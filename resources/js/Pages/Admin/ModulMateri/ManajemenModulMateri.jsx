@@ -21,6 +21,24 @@ const focusLabels = {
     presentation: 'Presentasi Mingguan',
 };
 
+const focusPageCopy = {
+    roadmap: {
+        title: 'Roadmap',
+        description: 'Susun Minggu, Hari, dan urutan belajar dalam satu kelas.',
+        emptyProgram: 'Buka workspace roadmap kelas.',
+    },
+    presentation: {
+        title: 'Presentasi',
+        description: 'Kelola presentasi pembuka, sela Hari, dan penutup pada setiap Minggu.',
+        emptyProgram: 'Kelola presentasi mingguan kelas ini.',
+    },
+    flashcard: {
+        title: 'Kuis & Repetisi',
+        description: 'Kelola materi repetisi, kuis, dan latihan menulis untuk setiap Hari.',
+        emptyProgram: 'Kelola latihan harian kelas ini.',
+    },
+};
+
 const inputClass = 'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:focus:ring-orange-900/30';
 
 function StatusBadge({ status = 'draft' }) {
@@ -267,6 +285,10 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
 
     const selectedProgram = programs.find((program) => String(program.id) === String(selectedProgramId));
     const focus = filters.focus || 'roadmap';
+    const pageCopy = focusPageCopy[focus] || focusPageCopy.roadmap;
+    const isRoadmapFocus = focus === 'roadmap';
+    const isPresentationFocus = focus === 'presentation';
+    const isPracticeFocus = focus === 'flashcard';
 
     const moduleForm = useForm({
         program_pembelajaran_id: selectedProgramId || '',
@@ -297,20 +319,6 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
             || targetModule.days?.[0];
         setOpenDayId((current) => filters.day_id ? targetDay?.id || null : current || targetDay?.id || null);
     }, [filters.day_id, filters.week_id, moduleItems.length]);
-
-    useEffect(() => {
-        if (!selectedProgramId || focus === 'roadmap' || !openModuleId) {
-            return undefined;
-        }
-
-        const frame = window.requestAnimationFrame(() => {
-            document
-                .querySelector(`[data-content-focus="${focus}"]`)
-                ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        });
-
-        return () => window.cancelAnimationFrame(frame);
-    }, [focus, openModuleId, selectedProgramId]);
 
     const currentModules = useMemo(
         () => selectedProgramId ? moduleItems : [],
@@ -440,7 +448,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
 
     return (
         <AuthenticatedLayout>
-            <Head title="Roadmap Kelas - Japanlingo" />
+            <Head title={`${pageCopy.title} Kelas - Japanlingo`} />
 
             <div className="min-h-screen bg-[#F8F9FB] dark:bg-gray-950">
                 <main className="mx-auto max-w-6xl space-y-5 px-4 py-5 sm:px-6 lg:px-8">
@@ -455,15 +463,15 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                         Kelas / {focusLabels[focus]}
                                     </p>
                                     <h1 className="mt-1 text-xl font-black text-gray-900 dark:text-white sm:text-2xl">
-                                        {selectedProgram ? `Roadmap ${selectedProgram.title}` : 'Pilih Kelas'}
+                                        {selectedProgram ? `${pageCopy.title} ${selectedProgram.title}` : 'Pilih Kelas'}
                                     </h1>
                                     <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
-                                        Susun Minggu, Hari, dan materi belajar tanpa berpindah konteks kelas.
+                                        {pageCopy.description}
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="grid w-full gap-2 sm:grid-cols-[minmax(0,260px)_auto] lg:w-auto">
+                            <div className={`grid w-full gap-2 lg:w-auto ${isRoadmapFocus ? 'sm:grid-cols-[minmax(0,260px)_auto]' : 'sm:w-[300px]'}`}>
                                 <SearchableSelect
                                     value={selectedProgramId}
                                     onChange={chooseProgram}
@@ -471,10 +479,12 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                     searchPlaceholder="Cari kelas..."
                                     options={programs.map((program) => ({ value: program.id, label: program.title }))}
                                 />
-                                <button type="button" onClick={openCreateModule} disabled={!selectedProgramId} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
-                                    <AddIcon sx={{ fontSize: 18 }} />
-                                    Tambah Minggu
-                                </button>
+                                {isRoadmapFocus && (
+                                    <button type="button" onClick={openCreateModule} disabled={!selectedProgramId} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
+                                        <AddIcon sx={{ fontSize: 18 }} />
+                                        Tambah Minggu
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </section>
@@ -488,7 +498,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                     </span>
                                     <span className="min-w-0">
                                         <span className="block font-black text-gray-900 dark:text-white">{program.title}</span>
-                                        <span className="mt-1 block text-sm font-medium text-gray-500 dark:text-gray-400">{program.description || 'Buka workspace roadmap kelas.'}</span>
+                                        <span className="mt-1 block text-sm font-medium text-gray-500 dark:text-gray-400">{program.description || pageCopy.emptyProgram}</span>
                                     </span>
                                 </button>
                             ))}
@@ -499,6 +509,11 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                         <section className="space-y-3">
                             {currentModules.map((module) => {
                                 const moduleOpen = openModuleId === module.id;
+                                const moduleSummary = isPresentationFocus
+                                    ? `${module.presentation_count || 0} presentasi`
+                                    : isPracticeFocus
+                                        ? `${module.days_count || 0} Hari / ${module.flashcard_count || 0} kartu / ${module.quiz_count || 0} kuis`
+                                        : `${module.days_count || 0} Hari / ${module.flashcard_count || 0} kartu / ${module.quiz_count || 0} kuis / ${module.presentation_count || 0} presentasi`;
 
                                 return (
                                     <article key={module.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
@@ -521,24 +536,28 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                         <StatusBadge status={module.status} />
                                                     </span>
                                                     <span className="mt-1 block text-xs font-bold text-gray-400">
-                                                        {module.days_count || 0} Hari / {module.flashcard_count || 0} kartu / {module.quiz_count || 0} kuis / {module.presentation_count || 0} presentasi
+                                                        {moduleSummary}
                                                     </span>
                                                 </span>
                                                 <ExpandMoreIcon className={`shrink-0 text-gray-400 transition-transform ${moduleOpen ? 'rotate-180' : ''}`} />
                                             </button>
-                                            <div className="hidden items-center gap-2 sm:flex">
-                                                <button type="button" onClick={() => openEditModule(module)} title="Edit Minggu" className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 dark:border-gray-700 dark:text-gray-300">
-                                                    <EditOutlinedIcon sx={{ fontSize: 17 }} />
-                                                </button>
-                                                <button type="button" onClick={() => deleteModule(module)} title="Hapus Minggu" className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 text-red-600 dark:border-red-900/40">
-                                                    <DeleteOutlineIcon sx={{ fontSize: 17 }} />
-                                                </button>
-                                            </div>
+                                            {isRoadmapFocus && (
+                                                <div className="hidden items-center gap-2 sm:flex">
+                                                    <button type="button" onClick={() => openEditModule(module)} title="Edit Minggu" className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 dark:border-gray-700 dark:text-gray-300">
+                                                        <EditOutlinedIcon sx={{ fontSize: 17 }} />
+                                                    </button>
+                                                    <button type="button" onClick={() => deleteModule(module)} title="Hapus Minggu" className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 text-red-600 dark:border-red-900/40">
+                                                        <DeleteOutlineIcon sx={{ fontSize: 17 }} />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
 
-                                        {moduleOpen && (
-                                            <div className="border-t border-gray-100 bg-gray-50/70 p-3 dark:border-gray-800 dark:bg-gray-950/40 sm:p-4">
-                                                <div className="mb-3 flex items-center justify-between gap-3">
+                                         {moduleOpen && (
+                                             <div className="border-t border-gray-100 bg-gray-50/70 p-3 dark:border-gray-800 dark:bg-gray-950/40 sm:p-4">
+                                                 {isRoadmapFocus && (
+                                                     <>
+                                                 <div className="mb-3 flex items-center justify-between gap-3">
                                                     <p className="text-xs font-black uppercase tracking-[0.18em] text-gray-400">Susunan Hari</p>
                                                     <div className="flex gap-2">
                                                         <button type="button" onClick={() => openEditModule(module)} className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs font-black text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 sm:hidden">Edit Minggu</button>
@@ -578,7 +597,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                     <span>Buka Bank</span>
                                                 </Link>
 
-                                                <div className="space-y-2">
+                                                 <div className="space-y-2">
                                                     {(module.days || []).map((day) => {
                                                         const dayOpen = openDayId === day.id;
                                                         return (
@@ -636,20 +655,85 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                             <span className="mt-1 block text-xs font-bold text-orange-600">Tambah Hari pertama</span>
                                                         </button>
                                                     )}
-                                                </div>
-                                            </div>
-                                        )}
+                                                 </div>
+                                                     </>
+                                                 )}
+
+                                                 {isPresentationFocus && (
+                                                     <div className="space-y-3">
+                                                         <div>
+                                                             <p className="text-xs font-black uppercase tracking-[0.18em] text-gray-400">Materi Presentasi</p>
+                                                             <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">Atur deck dan posisinya di dalam Minggu ini.</p>
+                                                         </div>
+                                                         <WeeklyPresentationRow module={module} focused />
+                                                     </div>
+                                                 )}
+
+                                                 {isPracticeFocus && (
+                                                     <div className="space-y-3">
+                                                         <div>
+                                                             <p className="text-xs font-black uppercase tracking-[0.18em] text-gray-400">Latihan per Hari</p>
+                                                             <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">Buka builder atau lengkapi materi latihan tanpa masuk ke pengaturan Roadmap.</p>
+                                                         </div>
+
+                                                         {(module.days || []).map((day) => (
+                                                             <div key={day.id} className="border-b border-gray-200 pb-3 last:border-b-0 last:pb-0 dark:border-gray-800">
+                                                                 <div className="mb-3 flex min-w-0 items-center gap-3">
+                                                                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-xs font-black text-white dark:bg-white dark:text-gray-900">H{day.day_number}</span>
+                                                                     <span className="min-w-0 flex-1">
+                                                                         <span className="block truncate text-sm font-black text-gray-900 dark:text-white">{day.title}</span>
+                                                                         {day.description && <span className="mt-0.5 block truncate text-xs font-semibold text-gray-400">{day.description}</span>}
+                                                                     </span>
+                                                                     <StatusBadge status={day.status} />
+                                                                 </div>
+                                                                 <DailyPracticeRow
+                                                                     module={module}
+                                                                     day={day}
+                                                                     onCreate={openResourceCreate}
+                                                                     focused
+                                                                 />
+                                                             </div>
+                                                         ))}
+
+                                                         {(module.days || []).length === 0 && (
+                                                             <div className="rounded-xl border border-dashed border-gray-300 bg-white px-5 py-8 text-center dark:border-gray-700 dark:bg-gray-900">
+                                                                 <p className="text-sm font-black text-gray-700 dark:text-gray-200">Minggu ini belum memiliki Hari</p>
+                                                                 <Link
+                                                                     href={route('admin.modules.index', { program_id: selectedProgramId, focus: 'roadmap', week_id: module.id })}
+                                                                     className="mt-2 inline-flex text-xs font-black text-orange-600"
+                                                                 >
+                                                                     Tambahkan Hari melalui Roadmap
+                                                                 </Link>
+                                                             </div>
+                                                         )}
+                                                     </div>
+                                                 )}
+                                             </div>
+                                         )}
                                     </article>
                                 );
                             })}
 
-                            {currentModules.length === 0 && (
-                                <button type="button" onClick={openCreateModule} className="w-full rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center dark:border-gray-700 dark:bg-gray-900">
-                                    <MenuBookIcon sx={{ fontSize: 38 }} className="text-gray-300" />
-                                    <span className="mt-3 block text-base font-black text-gray-800 dark:text-gray-100">Kelas ini belum memiliki Minggu</span>
-                                    <span className="mt-1 block text-sm font-bold text-orange-600">Tambah Minggu pertama</span>
-                                </button>
-                            )}
+                             {currentModules.length === 0 && (
+                                 isRoadmapFocus ? (
+                                     <button type="button" onClick={openCreateModule} className="w-full rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center dark:border-gray-700 dark:bg-gray-900">
+                                         <MenuBookIcon sx={{ fontSize: 38 }} className="text-gray-300" />
+                                         <span className="mt-3 block text-base font-black text-gray-800 dark:text-gray-100">Kelas ini belum memiliki Minggu</span>
+                                         <span className="mt-1 block text-sm font-bold text-orange-600">Tambah Minggu pertama</span>
+                                     </button>
+                                 ) : (
+                                     <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center dark:border-gray-700 dark:bg-gray-900">
+                                         <MenuBookIcon sx={{ fontSize: 38 }} className="text-gray-300" />
+                                         <p className="mt-3 text-base font-black text-gray-800 dark:text-gray-100">Kelas ini belum memiliki Minggu</p>
+                                         <Link
+                                             href={route('admin.modules.index', { program_id: selectedProgramId, focus: 'roadmap' })}
+                                             className="mt-2 inline-flex text-sm font-black text-orange-600"
+                                         >
+                                             Susun Minggu melalui Roadmap
+                                         </Link>
+                                     </div>
+                                 )
+                             )}
                         </section>
                     )}
 
