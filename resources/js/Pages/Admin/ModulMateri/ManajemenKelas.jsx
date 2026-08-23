@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -26,6 +26,7 @@ const emptyForm = {
     description: '',
     instructor_name: '',
     thumbnail_url: '',
+    thumbnail_file: null,
     status: 'draft',
     sort_order: 1,
 };
@@ -101,6 +102,8 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
     const [editing, setEditing] = useState(null);
     const [managingProgram, setManagingProgram] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState('');
+    const thumbnailFileInputRef = useRef(null);
     const form = useForm(emptyForm);
     const availableLevels = levels.filter((level) => (
         String(level.curriculum_track_id) === String(form.data.curriculum_track_id)
@@ -108,6 +111,7 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
 
     const openCreate = () => {
         setEditing(null);
+        setThumbnailPreviewUrl('');
         form.setData(emptyForm);
         setShowForm(true);
     };
@@ -121,16 +125,50 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
             description: program.description || '',
             instructor_name: program.instructor_name || '',
             thumbnail_url: program.thumbnail_url || '',
+            thumbnail_file: null,
             status: program.status || 'published',
             sort_order: program.sort_order || 1,
         });
+        setThumbnailPreviewUrl(program.thumbnail_url || '');
         setShowForm(true);
     };
 
     const closeForm = () => {
         setShowForm(false);
         setEditing(null);
+        setThumbnailPreviewUrl('');
         form.reset();
+    };
+
+    useEffect(() => () => {
+        if (thumbnailPreviewUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(thumbnailPreviewUrl);
+        }
+    }, [thumbnailPreviewUrl]);
+
+    const selectThumbnailFile = (event) => {
+        const file = event.target.files?.[0] || null;
+
+        form.setData((current) => ({
+            ...current,
+            thumbnail_file: file,
+            thumbnail_url: '',
+        }));
+        setThumbnailPreviewUrl(file ? URL.createObjectURL(file) : '');
+    };
+
+    const setThumbnailUrl = (event) => {
+        const thumbnailUrl = event.target.value;
+
+        form.setData((current) => ({
+            ...current,
+            thumbnail_file: null,
+            thumbnail_url: thumbnailUrl,
+        }));
+        if (thumbnailFileInputRef.current) {
+            thumbnailFileInputRef.current.value = '';
+        }
+        setThumbnailPreviewUrl(thumbnailUrl);
     };
 
     const submitFilters = (event) => {
@@ -140,14 +178,14 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
 
     const submitForm = (event) => {
         event.preventDefault();
-        const options = { preserveScroll: true, onSuccess: closeForm };
+        const options = { preserveScroll: true, forceFormData: true, onSuccess: closeForm };
 
         if (editing) {
-            form.put(route('admin.programs.update', editing.id), options);
+            form.transform((data) => ({ ...data, _method: 'put' })).post(route('admin.programs.update', editing.id), options);
             return;
         }
 
-        form.post(route('admin.programs.store'), options);
+        form.transform((data) => data).post(route('admin.programs.store'), options);
     };
 
     const confirmDelete = () => {
@@ -397,8 +435,8 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                 <p className="text-xs font-black uppercase tracking-[0.25em] text-white/70">Preview Kelas</p>
                                 <div className="mt-6 overflow-hidden rounded-[1.4rem] bg-white/15 shadow-xl backdrop-blur">
                                     <div className="relative h-48 bg-white/10">
-                                        {form.data.thumbnail_url ? (
-                                            <img src={form.data.thumbnail_url} alt={form.data.title || 'Preview kelas'} className="h-full w-full object-cover" />
+                                        {thumbnailPreviewUrl ? (
+                                            <img src={thumbnailPreviewUrl} alt={form.data.title || 'Preview kelas'} className="h-full w-full object-cover" />
                                         ) : (
                                             <div className="flex h-full items-center justify-center">
                                                 <ImageOutlinedIcon sx={{ fontSize: 54 }} />
@@ -446,8 +484,27 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                             {availableLevels.map((level) => <option key={level.id} value={level.id}>{level.level_name}</option>)}
                                         </select>
                                     </Field>
-                                    <Field label="Thumbnail URL" wide>
-                                        <input value={form.data.thumbnail_url} onChange={(event) => form.setData('thumbnail_url', event.target.value)} placeholder="/build/assets/bahasa-jepang-guru-1-BKAqu58U.jpg" className={inputClass} />
+                                    <Field label="Thumbnail Kelas" wide>
+                                        <div className="grid gap-3 md:grid-cols-2">
+                                            <label className="block rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-3 transition hover:border-orange-300 hover:bg-orange-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:border-orange-800 dark:hover:bg-orange-950/20">
+                                                <span className="mb-2 flex items-center gap-2 text-sm font-black text-gray-800 dark:text-gray-100">
+                                                    <ImageOutlinedIcon sx={{ fontSize: 18 }} /> Unggah Gambar
+                                                </span>
+                                                <input
+                                                    ref={thumbnailFileInputRef}
+                                                    type="file"
+                                                    accept="image/png,image/jpeg,image/webp"
+                                                    onChange={selectThumbnailFile}
+                                                    className="block w-full text-xs font-semibold text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-orange-100 file:px-3 file:py-2 file:text-xs file:font-black file:text-orange-700 hover:file:bg-orange-200 dark:text-gray-300 dark:file:bg-orange-900/30 dark:file:text-orange-300"
+                                                />
+                                                <span className="mt-2 block text-xs font-medium text-gray-500 dark:text-gray-400">PNG, JPG, JPEG, atau WebP. Maks. 5 MB.</span>
+                                            </label>
+                                            <label className="block">
+                                                <span className="mb-2 block text-sm font-black text-gray-800 dark:text-gray-100">URL Gambar Eksternal</span>
+                                                <input type="text" inputMode="url" value={form.data.thumbnail_url} onChange={setThumbnailUrl} placeholder="https://contoh.com/thumbnail-kelas.webp" className={inputClass} />
+                                                <span className="mt-2 block text-xs font-medium text-gray-500 dark:text-gray-400">Gunakan URL file gambar langsung, bukan halaman Google Drive atau Canva.</span>
+                                            </label>
+                                        </div>
                                     </Field>
                                     <Field label="Deskripsi" wide>
                                         <textarea value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} placeholder="Ringkasan kelas" className={`${inputClass} min-h-28`} />

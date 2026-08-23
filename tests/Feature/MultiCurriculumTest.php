@@ -3,6 +3,9 @@
 use App\Models\CurriculumTrack;
 use App\Models\LevelPembelajaran;
 use App\Models\Pengguna;
+use App\Models\ProgramPembelajaran;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 it('creates classes inside the selected curriculum track', function () {
     $admin = Pengguna::factory()->create(['role' => 'admin']);
@@ -70,4 +73,30 @@ it('rejects a level from a different curriculum track', function () {
     ])->assertSessionHasErrors('level_id');
 
     $this->assertDatabaseMissing('program_pembelajaran', ['title' => 'Kelas Tidak Valid']);
+});
+
+it('stores an uploaded class thumbnail on the public disk', function () {
+    Storage::fake('public');
+
+    $admin = Pengguna::factory()->create(['role' => 'admin']);
+    $track = CurriculumTrack::create([
+        'code' => 'thumbnail-test',
+        'name' => 'Thumbnail Test',
+        'status' => 'active',
+        'sort_order' => 1,
+    ]);
+
+    $this->actingAs($admin)->post(route('admin.programs.store'), [
+        'curriculum_track_id' => $track->id,
+        'title' => 'Kelas dengan Thumbnail',
+        'status' => 'draft',
+        'sort_order' => 1,
+        'thumbnail_file' => UploadedFile::fake()->image('kelas.webp'),
+    ])->assertSessionHasNoErrors();
+
+    $program = ProgramPembelajaran::where('title', 'Kelas dengan Thumbnail')->firstOrFail();
+    $thumbnailPath = ltrim(str_replace('/storage/', '', $program->thumbnail_url), '/');
+
+    expect($thumbnailPath)->toStartWith('kelas-thumbnails/');
+    Storage::disk('public')->assertExists($thumbnailPath);
 });

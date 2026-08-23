@@ -11,6 +11,7 @@ use App\Models\Modul;
 use App\Models\ProgramPembelajaran;
 use App\Services\NotifikasiPenggunaService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -46,7 +47,7 @@ class AdminModulController extends Controller
 
     public function storeProgram(Request $request)
     {
-        $validated = $this->validateProgram($request);
+        $validated = $this->prepareProgramInput($request);
         $validated['slug'] = $this->uniqueProgramSlug($validated['title']);
 
         ProgramPembelajaran::create($validated);
@@ -56,7 +57,12 @@ class AdminModulController extends Controller
 
     public function updateProgram(Request $request, ProgramPembelajaran $program)
     {
-        $program->update($this->validateProgram($request, $program));
+        $previousThumbnailUrl = $program->thumbnail_url;
+        $program->update($this->prepareProgramInput($request, $program));
+
+        if ($previousThumbnailUrl !== $program->thumbnail_url) {
+            $this->deleteManagedThumbnail($previousThumbnailUrl);
+        }
 
         return redirect()->back()->with('success', 'Kelas berhasil diperbarui.');
     }
@@ -69,6 +75,7 @@ class AdminModulController extends Controller
             ]);
         }
 
+        $this->deleteManagedThumbnail($program->thumbnail_url);
         $program->delete();
 
         return redirect()->back()->with('success', 'Kelas berhasil dihapus.');
@@ -276,11 +283,11 @@ class AdminModulController extends Controller
         return redirect()->back()->with('success', 'Modul berhasil dihapus');
     }
 
-    private function validateProgram(Request $request, ?ProgramPembelajaran $program = null): array
+    private function prepareProgramInput(Request $request, ?ProgramPembelajaran $program = null): array
     {
         $track = CurriculumTrack::whereKey($request->integer('curriculum_track_id'))->first();
 
-        return $request->validate([
+        $validated = $request->validate([
             'curriculum_track_id' => ['required', 'exists:curriculum_tracks,id'],
             'level_id' => [
                 Rule::requiredIf($track?->code === 'jlpt'),
@@ -293,9 +300,32 @@ class AdminModulController extends Controller
             'description' => ['nullable', 'string'],
             'instructor_name' => ['nullable', 'string', 'max:255'],
             'thumbnail_url' => ['nullable', 'string', 'max:2048'],
+            'thumbnail_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'status' => ['required', Rule::in(['draft', 'published'])],
             'sort_order' => ['required', 'integer', 'min:1'],
         ]);
+
+        if ($request->hasFile('thumbnail_file')) {
+            $thumbnailPath = $request->file('thumbnail_file')->store('kelas-thumbnails', 'public');
+            $validated['thumbnail_url'] = Storage::disk('public')->url($thumbnailPath);
+        }
+
+        unset($validated['thumbnail_file']);
+
+        return $validated;
+    }
+
+    private function deleteManagedThumbnail(?string $thumbnailUrl): void
+    {
+        if (! $thumbnailUrl) {
+            return;
+        }
+
+        $path = ltrim(Str::after($thumbnailUrl, '/storage/'), '/');
+
+        if ($path !== ltrim($thumbnailUrl, '/') && str_starts_with($path, 'kelas-thumbnails/')) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     private function uniqueProgramSlug(string $title): string
