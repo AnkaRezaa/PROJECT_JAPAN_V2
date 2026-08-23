@@ -105,12 +105,27 @@ class AdminKosakataController extends Controller
         return Inertia::render('Admin/Kosakata/Kosakata', [
             'vocabulary' => $query->paginate(12)->withQueryString(),
             'filters' => $request->only('search', 'status', 'jlpt_level', 'content_type', 'program_id', 'module_id', 'module_day_id'),
+            'programs' => ProgramPembelajaran::with(['level:id,level_name', 'curriculumTrack:id,code,name'])
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (ProgramPembelajaran $program) => [
+                    'id' => $program->id,
+                    'title' => $program->title,
+                    'status' => $program->status,
+                    'level' => $program->level?->level_name,
+                    'curriculum_track' => $program->curriculumTrack?->name,
+                ]),
             'modules' => Modul::with([
                 'programPembelajaran:id,title',
                 'days:id,module_id,day_number,title,status',
             ])
                 ->when($request->filled('program_id'), fn ($moduleQuery) => $moduleQuery
                     ->where('program_pembelajaran_id', $request->integer('program_id')))
+                ->orderBy('program_pembelajaran_id')
+                ->orderBy('week_number')
+                ->get(['id', 'program_pembelajaran_id', 'title', 'week_number']),
+            'importModules' => Modul::with('days:id,module_id,day_number,title,status')
                 ->orderBy('program_pembelajaran_id')
                 ->orderBy('week_number')
                 ->get(['id', 'program_pembelajaran_id', 'title', 'week_number']),

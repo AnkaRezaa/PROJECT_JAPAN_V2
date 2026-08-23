@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Card from '@/Components/UI/Card';
+import AdminDialog from '@/Components/UI/AdminDialog';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import SearchableSelect from '@/Components/UI/SearchableSelect';
 import SearchableMultiSelect from '@/Components/UI/SearchableMultiSelect';
@@ -91,7 +92,7 @@ function Field({ label, children, wide = false }) {
     );
 }
 
-export default function Kosakata({ vocabulary = {}, filters = {}, modules = [], availableLevels = [], program = null }) {
+export default function Kosakata({ vocabulary = {}, filters = {}, programs = [], modules = [], importModules = [], availableLevels = [], program = null }) {
     const rows = vocabulary.data || [];
     const importInputRef = useRef(null);
     const [showForm, setShowForm] = useState(false);
@@ -102,9 +103,17 @@ export default function Kosakata({ vocabulary = {}, filters = {}, modules = [], 
     const [contentType, setContentType] = useState(filters.content_type || 'all');
     const [moduleId, setModuleId] = useState(filters.module_id || 'all');
     const [moduleDayId, setModuleDayId] = useState(filters.module_day_id || 'all');
-    const [showTemplateMenu, setShowTemplateMenu] = useState(false);
+    const [showImportDialog, setShowImportDialog] = useState(false);
     const [strokePreview, setStrokePreview] = useState(null);
     const form = useForm(emptyForm);
+    const importForm = useForm({
+        program_id: '',
+        module_id: '',
+        module_day_id: '',
+        content_type: '',
+        source_type: 'import',
+        import_file: null,
+    });
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
     const contextualModule = modules.find((module) => String(module.id) === String(filters.module_id));
     const programJlptLevel = program?.curriculum_track?.code === 'jlpt'
@@ -179,27 +188,60 @@ export default function Kosakata({ vocabulary = {}, filters = {}, modules = [], 
             : form.post(route('admin.vocabulary.store'), { preserveScroll: true, onSuccess: closeForm });
     };
 
-    const importVocabulary = (event) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
+    const resetImportDialog = () => {
+        setShowImportDialog(false);
+        importForm.clearErrors();
+        importForm.reset();
+        if (importInputRef.current) importInputRef.current.value = '';
+    };
 
-        const payload = new FormData();
-        payload.append('import_file', file);
-        payload.append('source_type', 'import');
-        if (filters.program_id) payload.append('program_id', filters.program_id);
-        if (contentType !== 'all') payload.append('content_type', contentType);
-        if (moduleId !== 'all') payload.append('module_id', moduleId);
-        if (moduleDayId !== 'all') payload.append('module_day_id', moduleDayId);
+    const openImport = () => {
+        const selectedModule = importModules.find((module) => String(module.id) === String(moduleId));
+        const selectedDay = selectedModule?.days?.find((day) => String(day.id) === String(moduleDayId));
 
-        router.post(route('admin.vocabulary.import'), payload, {
+        importForm.clearErrors();
+        importForm.setData({
+            program_id: filters.program_id || selectedModule?.program_pembelajaran_id || '',
+            module_id: selectedModule?.id || '',
+            module_day_id: selectedDay?.id || '',
+            content_type: contentType !== 'all' ? contentType : '',
+            source_type: 'import',
+            import_file: null,
+        });
+        if (importInputRef.current) importInputRef.current.value = '';
+        setShowImportDialog(true);
+    };
+
+    const closeImport = () => {
+        if (importForm.processing) return;
+        resetImportDialog();
+    };
+
+    const importVocabulary = () => {
+        if (!importForm.data.program_id || !importForm.data.module_id || !importForm.data.import_file) return;
+
+        importForm.post(route('admin.vocabulary.import'), {
             forceFormData: true,
             preserveScroll: true,
             preserveState: false,
+            onSuccess: resetImportDialog,
+            onError: () => importForm.setData('import_file', null),
             onFinish: () => {
-                event.target.value = '';
+                if (importInputRef.current) importInputRef.current.value = '';
             },
         });
     };
+
+    const importModuleOptions = importModules.filter((module) => String(module.program_pembelajaran_id) === String(importForm.data.program_id));
+    const importModule = importModuleOptions.find((module) => String(module.id) === String(importForm.data.module_id));
+    const importDays = importModule?.days || [];
+    const importDay = importDays.find((day) => String(day.id) === String(importForm.data.module_day_id));
+    const importReady = Boolean(importForm.data.program_id && importForm.data.module_id && importForm.data.import_file);
+    const importTarget = [
+        programs.find((item) => String(item.id) === String(importForm.data.program_id))?.title,
+        importModule ? `Week ${importModule.week_number ?? '-'} - ${importModule.title}` : null,
+        importDay ? `Hari ${importDay.day_number}` : null,
+    ].filter(Boolean).join(' > ');
 
     const deleteVocabulary = (item) => {
         openConfirm({
@@ -244,23 +286,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, modules = [], 
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            <div className="relative">
-                                <button type="button" onClick={() => setShowTemplateMenu((value) => !value)} className="h-11 rounded-xl bg-red-600 px-4 text-sm font-bold text-white shadow-md shadow-red-500/20 transition-colors hover:bg-red-700">
-                                    Template
-                                </button>
-                                {showTemplateMenu && (
-                                    <div className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900">
-                                        <a href={route('admin.vocabulary.template', { format: 'xlsx', program_id: filters.program_id })} onClick={() => setShowTemplateMenu(false)} className="block px-4 py-3 text-sm font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 dark:text-gray-200 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-300">
-                                            Download Excel (.xlsx)
-                                        </a>
-                                        <a href={route('admin.vocabulary.template', { format: 'csv', program_id: filters.program_id })} onClick={() => setShowTemplateMenu(false)} className="block border-t border-gray-100 px-4 py-3 text-sm font-bold text-gray-700 hover:bg-red-50 hover:text-red-700 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-red-900/20 dark:hover:text-red-300">
-                                            Download CSV (.csv)
-                                        </a>
-                                    </div>
-                                )}
-                            </div>
-                            <input ref={importInputRef} type="file" accept=".csv,.txt,.xlsx" className="hidden" onChange={importVocabulary} />
-                            <button disabled={!filters.program_id || moduleId === 'all'} onClick={() => importInputRef.current?.click()} className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold text-gray-600 transition-colors hover:border-red-200 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-45 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                            <button type="button" onClick={openImport} className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold text-gray-600 transition-colors hover:border-red-200 hover:text-red-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
                                 <FileUploadIcon sx={{ fontSize: 18 }} />
                                 Import CSV/Excel
                             </button>
@@ -350,6 +376,130 @@ export default function Kosakata({ vocabulary = {}, filters = {}, modules = [], 
                         ))}
                     </div>
                 )}
+
+                <AdminDialog
+                    open={showImportDialog}
+                    onClose={closeImport}
+                    eyebrow="Bank Konten"
+                    title="Import CSV atau Excel"
+                    description="Pilih tujuan konten sebelum mengunggah file. Kelas dan Week wajib dipilih; Hari bersifat opsional."
+                    maxWidth="max-w-3xl"
+                    footer={(
+                        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                                {importReady ? `Tujuan: ${importTarget}` : 'Pilih kelas, Week, dan file untuk melanjutkan.'}
+                            </p>
+                            <div className="flex gap-2 sm:shrink-0">
+                                <button type="button" onClick={closeImport} disabled={importForm.processing} className="h-10 flex-1 rounded-xl border border-gray-200 px-4 text-sm font-bold text-gray-600 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 sm:flex-none">
+                                    Batal
+                                </button>
+                                <button type="button" onClick={importVocabulary} disabled={!importReady || importForm.processing} className="h-10 flex-1 rounded-xl bg-red-600 px-5 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none">
+                                    {importForm.processing ? 'Mengimpor...' : 'Import Konten'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                >
+                    <div className="space-y-5">
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <Field label="Kelas tujuan" wide>
+                                <SearchableSelect
+                                    value={importForm.data.program_id}
+                                    onChange={(value) => importForm.setData({
+                                        ...importForm.data,
+                                        program_id: value || '',
+                                        module_id: '',
+                                        module_day_id: '',
+                                    })}
+                                    placeholder="Pilih kelas"
+                                    searchPlaceholder="Cari nama kelas..."
+                                    options={programs.map((item) => ({
+                                        value: item.id,
+                                        label: item.title,
+                                        description: [item.curriculum_track, item.level].filter(Boolean).join(' - '),
+                                    }))}
+                                />
+                            </Field>
+                            <Field label="Week tujuan">
+                                <SearchableSelect
+                                    value={importForm.data.module_id}
+                                    onChange={(value) => importForm.setData({
+                                        ...importForm.data,
+                                        module_id: value || '',
+                                        module_day_id: '',
+                                    })}
+                                    disabled={!importForm.data.program_id}
+                                    placeholder={importForm.data.program_id ? 'Pilih Week' : 'Pilih kelas dahulu'}
+                                    searchPlaceholder="Cari Week..."
+                                    options={importModuleOptions.map((module) => ({
+                                        value: module.id,
+                                        label: `Week ${module.week_number ?? '-'} - ${module.title}`,
+                                    }))}
+                                />
+                            </Field>
+                            <Field label="Hari (opsional)">
+                                <SearchableSelect
+                                    value={importForm.data.module_day_id}
+                                    onChange={(value) => importForm.setData('module_day_id', value || '')}
+                                    disabled={!importForm.data.module_id}
+                                    placeholder={importForm.data.module_id ? 'Semua Hari dalam Week' : 'Pilih Week dahulu'}
+                                    searchPlaceholder="Cari Hari..."
+                                    allowClear
+                                    clearLabel="Tanpa Hari khusus"
+                                    options={importDays.map((day) => ({
+                                        value: day.id,
+                                        label: `Hari ${day.day_number} - ${day.title}`,
+                                    }))}
+                                />
+                            </Field>
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-950">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <p className="text-sm font-black text-gray-900 dark:text-white">Gunakan template sesuai kelas</p>
+                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Template membawa kolom kosakata, kanji, bunpo, contoh, audio, dan detail stroke.</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    {importForm.data.program_id ? (
+                                        <>
+                                            <a href={route('admin.vocabulary.template', { format: 'xlsx', program_id: importForm.data.program_id })} className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/50 dark:bg-gray-900 dark:text-emerald-300">Excel</a>
+                                            <a href={route('admin.vocabulary.template', { format: 'csv', program_id: importForm.data.program_id })} className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-700 hover:bg-red-50 dark:border-red-900/50 dark:bg-gray-900 dark:text-red-300">CSV</a>
+                                        </>
+                                    ) : (
+                                        <span className="text-xs font-bold text-gray-400">Pilih kelas dahulu</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <label className="block cursor-pointer rounded-2xl border-2 border-dashed border-gray-300 bg-white p-6 text-center transition hover:border-red-300 hover:bg-red-50/40 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-red-900/60 dark:hover:bg-red-950/20">
+                            <input
+                                ref={importInputRef}
+                                type="file"
+                                accept=".csv,.txt,.xlsx"
+                                className="hidden"
+                                onChange={(event) => importForm.setData('import_file', event.target.files?.[0] || null)}
+                            />
+                            <FileUploadIcon className="text-red-600 dark:text-red-400" sx={{ fontSize: 30 }} />
+                            <p className="mt-2 text-sm font-black text-gray-900 dark:text-white">
+                                {importForm.data.import_file?.name || 'Pilih file CSV atau Excel'}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                CSV, TXT, atau XLSX dengan ukuran maksimum 4 MB.
+                            </p>
+                        </label>
+
+                        {Object.keys(importForm.errors).length > 0 && (
+                            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
+                                <p className="text-xs font-black uppercase tracking-wider text-red-700 dark:text-red-300">Import belum dapat diproses</p>
+                                <ul className="mt-2 space-y-1 text-sm font-semibold text-red-700 dark:text-red-300">
+                                    {Object.values(importForm.errors).map((message, index) => <li key={`${message}-${index}`}>{message}</li>)}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                </AdminDialog>
 
                 {showForm && (
                     <div className="fixed inset-0 z-[110] overflow-y-auto bg-gray-950/60 p-3 backdrop-blur-sm sm:p-5">
