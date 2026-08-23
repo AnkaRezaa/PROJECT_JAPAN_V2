@@ -31,7 +31,7 @@ export default function AdminDialog({
     if (!open) return null;
 
     return (
-        <div className="fixed inset-0 z-[110] flex items-end bg-gray-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label={title}>
+        <div className="fixed inset-0 z-[110] flex items-end justify-center bg-gray-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label={title}>
             <button type="button" aria-label="Tutup dialog" onClick={onClose} className="absolute inset-0 cursor-default" />
             <section className={`relative flex max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-[1.5rem] bg-white shadow-2xl dark:bg-gray-900 sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-[1.5rem] ${maxWidth}`}>
                 <header className="flex shrink-0 items-start justify-between gap-4 border-b border-gray-100 px-5 py-4 dark:border-gray-800 sm:px-6">
