@@ -416,6 +416,10 @@ class PembayaranMidtransController extends Controller
                 }
 
                 $this->notifySuperadminTransaction($activatedTransaction, 'payment_success', 'Pembayaran Midtrans berhasil', 'success');
+
+                if ($isPendingApproval) {
+                    DB::afterCommit(fn () => $this->notifyMentorPendingEnrollment($activatedTransaction));
+                }
             }
 
             if (in_array($newStatus, ['failed', 'expired', 'canceled'], true) && $oldStatus !== $newStatus) {
@@ -794,6 +798,51 @@ class PembayaranMidtransController extends Controller
             $severity,
             true
         );
+    }
+
+    private function notifyMentorPendingEnrollment(Transaksi $transaction): void
+    {
+        $transaction->loadMissing(['user:id,username,email', 'kloterBelajar.admin:id,username,email']);
+        $kloter = $transaction->kloterBelajar;
+        $mentor = $kloter?->admin;
+
+        if (! $kloter || ! $mentor || $mentor->role !== 'admin' || $mentor->status !== 'active') {
+            return;
+        }
+
+        $notifikasi = app(NotifikasiPenggunaService::class);
+        $userLabel = $transaction->user?->username ?: $transaction->user?->email ?: 'Peserta baru';
+
+        $notifikasi->kirimKePengguna(
+            $mentor,
+            'kloter_enrollment_pending',
+            'Peserta menunggu persetujuan',
+            "{$userLabel} sudah membayar dan menunggu persetujuan untuk {$kloter->nama}.",
+            route('admin.users', ['kloter' => $kloter->id]),
+            [
+                'transaction_id' => $transaction->id,
+                'kloter_id' => $kloter->id,
+                'user_id' => $transaction->user_id,
+                'source' => 'midtrans',
+            ],
+            'access',
+            'warning',
+            true,
+        );
+
+        if (! app(KloterBelajarService::class)->masihAdaKapasitas($kloter)) {
+            $notifikasi->kirimKePengguna(
+                $mentor,
+                'kloter_full',
+                'Kloter sudah penuh',
+                "Kapasitas {$kloter->nama} sudah penuh. Periksa peserta atau kapasitas sebelum menerima pendaftaran baru.",
+                route('admin.users', ['kloter' => $kloter->id]),
+                ['kloter_id' => $kloter->id, 'source' => 'midtrans'],
+                'access',
+                'warning',
+                true,
+            );
+        }
     }
 
     private function snapBaseUrl(): string

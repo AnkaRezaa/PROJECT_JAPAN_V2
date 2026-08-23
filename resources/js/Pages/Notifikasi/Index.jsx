@@ -89,6 +89,31 @@ export default function NotificationIndex({ notifications, unreadCount = 0, filt
     const { auth } = usePage().props;
     const activeFilter = filters.filter || 'all';
     const hasNotifications = notifications.data?.length > 0;
+    const notificationContext = {
+        user: {
+            eyebrow: 'Pusat pembaruan',
+            title: 'Notifikasi',
+            emptyTitle: 'Belum ada notifikasi',
+            emptyDescription: 'Pembaruan pembayaran, akses kelas, materi, dan progress akan muncul di sini.',
+        },
+        admin: {
+            eyebrow: 'Operasional kelas',
+            title: 'Aktivitas Kelas',
+            emptyTitle: 'Belum ada aktivitas kelas',
+            emptyDescription: 'Peserta menunggu persetujuan dan perubahan anggota kloter akan muncul di sini.',
+        },
+        superadmin: {
+            eyebrow: 'Operasional platform',
+            title: 'Aktivitas Operasional',
+            emptyTitle: 'Belum ada aktivitas operasional',
+            emptyDescription: 'Pembayaran, access key, kloter, dan tindakan yang perlu diperiksa akan muncul di sini.',
+        },
+    }[auth?.user?.role] || {
+        eyebrow: 'Pusat pembaruan',
+        title: 'Notifikasi',
+        emptyTitle: 'Belum ada notifikasi',
+        emptyDescription: 'Pembaruan terbaru akan muncul di sini.',
+    };
 
     const fallbackDashboard = {
         admin: '/admin/dashboard',
@@ -111,7 +136,7 @@ export default function NotificationIndex({ notifications, unreadCount = 0, filt
 
     return (
         <AuthenticatedLayout>
-            <Head title="Notifikasi" />
+            <Head title={notificationContext.title} />
 
             <main className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
                 <button
@@ -125,8 +150,8 @@ export default function NotificationIndex({ notifications, unreadCount = 0, filt
 
                 <header className="flex flex-col gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-end sm:justify-between dark:border-gray-800">
                     <div>
-                        <p className="text-xs font-bold uppercase text-red-600 dark:text-red-400">Pusat aktivitas</p>
-                        <h1 className="mt-1 text-2xl font-black text-gray-950 sm:text-3xl dark:text-white">Notifikasi</h1>
+                        <p className="text-xs font-bold uppercase text-red-600 dark:text-red-400">{notificationContext.eyebrow}</p>
+                        <h1 className="mt-1 text-2xl font-black text-gray-950 sm:text-3xl dark:text-white">{notificationContext.title}</h1>
                         <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                             {unreadCount > 0 ? `${unreadCount} pemberitahuan belum dibaca.` : 'Semua pemberitahuan sudah dibaca.'}
                         </p>
@@ -150,7 +175,7 @@ export default function NotificationIndex({ notifications, unreadCount = 0, filt
                     ].map(([value, label]) => (
                         <Link
                             key={value}
-                            href={route('user.notifications.index', { filter: value })}
+                            href={route('notifications.page', { filter: value })}
                             preserveScroll
                             className={`flex min-h-10 flex-1 items-center justify-center rounded-md px-4 text-sm font-bold transition-colors sm:flex-none ${activeFilter === value ? 'bg-white text-gray-950 shadow-sm dark:bg-gray-800 dark:text-white' : 'text-gray-600 hover:text-gray-950 dark:text-gray-300 dark:hover:text-white'}`}
                             role="tab"
@@ -172,10 +197,10 @@ export default function NotificationIndex({ notifications, unreadCount = 0, filt
                                 <NotificationsOutlinedIcon />
                             </div>
                             <h2 className="mt-4 text-base font-bold text-gray-950 dark:text-white">
-                                {activeFilter === 'unread' ? 'Tidak ada notifikasi yang belum dibaca' : 'Belum ada notifikasi'}
+                                {activeFilter === 'unread' ? 'Tidak ada aktivitas yang belum dibaca' : notificationContext.emptyTitle}
                             </h2>
                             <p className="mt-1 max-w-sm text-sm text-gray-600 dark:text-gray-300">
-                                Pembaruan pembayaran, akses kelas, materi, dan progress akan muncul di sini.
+                                {notificationContext.emptyDescription}
                             </p>
                         </div>
                     )}

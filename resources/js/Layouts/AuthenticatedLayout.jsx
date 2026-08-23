@@ -439,6 +439,31 @@ export default function AuthenticatedLayout({ children }) {
     const isSuperadmin = user?.role === 'superadmin';
     const isAdmin = user?.role === 'admin' || isSuperadmin;
     const isUser = user?.role === 'user';
+    const notificationContext = {
+        user: {
+            label: 'Notifikasi',
+            title: 'Notifikasi',
+            empty: 'Tidak ada notifikasi baru.',
+            allLabel: 'Lihat semua notifikasi',
+        },
+        admin: {
+            label: 'Aktivitas Baru',
+            title: 'Aktivitas Kelas',
+            empty: 'Tidak ada aktivitas kelas baru.',
+            allLabel: 'Lihat semua aktivitas kelas',
+        },
+        superadmin: {
+            label: 'Aktivitas Baru',
+            title: 'Aktivitas Operasional',
+            empty: 'Tidak ada aktivitas operasional baru.',
+            allLabel: 'Lihat semua aktivitas operasional',
+        },
+    }[user?.role] || {
+        label: 'Notifikasi',
+        title: 'Notifikasi',
+        empty: 'Tidak ada notifikasi baru.',
+        allLabel: 'Lihat semua notifikasi',
+    };
     const activeMenu = isSuperadmin ? superadminMenu : (isAdmin ? adminMenu : userMenu);
     const navigationExpanded = mobileOpen || isExpanded;
     const profileHref = user?.role === 'superadmin'
@@ -780,14 +805,14 @@ export default function AuthenticatedLayout({ children }) {
                             setNotificationOpen((open) => !open);
                             setProfileMenuOpen(false);
                         }}
-                        aria-label={unreadCount > 0 ? `Notifikasi, ${unreadCount} belum dibaca` : 'Notifikasi'}
+                        aria-label={unreadCount > 0 ? `${notificationContext.label}, ${unreadCount} belum dibaca` : notificationContext.label}
                         aria-controls="sidebar-notification-menu"
                         aria-expanded={notificationOpen}
-                        title={!navigationExpanded ? 'Notifikasi' : undefined}
+                        title={!navigationExpanded ? notificationContext.label : undefined}
                         className={`relative mb-2 flex min-h-11 w-full items-center rounded-xl text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white ${navigationExpanded ? 'justify-start px-3' : 'justify-center'}`}
                     >
                         <NotificationsOutlinedIcon sx={{ fontSize: 24 }} />
-                        {navigationExpanded && <span className="ml-3 text-sm font-semibold animate-in">Notifikasi</span>}
+                        {navigationExpanded && <span className="ml-3 text-sm font-semibold animate-in">{notificationContext.label}</span>}
                         {unreadCount > 0 && (
                             <span className={`absolute inline-flex min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-600 px-1 text-[9px] font-black leading-4 text-white dark:border-gray-900 ${navigationExpanded ? 'right-2 top-2' : 'right-0.5 top-0.5'}`}>
                                 {unreadCount > 99 ? '99+' : unreadCount}
@@ -800,8 +825,8 @@ export default function AuthenticatedLayout({ children }) {
                         <div id="sidebar-notification-menu" className={`fixed inset-x-3 bottom-3 z-[70] max-h-[75dvh] origin-bottom overflow-hidden rounded-xl border border-gray-200 bg-white text-left shadow-2xl animate-in dark:border-gray-700 dark:bg-gray-950 lg:absolute lg:inset-x-auto lg:bottom-[110px] lg:max-h-[420px] lg:w-[340px] lg:origin-bottom-left ${desktopPopoverPosition}`}>
                             <div className="flex items-start justify-between gap-3 border-b border-gray-200 p-4 dark:border-gray-800">
                                 <div>
-                                    <h3 className="font-black text-gray-950 dark:text-white">Notifikasi</h3>
-                                    <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{unreadCount > 0 ? `${unreadCount} belum dibaca` : 'Semua sudah dibaca'}</p>
+                                    <h3 className="font-black text-gray-950 dark:text-white">{notificationContext.title}</h3>
+                                    <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{unreadCount > 0 ? `${unreadCount} belum dibaca` : notificationContext.empty}</p>
                                 </div>
                                 {unreadCount > 0 && (
                                     <button
@@ -816,7 +841,7 @@ export default function AuthenticatedLayout({ children }) {
                             <div className="max-h-[calc(75dvh-132px)] overflow-y-auto lg:max-h-[300px]">
                                 {unreadCount === 0 ? (
                                     <div className="p-6 text-center text-xs font-medium text-gray-600 dark:text-gray-300">
-                                        Tidak ada notifikasi baru.
+                                        {notificationContext.empty}
                                     </div>
                                 ) : (
                                     notifications.slice(0, 5).map((notif) => (
@@ -838,14 +863,14 @@ export default function AuthenticatedLayout({ children }) {
                                 )}
                             </div>
                             <Link
-                                href={route('user.notifications.index')}
+                                href={route('notifications.page')}
                                 onClick={() => {
                                     setNotificationOpen(false);
                                     handleNavigation();
                                 }}
                                 className="flex min-h-11 items-center justify-center border-t border-gray-200 px-4 text-xs font-bold text-gray-800 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500 dark:border-gray-800 dark:text-gray-100 dark:hover:bg-gray-900"
                             >
-                                Lihat semua notifikasi
+                                {notificationContext.allLabel}
                             </Link>
                         </div>
                     )}

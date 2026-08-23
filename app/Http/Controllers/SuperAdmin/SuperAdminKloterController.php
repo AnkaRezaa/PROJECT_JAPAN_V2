@@ -10,6 +10,7 @@ use App\Models\ProgramPembelajaran;
 use App\Models\Progres;
 use App\Services\AksesLanggananService;
 use App\Services\KloterBelajarService;
+use App\Services\NotifikasiPenggunaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -207,6 +208,26 @@ class SuperAdminKloterController extends SuperAdminDasarController
             $validated['catatan'] ?? 'Ditambahkan manual oleh superadmin.'
         );
 
+        $this->notifyKloterAdmin(
+            $request,
+            $kloter,
+            'kloter_member_assigned',
+            'Peserta ditambahkan ke kloter',
+            "{$user->username} ditambahkan ke {$kloter->nama} oleh superadmin.",
+            ['kloter_id' => $kloter->id, 'user_id' => $user->id, 'source' => 'superadmin'],
+        );
+
+        if (! $kloterService->masihAdaKapasitas($kloter)) {
+            $this->notifyKloterAdmin(
+                $request,
+                $kloter,
+                'kloter_full',
+                'Kloter sudah penuh',
+                "Kapasitas {$kloter->nama} sudah penuh. Periksa peserta atau kapasitas sebelum menerima pendaftaran baru.",
+                ['kloter_id' => $kloter->id, 'source' => 'superadmin'],
+            );
+        }
+
         $this->logActivity($request, 'kloter.user_assigned', 'kloter_belajar', $kloter->id, "Menambahkan {$user->username} ke kloter {$kloter->nama}");
 
         return redirect()->route('superadmin.kloters', ['selected' => $kloter->id])->with('success', 'User berhasil dimasukkan ke kloter.');
@@ -217,6 +238,15 @@ class SuperAdminKloterController extends SuperAdminDasarController
         AnggotaKloter::where('kloter_belajar_id', $kloter->id)
             ->where('user_id', $user->id)
             ->update(['status' => 'removed']);
+
+        $this->notifyKloterAdmin(
+            $request,
+            $kloter,
+            'kloter_member_removed',
+            'Peserta dikeluarkan dari kloter',
+            "{$user->username} dikeluarkan dari {$kloter->nama} oleh superadmin.",
+            ['kloter_id' => $kloter->id, 'user_id' => $user->id, 'source' => 'superadmin'],
+        );
 
         $this->logActivity($request, 'kloter.user_removed', 'kloter_belajar', $kloter->id, "Mengeluarkan {$user->username} dari kloter {$kloter->nama}");
 
@@ -345,6 +375,34 @@ class SuperAdminKloterController extends SuperAdminDasarController
         KloterBelajar::where('program_pembelajaran_id', $programPembelajaranId)
             ->when($exceptId, fn ($query) => $query->where('id', '!=', $exceptId))
             ->update(['is_default' => false]);
+    }
+
+    private function notifyKloterAdmin(
+        Request $request,
+        KloterBelajar $kloter,
+        string $type,
+        string $title,
+        string $message,
+        array $meta,
+    ): void {
+        $kloter->loadMissing('admin:id,username,email,role,status');
+        $mentor = $kloter->admin;
+
+        if (! $mentor || $mentor->role !== 'admin' || $mentor->status !== 'active' || $mentor->is($request->user())) {
+            return;
+        }
+
+        app(NotifikasiPenggunaService::class)->kirimKePengguna(
+            $mentor,
+            $type,
+            $title,
+            $message,
+            route('admin.users', ['kloter' => $kloter->id]),
+            $meta,
+            'access',
+            $type === 'kloter_full' ? 'warning' : 'info',
+            false,
+        );
     }
 
     private function userBelumKloterCount(): int

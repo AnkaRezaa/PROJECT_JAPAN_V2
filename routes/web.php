@@ -79,7 +79,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Notifications
     Route::get('/notifications', [NotifikasiController::class, 'index'])->name('notifications.index');
-    Route::get('/user/notifications', [NotifikasiController::class, 'page'])->name('user.notifications.index');
+    Route::get('/notifications/page', [NotifikasiController::class, 'page'])->name('notifications.page');
+    Route::redirect('/user/notifications', '/notifications/page')->name('user.notifications.index');
     Route::post('/notifications/{id}/read', [NotifikasiController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotifikasiController::class, 'markAllAsRead'])->name('notifications.readAll');
 
