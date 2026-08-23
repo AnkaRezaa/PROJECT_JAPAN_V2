@@ -93,6 +93,12 @@ function AttentionQueue({ items = [] }) {
 }
 
 function CohortPulse({ cohorts = [] }) {
+    const cohortItems = Array.isArray(cohorts)
+        ? cohorts
+        : Array.isArray(cohorts?.data)
+            ? cohorts.data
+            : Object.values(cohorts || {});
+
     return (
         <Card padding={false}>
             <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-5 dark:border-gray-800 sm:px-6">
@@ -103,7 +109,7 @@ function CohortPulse({ cohorts = [] }) {
                 <Link href={route('superadmin.kloters')} className="text-xs font-black text-red-600 hover:text-red-700 dark:text-red-300">Kelola kloter</Link>
             </div>
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {cohorts.map((cohort) => (
+                {cohortItems.map((cohort) => (
                     <Link key={cohort.id} href={route('superadmin.kloters', { selected: cohort.id })} className="group grid gap-3 px-5 py-4 transition hover:bg-gray-50 dark:hover:bg-gray-800/40 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center sm:px-6">
                         <div className="min-w-0">
                             <p className="truncate text-sm font-black text-gray-950 group-hover:text-red-600 dark:text-white dark:group-hover:text-red-300">{cohort.name}</p>
@@ -119,7 +125,7 @@ function CohortPulse({ cohorts = [] }) {
                         </span>
                     </Link>
                 ))}
-                {cohorts.length === 0 && <EmptyState>Belum ada kloter aktif.</EmptyState>}
+                {cohortItems.length === 0 && <EmptyState>Belum ada kloter aktif.</EmptyState>}
             </div>
         </Card>
     );

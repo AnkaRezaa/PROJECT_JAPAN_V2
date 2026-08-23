@@ -162,7 +162,7 @@ class SuperAdminBerandaController extends SuperAdminDasarController
 
         return [
             'attention_queue' => $attentionQueue,
-            'cohort_pulse' => $cohortPulse,
+            'cohort_pulse' => $cohortPulse->all(),
         ];
     }
 
