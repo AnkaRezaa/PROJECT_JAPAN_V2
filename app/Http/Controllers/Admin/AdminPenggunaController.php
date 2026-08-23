@@ -33,6 +33,10 @@ class AdminPenggunaController extends Controller
         /** @var Pengguna $admin */
         $admin = $request->user();
         $search = (string) $request->string('search');
+        $requestedTab = $request->string('tab')->toString();
+        $activeTab = in_array($requestedTab, ['students', 'pending', 'kloter'], true)
+            ? $requestedTab
+            : 'students';
         $selectedKloter = $kloterService->resolveKloterDikelola($admin, $request->integer('kloter') ?: null);
         $programIds = $kloterService->programIdsDikelola($admin, $selectedKloter);
 
@@ -75,6 +79,7 @@ class AdminPenggunaController extends Controller
             'filters' => [
                 'search' => $search,
                 'kloter' => $selectedKloter?->id,
+                'tab' => $activeTab,
             ],
         ]);
     }

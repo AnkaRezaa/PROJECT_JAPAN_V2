@@ -18,7 +18,7 @@ export default function Users({
     filters = {},
 }) {
     const [search, setSearch] = useState(filters.search || '');
-    const [activeTab, setActiveTab] = useState('students');
+    const [activeTab, setActiveTab] = useState(filters.tab || 'students');
     const [rejectTarget, setRejectTarget] = useState(null);
     const items = students?.data || [];
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
@@ -42,6 +42,7 @@ export default function Users({
         router.get(route('admin.users'), {
             search,
             kloter: filters.kloter || '',
+            tab: activeTab === 'students' ? undefined : activeTab,
             ...overrides,
         }, {
             preserveState: true,

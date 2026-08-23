@@ -26,12 +26,24 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
                     <KloterFilter routeName="admin.analytics" kloters={kloters} filters={filters} adminScope={adminScope} />
                 </div>
 
-                <div className="flex w-full gap-2 border-b border-gray-200 dark:border-gray-800">
+                <div className="flex w-full gap-2 overflow-x-auto border-b border-gray-200 dark:border-gray-800">
                     <Link
                         href={route('admin.users', filters.kloter ? { kloter: filters.kloter } : {})}
                         className="border-b-2 border-transparent px-3 py-3 text-sm font-black text-gray-700 transition hover:border-gray-300 hover:text-gray-950 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:text-white"
                     >
                         Siswa
+                    </Link>
+                    <Link
+                        href={route('admin.users', { ...(filters.kloter ? { kloter: filters.kloter } : {}), tab: 'pending' })}
+                        className="border-b-2 border-transparent px-3 py-3 text-sm font-black text-gray-700 transition hover:border-gray-300 hover:text-gray-950 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:text-white"
+                    >
+                        Persetujuan
+                    </Link>
+                    <Link
+                        href={route('admin.users', { ...(filters.kloter ? { kloter: filters.kloter } : {}), tab: 'kloter' })}
+                        className="border-b-2 border-transparent px-3 py-3 text-sm font-black text-gray-700 transition hover:border-gray-300 hover:text-gray-950 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:text-white"
+                    >
+                        Kelola Kloter
                     </Link>
                     <Link
                         href={route('admin.analytics', filters.kloter ? { kloter: filters.kloter } : {})}
