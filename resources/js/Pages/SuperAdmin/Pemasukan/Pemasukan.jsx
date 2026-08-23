@@ -191,34 +191,34 @@ export default function Pemasukan({
         <AuthenticatedLayout>
             <Head title="Superadmin - Pemasukan" />
 
-            <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
+            <div className="mx-auto w-full max-w-[1600px] space-y-5 px-3 py-4 sm:px-5 sm:py-6 lg:px-6 2xl:px-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="min-w-0">
                         <p className="text-xs font-black uppercase tracking-[0.3em] text-red-600 dark:text-red-400">Superadmin</p>
                         <h1 className="text-2xl font-black text-gray-900 dark:text-white">Pemasukan</h1>
                         <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
                             Monitoring transaksi manual dan Midtrans, approve/reject, access key, dan akses belajar.
                         </p>
                     </div>
-                    <div className="flex flex-wrap gap-3">
-                        <button onClick={openPlanCreateForm} className="rounded-xl border border-gray-200 dark:border-gray-700 px-5 py-3 text-sm font-black text-gray-700 dark:text-gray-300">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:flex-wrap">
+                        <button onClick={openPlanCreateForm} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-3 text-sm font-black text-gray-700 dark:border-gray-700 dark:text-gray-300 xl:w-auto">
                             Buat Plan
                         </button>
-                        <button onClick={() => setShowAccessKeyForm(true)} className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-black text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-300">
+                        <button onClick={() => setShowAccessKeyForm(true)} className="min-h-11 w-full rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-black text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-300 xl:w-auto">
                             Buat Access Key
                         </button>
-                        <button onClick={() => setShowTransactionForm(true)} className="rounded-xl bg-red-600 px-5 py-3 text-sm font-black text-white shadow-md shadow-red-500/20 hover:bg-red-700">
+                        <button onClick={() => setShowTransactionForm(true)} className="min-h-11 w-full rounded-xl bg-red-600 px-5 py-3 text-sm font-black text-white shadow-md shadow-red-500/20 hover:bg-red-700 sm:col-span-2 xl:col-auto xl:w-auto">
                             Buat Transaksi
                         </button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
                     {stats.map((item) => <StatCard key={item.title} {...item} />)}
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-                    <ChartCard title="Pendapatan Berhasil" subtitle="Hanya transaksi berstatus success" action={<ChartPeriodSelect routeName="superadmin.payments" filters={filters} />}>
+                <div className="grid min-w-0 grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+                    <ChartCard className="min-w-0 p-4 sm:p-6" title="Pendapatan Berhasil" subtitle="Hanya transaksi berstatus success" action={<ChartPeriodSelect routeName="superadmin.payments" filters={filters} />}>
                         {revenueSeries.some((item) => item.revenue > 0) ? (
                             <ChartContainer config={{ revenue: { label: 'Pendapatan', theme: { light: '#dc2626', dark: '#f87171' } }, transactions: { label: 'Transaksi', theme: { light: '#f97316', dark: '#fb923c' } } }}>
                                 <AreaChart data={revenueSeries} margin={{ top: 8, right: 4, left: 8, bottom: 0 }}>
@@ -238,7 +238,7 @@ export default function Pemasukan({
                         ) : <ChartEmpty>Belum ada pendapatan berhasil pada periode ini.</ChartEmpty>}
                     </ChartCard>
 
-                    <ChartCard title="Status Transaksi" subtitle="Semua transaksi tercatat">
+                    <ChartCard className="min-w-0 p-4 sm:p-6" title="Status Transaksi" subtitle="Semua transaksi tercatat">
                         {transactionStatusDistribution.some((item) => item.value > 0) ? (
                             <ChartContainer config={{ success: { color: '#10b981' }, pending: { color: '#f59e0b' }, failed: { color: '#dc2626' } }}>
                                 <PieChart>
@@ -253,7 +253,7 @@ export default function Pemasukan({
                     </ChartCard>
                 </div>
 
-                <ChartCard title="Metode Pembayaran" subtitle="Metode yang paling sering dipakai">
+                <ChartCard className="min-w-0 p-4 sm:p-6" title="Metode Pembayaran" subtitle="Metode yang paling sering dipakai">
                     {paymentMethodDistribution.some((item) => item.value > 0) ? (
                         <ChartContainer config={Object.fromEntries(paymentMethodDistribution.map((item) => [item.chart_key, { color: item.color }]))}>
                             <PieChart>
@@ -267,14 +267,14 @@ export default function Pemasukan({
                     ) : <ChartEmpty>Belum ada metode pembayaran yang tercatat.</ChartEmpty>}
                 </ChartCard>
 
-                <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-                    <Card>
-                        <form onSubmit={submitFilters} className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_180px_180px_120px]">
+                <div className="grid min-w-0 grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
+                    <Card className="min-w-0 p-4 sm:p-6">
+                        <form onSubmit={submitFilters} className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_160px_160px_110px]">
                             <input
                                 value={filterForm.data.search}
                                 onChange={(e) => filterForm.setData('search', e.target.value)}
                                 placeholder="Cari transaksi atau user..."
-                                className="h-11 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm text-gray-900 dark:text-white"
+                                className="h-11 min-w-0 rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             />
                             <select value={filterForm.data.status} onChange={(e) => filterForm.setData('status', e.target.value)} className="h-11 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm font-bold text-gray-900 dark:text-white">
                                 <option value="all">Semua status</option>
@@ -291,7 +291,7 @@ export default function Pemasukan({
                                 <option value="credit_card">Credit Card</option>
                                 <option value="midtrans">Midtrans</option>
                             </select>
-                            <button className="rounded-xl bg-gray-900 text-sm font-black text-white dark:bg-white dark:text-gray-900">Filter</button>
+                            <button className="min-h-11 rounded-xl bg-gray-900 px-4 text-sm font-black text-white dark:bg-white dark:text-gray-900">Filter</button>
                         </form>
 
                         <div className="mt-5 overflow-x-auto">
@@ -395,14 +395,14 @@ export default function Pemasukan({
                         )}
                     </Card>
 
-                    <div className="space-y-6">
-                        <Card>
+                    <div className="min-w-0 space-y-5">
+                        <Card className="min-w-0 p-4 sm:p-6">
                             <h2 className="text-lg font-black text-gray-900 dark:text-white">Plan Aktif</h2>
-                            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-1">
                                 {plans.map((plan) => (
-                                    <div key={plan.id} className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+                                    <div key={plan.id} className="min-w-0 rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
                                         <div className="flex items-start justify-between gap-3">
-                                            <div>
+                                            <div className="min-w-0">
                                                 <p className="text-sm font-black text-gray-900 dark:text-white">{plan.name}</p>
                                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{plan.description}</p>
                                             </div>
@@ -410,9 +410,9 @@ export default function Pemasukan({
                                                 {plan.is_active ? 'Active' : 'Inactive'}
                                             </span>
                                         </div>
-                                        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                                            <span className="rounded-full bg-red-50 dark:bg-red-900/20 px-3 py-1 text-xs font-black text-red-600 dark:text-red-400">{plan.price_formatted}</span>
-                                            <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-bold text-gray-600 dark:text-gray-400">{plan.duration_days} hari</span>
+                                        <div className="mt-3 grid grid-cols-1 gap-2 text-center sm:grid-cols-3 2xl:grid-cols-1">
+                                            <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-600 dark:bg-red-900/20 dark:text-red-400">{plan.price_formatted}</span>
+                                            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-400">{plan.duration_days} hari</span>
                                             <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700 dark:bg-sky-900/20 dark:text-sky-300">{plan.scope_label}</span>
                                         </div>
                                         {plan.is_legacy ? (
@@ -431,7 +431,7 @@ export default function Pemasukan({
                             </div>
                         </Card>
 
-                        <Card>
+                        <Card className="min-w-0 p-4 sm:p-6">
                             <h2 className="text-lg font-black text-gray-900 dark:text-white">Access Key</h2>
                             <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">Kode akses manual untuk demo, kloter, atau akses kelas dari superadmin.</p>
                             <div className="mt-4 space-y-3">
@@ -488,9 +488,9 @@ export default function Pemasukan({
                             <input value={planForm.data.name} onChange={(e) => planForm.setData('name', e.target.value)} placeholder="Nama plan" className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm" />
                             <input value={planForm.data.slug} onChange={(e) => planForm.setData('slug', e.target.value)} placeholder="Slug" className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm" />
                             <input value={planForm.data.description} onChange={(e) => planForm.setData('description', e.target.value)} placeholder="Deskripsi" className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm" />
-                            <div className="grid grid-cols-2 gap-4">
-                                <input type="number" value={planForm.data.price} onChange={(e) => planForm.setData('price', e.target.value)} placeholder="Harga" className="h-11 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm" />
-                                <input type="number" value={planForm.data.duration_days} onChange={(e) => planForm.setData('duration_days', e.target.value)} placeholder="Durasi hari" className="h-11 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm" />
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <input type="number" value={planForm.data.price} onChange={(e) => planForm.setData('price', e.target.value)} placeholder="Harga" className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                                <input type="number" value={planForm.data.duration_days} onChange={(e) => planForm.setData('duration_days', e.target.value)} placeholder="Durasi hari" className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
                             </div>
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <select
@@ -521,9 +521,9 @@ export default function Pemasukan({
                                 <input type="checkbox" checked={planForm.data.is_active} onChange={(e) => planForm.setData('is_active', e.target.checked)} className="rounded border-gray-300 text-red-600 focus:ring-red-500" />
                                 Aktif
                             </label>
-                            <div className="flex justify-end gap-3">
-                                <button type="button" onClick={closePlanForm} className="rounded-xl border border-gray-200 dark:border-gray-700 px-5 py-2.5 text-sm font-bold">Batal</button>
-                                <button disabled={planForm.processing} className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-black text-white">{planForm.processing ? 'Menyimpan...' : editingPlan ? 'Update Plan' : 'Simpan Plan'}</button>
+                            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                                <button type="button" onClick={closePlanForm} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
+                                <button disabled={planForm.processing} className="min-h-11 w-full rounded-xl bg-red-600 px-5 py-2.5 text-sm font-black text-white sm:w-auto">{planForm.processing ? 'Menyimpan...' : editingPlan ? 'Update Plan' : 'Simpan Plan'}</button>
                             </div>
                         </form>
                 </AdminDialog>
@@ -577,9 +577,9 @@ export default function Pemasukan({
                             </div>
                             <textarea value={transactionForm.data.notes} onChange={(e) => transactionForm.setData('notes', e.target.value)} rows={3} placeholder="Catatan transaksi" className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 text-sm" />
                             <input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => transactionForm.setData('proof_of_payment', e.target.files[0] || null)} className="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-4 file:rounded-xl file:border-0 file:bg-red-50 file:px-4 file:py-3 file:text-sm file:font-black file:text-red-600" />
-                            <div className="flex justify-end gap-3">
-                                <button type="button" onClick={() => setShowTransactionForm(false)} className="rounded-xl border border-gray-200 dark:border-gray-700 px-5 py-2.5 text-sm font-bold">Batal</button>
-                                <button disabled={transactionForm.processing} className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-black text-white">{transactionForm.processing ? 'Menyimpan...' : 'Simpan Transaksi'}</button>
+                            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                                <button type="button" onClick={() => setShowTransactionForm(false)} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
+                                <button disabled={transactionForm.processing} className="min-h-11 w-full rounded-xl bg-red-600 px-5 py-2.5 text-sm font-black text-white sm:w-auto">{transactionForm.processing ? 'Menyimpan...' : 'Simpan Transaksi'}</button>
                             </div>
                         </form>
                 </AdminDialog>
@@ -614,15 +614,15 @@ export default function Pemasukan({
                                     options={programs.map((program) => ({ value: program.id, label: program.title }))}
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <input type="number" min="1" max="366" value={accessKeyForm.data.duration_days} onChange={(e) => accessKeyForm.setData('duration_days', e.target.value)} placeholder="Durasi hari" className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
-                                <input type="number" min="1" max="500" value={accessKeyForm.data.max_uses} onChange={(e) => accessKeyForm.setData('max_uses', e.target.value)} placeholder="Maks pemakaian" className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <input type="number" min="1" max="366" value={accessKeyForm.data.duration_days} onChange={(e) => accessKeyForm.setData('duration_days', e.target.value)} placeholder="Durasi hari" className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                                <input type="number" min="1" max="500" value={accessKeyForm.data.max_uses} onChange={(e) => accessKeyForm.setData('max_uses', e.target.value)} placeholder="Maks pemakaian" className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
                             </div>
                             <input type="datetime-local" value={accessKeyForm.data.expires_at} onChange={(e) => accessKeyForm.setData('expires_at', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
                             <textarea value={accessKeyForm.data.notes} onChange={(e) => accessKeyForm.setData('notes', e.target.value)} rows={3} placeholder="Catatan internal" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900" />
-                            <div className="flex justify-end gap-3">
-                                <button type="button" onClick={() => setShowAccessKeyForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700">Batal</button>
-                                <button disabled={accessKeyForm.processing} className="rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-black text-white disabled:opacity-50">{accessKeyForm.processing ? 'Membuat...' : 'Buat Key'}</button>
+                            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                                <button type="button" onClick={() => setShowAccessKeyForm(false)} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
+                                <button disabled={accessKeyForm.processing} className="min-h-11 w-full rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-black text-white disabled:opacity-50 sm:w-auto">{accessKeyForm.processing ? 'Membuat...' : 'Buat Key'}</button>
                             </div>
                         </form>
                 </AdminDialog>
