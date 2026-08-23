@@ -25,6 +25,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
+import LogoutIcon from '@mui/icons-material/Logout';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
@@ -654,6 +655,21 @@ export default function BuilderPresentasi({
         return () => window.removeEventListener('beforeunload', warnBeforeLeave);
     }, [hasUnsavedChanges]);
 
+    useEffect(() => {
+        if (!showPlacementEditor) return undefined;
+
+        const closePlacementEditor = (event) => {
+            if (event.key !== 'Escape') return;
+
+            event.preventDefault();
+            setShowPlacementEditor(false);
+        };
+
+        window.addEventListener('keydown', closePlacementEditor);
+
+        return () => window.removeEventListener('keydown', closePlacementEditor);
+    }, [showPlacementEditor]);
+
     const visitDeck = (deckId) => {
         if (hasUnsavedChanges && !window.confirm('Perubahan pada presentasi ini belum disimpan. Buang perubahan dan lanjutkan?')) {
             return;
@@ -1140,6 +1156,16 @@ export default function BuilderPresentasi({
                                         visitDeck(deckId);
                                     }}
                                 />
+                            </div>
+                            <div className="border-t border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900 sm:p-5">
+                                <button
+                                    type="button"
+                                    onClick={leaveWorkspace}
+                                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 text-xs font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 dark:border-gray-700 dark:text-gray-200 dark:hover:border-red-900/60 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                                >
+                                    <LogoutIcon sx={{ fontSize: 17 }} />
+                                    Keluar Builder
+                                </button>
                             </div>
                         </div>
                     </div>
