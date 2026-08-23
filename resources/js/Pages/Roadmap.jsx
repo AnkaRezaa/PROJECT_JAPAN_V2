@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { useState } from 'react';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -16,6 +16,7 @@ import GuestNavbar from '@/Components/Layout/GuestNavbar';
 import FallEffect from '@/Components/theme/FallEffect';
 import theme from '@/Components/theme/themes';
 import MountFujiBg from '../../Images/Mount-Fuji-New.jpg';
+import SeoHead from '@/Components/SEO/SeoHead';
 
 const stages = [
     {
@@ -112,13 +113,13 @@ function StageNode({ stage, index, selected, onSelect }) {
     );
 }
 
-export default function Roadmap() {
+export default function Roadmap({ seo = {} }) {
     const [selectedStage, setSelectedStage] = useState(stages[0]);
 
     return (
         <>
             <FallEffect />
-            <Head title="Roadmap JLPT N3 - Japanlingo" />
+            <SeoHead seo={seo} />
             <GuestNavbar heroTone="dark" />
 
             <main className="overflow-hidden bg-[#f7f8f8] text-slate-900 dark:bg-slate-950 dark:text-white">

@@ -49,9 +49,12 @@ Route::get('/', [HalamanController::class, 'home'])->name('home');
 Route::get('/about', [HalamanController::class, 'about'])->name('about');
 Route::get('/pricing', [HalamanController::class, 'pricing'])->name('pricing');
 Route::get('/roadmap', [HalamanController::class, 'roadmap'])->name('roadmap');
+Route::get('/kelas/{programSlug}', [HalamanController::class, 'publicClass'])->name('public.classes.show');
 Route::get('/privacy-policy', [HalamanController::class, 'privacyPolicy'])->name('privacy-policy');
 Route::get('/terms', [HalamanController::class, 'terms'])->name('terms');
 Route::get('/cookie-policy', [HalamanController::class, 'cookiePolicy'])->name('cookie-policy');
+Route::get('/robots.txt', [HalamanController::class, 'robots'])->name('robots');
+Route::get('/sitemap.xml', [HalamanController::class, 'sitemap'])->name('sitemap');
 
 // Authenticated Routes
 Route::middleware(['auth', 'verified'])->group(function () {

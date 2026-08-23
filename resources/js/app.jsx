@@ -6,10 +6,13 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { installInterfaceSoundEffects } from '@/Components/UI/SoundEffects';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const seoSiteName = import.meta.env.VITE_SEO_SITE_NAME || 'Belajar Bahasa Jepang';
 
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
+    title: (title) => {
+        if (!title) return seoSiteName;
+        return title.includes(seoSiteName) ? title : `${title} | ${seoSiteName}`;
+    },
     resolve: (name) =>
         resolvePageComponent(
             `./Pages/${name}.jsx`,

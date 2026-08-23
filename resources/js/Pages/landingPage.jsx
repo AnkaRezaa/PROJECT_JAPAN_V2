@@ -1,5 +1,4 @@
 import React from 'react';
-import { Head } from '@inertiajs/react';
 import Button from '@/Components/UI/Button';
 import Badge from '@/Components/UI/Badge';
 import Card from '@/Components/UI/Card';
@@ -20,6 +19,7 @@ import StarIcon from '@mui/icons-material/Star';
 import CheckIcon from '@mui/icons-material/Check';
 import rawTheme from '@/Components/theme/themes';
 import FallEffect from '@/Components/theme/FallEffect';
+import SeoHead from '@/Components/SEO/SeoHead';
 import heroStaticImage from '@/../Images/Mount-Fuji-New.jpg';
 
 // Map theme keys ke format yang dipakai landingPage
@@ -60,7 +60,7 @@ const formatDuration = (days) => {
   return `${days} hari`;
 };
 
-const LandingPage = ({ programs = [] }) => {
+const LandingPage = ({ programs = [], seo = {} }) => {
   const scrollToDemo = () => {
     document.getElementById('demo-belajar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
@@ -73,7 +73,7 @@ const LandingPage = ({ programs = [] }) => {
   return (
     <>
       <FallEffect />
-      <Head title="Japanlingo - Belajar Bahasa Jepang Interaktif" />
+      <SeoHead seo={seo} />
       <GuestNavbar />
 
       {/* Hero */}
@@ -92,7 +92,7 @@ const LandingPage = ({ programs = [] }) => {
         <div className="max-w-xl lg:max-w-xl relative z-10">
           <div className={`inline-flex items-center gap-2 px-3 py-1 ${theme.heroBadgeBg} rounded-full mb-6 border`}>
             <span className={`w-2 h-2 rounded-full ${theme.heroBadgeDot} animate-pulse`}></span>
-            <span className={`text-xs font-bold ${theme.heroBadgeText} uppercase tracking-wider`}>Platform #1 Belajar JLPT N3</span>
+            <span className={`text-xs font-bold ${theme.heroBadgeText} uppercase tracking-wider`}>Roadmap Belajar Bahasa Jepang</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black leading-[1.1] mb-6 text-[#1A1A1A] tracking-tight">
@@ -307,7 +307,7 @@ const LandingPage = ({ programs = [] }) => {
               <div className="space-y-8">
                 {[
                   { icon: <VideogameAssetIcon />, title: 'Kuis Tergamifikasi', desc: 'Dapatkan XP, buka lencana, dan bersaing di papan peringkat sembari menguasai tata bahasa dan kosakata.', color: 'bg-red-100 text-red-600' },
-                  { icon: <AutoAwesomeIcon />, title: 'Audio Penutur Asli', desc: 'Dengarkan lebih dari 10.000 frasa yang direkam oleh pengisi suara profesional Jepang, bukan robot.', color: 'bg-orange-100 text-orange-600' },
+                  { icon: <AutoAwesomeIcon />, title: 'Audio Pendamping', desc: 'Dengarkan pelafalan saat mempelajari kosakata, flashcard, dan latihan bahasa Jepang.', color: 'bg-orange-100 text-orange-600' },
                   { icon: <ListAltIcon />, title: 'Kurikulum Terstruktur', desc: 'Tidak ada lagi belajar acak. Ikuti jalur jelas yang dirancang untuk membantu Anda lulus JLPT.', color: 'bg-red-100 text-red-600' },
                 ].map((item, i) => (
                   <div key={i} className="flex gap-5 group">

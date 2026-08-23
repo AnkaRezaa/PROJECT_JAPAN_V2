@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import SchoolIcon from '@mui/icons-material/School';
 import GuestFooter from '@/Components/Layout/GuestFooter';
@@ -8,6 +8,7 @@ import guru1 from '@/../Images/bahasa-jepang-guru-1.jpg';
 import guru2 from '@/../Images/bahasa-jepangnya-guru.jpg';
 import studentImage from '@/../Images/japannese_student.jpg';
 import MountFujiBg from '../../Images/Mount-Fuji-New.jpg';
+import SeoHead from '@/Components/SEO/SeoHead';
 
 // Ganti data sementara ini saat profil pengajar Japanlingo sudah siap dipublikasikan.
 const teamMembers = [
@@ -46,11 +47,11 @@ const learningPoints = [
     },
 ];
 
-export default function About() {
+export default function About({ seo = {} }) {
     return (
         <>
             <FallEffect />
-            <Head title="Tentang Japanlingo" />
+            <SeoHead seo={seo} />
             <GuestNavbar heroTone="dark" />
 
             <main className="overflow-hidden bg-[#f7f8f8] text-slate-900 dark:bg-slate-950 dark:text-white">

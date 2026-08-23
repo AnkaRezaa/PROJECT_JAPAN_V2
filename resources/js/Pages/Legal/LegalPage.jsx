@@ -1,12 +1,13 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import GuestNavbar from '@/Components/Layout/GuestNavbar';
 import Footer from '@/Components/Layout/GuestFooter';
+import SeoHead from '@/Components/SEO/SeoHead';
 
-export default function LegalPage({ title, updatedAt, intro, sections = [] }) {
+export default function LegalPage({ title, updatedAt, intro, sections = [], seo = {} }) {
     return (
         <>
-            <Head title={`${title} - Japanlingo`} />
+            <SeoHead seo={seo} />
             <GuestNavbar />
 
             <main className="bg-slate-50">

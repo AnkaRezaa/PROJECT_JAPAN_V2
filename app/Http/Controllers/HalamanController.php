@@ -15,6 +15,7 @@ use App\Services\GamifikasiConfigService;
 use App\Services\KelasPenggunaPayloadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class HalamanController extends Controller
@@ -23,24 +24,139 @@ class HalamanController extends Controller
     {
         return Inertia::render('landingPage', [
             'programs' => $this->publicPricingPrograms($kelasPayload),
+            'seo' => $this->seo(
+                'Belajar Bahasa Jepang Online dengan Kelas dan Latihan Interaktif',
+                config('seo.default_description'),
+                route('home'),
+                structuredData: [$this->websiteSchema()]
+            ),
         ]);
     }
 
     public function about()
     {
-        return Inertia::render('About');
+        return Inertia::render('About', [
+            'seo' => $this->seo(
+                'Tentang Platform Belajar Bahasa Jepang',
+                'Kenali pendekatan belajar bahasa Jepang yang menghubungkan kelas, roadmap, latihan, evaluasi, dan pendampingan mentor.',
+                route('about')
+            ),
+        ]);
     }
 
     public function pricing(KelasPenggunaPayloadService $kelasPayload)
     {
         return Inertia::render('Pricing', [
             'programs' => $this->publicPricingPrograms($kelasPayload),
+            'seo' => $this->seo(
+                'Kelas Bahasa Jepang Online - Mandiri dan Bersama Mentor',
+                'Pilih kelas bahasa Jepang online dengan materi terstruktur, latihan interaktif, evaluasi, dan pilihan belajar mandiri atau bersama mentor.',
+                route('pricing')
+            ),
         ]);
     }
 
     public function roadmap()
     {
-        return Inertia::render('Roadmap');
+        return Inertia::render('Roadmap', [
+            'seo' => $this->seo(
+                'Roadmap Belajar Bahasa Jepang Terstruktur',
+                'Ikuti perjalanan belajar bahasa Jepang secara bertahap melalui materi mingguan, kanji, kosakata, latihan, kuis, dan evaluasi.',
+                route('roadmap')
+            ),
+        ]);
+    }
+
+    public function publicClass(string $programSlug, KelasPenggunaPayloadService $kelasPayload)
+    {
+        $program = $this->publicPricingProgramQuery()
+            ->where('slug', $programSlug)
+            ->firstOrFail();
+        $payload = $this->publicPricingProgramPayload($program, $kelasPayload);
+        $description = Str::limit(
+            trim((string) $program->description) ?: "Pelajari bahasa Jepang melalui {$program->title} dengan roadmap, latihan, dan evaluasi terstruktur.",
+            160,
+            ''
+        );
+        $canonical = route('public.classes.show', $program->slug);
+        $image = $this->absoluteSeoImage($kelasPayload->thumbnailUrl($program->thumbnail_url));
+        $schemas = [
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'Course',
+                'name' => $program->title,
+                'description' => $description,
+                'url' => $canonical,
+                'inLanguage' => 'id',
+                ...($program->level?->level_name ? ['educationalLevel' => $program->level->level_name] : []),
+                ...($image ? ['image' => $image] : []),
+            ],
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => [
+                    ['@type' => 'ListItem', 'position' => 1, 'name' => 'Beranda', 'item' => route('home')],
+                    ['@type' => 'ListItem', 'position' => 2, 'name' => 'Kelas', 'item' => route('pricing')],
+                    ['@type' => 'ListItem', 'position' => 3, 'name' => $program->title, 'item' => $canonical],
+                ],
+            ],
+        ];
+
+        return Inertia::render('Public/Kelas/Show', [
+            'program' => $payload,
+            'seo' => $this->seo(
+                "{$program->title} - Kelas Bahasa Jepang Online",
+                $description,
+                $canonical,
+                'website',
+                $image,
+                $schemas
+            ),
+        ]);
+    }
+
+    public function robots()
+    {
+        $content = config('seo.indexing_enabled')
+            ? implode("\n", [
+                'User-agent: *',
+                'Allow: /',
+                'Disallow: /admin/',
+                'Disallow: /superadmin/',
+                'Disallow: /user/',
+                'Disallow: /payments/',
+                'Disallow: /profile',
+                'Disallow: /dashboard',
+                'Sitemap: '.route('sitemap'),
+            ])
+            : "User-agent: *\nDisallow: /";
+
+        return response($content."\n", 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
+    }
+
+    public function sitemap()
+    {
+        abort_unless(config('seo.indexing_enabled'), 404);
+
+        $staticUrls = collect([
+            ['loc' => route('home'), 'lastmod' => null],
+            ['loc' => route('about'), 'lastmod' => null],
+            ['loc' => route('pricing'), 'lastmod' => null],
+            ['loc' => route('roadmap'), 'lastmod' => null],
+            ['loc' => route('privacy-policy'), 'lastmod' => null],
+            ['loc' => route('terms'), 'lastmod' => null],
+            ['loc' => route('cookie-policy'), 'lastmod' => null],
+        ]);
+        $classUrls = $this->publicPricingProgramQuery()
+            ->get()
+            ->map(fn (ProgramPembelajaran $program) => [
+                'loc' => route('public.classes.show', $program->slug),
+                'lastmod' => optional($program->updated_at)->toAtomString(),
+            ]);
+
+        return response()
+            ->view('seo.sitemap', ['urls' => $staticUrls->concat($classUrls)])
+            ->header('Content-Type', 'application/xml; charset=UTF-8');
     }
 
     public function privacyPolicy()
@@ -67,6 +183,11 @@ class HalamanController extends Controller
                     'body' => 'Pertanyaan terkait privasi dapat dikirim melalui kontak resmi Japanlingo yang tersedia di footer website.',
                 ],
             ],
+            'seo' => $this->seo(
+                'Kebijakan Privasi',
+                'Kebijakan privasi penggunaan akun, data pembelajaran, pembayaran, dan layanan kelas bahasa Jepang.',
+                route('privacy-policy')
+            ),
         ]);
     }
 
@@ -94,6 +215,11 @@ class HalamanController extends Controller
                     'body' => 'Pembayaran diproses melalui Midtrans. Akses akan aktif setelah status pembayaran berhasil diterima dan diproses oleh sistem.',
                 ],
             ],
+            'seo' => $this->seo(
+                'Syarat dan Ketentuan',
+                'Syarat penggunaan akun, akses kelas, konten pembelajaran, dan pembayaran layanan belajar bahasa Jepang.',
+                route('terms')
+            ),
         ]);
     }
 
@@ -121,6 +247,11 @@ class HalamanController extends Controller
                     'body' => 'Pengguna dapat menghapus cookie melalui pengaturan browser, tetapi beberapa fitur seperti login dan checkout mungkin tidak berjalan normal tanpa cookie.',
                 ],
             ],
+            'seo' => $this->seo(
+                'Kebijakan Cookies',
+                'Penjelasan penggunaan cookie untuk sesi, keamanan akun, preferensi tampilan, autentikasi, dan pembayaran.',
+                route('cookie-policy')
+            ),
         ]);
     }
 
@@ -338,8 +469,15 @@ class HalamanController extends Controller
 
     private function publicPricingPrograms(KelasPenggunaPayloadService $kelasPayload)
     {
+        return $this->publicPricingProgramQuery()
+            ->get()
+            ->map(fn (ProgramPembelajaran $program) => $this->publicPricingProgramPayload($program, $kelasPayload));
+    }
+
+    private function publicPricingProgramQuery()
+    {
         return ProgramPembelajaran::query()
-            ->with('level:id,level_name')
+            ->with(['level:id,level_name', 'curriculumTrack:id,code,name'])
             ->with(['modules' => fn ($query) => $query
                 ->where('status', 'published')
                 ->withCount([
@@ -359,39 +497,90 @@ class HalamanController extends Controller
                 ->orderBy('price')])
             ->where('status', 'published')
             ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get()
-            ->map(fn (ProgramPembelajaran $program) => [
-                'id' => $program->id,
-                'title' => $program->title,
-                'slug' => $program->slug,
-                'description' => $program->description,
-                'instructor_name' => $program->instructor_name,
-                'thumbnail_url' => $kelasPayload->thumbnailUrl($program->thumbnail_url),
-                'level' => $program->level?->level_name,
-                'weeks_count' => $program->modules->count(),
-                'preview_modules' => $program->modules->map(fn (Modul $module) => [
-                    'id' => $module->id,
-                    'week_number' => $module->week_number,
-                    'title' => $module->title,
-                    'description' => $module->description,
-                    'presentations_count' => $module->presentation_decks_count,
-                    'flashcards_count' => $module->flashcard_sets_count,
-                    'quizzes_count' => $module->quizzes_count,
-                ])->values(),
-                'payment_plans' => $program->paymentPlans->map(fn (PaketPembayaran $plan) => [
-                    'id' => $plan->id,
-                    'name' => $plan->name,
-                    'scope_type' => $plan->scope_type,
-                    'scope_label' => $plan->scope_type === AksesLanggananService::SCOPE_KLOTER
-                        ? 'Kelas Mentor'
-                        : 'Kelas Mandiri',
-                    'description' => $plan->description,
-                    'price' => $plan->price,
-                    'price_formatted' => 'Rp '.number_format($plan->price),
-                    'duration_days' => $plan->duration_days,
-                    'features' => $plan->features ?? [],
-                ])->values(),
-            ]);
+            ->orderBy('id');
+    }
+
+    private function publicPricingProgramPayload(ProgramPembelajaran $program, KelasPenggunaPayloadService $kelasPayload): array
+    {
+        return [
+            'id' => $program->id,
+            'title' => $program->title,
+            'slug' => $program->slug,
+            'description' => $program->description,
+            'instructor_name' => $program->instructor_name,
+            'thumbnail_url' => $kelasPayload->thumbnailUrl($program->thumbnail_url),
+            'level' => $program->level?->level_name,
+            'curriculum_track' => $program->curriculumTrack?->name,
+            'weeks_count' => $program->modules->count(),
+            'preview_modules' => $program->modules->map(fn (Modul $module) => [
+                'id' => $module->id,
+                'week_number' => $module->week_number,
+                'title' => $module->title,
+                'description' => $module->description,
+                'presentations_count' => $module->presentation_decks_count,
+                'flashcards_count' => $module->flashcard_sets_count,
+                'quizzes_count' => $module->quizzes_count,
+            ])->values(),
+            'payment_plans' => $program->paymentPlans->map(fn (PaketPembayaran $plan) => [
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'scope_type' => $plan->scope_type,
+                'scope_label' => $plan->scope_type === AksesLanggananService::SCOPE_KLOTER
+                    ? 'Kelas Mentor'
+                    : 'Kelas Mandiri',
+                'description' => $plan->description,
+                'price' => $plan->price,
+                'price_formatted' => 'Rp '.number_format($plan->price),
+                'duration_days' => $plan->duration_days,
+                'features' => $plan->features ?? [],
+            ])->values(),
+        ];
+    }
+
+    private function seo(
+        string $title,
+        string $description,
+        string $canonical,
+        string $type = 'website',
+        ?string $image = null,
+        array $structuredData = []
+    ): array {
+        $siteName = config('seo.site_name');
+
+        return [
+            'title' => $title,
+            'full_title' => Str::contains(Str::lower($title), Str::lower($siteName))
+                ? $title
+                : "{$title} | {$siteName}",
+            'description' => $description,
+            'canonical' => $canonical,
+            'image' => $image ?: $this->absoluteSeoImage(config('seo.default_image')),
+            'robots' => config('seo.indexing_enabled') ? 'index, follow' : 'noindex, nofollow',
+            'type' => $type,
+            'site_name' => $siteName,
+            'google_site_verification' => config('seo.google_site_verification'),
+            'structured_data' => $structuredData,
+        ];
+    }
+
+    private function websiteSchema(): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'name' => config('seo.site_name'),
+            'url' => route('home'),
+            'description' => config('seo.default_description'),
+            'inLanguage' => 'id',
+        ];
+    }
+
+    private function absoluteSeoImage(?string $image): ?string
+    {
+        if (blank($image)) {
+            return null;
+        }
+
+        return Str::startsWith($image, ['http://', 'https://']) ? $image : url($image);
     }
 }

@@ -4,7 +4,44 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        @php
+            $seo = data_get($page, 'props.seo', []);
+            $seoTitle = data_get($seo, 'full_title', config('seo.site_name'));
+            $seoDescription = data_get($seo, 'description', config('seo.default_description'));
+            $seoCanonical = data_get($seo, 'canonical', url()->current());
+            $seoRobots = data_get($seo, 'robots', 'noindex, nofollow');
+            $seoType = data_get($seo, 'type', 'website');
+            $seoImage = data_get($seo, 'image');
+            $seoStructuredData = data_get($seo, 'structured_data', []);
+            $seoVerification = data_get($seo, 'google_site_verification');
+        @endphp
+
+        <title inertia>{{ $seoTitle }}</title>
+        <meta inertia="description" name="description" content="{{ $seoDescription }}">
+        <meta inertia="robots" name="robots" content="{{ $seoRobots }}">
+        <link inertia="canonical" rel="canonical" href="{{ $seoCanonical }}">
+
+        <meta inertia="og:type" property="og:type" content="{{ $seoType }}">
+        <meta inertia="og:title" property="og:title" content="{{ $seoTitle }}">
+        <meta inertia="og:description" property="og:description" content="{{ $seoDescription }}">
+        <meta inertia="og:url" property="og:url" content="{{ $seoCanonical }}">
+        <meta inertia="og:site_name" property="og:site_name" content="{{ config('seo.site_name') }}">
+        @if ($seoImage)
+            <meta inertia="og:image" property="og:image" content="{{ $seoImage }}">
+        @endif
+
+        <meta inertia="twitter:card" name="twitter:card" content="{{ $seoImage ? 'summary_large_image' : 'summary' }}">
+        <meta inertia="twitter:title" name="twitter:title" content="{{ $seoTitle }}">
+        <meta inertia="twitter:description" name="twitter:description" content="{{ $seoDescription }}">
+        @if ($seoImage)
+            <meta inertia="twitter:image" name="twitter:image" content="{{ $seoImage }}">
+        @endif
+        @if ($seoVerification)
+            <meta inertia="google-site-verification" name="google-site-verification" content="{{ $seoVerification }}">
+        @endif
+        @foreach ($seoStructuredData as $index => $schema)
+            <script inertia="structured-data-{{ $index }}" type="application/ld+json">{!! json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
+        @endforeach
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Yuji+Syuku&display=swap" rel="stylesheet">
 
         <!-- Kustom Favicon Nano Banana -->

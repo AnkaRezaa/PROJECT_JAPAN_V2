@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import GroupsIcon from '@mui/icons-material/Groups';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
@@ -9,6 +9,7 @@ import Button from '@/Components/UI/Button';
 import Footer from '@/Components/Layout/GuestFooter';
 import GuestNavbar from '@/Components/Layout/GuestNavbar';
 import FallEffect from '@/Components/theme/FallEffect';
+import SeoHead from '@/Components/SEO/SeoHead';
 
 const faqs = [
   {
@@ -154,6 +155,14 @@ function ClassCard({ program, auth }) {
           <p className="mt-2 line-clamp-2 text-sm leading-5 text-gray-500">{program.description}</p>
         )}
 
+        <Button
+          variant="outline"
+          href={route('public.classes.show', program.slug)}
+          className="mt-4 w-full"
+        >
+          Lihat detail kelas
+        </Button>
+
         <div className="mt-5 border-t border-gray-200 pt-5">
           <ClassContents modules={program.preview_modules} />
         </div>
@@ -198,14 +207,14 @@ function ClassCard({ program, auth }) {
   );
 }
 
-export default function Pricing({ programs = [] }) {
+export default function Pricing({ programs = [], seo = {} }) {
   const { auth } = usePage().props;
   const [openFaq, setOpenFaq] = useState(null);
 
   return (
     <>
       <FallEffect />
-      <Head title="Kelas dan Harga - Japanlingo" />
+      <SeoHead seo={seo} />
       <GuestNavbar />
 
       <main>
