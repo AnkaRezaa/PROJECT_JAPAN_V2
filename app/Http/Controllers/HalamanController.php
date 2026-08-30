@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Auth\LoginSosialController;
 use App\Models\DeckPresentasi;
+use App\Models\HariModul;
 use App\Models\Kosakata;
 use App\Models\Modul;
 use App\Models\PaketPembayaran;
@@ -56,9 +57,83 @@ class HalamanController extends Controller
         ]);
     }
 
-    public function roadmap()
+    public function roadmap(Request $request)
     {
+        $programs = ProgramPembelajaran::query()
+            ->with('level:id,level_name')
+            ->withCount([
+                'modules as weeks_count' => fn ($query) => $query->where('status', 'published'),
+            ])
+            ->where('status', 'published')
+            ->whereHas('modules', fn ($query) => $query->where('status', 'published'))
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        $dayCounts = HariModul::query()
+            ->selectRaw('modules.program_pembelajaran_id, COUNT(module_days.id) as total')
+            ->join('modules', 'modules.id', '=', 'module_days.module_id')
+            ->where('modules.status', 'published')
+            ->where('module_days.status', 'published')
+            ->whereIn('modules.program_pembelajaran_id', $programs->pluck('id'))
+            ->groupBy('modules.program_pembelajaran_id')
+            ->pluck('total', 'modules.program_pembelajaran_id');
+
+        $roadmapOptions = $programs->map(fn (ProgramPembelajaran $program) => [
+            'id' => $program->id,
+            'title' => $program->title,
+            'slug' => $program->slug,
+            'level' => $program->level?->level_name,
+            'weeks_count' => (int) $program->weeks_count,
+            'days_count' => (int) ($dayCounts[$program->id] ?? 0),
+        ])->values();
+
+        $requestedSlug = trim($request->string('kelas')->toString());
+        $selectedOption = filled($requestedSlug)
+            ? $roadmapOptions->firstWhere('slug', $requestedSlug)
+            : $roadmapOptions->first();
+
+        abort_if(filled($requestedSlug) && ! $selectedOption, 404);
+
+        $selectedProgram = $selectedOption
+            ? ProgramPembelajaran::query()
+                ->with('level:id,level_name')
+                ->with(['modules' => fn ($query) => $query
+                    ->where('status', 'published')
+                    ->with(['days' => fn ($dayQuery) => $dayQuery
+                        ->where('status', 'published')
+                        ->orderBy('day_number')])
+                    ->orderBy('week_number')
+                    ->orderBy('id')])
+                ->whereKey($selectedOption['id'])
+                ->first()
+            : null;
+
+        $selectedRoadmap = $selectedProgram ? [
+            'id' => $selectedProgram->id,
+            'title' => $selectedProgram->title,
+            'slug' => $selectedProgram->slug,
+            'description' => $selectedProgram->description,
+            'level' => $selectedProgram->level?->level_name,
+            'weeks_count' => $selectedProgram->modules->count(),
+            'days_count' => $selectedProgram->modules->sum(fn ($module) => $module->days->count()),
+            'weeks' => $selectedProgram->modules->map(fn ($module) => [
+                'id' => $module->id,
+                'week_number' => (int) $module->week_number,
+                'title' => $module->title,
+                'description' => $module->description,
+                'days' => $module->days->map(fn ($day) => [
+                    'id' => $day->id,
+                    'day_number' => (int) $day->day_number,
+                    'title' => $day->title,
+                    'description' => $day->description,
+                ])->values(),
+            ])->values(),
+        ] : null;
+
         return Inertia::render('Roadmap', [
+            'roadmapOptions' => $roadmapOptions,
+            'selectedRoadmap' => $selectedRoadmap,
             'seo' => $this->seo(
                 'Roadmap Belajar Bahasa Jepang Terstruktur',
                 'Ikuti perjalanan belajar bahasa Jepang secara bertahap melalui materi mingguan, kanji, kosakata, latihan, kuis, dan evaluasi.',
@@ -164,7 +239,7 @@ class HalamanController extends Controller
         return Inertia::render('Legal/LegalPage', [
             'title' => 'Kebijakan Privasi',
             'updatedAt' => '18 Juli 2026',
-            'intro' => 'Dokumen operasional awal ini menjelaskan bagaimana Japanlingo mengelola data akun dan aktivitas belajar pengguna.',
+            'intro' => 'Dokumen operasional awal ini menjelaskan bagaimana TOKU-UP mengelola data akun dan aktivitas belajar pengguna.',
             'sections' => [
                 [
                     'heading' => 'Data yang Kami Kelola',
@@ -180,7 +255,7 @@ class HalamanController extends Controller
                 ],
                 [
                     'heading' => 'Kontak',
-                    'body' => 'Pertanyaan terkait privasi dapat dikirim melalui kontak resmi Japanlingo yang tersedia di footer website.',
+                    'body' => 'Pertanyaan terkait privasi dapat dikirim melalui kontak resmi TOKU-UP yang tersedia di footer website.',
                 ],
             ],
             'seo' => $this->seo(
@@ -196,7 +271,7 @@ class HalamanController extends Controller
         return Inertia::render('Legal/LegalPage', [
             'title' => 'Syarat & Ketentuan',
             'updatedAt' => '18 Juli 2026',
-            'intro' => 'Dokumen operasional awal ini mengatur penggunaan akun, kelas, konten belajar, dan fitur pembayaran Japanlingo.',
+            'intro' => 'Dokumen operasional awal ini mengatur penggunaan akun, kelas, konten belajar, dan fitur pembayaran TOKU-UP.',
             'sections' => [
                 [
                     'heading' => 'Penggunaan Akun',
@@ -232,7 +307,7 @@ class HalamanController extends Controller
             'sections' => [
                 [
                     'heading' => 'Cookie Sesi',
-                    'body' => 'Japanlingo menggunakan cookie sesi untuk login, keamanan CSRF, dan menjaga pengguna tetap berada pada sesi yang valid.',
+                    'body' => 'TOKU-UP menggunakan cookie sesi untuk login, keamanan CSRF, dan menjaga pengguna tetap berada pada sesi yang valid.',
                 ],
                 [
                     'heading' => 'Preferensi Tampilan',

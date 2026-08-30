@@ -63,7 +63,7 @@ const statusPresentation = {
   },
   refund_required: {
     label: 'Refund sedang ditindaklanjuti',
-    description: 'Pendaftaran mentor ditolak. Tim Japanlingo akan menindaklanjuti pengembalian pembayaran.',
+    description: 'Pendaftaran mentor ditolak. Tim TOKU-UP akan menindaklanjuti pengembalian pembayaran.',
     badgeClass: 'border-red-200 bg-red-50 text-red-800',
     iconClass: 'bg-red-50 text-red-700',
     Icon: ErrorOutlineIcon,
@@ -257,7 +257,7 @@ export default function Checkout({ transaction, midtrans }) {
 
   return (
     <>
-      <Head title={`Checkout ${transaction.transaction_code} - Japanlingo`} />
+      <Head title={`Checkout ${transaction.transaction_code} - TOKU-UP`} />
 
       <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-900 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-5xl">
@@ -272,7 +272,7 @@ export default function Checkout({ transaction, midtrans }) {
                 <span className="hidden sm:inline">Kembali</span>
               </Link>
               <Link href={route('home')} className="truncate text-lg font-black text-slate-950">
-                Japanlingo
+                TOKU-UP
               </Link>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
@@ -289,7 +289,7 @@ export default function Checkout({ transaction, midtrans }) {
               </div>
 
               <h1 className="mt-5 break-words text-xl font-black text-slate-950 sm:text-2xl">
-                {transaction.payment_plan?.name || 'Akses Japanlingo'}
+                {transaction.payment_plan?.name || 'Akses TOKU-UP'}
               </h1>
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 {transaction.payment_plan?.description || 'Akses untuk membuka konten belajar lanjutan.'}

@@ -17,6 +17,7 @@ use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\PembayaranMidtransController;
 use App\Http\Controllers\PengarahDashboardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UmpanBalikProdukController;
 use App\Http\Controllers\SuperAdmin\SuperAdminAktivitasController;
 use App\Http\Controllers\SuperAdmin\SuperAdminBerandaController;
 use App\Http\Controllers\SuperAdmin\SuperAdminGamifikasiController;
@@ -61,9 +62,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Profile
     Route::get('/profile', [HalamanController::class, 'userProfile'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/learning-preferences', [ProfileController::class, 'updateLearningPreferences'])
+        ->middleware('role:user')
+        ->name('profile.learning-preferences.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])
-        ->middleware('throttle:5,1')
+        ->middleware(['role:user', 'throttle:5,1'])
         ->name('profile.destroy');
+    Route::post('/feedback', [UmpanBalikProdukController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('product-feedback.store');
     Route::post('/profile/access-keys/redeem', [UserDashboardController::class, 'redeemAccessKey'])->middleware(['role:user', 'throttle:access-keys'])->name('profile.access-keys.redeem');
     Route::get('/user/access-status', function (Request $request, AksesPremiumService $aksesPremium) {
         return response()->json($aksesPremium->statusAkses($request->user()));
@@ -92,11 +99,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/users/{user}', [SuperAdminPenggunaController::class, 'show'])->name('users.show');
         Route::patch('/users/{user}/status', [SuperAdminPenggunaController::class, 'updateStatus'])->name('users.status');
         Route::post('/users/{user}/reset-password', [SuperAdminPenggunaController::class, 'resetPassword'])->name('users.reset-password');
+        Route::delete('/users/{user}', [SuperAdminPenggunaController::class, 'destroy'])->name('users.destroy');
+        Route::post('/users/{user}/anonymize', [SuperAdminPenggunaController::class, 'anonymize'])->name('users.anonymize');
         Route::get('/admins', SuperAdminPengelolaAdminController::class)->name('admins');
         Route::post('/admins', [SuperAdminPengelolaAdminController::class, 'store'])->name('admins.store');
         Route::patch('/admins/{user}/scope', [SuperAdminPengelolaAdminController::class, 'updateScope'])->name('admins.scope');
+        Route::patch('/admins/{user}', [SuperAdminPengelolaAdminController::class, 'update'])->name('admins.update');
         Route::patch('/admins/{user}/status', [SuperAdminPengelolaAdminController::class, 'updateStatus'])->name('admins.status');
         Route::post('/admins/{user}/reset-password', [SuperAdminPengelolaAdminController::class, 'resetPassword'])->name('admins.reset-password');
+        Route::delete('/admins/{user}', [SuperAdminPengelolaAdminController::class, 'destroy'])->name('admins.destroy');
+        Route::post('/admins/{user}/anonymize', [SuperAdminPengelolaAdminController::class, 'anonymize'])->name('admins.anonymize');
         Route::get('/content', SuperAdminKontenController::class)->name('content');
         Route::post('/content/news', [SuperAdminKontenController::class, 'store'])->name('content.news.store');
         Route::put('/content/news/{news}', [SuperAdminKontenController::class, 'update'])->name('content.news.update');
@@ -119,6 +131,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/kloters/{kloter}/users/{user}', [SuperAdminKloterController::class, 'removeUser'])->name('kloters.users.destroy');
         Route::post('/kloters/{kloter}/access-keys', [SuperAdminKloterController::class, 'generateAccessKey'])->name('kloters.access-keys.store');
         Route::get('/activity', SuperAdminAktivitasController::class)->name('activity');
+        Route::patch('/activity/feedback/{feedback}', [SuperAdminAktivitasController::class, 'updateFeedback'])->name('activity.feedback.update');
+        Route::get('/activity/feedback-export', [SuperAdminAktivitasController::class, 'exportFeedback'])->name('activity.feedback.export');
         Route::get('/payments', SuperAdminPembayaranController::class)->name('payments');
         Route::post('/payments/plans', [SuperAdminPembayaranController::class, 'storePlan'])->name('payments.plans.store');
         Route::put('/payments/plans/{plan}', [SuperAdminPembayaranController::class, 'updatePlan'])->name('payments.plans.update');

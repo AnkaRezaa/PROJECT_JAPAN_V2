@@ -37,6 +37,7 @@ class HandleInertiaRequests extends Middleware
                     $request->user()->only([
                         'id', 'username', 'email', 'role', 'admin_scope',
                         'xp', 'level', 'streak_count', 'subscription_status', 'avatar',
+                        'show_romaji', 'show_indonesian_translation',
                     ]),
                     [
                         'name' => $request->user()->username,

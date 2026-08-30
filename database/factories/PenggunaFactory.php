@@ -26,6 +26,11 @@ class PenggunaFactory extends Factory
         return [
             'username' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
+            'role' => 'user',
+            'subscription_status' => 'free',
+            'status' => 'active',
+            'auth_provider' => 'email',
+            'password_login_enabled' => true,
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),

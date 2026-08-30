@@ -40,9 +40,13 @@ class Pengguna extends Authenticatable implements MustVerifyEmailContract
         'auth_provider',
         'google_id',
         'avatar',
+        'show_romaji',
+        'show_indonesian_translation',
         'status',
         'suspended_at',
         'suspended_reason',
+        'scheduled_anonymization_at',
+        'anonymized_at',
         'xp',
         'level',
         'streak_count',
@@ -70,8 +74,12 @@ class Pengguna extends Authenticatable implements MustVerifyEmailContract
             'email_verified_at' => 'datetime',
             'last_activity_date' => 'date',
             'suspended_at' => 'datetime',
+            'scheduled_anonymization_at' => 'datetime',
+            'anonymized_at' => 'datetime',
             'password' => 'hashed',
             'password_login_enabled' => 'boolean',
+            'show_romaji' => 'boolean',
+            'show_indonesian_translation' => 'boolean',
         ];
     }
 
@@ -88,6 +96,11 @@ class Pengguna extends Authenticatable implements MustVerifyEmailContract
     public function learningFeedback(): HasMany
     {
         return $this->hasMany(UmpanBalikPembelajaran::class, 'user_id');
+    }
+
+    public function productFeedback(): HasMany
+    {
+        return $this->hasMany(UmpanBalikProduk::class, 'user_id');
     }
 
     public function examTargets(): HasMany
@@ -169,8 +182,16 @@ class Pengguna extends Authenticatable implements MustVerifyEmailContract
         return $this->role === 'admin' && $this->admin_scope !== self::ADMIN_SCOPE_KLOTER;
     }
 
-    public function isAdminKloter(): bool
+    public function isMentor(): bool
     {
         return $this->role === 'admin' && $this->admin_scope === self::ADMIN_SCOPE_KLOTER;
+    }
+
+    /**
+     * Backward-compatible alias for older integrations and stored terminology.
+     */
+    public function isAdminKloter(): bool
+    {
+        return $this->isMentor();
     }
 }

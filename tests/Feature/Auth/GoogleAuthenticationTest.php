@@ -164,9 +164,9 @@ test('Google account with unverified email is rejected', function () {
     Notification::assertNothingSent();
 });
 
-test('unlinked administrator account cannot be linked automatically', function () {
+test('verified administrator email can be linked to Google and keeps its role', function () {
     Notification::fake();
-    Pengguna::factory()->create([
+    $admin = Pengguna::factory()->create([
         'email' => 'google@example.com',
         'role' => 'admin',
         'google_id' => null,
@@ -178,9 +178,10 @@ test('unlinked administrator account cannot be linked automatically', function (
         ->from(route('login'))
         ->get(route('auth.google.callback'));
 
-    $response->assertRedirect(route('login'))
-        ->assertSessionHasErrors('email');
-    $this->assertGuest();
+    $response->assertRedirect(route('admin.dashboard'));
+    $this->assertAuthenticatedAs($admin);
+    expect($admin->refresh()->google_id)->toBe('google-user-123')
+        ->and($admin->role)->toBe('admin');
     Notification::assertNothingSent();
 });
 

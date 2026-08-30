@@ -15,3 +15,4 @@ Schedule::command('payments:reconcile-pending --hours=48')->everyTenMinutes()->w
 Schedule::command('news:publish-scheduled')->everyMinute()->withoutOverlapping();
 Schedule::command('auth:clear-resets')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('live-classes:cleanup-snapshots --days=30')->dailyAt('01:00')->withoutOverlapping();
+Schedule::command('accounts:anonymize-suspended')->dailyAt('01:15')->withoutOverlapping();

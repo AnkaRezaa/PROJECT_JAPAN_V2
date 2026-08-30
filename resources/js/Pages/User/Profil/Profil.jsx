@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import ConfirmActionDialog from '@/Components/UI/ConfirmActionDialog';
 import LeagueIcon from '@/Components/Gamification/LeagueIcon';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import theme from '@/Components/theme/themes';
 
 import PersonIcon from '@mui/icons-material/Person';
@@ -22,6 +22,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import TranslateIcon from '@mui/icons-material/Translate';
 import {
     areSoundEffectsEnabled,
     playSoundEffect,
@@ -40,7 +41,7 @@ const LEAGUE_STYLES = [
     { color: 'text-amber-700 dark:text-amber-500', bar: 'bg-amber-500', frame: 'from-amber-500 to-orange-700 shadow-amber-500/25' },
     { color: 'text-slate-600 dark:text-slate-400', bar: 'bg-slate-500', frame: 'from-slate-300 to-slate-700 shadow-slate-500/25' },
     { color: 'text-yellow-600 dark:text-yellow-400', bar: 'bg-yellow-500', frame: 'from-yellow-300 to-amber-600 shadow-yellow-500/25' },
-    { color: 'text-red-600 dark:text-red-400', bar: 'bg-red-500', frame: 'from-cyan-300 via-red-500 to-rose-700 shadow-red-500/25' },
+    { color: 'text-brand-600 dark:text-brand-400', bar: 'bg-brand-500', frame: 'from-cyan-300 via-brand-500 to-rose-700 shadow-brand-500/25' },
     { color: 'text-purple-600 dark:text-purple-400', bar: 'bg-purple-500', frame: 'from-fuchsia-400 to-purple-800 shadow-purple-500/25' },
 ];
 
@@ -166,6 +167,10 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
     const [deleteConfirm, setDeleteConfirm] = useState(Boolean(deletionAuth.open_dialog));
     const [themeLabel, setThemeLabel] = useState(resolveThemeLabel);
     const [soundEffectsEnabled, setSoundEffectsEnabledState] = useState(areSoundEffectsEnabled);
+    const [learningPreferences, setLearningPreferences] = useState({
+        show_romaji: Boolean(user.show_romaji),
+        show_indonesian_translation: Boolean(user.show_indonesian_translation),
+    });
     const accessKeyForm = useForm({ code: '' });
     const deleteAccountForm = useForm({
         confirmation_username: '',
@@ -186,11 +191,11 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
 
         syncThemeLabel();
         window.addEventListener('storage', syncThemeLabel);
-        window.addEventListener('japanlingo:theme-changed', syncThemeLabel);
+        window.addEventListener('toku-up:theme-changed', syncThemeLabel);
 
         return () => {
             window.removeEventListener('storage', syncThemeLabel);
-            window.removeEventListener('japanlingo:theme-changed', syncThemeLabel);
+            window.removeEventListener('toku-up:theme-changed', syncThemeLabel);
         };
     }, []);
 
@@ -198,11 +203,11 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
         const syncSoundEffects = () => setSoundEffectsEnabledState(areSoundEffectsEnabled());
 
         window.addEventListener('storage', syncSoundEffects);
-        window.addEventListener('japanlingo:sound-effects-changed', syncSoundEffects);
+        window.addEventListener('toku-up:sound-effects-changed', syncSoundEffects);
 
         return () => {
             window.removeEventListener('storage', syncSoundEffects);
-            window.removeEventListener('japanlingo:sound-effects-changed', syncSoundEffects);
+            window.removeEventListener('toku-up:sound-effects-changed', syncSoundEffects);
         };
     }, []);
 
@@ -214,6 +219,16 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
         if (nextValue) {
             playSoundEffect('select');
         }
+    };
+
+    const updateLearningPreference = (key) => {
+        const nextPreferences = { ...learningPreferences, [key]: !learningPreferences[key] };
+        setLearningPreferences(nextPreferences);
+        router.patch(route('profile.learning-preferences.update'), nextPreferences, {
+            preserveScroll: true,
+            preserveState: true,
+            onError: () => setLearningPreferences(learningPreferences),
+        });
     };
 
     const handleSave = () => {
@@ -268,10 +283,11 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
         : 'Mulai dari kuis pertama atau selesaikan modul mingguan untuk membuka lencana.';
 
     return (
+        <MotionConfig reducedMotion="user">
         <AuthenticatedLayout header={false}>
-            <Head title={`Profil ${user.username} — Japanlingo`} />
+            <Head title={`Profil ${user.username} — TOKU-UP`} />
 
-            <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-950 py-10 px-4 sm:px-6 relative overflow-hidden transition-colors duration-300">
+            <div className="min-h-screen bg-surface-muted py-10 px-4 sm:px-6 relative overflow-hidden transition-colors duration-300">
                 <JapanesePattern />
                 <FloatingSakura />
                 
@@ -374,16 +390,16 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
                                         </div>
 
                                         {/* XP Card */}
-                                        <div className="col-span-1 bg-red-50 dark:bg-red-900/10 rounded-[2rem] border border-red-100 dark:border-red-500/20 p-5 sm:p-8 flex flex-col justify-center relative overflow-hidden group transition-colors">
+                                        <div className="col-span-1 bg-brand-50 dark:bg-brand-900/10 rounded-[2rem] border border-brand-100 dark:border-brand-500/20 p-5 sm:p-8 flex flex-col justify-center relative overflow-hidden group transition-colors">
                                             <div className="absolute -right-4 -top-4 opacity-10 dark:opacity-[0.05] group-hover:scale-110 transition-transform duration-500">
                                                 <BoltIcon sx={{ fontSize: 120, color: '#3b82f6' }} />
                                             </div>
                                             <div className="relative z-10">
-                                                <div className="w-12 h-12 bg-white dark:bg-red-500/20 rounded-2xl shadow-sm flex items-center justify-center text-red-500 dark:text-red-400 mb-4">
+                                                <div className="w-12 h-12 bg-white dark:bg-brand-500/20 rounded-2xl shadow-sm flex items-center justify-center text-brand-500 dark:text-brand-400 mb-4">
                                                     <BoltIcon sx={{ fontSize: 24 }} />
                                                 </div>
-                                                <h3 className="break-words text-3xl sm:text-4xl font-black text-red-600 dark:text-red-400 tracking-tight">{xp.toLocaleString()}</h3>
-                                                <p className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-red-500/80 sm:text-xs sm:tracking-widest dark:text-red-400/80">Total XP</p>
+                                                <h3 className="break-words text-3xl sm:text-4xl font-black text-brand-600 dark:text-brand-400 tracking-tight">{xp.toLocaleString()}</h3>
+                                                <p className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-brand-500/80 sm:text-xs sm:tracking-widest dark:text-brand-400/80">Total XP</p>
                                             </div>
                                         </div>
 
@@ -431,7 +447,7 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
 
                                         {/* Badges / Pencapaian Card */}
                                         <div className="col-span-2 overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm transition-colors dark:border-gray-800 dark:bg-gray-900">
-                                            <div className="relative overflow-hidden bg-gradient-to-br from-rose-600 via-red-500 to-orange-500 p-6 text-white sm:p-8">
+                                            <div className="relative overflow-hidden bg-gradient-to-br from-rose-600 via-brand-500 to-orange-500 p-6 text-white sm:p-8">
                                                 <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/10 blur-2xl" />
                                                 <div className="absolute bottom-0 right-8 text-8xl font-black text-white/10">達</div>
                                                 <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -477,7 +493,7 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
                                                             'from-emerald-400 to-teal-600 shadow-emerald-500/20',
                                                             'from-violet-400 to-purple-700 shadow-violet-500/20',
                                                             'from-sky-400 to-blue-700 shadow-sky-500/20',
-                                                            'from-rose-400 to-red-700 shadow-rose-500/20',
+                                                            'from-rose-400 to-brand-700 shadow-rose-500/20',
                                                         ][idx % 4];
 
                                                         if (!achievement) {
@@ -566,6 +582,50 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
                                                             {soundEffectsEnabled ? 'Aktif' : 'Nonaktif'}
                                                         </button>
                                                     </div>
+                                                    <div className="mt-3 rounded-2xl border border-gray-100 bg-gray-50/50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-sky-600 shadow-sm dark:bg-gray-800 dark:text-sky-300">
+                                                                <TranslateIcon sx={{ fontSize: 20 }} />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-bold text-gray-800 dark:text-gray-200">Bantuan Baca Jepang</p>
+                                                                <p className="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">Atur bantuan yang tampil di materi, flashcard, kuis, dan berita.</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                                            {[
+                                                                { key: 'show_romaji', label: 'Romaji', description: 'Tampilkan ejaan latin di bawah bacaan Jepang.' },
+                                                                { key: 'show_indonesian_translation', label: 'Terjemahan Indonesia', description: 'Tampilkan arti saat materi menyediakannya.' },
+                                                            ].map((preference) => (
+                                                                <button
+                                                                    key={preference.key}
+                                                                    type="button"
+                                                                    onClick={() => updateLearningPreference(preference.key)}
+                                                                    aria-pressed={learningPreferences[preference.key]}
+                                                                    className={`flex min-h-[4.5rem] items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left transition ${learningPreferences[preference.key]
+                                                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300'
+                                                                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'}`}
+                                                                >
+                                                                    <span className="min-w-0">
+                                                                        <span className="block text-sm font-bold">{preference.label}</span>
+                                                                        <span className="mt-0.5 block text-xs font-medium leading-5 text-gray-500 dark:text-gray-400">{preference.description}</span>
+                                                                    </span>
+                                                                    <span
+                                                                        aria-hidden="true"
+                                                                        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${learningPreferences[preference.key] ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                                                    >
+                                                                        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${learningPreferences[preference.key] ? 'translate-x-[1.375rem]' : 'translate-x-0.5'}`} />
+                                                                    </span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                        <div className="mt-3 rounded-xl border border-dashed border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+                                                            <p lang="ja" className="text-base font-black text-gray-900 dark:text-white">日本語を勉強します</p>
+                                                            <p lang="ja" className="mt-1 text-xs font-semibold text-sky-700 dark:text-sky-300">にほんごをべんきょうします</p>
+                                                            {learningPreferences.show_romaji && <p className="mt-0.5 text-xs font-semibold text-gray-500 dark:text-gray-400">nihongo o benkyou shimasu</p>}
+                                                            {learningPreferences.show_indonesian_translation && <p className="mt-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">Saya belajar bahasa Jepang.</p>}
+                                                        </div>
+                                                    </div>
                                                 </div>
 
                                                 {/* Kontak */}
@@ -603,7 +663,7 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
                                                 <h3 className="font-black text-rose-700 dark:text-rose-400 text-lg">Zona Berbahaya</h3>
                                             </div>
                                             <p className="text-sm text-rose-600 dark:text-rose-400/90 font-medium leading-relaxed mb-6">
-                                                Menghapus akun akan menghilangkan seluruh progres belajar, XP, dan riwayat langganan Anda secara <strong className="font-black">permanen</strong>. Tindakan ini tidak dapat dibatalkan.
+                                                Akun tidak dapat digunakan kembali setelah dihapus. Identitas pribadi akan dihapus, sedangkan riwayat pembayaran tetap disimpan tanpa data pribadi bila diwajibkan.
                                             </p>
                                             
                                             <button
@@ -749,12 +809,12 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
             <ConfirmActionDialog
                 show={deleteConfirm}
                 variant="danger"
-                title="Hapus Akun Permanen?"
+                title="Hapus Akun?"
                 message={passwordLoginEnabled
-                    ? 'Ketik username dan masukkan password akun. Progres belajar, XP, dan riwayat langganan akan ikut terhapus.'
+                    ? 'Ketik username dan masukkan password akun. Tindakan ini tidak dapat dibatalkan.'
                     : googleReauthenticated
-                        ? 'Identitas Google sudah terverifikasi. Ketik username untuk mengonfirmasi penghapusan permanen.'
-                        : 'Verifikasi kembali akun Google yang terhubung sebelum menghapus akun secara permanen.'}
+                        ? 'Identitas Google sudah terverifikasi. Ketik username untuk mengonfirmasi penghapusan akun.'
+                        : 'Verifikasi kembali akun Google yang terhubung sebelum menghapus akun.'}
                 details={[
                     { label: 'Akun', value: user.username },
                     { label: 'Email', value: user.email },
@@ -762,7 +822,7 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
                 ]}
                 confirmLabel={!passwordLoginEnabled && !googleReauthenticated
                     ? 'Verifikasi dengan Google'
-                    : 'Ya, Hapus Permanen'}
+                    : 'Ya, Hapus Akun'}
                 processing={deleteAccountForm.processing}
                 onConfirm={confirmAccountDeletion}
                 onCancel={() => {
@@ -773,7 +833,7 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
             >
                 {!passwordLoginEnabled && !googleReauthenticated ? (
                     <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold leading-6 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
-                        Google akan memastikan bahwa akun yang dipilih sama dengan akun Japanlingo ini. Anda akan kembali ke halaman profil setelah verifikasi.
+                        Google akan memastikan bahwa akun yang dipilih sama dengan akun TOKU-UP ini. Anda akan kembali ke halaman profil setelah verifikasi.
                         {deleteAccountForm.errors.google_confirmation && (
                             <p className="mt-2 text-xs font-bold text-rose-600 dark:text-rose-400">{deleteAccountForm.errors.google_confirmation}</p>
                         )}
@@ -822,5 +882,6 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
                 )}
             </ConfirmActionDialog>
         </AuthenticatedLayout>
+        </MotionConfig>
     );
 }

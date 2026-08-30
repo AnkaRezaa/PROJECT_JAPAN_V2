@@ -79,9 +79,9 @@ class LoginSosialController extends Controller
         }
 
         if ($user) {
-            if (in_array($user->role, ['admin', 'superadmin'], true) && ! $user->google_id) {
+            if (filled($user->google_id) && ! hash_equals((string) $user->google_id, (string) $googleUser->getId())) {
                 return redirect()->route('login')->withErrors([
-                    'email' => 'Login Google belum terhubung untuk akun pengelola ini.',
+                    'email' => 'Email ini sudah terhubung dengan akun Google lain.',
                 ]);
             }
 
@@ -98,6 +98,7 @@ class LoginSosialController extends Controller
                 'password_login_enabled' => false,
                 'role' => 'user',
                 'subscription_status' => 'free',
+                'status' => 'active',
                 'auth_provider' => 'google',
                 'google_id' => $googleUser->getId(),
                 'avatar' => $googleUser->getAvatar(),
@@ -106,7 +107,7 @@ class LoginSosialController extends Controller
             $user->forceFill(['email_verified_at' => now()])->save();
         }
 
-        if ($user->status === 'suspended') {
+        if ($user->status !== 'active') {
             RiwayatLogin::create([
                 'user_id' => $user->id,
                 'email' => $user->email,
@@ -118,7 +119,9 @@ class LoginSosialController extends Controller
             ]);
 
             return redirect()->route('login')->withErrors([
-                'email' => 'Akun Anda telah disuspend.',
+                'email' => $user->status === 'suspended'
+                    ? 'Akun Anda sedang ditangguhkan.'
+                    : 'Akun ini tidak lagi aktif.',
             ]);
         }
 
@@ -184,7 +187,7 @@ class LoginSosialController extends Controller
         if (! $userMatches || ! $emailVerified || ! $googleIdMatches || ! $emailMatches) {
             return $this->oauthFailure(
                 self::OAUTH_INTENT_DELETE_ACCOUNT,
-                'Gunakan akun Google yang terhubung dengan akun Japanlingo ini.'
+                'Gunakan akun Google yang terhubung dengan akun TOKU-UP ini.'
             );
         }
 

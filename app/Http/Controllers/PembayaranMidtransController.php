@@ -241,7 +241,7 @@ class PembayaranMidtransController extends Controller
 
             if ($response->failed() && ! $isAlreadyClosed) {
                 if (in_array($response->status(), [401, 403], true)) {
-                    abort(502, 'Konfigurasi pembayaran belum dapat memproses pembatalan. Hubungi pengelola Japanlingo.');
+                    abort(502, 'Konfigurasi pembayaran belum dapat memproses pembatalan. Hubungi pengelola TOKU-UP.');
                 }
 
                 $isInProgress = $errors->contains(fn ($message) => str_contains($message, 'transaction is on progress'));

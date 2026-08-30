@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Auth\LoginSosialController;
+use App\Services\AccountDeletionService;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,10 +32,22 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit');
     }
 
+    public function updateLearningPreferences(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'show_romaji' => ['required', 'boolean'],
+            'show_indonesian_translation' => ['required', 'boolean'],
+        ]);
+
+        $request->user()->update($validated);
+
+        return back()->with('success', 'Pengaturan bantuan baca berhasil disimpan.');
+    }
+
     /**
      * Delete the user's account.
      */
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request, AccountDeletionService $deletions): RedirectResponse
     {
         $user = $request->user();
         $passwordLoginEnabled = $user->password_login_enabled !== false;
@@ -58,16 +71,19 @@ class ProfileController extends Controller
             ]);
         }
 
+        $this->revokeGoogleAccess($request);
         Auth::logout();
 
-        $user->delete();
-
-        $this->revokeGoogleAccess($request);
+        // Logout rotates the remember token. It must happen before deletion,
+        // otherwise Laravel can persist the deleted model again.
+        $result = $deletions->deleteSelf($user);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return Redirect::to('/');
+        return Redirect::to('/')->with('success', $result === 'anonymized'
+            ? 'Identitas akun telah dihapus. Riwayat pembayaran tetap disimpan tanpa data pribadi.'
+            : 'Akun telah dihapus permanen.');
     }
 
     private function hasRecentGoogleConfirmation(Request $request): bool

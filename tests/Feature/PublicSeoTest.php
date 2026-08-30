@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\HariModul;
 use App\Models\LevelPembelajaran;
+use App\Models\Modul;
 use App\Models\ProgramPembelajaran;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -58,6 +60,94 @@ test('unpublished class is not available publicly', function () {
     ]);
 
     $this->get(route('public.classes.show', $program->slug))->assertNotFound();
+});
+
+test('public roadmap returns the published Week and Day hierarchy from the default class', function () {
+    $program = createSeoProgram();
+    $publishedWeek = Modul::create([
+        'level_id' => $program->level_id,
+        'program_pembelajaran_id' => $program->id,
+        'title' => 'Fondasi Kosakata',
+        'week_number' => 1,
+        'description' => 'Membangun fondasi kelas.',
+        'status' => 'published',
+    ]);
+    $draftWeek = Modul::create([
+        'level_id' => $program->level_id,
+        'program_pembelajaran_id' => $program->id,
+        'title' => 'Week Draft',
+        'week_number' => 2,
+        'status' => 'draft',
+    ]);
+    HariModul::create([
+        'module_id' => $publishedWeek->id,
+        'day_number' => 1,
+        'title' => 'Perkenalan Kosakata',
+        'description' => 'Ringkasan Hari pertama.',
+        'status' => 'published',
+    ]);
+    HariModul::create([
+        'module_id' => $publishedWeek->id,
+        'day_number' => 2,
+        'title' => 'Hari Draft',
+        'status' => 'draft',
+    ]);
+    HariModul::create([
+        'module_id' => $draftWeek->id,
+        'day_number' => 1,
+        'title' => 'Day dalam Week Draft',
+        'status' => 'published',
+    ]);
+
+    $this->get(route('roadmap'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Roadmap')
+            ->has('roadmapOptions', 1)
+            ->where('roadmapOptions.0.slug', $program->slug)
+            ->where('roadmapOptions.0.weeks_count', 1)
+            ->where('roadmapOptions.0.days_count', 1)
+            ->where('selectedRoadmap.slug', $program->slug)
+            ->has('selectedRoadmap.weeks', 1)
+            ->where('selectedRoadmap.weeks.0.title', 'Fondasi Kosakata')
+            ->has('selectedRoadmap.weeks.0.days', 1)
+            ->where('selectedRoadmap.weeks.0.days.0.title', 'Perkenalan Kosakata')
+        );
+});
+
+test('public roadmap can select another published class and rejects an unavailable slug', function () {
+    $firstProgram = createSeoProgram();
+    Modul::create([
+        'level_id' => $firstProgram->level_id,
+        'program_pembelajaran_id' => $firstProgram->id,
+        'title' => 'Week Pertama',
+        'week_number' => 1,
+        'status' => 'published',
+    ]);
+    $secondProgram = ProgramPembelajaran::create([
+        'level_id' => $firstProgram->level_id,
+        'title' => 'Kelas SSW Terstruktur',
+        'slug' => 'kelas-ssw-terstruktur',
+        'description' => 'Roadmap persiapan SSW.',
+        'status' => 'published',
+        'sort_order' => 2,
+    ]);
+    Modul::create([
+        'level_id' => $secondProgram->level_id,
+        'program_pembelajaran_id' => $secondProgram->id,
+        'title' => 'Pengenalan SSW',
+        'week_number' => 1,
+        'status' => 'published',
+    ]);
+
+    $this->get(route('roadmap', ['kelas' => $secondProgram->slug]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('selectedRoadmap.slug', $secondProgram->slug)
+            ->where('selectedRoadmap.weeks.0.title', 'Pengenalan SSW')
+        );
+
+    $this->get(route('roadmap', ['kelas' => 'kelas-tidak-tersedia']))->assertNotFound();
 });
 
 test('robots and sitemap follow the indexing switch', function () {
