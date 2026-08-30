@@ -45,7 +45,7 @@ Gunakan secret production baru. Jika secret pernah terekspos, rotasi database, M
 - route-model binding bukan authorization;
 - selalu periksa ownership/program/kloter/publish/entitlement pada service backend;
 - user tidak boleh membuka invoice, flashcard, kuis, PDF, atau live room milik scope lain;
-- admin kloter dibatasi ke kloter yang diampu;
+- Mentor Kelas dibatasi ke kloter yang diampu;
 - UI tersembunyi bukan kontrol akses.
 
 ## Payment

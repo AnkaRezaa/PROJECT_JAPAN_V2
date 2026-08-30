@@ -1,6 +1,6 @@
-# JapanLingo V2 - Dokumentasi Proyek
+# TOKU-UP - Dokumentasi Proyek
 
-Dokumentasi ini adalah handbook teknis dan operasional JapanLingo V2. Gunakan folder `.A_context_project/` untuk membaca riwayat keputusan dan revisi klien; gunakan folder `docs/` untuk setup, deployment, pengoperasian, dan verifikasi sistem yang sedang berlaku.
+Dokumentasi ini adalah handbook teknis dan operasional TOKU-UP. Gunakan folder `.A_context_project/` untuk membaca riwayat keputusan dan revisi klien; gunakan folder `docs/` untuk setup, deployment, pengoperasian, dan verifikasi sistem yang sedang berlaku.
 
 ## Urutan Baca
 
@@ -20,11 +20,13 @@ Dokumentasi ini adalah handbook teknis dan operasional JapanLingo V2. Gunakan fo
 14. [Konten, roadmap, dan progress](07-learning/content-roadmap.md)
 15. [Gamifikasi](07-learning/gamification.md)
 16. [Ekspansi multi-kurikulum](07-learning/multi-curriculum.md)
-17. [Scheduler, queue, backup, dan monitoring](08-operations/scheduler-queue-backup.md)
-18. [Hardening keamanan](09-security/hardening.md)
-19. [Testing dan checklist rilis](10-testing/release-checklist.md)
-20. [Troubleshooting](11-troubleshooting/common-errors.md)
-21. [Referensi seluruh file kode dan resource](12-code-reference/README.md)
+17. [Bantuan baca dan feedback produk](07-learning/reading-assistance-and-feedback.md)
+18. [Scheduler, queue, backup, dan monitoring](08-operations/scheduler-queue-backup.md)
+19. [Hardening keamanan](09-security/hardening.md)
+20. [Retensi dan penghapusan akun](09-security/account-retention-and-deletion.md)
+21. [Testing dan checklist rilis](10-testing/release-checklist.md)
+22. [Troubleshooting](11-troubleshooting/common-errors.md)
+23. [Referensi seluruh file kode dan resource](12-code-reference/README.md)
 
 Template HTML Mailtrap berada di [mailtrap-templates](mailtrap-templates/).
 

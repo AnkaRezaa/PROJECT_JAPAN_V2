@@ -1,5 +1,9 @@
 # Kelas Mandiri, Kelas Mentor, Kloter, dan Access Key
 
+## Cakupan Mentor Kelas
+
+Hak Mentor Kelas diturunkan dari `kloter_belajar.admin_id`. Program tanpa kloter yang ditugaskan tidak boleh muncul atau dapat dibuka mentor lewat URL langsung. Kelas mandiri tidak menjadi hak akses mentor.
+
 ## Kelas Mandiri
 
 ```text
@@ -21,7 +25,7 @@ scope_type = kloter
 - kapasitas/kursi diperiksa dan direservasi selama transaksi pending;
 - pembayaran valid membuat enrollment `paid_pending_approval`;
 - subscription belum aktif;
-- mentor/admin kloter menyetujui atau menolak;
+- Mentor Kelas menyetujui atau menolak;
 - approval membuat membership dan subscription aktif, dengan durasi mulai pada waktu approval;
 - reject memberi notifikasi dan memerlukan proses refund manual bila uang harus dikembalikan.
 
@@ -29,7 +33,7 @@ scope_type = kloter
 
 - mentor adalah akun `role=admin` yang menjadi `admin_id` kloter;
 - admin global boleh menjadi mentor bila ditetapkan sebagai pengampu kloter;
-- admin kloter hanya memproses siswa kloternya;
+- Mentor Kelas hanya memproses siswa kloternya;
 - admin global dapat melihat seluruh approval, tetapi tetap tidak boleh mengubah data secara ambigu tanpa konteks kloter;
 - superadmin membuat kloter dan menetapkan admin pengampu.
 
@@ -42,7 +46,7 @@ Administratif: subscription aktif -> ditambahkan manual -> active
 
 - Tab **Persetujuan** hanya menampilkan membership `paid_pending_approval` dengan transaksi `success`.
 - Admin pengampu menjadi pemroses utama; admin global dapat memproses seluruh kloter sebagai penanggung jawab cadangan.
-- Admin kloter lain tetap tidak dapat memproses enrollment di luar kloter yang diampunya.
+- Mentor Kelas lain tetap tidak dapat memproses enrollment di luar kloter yang diampunya.
 - **Tambahkan Siswa Secara Manual** hanya untuk access key, pembayaran manual, migrasi, atau koreksi administratif. Jalur ini langsung mengaktifkan membership dan tidak masuk antrean persetujuan.
 - Status kloter `draft`, `active`, dan `archived` dikelola superadmin. Admin mengatur jadwal, roster, serta persetujuan hanya pada kloter aktif.
 

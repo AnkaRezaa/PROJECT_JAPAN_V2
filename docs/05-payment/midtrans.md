@@ -47,7 +47,7 @@ Idempotensi juga diterapkan saat status masuk berulang: transaksi dikunci, trans
 
 Snap dibuat dengan masa berlaku sesuai `MIDTRANS_SNAP_EXPIRY_HOURS` (default 24 jam). Sebelum memakai kembali transaksi pending, backend memeriksa status resminya. Checkout yang sudah kedaluwarsa ditutup dan frontend membuat `checkout_request_key` baru agar user dapat memesan kembali tanpa memakai token lama dari `sessionStorage`.
 
-Callback `finish` dan `error` Snap selalu kembali ke invoice JapanLingo yang menyertakan `transactionCode`. Jangan memakai URL contoh vendor seperti `https://example.com`.
+Callback `finish` dan `error` Snap selalu kembali ke invoice TOKU-UP yang menyertakan `transactionCode`. Jangan memakai URL contoh vendor seperti `https://example.com`.
 
 ## Validasi Webhook
 

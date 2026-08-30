@@ -5,7 +5,7 @@ Salin `.env.example`, lalu isi secret hanya pada environment masing-masing. Nila
 ## Aplikasi dan Database
 
 ```dotenv
-APP_NAME=Japanlingo
+APP_NAME="TOKU-UP"
 APP_ENV=local
 APP_KEY=
 APP_DEBUG=true
@@ -59,7 +59,7 @@ MAIL_PORT=587
 MAIL_USERNAME=apismtp@mailtrap.io
 MAIL_PASSWORD=
 MAIL_FROM_ADDRESS=noreply@rezawalker.web.id
-MAIL_FROM_NAME="Japanlingo"
+MAIL_FROM_NAME="TOKU-UP"
 
 MAIL_NOTIFICATIONS_ENABLED=false
 MAILTRAP_TEMPLATES_ENABLED=true
@@ -77,7 +77,7 @@ MAILTRAP_TEMPLATE_PURCHASE_RECEIPT_UUID=
 
 ```dotenv
 BROADCAST_CONNECTION=reverb
-REVERB_APP_ID=japanlingo-local
+REVERB_APP_ID=toku-up-local
 REVERB_APP_KEY=
 REVERB_APP_SECRET=
 REVERB_HOST=127.0.0.1

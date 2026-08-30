@@ -2,7 +2,7 @@
 
 ## Virtual Host Aplikasi
 
-Buat `/etc/nginx/sites-available/japanlingo`:
+Buat `/etc/nginx/sites-available/toku-up`:
 
 ```nginx
 server {
@@ -36,7 +36,7 @@ server {
 Aktifkan:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/japanlingo /etc/nginx/sites-enabled/japanlingo
+sudo ln -s /etc/nginx/sites-available/toku-up /etc/nginx/sites-enabled/toku-up
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx
@@ -53,16 +53,16 @@ Setelah HTTPS aktif, pastikan `.env` memakai `APP_URL=https://rezawalker.web.id`
 
 ## Reverb sebagai systemd
 
-Repository menyediakan `deployment/systemd/japanlingo-reverb.service`:
+Repository menyediakan `deployment/systemd/toku-up-reverb.service`:
 
 Folder `deployment/systemd/` hanya berisi unit yang disalin ke server. Dokumen ini adalah referensi kanonis untuk instalasi dan operasi service supaya instruksi systemd tidak terduplikasi.
 
 ```bash
 cd /var/www/project_japan_v2
-sudo cp deployment/systemd/japanlingo-reverb.service /etc/systemd/system/
+sudo cp deployment/systemd/toku-up-reverb.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now japanlingo-reverb
-sudo systemctl status japanlingo-reverb
+sudo systemctl enable --now toku-up-reverb
+sudo systemctl status toku-up-reverb
 ```
 
 Service bind ke `127.0.0.1:8080`; jangan membuka 8080 ke publik. Tambahkan proxy WebSocket pada server HTTPS aplikasi:
@@ -108,7 +108,7 @@ Scheduler menjalankan expiry subscription, cleanup import/log/snapshot, reconcil
 Untuk trafik kecil gunakan `QUEUE_CONNECTION=sync`; worker tidak diperlukan. Jika beralih ke `database`, buat Supervisor:
 
 ```ini
-[program:japanlingo-worker]
+[program:toku-up-worker]
 command=/usr/bin/php /var/www/project_japan_v2/artisan queue:work database --queue=mail,default --sleep=3 --tries=3 --timeout=90
 directory=/var/www/project_japan_v2
 user=webtest
@@ -144,8 +144,8 @@ Sesuaikan port SSH nyata sebelum mengaktifkan UFW. Database, Reverb 8080, dan Li
 ## Log dan Restart
 
 ```bash
-sudo journalctl -u japanlingo-reverb -f
+sudo journalctl -u toku-up-reverb -f
 sudo tail -f /var/log/nginx/error.log
 tail -f /var/www/project_japan_v2/storage/logs/laravel.log
-sudo systemctl restart php8.3-fpm japanlingo-reverb
+sudo systemctl restart php8.3-fpm toku-up-reverb
 ```

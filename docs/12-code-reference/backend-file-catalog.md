@@ -2,12 +2,13 @@
 
 > Dibangkitkan oleh `scripts/generate-code-reference.ps1`. Jangan mengedit tabel secara manual; perbarui catatan arsitektur terpisah bila tanggung jawab domain berubah.
 
-Total file PHP dalam `app/`: 147.
+Total file PHP dalam `app/`: 153.
 
 ## Artisan command
 
 | File | Symbol utama | Tanggung jawab |
 |---|---|---|
+| `app/Console/Commands/AnonymizeSuspendedAccounts.php` | `AnonymizeSuspendedAccounts` | Operasi CLI/maintenance untuk Anonymize Suspended Accounts. |
 | `app/Console/Commands/BersihkanImportPresentasi.php` | `BersihkanImportPresentasi` | Operasi CLI/maintenance untuk Bersihkan Import Presentasi. |
 | `app/Console/Commands/BersihkanLogOperasional.php` | `BersihkanLogOperasional` | Operasi CLI/maintenance untuk Bersihkan Log Operasional. |
 | `app/Console/Commands/CleanupHandwritingQuestions.php` | `CleanupHandwritingQuestions` | Operasi CLI/maintenance untuk Cleanup Handwriting Questions. |
@@ -66,6 +67,7 @@ Total file PHP dalam `app/`: 147.
 | `app/Http/Controllers/PembayaranMidtransController.php` | `PembayaranMidtransController` | Endpoint dan orkestrasi HTTP untuk Pembayaran Midtrans Controller. |
 | `app/Http/Controllers/PengarahDashboardController.php` | `PengarahDashboardController` | Endpoint dan orkestrasi HTTP untuk Pengarah Dashboard Controller. |
 | `app/Http/Controllers/ProfileController.php` | `ProfileController` | Endpoint dan orkestrasi HTTP untuk Profile Controller. |
+| `app/Http/Controllers/UmpanBalikProdukController.php` | `UmpanBalikProdukController` | Endpoint dan orkestrasi HTTP untuk Umpan Balik Produk Controller. |
 
 ## Superadmin controller
 
@@ -105,6 +107,7 @@ Total file PHP dalam `app/`: 147.
 |---|---|---|
 | `app/Http/Middleware/CheckRole.php` | `CheckRole` | Menyaring request berdasarkan aturan Check Role. |
 | `app/Http/Middleware/HandleInertiaRequests.php` | `HandleInertiaRequests` | Menyaring request berdasarkan aturan Handle Inertia Requests. |
+| `app/Http/Middleware/SearchEngineIndexing.php` | `SearchEngineIndexing` | Menyaring request berdasarkan aturan Search Engine Indexing. |
 | `app/Http/Middleware/SubscriptionMiddleware.php` | `SubscriptionMiddleware` | Menyaring request berdasarkan aturan Subscription Middleware. |
 
 ## Form request
@@ -166,6 +169,7 @@ Total file PHP dalam `app/`: 147.
 | `app/Models/TargetUjianPengguna.php` | `TargetUjianPengguna` | Representasi dan relasi data Target Ujian Pengguna. |
 | `app/Models/Transaksi.php` | `Transaksi` | Representasi dan relasi data Transaksi. |
 | `app/Models/UmpanBalikPembelajaran.php` | `UmpanBalikPembelajaran` | Representasi dan relasi data Umpan Balik Pembelajaran. |
+| `app/Models/UmpanBalikProduk.php` | `UmpanBalikProduk` | Representasi dan relasi data Umpan Balik Produk. |
 
 ## Notification channel
 
@@ -193,6 +197,8 @@ Total file PHP dalam `app/`: 147.
 
 | File | Symbol utama | Tanggung jawab |
 |---|---|---|
+| `app/Services/AccountDeletionService.php` | `AccountDeletionService` | Aturan domain dan proses reusable untuk Account Deletion Service. |
+| `app/Services/AccountSuspensionService.php` | `AccountSuspensionService` | Aturan domain dan proses reusable untuk Account Suspension Service. |
 | `app/Services/AksesFlashcardPenggunaService.php` | `AksesFlashcardPenggunaService` | Aturan domain dan proses reusable untuk Akses Flashcard Pengguna Service. |
 | `app/Services/AksesKuisPenggunaService.php` | `AksesKuisPenggunaService` | Aturan domain dan proses reusable untuk Akses Kuis Pengguna Service. |
 | `app/Services/AksesLanggananService.php` | `AksesLanggananService` | Aturan domain dan proses reusable untuk Akses Langganan Service. |

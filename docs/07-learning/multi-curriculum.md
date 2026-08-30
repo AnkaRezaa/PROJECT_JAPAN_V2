@@ -1,8 +1,12 @@
 # Multi-Kurikulum dan Ekspansi Materi
 
+## Bantuan Baca Jepang
+
+Preferensi `show_romaji` dan `show_indonesian_translation` tersimpan pada akun user. Romaji hanya dibuat dari reading kana yang disediakan konten; kanji tanpa reading tidak ditebak otomatis. Berita memakai `reading_blocks` agar editor memasukkan teks Jepang, reading kana, dan terjemahan per bagian.
+
 ## Tujuan
 
-JapanLingo tetap dapat memakai **JLPT N3** sebagai nama kelas dan penawaran saat ini, tetapi fitur generik tidak boleh menganggap semua kelas selalu N3. Fondasi ini menyiapkan penambahan JLPT N5/N4/N2/N1, SSW, TG Jepang, atau jalur lain tanpa mengganti ID dan data pengguna yang sudah ada.
+TOKU-UP tetap dapat memakai **JLPT N3** sebagai nama kelas dan penawaran saat ini, tetapi fitur generik tidak boleh menganggap semua kelas selalu N3. Fondasi ini menyiapkan penambahan JLPT N5/N4/N2/N1, SSW, TG Jepang, atau jalur lain tanpa mengganti ID dan data pengguna yang sudah ada.
 
 ## Model Data
 

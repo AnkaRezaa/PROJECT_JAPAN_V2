@@ -14,7 +14,7 @@ Untuk kelas realtime tambahkan LiveKit Server Windows. Lihat [panduan realtime d
 ## Instalasi Awal
 
 ```powershell
-cd C:\laragon\www\project_japan\japanlingov2
+cd C:\laragon\www\project_japan\toku-up
 composer install
 npm install
 Copy-Item .env.example .env
@@ -93,13 +93,13 @@ npm audit --omit=dev
 
 ## Akun Demo
 
-Semua akun berikut memakai password `JapanLingo#2026`:
+Semua akun berikut memakai password `TOKU-UP#2026`:
 
-- `superadmin@japanlingo.com`: superadmin.
-- `admin@japanlingo.com`: admin global.
-- `admin.kloter@japanlingo.com`: admin mentor/pengampu kloter.
-- `student@japanlingo.com`: siswa kelas mandiri.
-- `student2@japanlingo.com`: siswa kelas mentor.
+- `superadmin@toku-up.com`: superadmin.
+- `admin@toku-up.com`: admin global.
+- `admin.kloter@toku-up.com`: admin mentor/pengampu kloter.
+- `student@toku-up.com`: siswa kelas mandiri.
+- `student2@toku-up.com`: siswa kelas mentor.
 
 Email demo ditandai sudah terverifikasi sehingga login pertama tidak memicu OTP ke alamat dummy. Kredensial ini hanya untuk development, staging, dan demonstrasi client.
 

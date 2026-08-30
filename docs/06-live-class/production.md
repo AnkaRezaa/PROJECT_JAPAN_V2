@@ -17,7 +17,7 @@ Buat DNS A record ketiganya ke IP VPS. Bila memakai Cloudflare, domain web boleh
 ```dotenv
 BROADCAST_CONNECTION=reverb
 
-REVERB_APP_ID=japanlingo-production
+REVERB_APP_ID=toku-up-production
 REVERB_APP_KEY=KEY_PRODUCTION_BARU
 REVERB_APP_SECRET=SECRET_PRODUCTION_BARU
 REVERB_HOST=rezawalker.web.id
@@ -116,7 +116,7 @@ UDP 50000-50199   -> IP_PRIVAT_VPS:50000-50199
 
 ```ini
 [Unit]
-Description=LiveKit Server JapanLingo
+Description=LiveKit Server TOKU-UP
 Wants=network-online.target
 After=network-online.target
 
@@ -193,7 +193,7 @@ cd /var/www/project_japan_v2
 php artisan optimize:clear
 npm run build
 php artisan optimize
-sudo systemctl restart php8.3-fpm japanlingo-reverb livekit
+sudo systemctl restart php8.3-fpm toku-up-reverb livekit
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -220,7 +220,7 @@ htop
 free -h
 df -h
 sudo journalctl -u livekit -f
-sudo journalctl -u japanlingo-reverb -f
+sudo journalctl -u toku-up-reverb -f
 sudo ss -s
 ```
 

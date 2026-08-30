@@ -1,5 +1,7 @@
 # Scheduler, Queue, Backup, Storage, dan Monitoring
 
+Scheduler juga menjalankan `accounts:anonymize-suspended` setiap hari. Command ini memproses akun suspended yang melewati `scheduled_anonymization_at`; scheduler Laravel wajib aktif sebelum kebijakan retensi 30 hari digunakan di production.
+
 ## Scheduler Aktif
 
 `routes/console.php` menjalankan:
@@ -52,8 +54,8 @@ Event kelas live tertentu menggunakan `ShouldBroadcastNow`, jadi tidak menunggu 
 Backup harian terenkripsi atau pada storage terpisah:
 
 ```bash
-mkdir -p /var/backups/japanlingo
-mysqldump --single-transaction --quick project_japan_v2 | gzip > /var/backups/japanlingo/db-$(date +%F-%H%M).sql.gz
+mkdir -p /var/backups/toku-up
+mysqldump --single-transaction --quick project_japan_v2 | gzip > /var/backups/toku-up/db-$(date +%F-%H%M).sql.gz
 ```
 
 Jangan menaruh backup SQL di `public/` atau root repository. Terapkan retention, misalnya 7 harian, 4 mingguan, dan beberapa bulanan sesuai kebutuhan bisnis.
@@ -68,7 +70,7 @@ storage/app/public (hanya asset yang memang publik)
 .env melalui secret manager/backup terenkripsi
 /etc/nginx/sites-available
 /etc/systemd/system/livekit.service
-/etc/systemd/system/japanlingo-reverb.service
+/etc/systemd/system/toku-up-reverb.service
 /etc/livekit/livekit.yaml (terenkripsi/permission ketat)
 ```
 

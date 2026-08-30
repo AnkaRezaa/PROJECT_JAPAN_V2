@@ -2,7 +2,7 @@
 
 > Dibangkitkan oleh `scripts/generate-code-reference.ps1`. Semua JS, JSX, CSS, Blade, dan source image di `resources/` tercantum di bawah.
 
-Total file dalam `resources/`: 152.
+Total file dalam `resources/`: 158.
 
 ## Stylesheet
 
@@ -23,7 +23,7 @@ Total file dalam `resources/`: 152.
 
 | File | Export/symbol utama | Tanggung jawab |
 |---|---|---|
-| `resources/js/app.jsx` | `appName` | Bootstrap React/Inertia, resolver halaman, dan provider aplikasi. |
+| `resources/js/app.jsx` | `seoSiteName` | Bootstrap React/Inertia, resolver halaman, dan provider aplikasi. |
 
 ## HTTP bootstrap
 
@@ -44,6 +44,7 @@ Total file dalam `resources/`: 152.
 | `resources/js/Components/Modal.jsx` | `Modal` | Komponen/resource untuk Modal. |
 | `resources/js/Components/NavLink.jsx` | `NavLink` | Komponen/resource untuk Nav Link. |
 | `resources/js/Components/ResponsiveNavLink.jsx` | `ResponsiveNavLink` | Komponen/resource untuk Responsive Nav Link. |
+| `resources/js/Components/SEO/SeoHead.jsx` | `SeoHead` | Komponen/resource untuk Seo Head. |
 | `resources/js/Components/theme/FallEffect.js` | `-` | Komponen/resource untuk Fall Effect. |
 | `resources/js/Components/theme/FallEffect.jsx` | `FallEffect` | Komponen/resource untuk Fall Effect. |
 | `resources/js/Components/theme/themes.js` | `DEFAULT_THEME` | Komponen/resource untuk themes. |
@@ -77,6 +78,7 @@ Total file dalam `resources/`: 152.
 | `resources/js/Components/Features/Dashboard/StreakWidget.jsx` | `StreakWidget` | Komponen fitur reusable untuk Streak Widget. |
 | `resources/js/Components/Features/Editor/NewsEditor.jsx` | `NewsEditor` | Komponen fitur reusable untuk News Editor. |
 | `resources/js/Components/Features/Editor/QuillEditor.jsx` | `QuillEditor` | Komponen fitur reusable untuk Quill Editor. |
+| `resources/js/Components/Features/Feedback/ProductFeedbackButton.jsx` | `ProductFeedbackButton` | Komponen fitur reusable untuk Product Feedback Button. |
 | `resources/js/Components/Features/Form/Checkbox.jsx` | `Checkbox` | Komponen fitur reusable untuk Checkbox. |
 | `resources/js/Components/Features/Form/FileUpload.jsx` | `FileUpload` | Komponen fitur reusable untuk File Upload. |
 | `resources/js/Components/Features/Form/FormSection.jsx` | `FormSection` | Komponen fitur reusable untuk Form Section. |
@@ -88,6 +90,8 @@ Total file dalam `resources/`: 152.
 | `resources/js/Components/Features/Handwriting/StrokeCharacterPreview.jsx` | `StrokeCharacterPreview` | Komponen fitur reusable untuk Stroke Character Preview. |
 | `resources/js/Components/Features/Handwriting/strokeData.js` | `strokeCache` | Komponen fitur reusable untuk stroke Data. |
 | `resources/js/Components/Features/Learning/CertificateCard.jsx` | `CertificateCard` | Komponen fitur reusable untuk Certificate Card. |
+| `resources/js/Components/Features/Learning/HighlightedLearningText.jsx` | `HighlightedLearningText` | Komponen fitur reusable untuk Highlighted Learning Text. |
+| `resources/js/Components/Features/Learning/JapaneseReading.jsx` | `JapaneseReading` | Komponen fitur reusable untuk Japanese Reading. |
 | `resources/js/Components/Features/Learning/LeaderboardItem.jsx` | `LeaderboardItem` | Komponen fitur reusable untuk Leaderboard Item. |
 | `resources/js/Components/Features/Learning/LessonCard.jsx` | `LessonCard` | Komponen fitur reusable untuk Lesson Card. |
 | `resources/js/Components/Features/Learning/LevelBadge.jsx` | `LevelBadge` | Komponen fitur reusable untuk Level Badge. |
@@ -169,6 +173,7 @@ Total file dalam `resources/`: 152.
 | `resources/js/Pages/Legal/LegalPage.jsx` | `LegalPage` | Komponen/resource untuk Legal Page. |
 | `resources/js/Pages/Notifikasi/Index.jsx` | `NotificationIndex` | Komponen/resource untuk Index. |
 | `resources/js/Pages/Pricing.jsx` | `Pricing` | Komponen/resource untuk Pricing. |
+| `resources/js/Pages/Public/Kelas/Show.jsx` | `PublicClassShow` | Komponen/resource untuk Show. |
 | `resources/js/Pages/Roadmap.jsx` | `Roadmap` | Komponen/resource untuk Roadmap. |
 
 ## Admin page
@@ -245,6 +250,7 @@ Total file dalam `resources/`: 152.
 | File | Export/symbol utama | Tanggung jawab |
 |---|---|---|
 | `resources/views/app.blade.php` | `-` | Shell HTML Laravel untuk mount Inertia dan asset Vite. |
+| `resources/views/seo/sitemap.blade.php` | `-` | Shell HTML Laravel untuk mount Inertia dan asset Vite. |
 
 ## Kandidat Legacy atau Duplikasi
 

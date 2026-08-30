@@ -100,7 +100,7 @@ nano .env
 Minimum:
 
 ```dotenv
-APP_NAME=Japanlingo
+APP_NAME="TOKU-UP"
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://rezawalker.web.id
@@ -130,7 +130,7 @@ Tambahkan Google, Midtrans, Mailtrap, Reverb, dan LiveKit dari panduan masing-ma
 Backup database sebelum migration pada server yang sudah memiliki data:
 
 ```bash
-mysqldump --single-transaction project_japan_v2 > /var/backups/japanlingo-before-migrate.sql
+mysqldump --single-transaction project_japan_v2 > /var/backups/toku-up-before-migrate.sql
 php artisan migrate --force
 php artisan storage:link
 ```
@@ -181,7 +181,7 @@ php artisan migrate --force
 php artisan optimize:clear
 php artisan optimize
 sudo systemctl restart php8.3-fpm
-sudo systemctl restart japanlingo-reverb
+sudo systemctl restart toku-up-reverb
 php artisan up
 ```
 

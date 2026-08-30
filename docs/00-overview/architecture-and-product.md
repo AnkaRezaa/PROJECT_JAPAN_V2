@@ -2,7 +2,7 @@
 
 ## Tujuan Produk
 
-JapanLingo V2 adalah LMS bahasa Jepang berbasis kelas. Alur utamanya bukan halaman materi panjang, tetapi:
+TOKU-UP adalah LMS bahasa Jepang berbasis kelas. Alur utamanya bukan halaman materi panjang, tetapi:
 
 ```text
 Kelas -> Week -> aktivitas terurut -> Day -> kuis/repetisi -> ujian -> progress
@@ -34,7 +34,7 @@ Presentasi dapat ditempatkan sebagai pembuka Week, setelah Day tertentu, atau pe
 ### Admin
 
 - mengelola konten kelas bersama: Week, Day, presentasi, flashcard/repetisi, kuis, ujian, dan Bank Konten;
-- admin dengan scope kloter melihat data operasional siswa pada kloter yang diampu;
+- Mentor Kelas melihat data operasional siswa pada kloter yang diampu;
 - admin global dapat melihat seluruh area admin, tetapi ruang live tetap memerlukan hubungan pengampu pada kloter;
 - mentor adalah label UI untuk admin pengampu, bukan role backend baru.
 

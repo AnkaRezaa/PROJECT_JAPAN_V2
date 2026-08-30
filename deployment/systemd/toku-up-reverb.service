@@ -1,5 +1,5 @@
 [Unit]
-Description=JapanLingo Laravel Reverb WebSocket Server
+Description=TOKU-UP Laravel Reverb WebSocket Server
 Documentation=https://laravel.com/docs/reverb
 Wants=network-online.target
 After=network-online.target
@@ -18,7 +18,7 @@ TimeoutStopSec=30
 LimitNOFILE=10000
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=japanlingo-reverb
+SyslogIdentifier=toku-up-reverb
 
 [Install]
 WantedBy=multi-user.target

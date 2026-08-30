@@ -56,7 +56,7 @@ Pesan Windows bahwa CPU capacity monitoring tidak tersedia dapat diabaikan untuk
 APP_URL=http://127.0.0.1:8000
 BROADCAST_CONNECTION=reverb
 
-REVERB_APP_ID=japanlingo-local
+REVERB_APP_ID=toku-up-local
 REVERB_APP_KEY=REVERB_KEY_RANDOM
 REVERB_APP_SECRET=REVERB_SECRET_RANDOM
 REVERB_HOST=127.0.0.1
@@ -89,7 +89,7 @@ Restart Vite setelah mengubah `VITE_REVERB_*`.
 ## 3. Reverb
 
 ```powershell
-cd C:\laragon\www\project_japan\japanlingov2
+cd C:\laragon\www\project_japan\toku-up
 php artisan reverb:start --host=127.0.0.1 --port=8080
 ```
 

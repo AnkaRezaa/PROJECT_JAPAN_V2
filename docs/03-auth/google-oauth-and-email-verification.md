@@ -1,8 +1,22 @@
 # Google OAuth dan Autentikasi Email
 
+## Akun Pengelola
+
+- Admin Global, Mentor Kelas, dan Superadmin dibuat lebih dahulu oleh Superadmin.
+- Login Google pertama hanya menautkan akun jika Google menyatakan email terverifikasi dan alamatnya sama dengan email database.
+- Login Google tidak pernah membuat atau menaikkan role pengelola secara otomatis.
+- Email pengelola yang sudah digunakan sebagai identitas Google tidak diedit dari halaman Data Admin.
+
+## Suspend dan Retensi
+
+- Suspend langsung menutup akses dan menjadwalkan anonimisasi setelah 30 hari.
+- Reaktivasi sebelum tenggat membatalkan jadwal anonimisasi.
+- Mentor Kelas harus melepas atau memindahkan seluruh kloter sebelum disuspend.
+- `accounts:anonymize-suspended` menghapus identitas login dan data pribadi, tetapi mempertahankan transaksi, progres, dan audit yang terhubung ke ID internal.
+
 ## Alur Login
 
-JapanLingo memiliki dua jalur:
+TOKU-UP memiliki dua jalur:
 
 1. Akun manual: password, verifikasi email, dan OTP reset password melalui email.
 2. Google OAuth: callback Socialite, email Google harus terverifikasi, lalu akun user dapat dibuat atau di-link.
@@ -11,7 +25,7 @@ Google OAuth tidak membutuhkan OTP Mailtrap tambahan karena Google sudah memveri
 
 ## Google Cloud Console
 
-1. Buka Google Cloud Console dan pilih/buat project JapanLingo.
+1. Buka Google Cloud Console dan pilih/buat project TOKU-UP.
 2. Buka `APIs & Services -> OAuth consent screen`.
 3. Isi nama aplikasi, support email, developer contact, homepage, privacy policy, dan terms bila production.
 4. Pilih audience yang sesuai. Saat status Testing, tambahkan email tester.

@@ -2,7 +2,7 @@
 
 > Dibangkitkan oleh `scripts/generate-code-reference.ps1`. Migration, factory, seeder, dan seluruh test tercantum di bawah.
 
-Total file database dan test: 115.
+Total file database dan test: 123.
 
 ## Test bootstrap/config
 
@@ -93,6 +93,10 @@ Total file database dan test: 115.
 | `database/migrations/2026_08_12_000001_add_scheduled_at_to_live_class_sessions_table.php` | `-` | Perubahan skema/data: 2026 08 12 000001 add scheduled at to live class sessions table. |
 | `database/migrations/2026_08_14_000001_add_audience_scope_to_presentation_decks.php` | `-` | Perubahan skema/data: 2026 08 14 000001 add audience scope to presentation decks. |
 | `database/migrations/2026_08_22_000001_add_curriculum_tracks.php` | `-` | Perubahan skema/data: 2026 08 22 000001 add curriculum tracks. |
+| `database/migrations/2026_08_27_000001_add_learning_preferences_and_retention_to_users.php` | `-` | Perubahan skema/data: 2026 08 27 000001 add learning preferences and retention to users. |
+| `database/migrations/2026_08_27_000002_add_reading_blocks_to_news.php` | `-` | Perubahan skema/data: 2026 08 27 000002 add reading blocks to news. |
+| `database/migrations/2026_08_27_000003_add_reading_fields_to_questions.php` | `-` | Perubahan skema/data: 2026 08 27 000003 add reading fields to questions. |
+| `database/migrations/2026_08_27_000004_create_product_feedback_table.php` | `-` | Perubahan skema/data: 2026 08 27 000004 create product feedback table. |
 
 ## Seeder
 
@@ -111,6 +115,7 @@ Total file database dan test: 115.
 
 | File | Symbol utama | Tujuan |
 |---|---|---|
+| `tests/Feature/AccountRetentionAndPreferencesTest.php` | `-` | Regresi HTTP/domain: Account Retention And Preferences Test. |
 | `tests/Feature/AdminGlobalKloterTest.php` | `-` | Regresi HTTP/domain: Admin Global Kloter Test. |
 | `tests/Feature/AdminLegacyContentRoutesTest.php` | `-` | Regresi HTTP/domain: Admin Legacy Content Routes Test. |
 | `tests/Feature/Auth/AuthenticationTest.php` | `-` | Regresi HTTP/domain: Authentication Test. |
@@ -130,8 +135,11 @@ Total file database dan test: 115.
 | `tests/Feature/LiveClassRoadmapTest.php` | `-` | Regresi HTTP/domain: Live Class Roadmap Test. |
 | `tests/Feature/MultiCurriculumTest.php` | `-` | Regresi HTTP/domain: Multi Curriculum Test. |
 | `tests/Feature/NewsPortalTest.php` | `-` | Regresi HTTP/domain: News Portal Test. |
+| `tests/Feature/NotificationInboxTest.php` | `-` | Regresi HTTP/domain: Notification Inbox Test. |
+| `tests/Feature/ProductFeedbackTest.php` | `-` | Regresi HTTP/domain: Product Feedback Test. |
 | `tests/Feature/ProfileTest.php` | `-` | Regresi HTTP/domain: Profile Test. |
 | `tests/Feature/PublicLegalPagesTest.php` | `-` | Regresi HTTP/domain: Public Legal Pages Test. |
+| `tests/Feature/PublicSeoTest.php` | `-` | Regresi HTTP/domain: Public Seo Test. |
 | `tests/Feature/QuickQuizTest.php` | `-` | Regresi HTTP/domain: Quick Quiz Test. |
 | `tests/Feature/RepetisiPembelajaranTest.php` | `-` | Regresi HTTP/domain: Repetisi Pembelajaran Test. |
 | `tests/Feature/SecurityHardeningTest.php` | `-` | Regresi HTTP/domain: Security Hardening Test. |

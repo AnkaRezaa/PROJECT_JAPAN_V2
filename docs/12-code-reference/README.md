@@ -1,6 +1,6 @@
 # Referensi Kode dan File
 
-Bagian ini adalah peta teknis repository JapanLingo V2. Tujuannya bukan menggantikan pembacaan kode, tetapi menjawab tiga pertanyaan dengan cepat: file berada di mana, tanggung jawabnya apa, dan dokumentasi operasional terkait berada di mana.
+Bagian ini adalah peta teknis repository TOKU-UP. Tujuannya bukan menggantikan pembacaan kode, tetapi menjawab tiga pertanyaan dengan cepat: file berada di mana, tanggung jawabnya apa, dan dokumentasi operasional terkait berada di mana.
 
 ## Katalog
 
