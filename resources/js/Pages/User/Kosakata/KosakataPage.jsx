@@ -3,7 +3,6 @@ import { Head, Link, router } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import HighlightedLearningText from '@/Components/Features/Learning/HighlightedLearningText';
 import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
 import JapaneseSpeechButton from '@/Components/UI/JapaneseSpeechButton';
 
@@ -159,9 +158,14 @@ function MaterialDetail({ item, onClose }) {
                                 />
                             </div>
                             <JapaneseReading
-                                japanese={<HighlightedLearningText text={item.example_sentence || '-'} term={item.word} />}
+                                japanese={item.example_sentence || '-'}
                                 reading={item.example_reading}
                                 translation={item.example_meaning}
+                                highlightTerms={{
+                                    japanese: item.word,
+                                    reading: item.reading,
+                                    translation: item.meaning_id || item.meaning_en,
+                                }}
                                 className="mt-2 text-base font-black leading-7 text-gray-900 dark:text-white"
                             />
                         </section>

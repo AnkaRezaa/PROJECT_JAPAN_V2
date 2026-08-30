@@ -1,6 +1,7 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
     "name": "toku-up",
+    "version": "1.0.0",
     "private": true,
     "type": "module",
     "scripts": {
@@ -46,6 +47,7 @@
         "pdfjs-dist": "^6.1.200",
         "pusher-js": "^8.6.0",
         "react-confetti": "^6.4.0",
-        "recharts": "^3.10.1"
+        "recharts": "^3.10.1",
+        "tiny-segmenter": "^0.2.0"
     }
 }
