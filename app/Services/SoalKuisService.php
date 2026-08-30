@@ -14,7 +14,14 @@ class SoalKuisService
 
     public function importHeaders(): array
     {
-        return ['module_week', 'day_number', 'type', 'question_text', 'correct_answer', 'options', 'explanation', 'audio_url', 'points'];
+        return [
+            'module_week', 'day_number', 'type',
+            'question_text', 'question_reading',
+            'correct_answer', 'correct_answer_reading',
+            'options', 'option_readings',
+            'explanation', 'explanation_reading',
+            'audio_url', 'points',
+        ];
     }
 
     public function syncQuestions(Kuis $quiz, array $validated): void
@@ -46,9 +53,13 @@ class SoalKuisService
                     [
                         'type' => $normalized['type'],
                         'question_text' => $normalized['question_text'],
+                        'question_reading' => $normalized['question_reading'],
                         'correct_answer' => $normalized['correct_answer'],
+                        'correct_answer_reading' => $normalized['correct_answer_reading'],
                         'options' => $normalized['options'],
+                        'option_readings' => $normalized['option_readings'],
                         'explanation' => $normalized['explanation'],
+                        'explanation_reading' => $normalized['explanation_reading'],
                         'audio_url' => $normalized['audio_url'],
                         'order' => $index,
                         'points' => $normalized['points'],
@@ -88,9 +99,13 @@ class SoalKuisService
                     'quiz_id' => $quiz->id,
                     'type' => $normalized['type'],
                     'question_text' => $normalized['question_text'],
+                    'question_reading' => $normalized['question_reading'],
                     'correct_answer' => $normalized['correct_answer'],
+                    'correct_answer_reading' => $normalized['correct_answer_reading'],
                     'options' => $normalized['options'],
+                    'option_readings' => $normalized['option_readings'],
                     'explanation' => $normalized['explanation'],
+                    'explanation_reading' => $normalized['explanation_reading'],
                     'audio_url' => $normalized['audio_url'],
                     'order' => $nextOrder + $index,
                     'points' => $normalized['points'],
@@ -125,9 +140,13 @@ class SoalKuisService
                 'row' => $index + 2,
                 'type' => $normalized['type'],
                 'question_text' => $normalized['question_text'],
+                'question_reading' => $normalized['question_reading'],
                 'correct_answer' => $normalized['correct_answer'],
+                'correct_answer_reading' => $normalized['correct_answer_reading'],
                 'options' => $normalized['options'] ?? [],
+                'option_readings' => $normalized['option_readings'] ?? [],
                 'explanation' => $normalized['explanation'],
+                'explanation_reading' => $normalized['explanation_reading'],
                 'audio_url' => $normalized['audio_url'],
                 'points' => $normalized['points'],
             ];
@@ -156,9 +175,13 @@ class SoalKuisService
                     'quiz_id' => $quiz->id,
                     'type' => $payload['type'] ?? 'multiple_choice',
                     'question_text' => $payload['question_text'],
+                    'question_reading' => $payload['question_reading'] ?? null,
                     'correct_answer' => $payload['correct_answer'],
+                    'correct_answer_reading' => $payload['correct_answer_reading'] ?? null,
                     'options' => $payload['options'],
+                    'option_readings' => $payload['option_readings'] ?? null,
                     'explanation' => $payload['explanation'],
+                    'explanation_reading' => $payload['explanation_reading'] ?? null,
                     'audio_url' => $payload['audio_url'],
                     'order' => $nextOrder + $created,
                     'points' => 1,
@@ -187,9 +210,13 @@ class SoalKuisService
             'questions' => collect($generated)->map(fn (array $payload) => [
                 'type' => $payload['type'] ?? 'multiple_choice',
                 'question_text' => $payload['question_text'],
+                'question_reading' => $payload['question_reading'] ?? null,
                 'correct_answer' => $payload['correct_answer'],
+                'correct_answer_reading' => $payload['correct_answer_reading'] ?? null,
                 'options' => $payload['options'],
+                'option_readings' => $payload['option_readings'] ?? [],
                 'explanation' => $payload['explanation'],
+                'explanation_reading' => $payload['explanation_reading'] ?? null,
             ])->values()->all(),
         ];
     }
@@ -305,6 +332,7 @@ class SoalKuisService
         $correctAnswer = trim((string) ($data['correct_answer'] ?? ''));
         $audioUrl = trim((string) ($data['audio_url'] ?? ''));
         $rawOptions = is_array($data['options'] ?? null) ? $data['options'] : [];
+        $rawOptionReadings = is_array($data['option_readings'] ?? null) ? $data['option_readings'] : [];
         $options = array_values(array_unique(array_filter(array_map(
             fn ($option) => trim((string) $option),
             $rawOptions
@@ -333,13 +361,19 @@ class SoalKuisService
             'error' => $error,
             'type' => $type,
             'question_text' => $questionText,
+            'question_reading' => $this->nullableText($data['question_reading'] ?? null),
             'correct_answer' => $correctAnswer,
+            'correct_answer_reading' => $this->nullableText($data['correct_answer_reading'] ?? null),
             'options' => match ($type) {
                 'multiple_choice' => $options,
                 'fill_blank' => array_slice($options, 0, 1),
                 default => null,
             },
+            'option_readings' => $type === 'multiple_choice'
+                ? array_map(fn ($reading) => $this->nullableText($reading), array_slice($rawOptionReadings, 0, count($options)))
+                : null,
             'explanation' => $data['explanation'] ?? null,
+            'explanation_reading' => $this->nullableText($data['explanation_reading'] ?? null),
             'audio_url' => $audioUrl !== '' ? $audioUrl : null,
             'points' => min(1000, max(1, (int) ($data['points'] ?? 1))),
         ];
@@ -366,12 +400,31 @@ class SoalKuisService
         return count($options) > 0 ? $options : null;
     }
 
+    private function parseOptionReadings(array $row): ?array
+    {
+        if (! empty($row['option_readings'])) {
+            $readings = preg_split('/\s*\|\s*/', (string) $row['option_readings']);
+        } else {
+            $readings = [
+                $row['option_a_reading'] ?? null,
+                $row['option_b_reading'] ?? null,
+                $row['option_c_reading'] ?? null,
+                $row['option_d_reading'] ?? null,
+            ];
+        }
+
+        $readings = array_map(fn ($reading) => $this->nullableText($reading), $readings);
+
+        return collect($readings)->contains(fn ($reading) => $reading !== null) ? $readings : null;
+    }
+
     private function normalizeImportRow(Kuis $quiz, array $row, int $index): array
     {
         $questionText = trim((string) ($row['question_text'] ?? $row['question'] ?? $row['soal'] ?? ''));
         $correctAnswer = trim((string) ($row['correct_answer'] ?? $row['answer'] ?? $row['jawaban_benar'] ?? ''));
         $type = $this->normalizeType($row['type'] ?? $row['tipe'] ?? $quiz->type);
         $options = $this->parseOptions($row);
+        $optionReadings = $this->parseOptionReadings($row);
         $scopeError = $this->importScopeError($quiz, $row, $index);
 
         if ($scopeError) {
@@ -379,9 +432,13 @@ class SoalKuisService
                 'error' => $scopeError,
                 'type' => $type,
                 'question_text' => $questionText,
+                'question_reading' => $row['question_reading'] ?? null,
                 'correct_answer' => $correctAnswer,
+                'correct_answer_reading' => $row['correct_answer_reading'] ?? null,
                 'options' => $options,
+                'option_readings' => $optionReadings,
                 'explanation' => $row['explanation'] ?? $row['pembahasan'] ?? null,
+                'explanation_reading' => $row['explanation_reading'] ?? null,
                 'audio_url' => $row['audio_url'] ?? null,
                 'points' => $row['points'] ?? 1,
             ];
@@ -394,9 +451,13 @@ class SoalKuisService
                 'error' => 'Baris '.($index + 2).": kolom {$missing} wajib diisi.",
                 'type' => $type,
                 'question_text' => $questionText,
+                'question_reading' => $row['question_reading'] ?? null,
                 'correct_answer' => $correctAnswer,
+                'correct_answer_reading' => $row['correct_answer_reading'] ?? null,
                 'options' => $options,
+                'option_readings' => $optionReadings,
                 'explanation' => $row['explanation'] ?? $row['pembahasan'] ?? null,
+                'explanation_reading' => $row['explanation_reading'] ?? null,
                 'audio_url' => $row['audio_url'] ?? null,
                 'points' => $row['points'] ?? 1,
             ];
@@ -405,9 +466,13 @@ class SoalKuisService
         $normalized = $this->normalizePayload([
             'type' => $type,
             'question_text' => $questionText,
+            'question_reading' => $row['question_reading'] ?? null,
             'correct_answer' => $correctAnswer,
+            'correct_answer_reading' => $row['correct_answer_reading'] ?? null,
             'options' => $options,
+            'option_readings' => $optionReadings,
             'explanation' => $row['explanation'] ?? $row['pembahasan'] ?? null,
+            'explanation_reading' => $row['explanation_reading'] ?? null,
             'audio_url' => $row['audio_url'] ?? null,
             'points' => $row['points'] ?? 1,
         ], $index);
@@ -457,7 +522,9 @@ class SoalKuisService
             return [
                 'question_text' => "Pilih kosakata Jepang untuk arti: {$meaning}",
                 'correct_answer' => $correct,
+                'correct_answer_reading' => $reading !== '' ? $reading : null,
                 'options' => $options,
+                'option_readings' => $this->readingsForWordOptions($options, $pool),
                 'explanation' => $this->vocabularyExplanation($vocabulary),
                 'audio_url' => $vocabulary->audio_url,
             ];
@@ -474,7 +541,9 @@ class SoalKuisService
             return [
                 'question_text' => "Pilih kosakata untuk reading: {$reading}",
                 'correct_answer' => $correct,
+                'correct_answer_reading' => $reading,
                 'options' => $options,
+                'option_readings' => $this->readingsForWordOptions($options, $pool),
                 'explanation' => $this->vocabularyExplanation($vocabulary),
                 'audio_url' => $vocabulary->audio_url,
             ];
@@ -489,11 +558,28 @@ class SoalKuisService
 
         return [
             'question_text' => "Apa arti dari {$label}?",
+            'question_reading' => $reading !== '' ? $reading : null,
             'correct_answer' => $meaning,
             'options' => $options,
             'explanation' => $this->vocabularyExplanation($vocabulary),
             'audio_url' => $vocabulary->audio_url,
         ];
+    }
+
+    private function readingsForWordOptions(array $options, $pool): array
+    {
+        $readings = $pool->keyBy('word');
+
+        return collect($options)
+            ->map(fn (string $option) => $this->nullableText($readings->get($option)?->reading))
+            ->all();
+    }
+
+    private function nullableText(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value !== '' ? $value : null;
     }
 
     private function optionsFromVocabularyPool($pool, string $correct, string $field): array

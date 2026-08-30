@@ -66,7 +66,7 @@ export default function LessonArticle({
     const documentLabel = isPdf ? 'PDF Viewer' : isPresentation ? 'PowerPoint Viewer' : isDoc ? 'Dokumen Word' : 'Lampiran Materi';
 
     return (
-        <article className="overflow-hidden rounded-[2rem] border border-orange-200 bg-orange-50/50 shadow-md dark:border-gray-800 dark:bg-gray-900">
+        <article className="overflow-hidden rounded-[2rem] border border-brand-200 bg-brand-50/50 shadow-md dark:border-gray-800 dark:bg-gray-900">
             <style>{`
                 .jl-ppt-slide {
                     border: 1px solid #fed7aa;
@@ -80,15 +80,15 @@ export default function LessonArticle({
                     background: rgba(17, 24, 39, 0.55);
                 }
             `}</style>
-            <header className="relative overflow-hidden border-b border-orange-300 bg-gradient-to-br from-orange-400 to-amber-500 px-6 py-10 text-white dark:border-gray-800 dark:from-gray-800 dark:to-gray-900 sm:px-10">
+            <header className="relative overflow-hidden border-b border-brand-300 bg-gradient-to-br from-brand-100 to-brand-400 px-6 py-10 text-ink-900 dark:border-gray-800 dark:from-gray-800 dark:to-gray-900 dark:text-white sm:px-10">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.2),_transparent_34%),linear-gradient(135deg,_rgba(255,255,255,0.08),_transparent)]" />
                 <div className="relative">
                     <div className="mb-5 flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-black/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-orange-50">
+                        <span className="rounded-full bg-black/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-brand-50">
                             {previewMode ? 'Student Preview' : 'Lesson Article'}
                         </span>
                         {moduleTitle && (
-                            <span className="rounded-full bg-orange-500/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-orange-100">
+                            <span className="rounded-full bg-brand-500/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-brand-100">
                                 {moduleTitle}
                             </span>
                         )}
@@ -99,7 +99,7 @@ export default function LessonArticle({
                         )}
                     </div>
                     <h1 className="max-w-3xl text-3xl font-black leading-tight sm:text-5xl">{lesson?.title || 'Untitled Lesson'}</h1>
-                    <div className="mt-5 flex flex-wrap gap-3 text-sm font-bold text-orange-50">
+                    <div className="mt-5 flex flex-wrap gap-3 text-sm font-bold text-brand-50">
                         {lesson?.duration_minutes && <span>{lesson.duration_minutes} menit baca</span>}
                         {lesson?.type && <span>{lesson.type}</span>}
                         {progressLabel && <span>{progressLabel}</span>}
@@ -130,37 +130,37 @@ export default function LessonArticle({
 
             <section className="px-6 py-8 sm:px-10 sm:py-10">
                 <div className="mb-6 flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-[#E64A19] dark:bg-orange-900/20 dark:text-orange-300">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300">
                         <SchoolIcon />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-700 dark:text-orange-400">Materi Pelajaran</p>
-                        <h2 className="text-xl font-black text-orange-950 dark:text-orange-50">Konten Utama</h2>
+                        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-brand-700 dark:text-brand-400">Materi Pelajaran</p>
+                        <h2 className="text-xl font-black text-brand-950 dark:text-brand-50">Konten Utama</h2>
                     </div>
                 </div>
 
                 {lesson?.content ? (
                     <div
-                        className="prose prose-orange max-w-none text-orange-950 prose-headings:font-black prose-headings:text-orange-900 prose-p:leading-8 prose-a:text-[#E64A19] prose-strong:text-orange-900 dark:prose-invert dark:text-gray-200 dark:prose-headings:text-white dark:prose-strong:text-white"
+                        className="prose prose-emerald max-w-none text-brand-950 prose-headings:font-black prose-headings:text-brand-900 prose-p:leading-8 prose-a:text-brand-700 prose-strong:text-brand-900 dark:prose-invert dark:text-gray-200 dark:prose-headings:text-white dark:prose-strong:text-white"
                         dangerouslySetInnerHTML={{ __html: lesson.content }}
                     />
                 ) : (
-                    <p className="rounded-2xl border border-dashed border-orange-300 bg-orange-100 p-6 text-sm font-bold italic text-orange-800 dark:border-gray-700 dark:bg-gray-950/50 dark:text-gray-500">
+                    <p className="rounded-2xl border border-dashed border-brand-300 bg-brand-100 p-6 text-sm font-bold italic text-brand-800 dark:border-gray-700 dark:bg-gray-950/50 dark:text-gray-500">
                         Konten teks belum tersedia.
                     </p>
                 )}
             </section>
 
             {(fileUrl || lesson?.type === 'file') && (
-                <section className="border-t border-orange-200 bg-orange-100/50 px-6 py-8 dark:border-gray-800 dark:bg-gray-950/40 sm:px-10">
+                <section className="border-t border-brand-200 bg-brand-100/50 px-6 py-8 dark:border-gray-800 dark:bg-gray-950/40 sm:px-10">
                     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
                                 {isPdf ? <PictureAsPdfIcon /> : isPresentation ? <SlideshowIcon /> : <InsertDriveFileIcon />}
                             </div>
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-700 dark:text-gray-400">Dokumen Pendukung</p>
-                                <h3 className="font-black text-orange-950 dark:text-white">{documentLabel}</h3>
+                                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-brand-700 dark:text-gray-400">Dokumen Pendukung</p>
+                                <h3 className="font-black text-brand-950 dark:text-white">{documentLabel}</h3>
                             </div>
                         </div>
                         {fileUrl && (
@@ -179,7 +179,7 @@ export default function LessonArticle({
                                 download
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-black text-white shadow-lg shadow-red-500/20 transition-colors hover:bg-red-700"
+                                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[var(--toku-primary)] px-5 text-sm font-black text-white shadow-md transition-colors hover:bg-[var(--toku-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--toku-focus)]"
                             >
                                 <DownloadIcon sx={{ fontSize: 18 }} />
                                 Download
@@ -189,10 +189,10 @@ export default function LessonArticle({
                     </div>
 
                     {fileUrl && isPdf ? (
-                        <div className="rounded-2xl border border-red-300 bg-red-50 p-8 text-center shadow-sm dark:border-red-900/40 dark:bg-gray-900">
-                            <PictureAsPdfIcon className="text-red-700 dark:text-red-300" sx={{ fontSize: 56 }} />
-                            <h4 className="mt-3 text-lg font-black text-red-950 dark:text-white">PDF siap dibaca</h4>
-                            <p className="mx-auto mt-2 max-w-md text-sm font-medium text-red-800 dark:text-gray-400">
+                        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-8 text-center shadow-sm dark:border-blue-900/40 dark:bg-gray-900">
+                            <PictureAsPdfIcon className="text-blue-700 dark:text-blue-300" sx={{ fontSize: 56 }} />
+                            <h4 className="mt-3 text-lg font-black text-gray-950 dark:text-white">PDF siap dibaca</h4>
+                            <p className="mx-auto mt-2 max-w-md text-sm font-medium text-blue-800 dark:text-gray-400">
                                 Buka viewer fullscreen agar fokus membaca konten. Tombol download tetap tersedia untuk menyimpan file.
                             </p>
                             <button
@@ -204,15 +204,15 @@ export default function LessonArticle({
                             </button>
                         </div>
                     ) : fileUrl ? (
-                        <div className="rounded-2xl border border-dashed border-orange-300 bg-orange-50 p-8 text-center dark:border-gray-700 dark:bg-gray-900">
-                            {isPresentation ? <SlideshowIcon className="text-red-600" sx={{ fontSize: 52 }} /> : <InsertDriveFileIcon className="text-red-600" sx={{ fontSize: 52 }} />}
-                            <h4 className="mt-3 text-lg font-black text-orange-950 dark:text-white">Preview inline tidak tersedia untuk format ini.</h4>
-                            <p className="mt-2 text-sm font-medium text-orange-800 dark:text-gray-400">
+                        <div className="rounded-2xl border border-dashed border-brand-300 bg-brand-50 p-8 text-center dark:border-gray-700 dark:bg-gray-900">
+                            {isPresentation ? <SlideshowIcon className="text-blue-600" sx={{ fontSize: 52 }} /> : <InsertDriveFileIcon className="text-blue-600" sx={{ fontSize: 52 }} />}
+                            <h4 className="mt-3 text-lg font-black text-brand-950 dark:text-white">Preview inline tidak tersedia untuk format ini.</h4>
+                            <p className="mt-2 text-sm font-medium text-brand-800 dark:text-gray-400">
                                 DOCX/PPTX yang di-import akan tampil sebagai konten teks di atas. Gunakan tombol download untuk menyimpan file asli.
                             </p>
                         </div>
                     ) : (
-                        <div className="rounded-2xl border border-dashed border-orange-300 bg-orange-50 p-8 text-center text-sm font-bold text-orange-800 dark:border-gray-700 dark:bg-gray-900">
+                        <div className="rounded-2xl border border-dashed border-brand-300 bg-brand-50 p-8 text-center text-sm font-bold text-brand-800 dark:border-gray-700 dark:bg-gray-900">
                             Belum ada dokumen yang diupload.
                         </div>
                     )}

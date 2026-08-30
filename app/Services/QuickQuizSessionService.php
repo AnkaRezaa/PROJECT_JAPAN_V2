@@ -192,6 +192,7 @@ class QuickQuizSessionService
                 'will_repeat' => ! $resolved,
                 'correct_answer' => $question->correct_answer,
                 'explanation' => $question->explanation,
+                'explanation_reading' => $question->explanation_reading,
                 'message' => $isCorrect
                     ? 'Benar. Materi ini masuk jadwal review berikutnya.'
                     : ($resolved
@@ -207,7 +208,7 @@ class QuickQuizSessionService
         $quizzes = Kuis::query()
             ->with([
                 'module.programPembelajaran:id,title,slug',
-                'day:id,module_id,day_number,title',
+                'day:id,module_id,day_number,title,status,checkpoint_quiz_id',
                 'questions' => fn ($query) => $query->orderBy('order'),
             ])
             ->where('status', 'published')
@@ -290,8 +291,10 @@ class QuickQuizSessionService
         return $question ? [
             'id' => $question->id,
             'question' => $question->question_text,
+            'question_reading' => $question->question_reading,
             'type' => $question->type,
             'options' => $question->options,
+            'option_readings' => $question->option_readings,
             'audio_url' => $question->audio_url,
             'character' => $question->type === 'handwriting'
                 ? (data_get($question->options, 'character')
@@ -312,7 +315,7 @@ class QuickQuizSessionService
     private function questionForUser(Pengguna $user, int $questionId): ?Soal
     {
         $question = Soal::query()
-            ->with(['quiz.module.programPembelajaran:id,title,slug', 'quiz.day:id,module_id,day_number,title'])
+            ->with(['quiz.module.programPembelajaran:id,title,slug', 'quiz.day:id,module_id,day_number,title,status,checkpoint_quiz_id'])
             ->find($questionId);
 
         if (! $question?->quiz || $question->quiz->status !== 'published' || $question->quiz->isWeeklyExam()) {

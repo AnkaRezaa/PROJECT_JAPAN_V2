@@ -18,6 +18,7 @@ class Berita extends Model
         'slug',
         'excerpt',
         'body',
+        'reading_blocks',
         'status',
         'audience',
         'category',
@@ -35,6 +36,7 @@ class Berita extends Model
 
     protected $casts = [
         'is_pinned' => 'boolean',
+        'reading_blocks' => 'array',
         'published_at' => 'datetime',
         'scheduled_at' => 'datetime',
         'starts_at' => 'datetime',

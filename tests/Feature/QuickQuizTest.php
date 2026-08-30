@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Cache;
 function quickQuizProgram(Pengguna $user, string $suffix): array
 {
     $level = LevelPembelajaran::create([
-        'level_name' => 'Q'.$suffix,
+        'level_name' => 'Q'.substr(md5($suffix), 0, 8),
         'stage' => random_int(100, 9999),
         'is_premium' => true,
     ]);

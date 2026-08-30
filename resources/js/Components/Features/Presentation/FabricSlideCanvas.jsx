@@ -13,7 +13,7 @@ import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 
 const CANVAS_WIDTH = 1280;
 const CANVAS_HEIGHT = 720;
-const colors = ['#111827', '#E64A19', '#2563EB', '#16A34A', '#F59E0B', '#DC2626', '#7C3AED', '#FFFFFF'];
+const colors = ['#111827', '#F97316', '#2563EB', '#16A34A', '#F59E0B', '#DC2626', '#7C3AED', '#FFFFFF'];
 const backgrounds = ['#FFFFFF', '#FFF7ED', '#F8FAFC', '#ECFEFF', '#F0FDF4', '#FEF2F2', '#111827'];
 const shapeOptions = [
     ['rectangle', 'Kotak'],
@@ -79,7 +79,7 @@ function fitCanvasToFrame(canvas, frame, logicalSize) {
     const height = Math.max(1, Math.round(width * (logicalSize.height / logicalSize.width)));
     const scale = width / logicalSize.width;
 
-    canvas.__japanlingoLogicalSize = logicalSize;
+    canvas.__tokuUpLogicalSize = logicalSize;
     canvas.setDimensions({ width, height });
     canvas.setViewportTransform([scale, 0, 0, scale, 0, 0]);
     if (canvas.wrapperEl) {
@@ -93,7 +93,7 @@ function fitCanvasToFrame(canvas, frame, logicalSize) {
 }
 
 function serializeCanvas(canvas) {
-    const logicalSize = canvas.__japanlingoLogicalSize || {
+    const logicalSize = canvas.__tokuUpLogicalSize || {
         width: CANVAS_WIDTH,
         height: CANVAS_HEIGHT,
     };
@@ -124,12 +124,12 @@ export default function FabricSlideCanvas({
     const contextTargetRef = useRef(null);
     const [mode, setMode] = useState('select');
     const [selectedType, setSelectedType] = useState('');
-    const [drawColor, setDrawColor] = useState('#E64A19');
+    const [drawColor, setDrawColor] = useState('#22C55E');
     const [drawSize, setDrawSize] = useState(5);
     const [textColor, setTextColor] = useState('#111827');
     const [fontSize, setFontSize] = useState(34);
     const [shapeFill, setShapeFill] = useState('#FFE4D6');
-    const [shapeStroke, setShapeStroke] = useState('#E64A19');
+    const [shapeStroke, setShapeStroke] = useState('#22C55E');
     const [backgroundColor, setBackgroundColor] = useState(value?.backgroundColor || '#FFFFFF');
     const [isUploadingBackground, setIsUploadingBackground] = useState(false);
     const [showShapeMenu, setShowShapeMenu] = useState(false);
@@ -327,7 +327,7 @@ export default function FabricSlideCanvas({
 
         if (object.kind === 'shape' || ['rect', 'circle', 'triangle', 'polygon', 'line', 'group'].includes(object.type)) {
             setShapeFill(object.fill || '#FFE4D6');
-            setShapeStroke(object.stroke || '#E64A19');
+            setShapeStroke(object.stroke || '#22C55E');
         }
     };
 
@@ -730,7 +730,7 @@ export default function FabricSlideCanvas({
 async function applyBackgroundImage(canvas, url) {
     try {
         const image = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
-        const logicalSize = canvas.__japanlingoLogicalSize || {
+        const logicalSize = canvas.__tokuUpLogicalSize || {
             width: CANVAS_WIDTH,
             height: CANVAS_HEIGHT,
         };
@@ -806,7 +806,7 @@ async function loadCustomObjects(canvas, objects) {
                 rx: object.shapeType === 'rounded' ? 24 : 0,
                 ry: object.shapeType === 'rounded' ? 24 : 0,
                 fill: object.fill || '#FFE4D6',
-                stroke: object.stroke || '#E64A19',
+                stroke: object.stroke || '#22C55E',
                 strokeWidth: object.strokeWidth || 2,
                 kind: 'shape',
                 shapeType: object.shapeType || 'rectangle',

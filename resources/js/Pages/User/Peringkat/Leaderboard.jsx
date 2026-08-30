@@ -3,7 +3,7 @@ import { Head, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { DarumaIcon, KabutoIcon, SakuraIcon, ScrollIcon, ShurikenIcon, ToriiIcon } from '@/Components/JapaneseIcons';
 import LeagueIcon from '@/Components/Gamification/LeagueIcon';
-import { motion } from 'framer-motion';
+import { motion, MotionConfig } from 'framer-motion';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import StarsIcon from '@mui/icons-material/Stars';
@@ -12,10 +12,10 @@ import { MascotGuide } from '@/Components/User/UserVisuals';
 const hashColor = (name) => {
     const colors = [
         'from-violet-500 to-purple-700',
-        'from-cyan-500 to-red-700',
+        'from-cyan-500 to-brand-700',
         'from-emerald-500 to-green-700',
         'from-rose-500 to-pink-700',
-        'from-orange-500 to-red-700',
+        'from-orange-500 to-brand-700',
         'from-teal-500 to-cyan-700',
         'from-rose-500 to-violet-700',
         'from-fuchsia-500 to-pink-700',
@@ -119,13 +119,14 @@ export default function Leaderboard({
     };
 
     return (
+        <MotionConfig reducedMotion="user">
         <AuthenticatedLayout>
-            <Head title="Papan Peringkat - Japanlingo" />
+            <Head title="Papan Peringkat - TOKU-UP" />
 
             <div className="relative min-h-screen overflow-hidden bg-[#f5eadb] text-slate-900 transition-colors duration-300 dark:bg-gray-950 dark:text-white">
                 <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(140deg,rgba(245,158,11,0.18)_0%,transparent_28%),linear-gradient(230deg,rgba(220,38,38,0.10)_0%,transparent_34%),repeating-linear-gradient(90deg,rgba(120,53,15,0.05)_0_1px,transparent_1px_74px),repeating-linear-gradient(0deg,rgba(120,53,15,0.04)_0_1px,transparent_1px_74px)] dark:bg-[linear-gradient(140deg,rgba(245,158,11,0.12)_0%,transparent_28%),linear-gradient(230deg,rgba(220,38,38,0.12)_0%,transparent_34%),repeating-linear-gradient(90deg,rgba(255,255,255,0.032)_0_1px,transparent_1px_74px),repeating-linear-gradient(0deg,rgba(255,255,255,0.026)_0_1px,transparent_1px_74px)]" />
                 <div className="pointer-events-none absolute left-8 top-32 hidden text-[12rem] font-black leading-none text-amber-900/[0.055] dark:text-white/[0.035] lg:block">勝</div>
-                <div className="pointer-events-none absolute right-8 top-[620px] hidden text-[12rem] font-black leading-none text-red-900/[0.04] dark:text-white/[0.03] lg:block">位</div>
+                <div className="pointer-events-none absolute right-8 top-[620px] hidden text-[12rem] font-black leading-none text-brand-900/[0.04] dark:text-white/[0.03] lg:block">位</div>
                 {/* HERO */}
                 <div className="relative z-10 px-4 pt-10 pb-8 transition-colors duration-300">
                     <div className="max-w-7xl mx-auto text-center">
@@ -157,7 +158,7 @@ export default function Leaderboard({
                                     onClick={() => setActiveLeague(league.name)}
                                     className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 py-2 text-xs font-black transition ${
                                         activeLeague === league.name
-                                            ? 'bg-gradient-to-r from-amber-400 to-red-500 text-white shadow-lg shadow-red-500/20'
+                                            ? 'bg-gradient-to-r from-amber-400 to-brand-500 text-white shadow-lg shadow-brand-500/20'
                                             : 'bg-white/70 text-slate-600 hover:bg-white dark:bg-gray-900/70 dark:text-gray-300 dark:hover:bg-gray-800'
                                     }`}
                                 >
@@ -445,7 +446,7 @@ export default function Leaderboard({
                         </div>
 
                         <div className="rounded-[2rem] border border-white/70 bg-white/72 p-5 shadow-2xl shadow-amber-900/5 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/72">
-                            <p className="text-xs font-black uppercase tracking-[0.25em] text-red-600 dark:text-red-400">Target Berikutnya</p>
+                            <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-600 dark:text-brand-400">Target Berikutnya</p>
                             <div className="mt-4 space-y-3">
                                 <div className="rounded-2xl bg-slate-50 p-4 dark:bg-gray-950/60">
                                     <p className="text-sm font-black text-slate-900 dark:text-white">Kejar Peringkat</p>
@@ -469,5 +470,6 @@ export default function Leaderboard({
                 </div>
             </div>
         </AuthenticatedLayout>
+        </MotionConfig>
     );
 }

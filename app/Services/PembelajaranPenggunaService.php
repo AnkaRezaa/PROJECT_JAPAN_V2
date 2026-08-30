@@ -90,9 +90,11 @@ class PembelajaranPenggunaService
                 return [
                     'id' => $question->id,
                     'question' => $question->question_text,
+                    'question_reading' => $question->question_reading,
                     'kanji' => '',
                     'type' => $question->type,
                     'options' => $question->options,
+                    'option_readings' => $question->option_readings,
                     'audio_url' => $question->audio_url,
                     'points' => max(1, (int) ($question->points ?? 1)),
                     'review_status' => $review?->status ?? 'new',

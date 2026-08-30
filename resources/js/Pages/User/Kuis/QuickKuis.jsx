@@ -8,6 +8,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ReplayIcon from '@mui/icons-material/Replay';
 import SchoolIcon from '@mui/icons-material/School';
 import KanjiHandwritingCanvas from '@/Components/Features/Handwriting/KanjiHandwritingCanvas';
+import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
 import JapaneseSpeechButton from '@/Components/UI/JapaneseSpeechButton';
 
 const normalizeType = (type) => {
@@ -90,7 +91,7 @@ export default function QuickKuis({ quickSession, backUrl, answerUrl, resetUrl }
                         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
                             <CheckCircleIcon sx={{ fontSize: 36 }} />
                         </div>
-                        <p className="mt-5 text-center text-xs font-black uppercase tracking-[0.18em] text-red-600 dark:text-red-400">Sesi selesai</p>
+                        <p className="mt-5 text-center text-xs font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Sesi selesai</p>
                         <h1 className="mt-2 text-center text-2xl font-black sm:text-3xl">Latihan hari ini sudah tercatat</h1>
                         <p className="mx-auto mt-3 max-w-lg text-center text-sm leading-6 text-gray-600 dark:text-gray-300">
                             Materi yang belum kuat akan diprioritaskan lagi pada Quick Kuis berikutnya.
@@ -109,7 +110,7 @@ export default function QuickKuis({ quickSession, backUrl, answerUrl, resetUrl }
                             <Link href={backUrl} className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl border border-gray-300 px-5 text-sm font-black text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
                                 Kembali ke dashboard
                             </Link>
-                            <button type="button" onClick={() => router.post(resetUrl)} className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-red-600 px-5 text-sm font-black text-white transition hover:bg-red-700">
+                    <button type="button" onClick={() => router.post(resetUrl)} className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-action-primary px-5 text-sm font-black text-ink-900 transition hover:bg-action-primary-hover">
                                 <ReplayIcon fontSize="small" /> Mulai sesi baru
                             </button>
                         </div>
@@ -133,7 +134,7 @@ export default function QuickKuis({ quickSession, backUrl, answerUrl, resetUrl }
                             <span>{progress}%</span>
                         </div>
                         <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
-                            <motion.div className="h-full rounded-full bg-red-600" animate={{ width: `${progress}%` }} transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.35 }} />
+                    <motion.div className="h-full rounded-full bg-progress-active" animate={{ width: `${progress}%` }} transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.35 }} />
                         </div>
                     </div>
                 </div>
@@ -150,12 +151,14 @@ export default function QuickKuis({ quickSession, backUrl, answerUrl, resetUrl }
                             {question.attempt_number > 1 && <span className="rounded-full bg-amber-100 px-2.5 py-1 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">Penguatan</span>}
                         </div>
 
-                        <h1 className="mt-6 break-words text-2xl font-black leading-tight sm:text-3xl">{question.question}</h1>
+                        <h1 className="mt-6 break-words text-2xl font-black leading-tight sm:text-3xl">
+                            <JapaneseReading japanese={question.question} reading={question.question_reading} />
+                        </h1>
                         {question.source.day_title && <p className="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400">{question.source.day_title}</p>}
 
                         {(type === 'listening' || question.audio_url) && (
                             <div className="mt-6 flex justify-center rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-                                <JapaneseSpeechButton audioUrl={question.audio_url} text={question.question} autoPlay={type === 'listening'} autoPlayEnabled playbackKey={`quick-${question.id}-${session.current_token}`} className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white shadow-lg shadow-red-600/20" />
+                                <JapaneseSpeechButton audioUrl={question.audio_url} text={question.question} autoPlay={type === 'listening'} autoPlayEnabled playbackKey={`quick-${question.id}-${session.current_token}`} className="flex h-14 w-14 items-center justify-center rounded-full bg-action-secondary text-white shadow-md" />
                             </div>
                         )}
 
@@ -164,29 +167,29 @@ export default function QuickKuis({ quickSession, backUrl, answerUrl, resetUrl }
                                 <div className="rounded-3xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900 sm:p-6">
                                     <p className="mb-4 text-center text-5xl font-black">{question.character}</p>
                                     <KanjiHandwritingCanvas key={`${question.id}-${session.current_token}`} character={question.character} mode="quiz" onChange={setHandwritingPayload} onComplete={setHandwritingPayload} />
-                                    <button type="button" disabled={submitting || feedback} onClick={() => submitAnswer()} className="mt-5 min-h-12 w-full rounded-2xl bg-red-600 px-5 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+                                    <button type="button" disabled={submitting || feedback} onClick={() => submitAnswer()} className="mt-5 min-h-12 w-full rounded-2xl bg-action-primary px-5 text-sm font-black text-ink-900 transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-50">
                                         {submitting ? 'Memeriksa...' : 'Periksa tulisan'}
                                     </button>
                                 </div>
                             ) : type === 'multiple_choice' && choices.length > 0 ? (
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     {choices.map((choice, index) => (
-                                        <button key={`${choice}-${index}`} type="button" disabled={submitting || feedback} onClick={() => { setAnswer(String(choice)); submitAnswer(String(choice)); }} className="min-h-14 rounded-2xl border-2 border-gray-200 bg-white px-5 py-4 text-left text-sm font-black text-gray-800 shadow-[0_3px_0_#e5e7eb] transition hover:border-red-300 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-300/40 disabled:cursor-default dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:shadow-[0_3px_0_#374151] dark:hover:border-red-700 dark:hover:bg-red-950/30 sm:text-base">
-                                            {choice}
+                                        <button key={`${choice}-${index}`} type="button" disabled={submitting || feedback} onClick={() => { setAnswer(String(choice)); submitAnswer(String(choice)); }} className="min-h-14 rounded-2xl border-2 border-gray-200 bg-white px-5 py-4 text-left text-sm font-black text-gray-800 shadow-[0_3px_0_#e5e7eb] transition hover:border-learning-300 hover:bg-learning-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-learning-300/50 disabled:cursor-default dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:shadow-[0_3px_0_#374151] dark:hover:border-learning-600 dark:hover:bg-learning-950/30 sm:text-base">
+                                            <JapaneseReading japanese={choice} reading={question.option_readings?.[index]} />
                                         </button>
                                     ))}
                                 </div>
                             ) : (
                                 <form onSubmit={(event) => { event.preventDefault(); submitAnswer(); }} className="space-y-4">
-                                    <input autoFocus type="text" value={answer} onChange={(event) => setAnswer(event.target.value)} disabled={submitting || feedback} placeholder={type === 'listening' ? 'Ketik jawaban dari audio...' : 'Ketik jawaban...'} className="min-h-14 w-full rounded-2xl border-2 border-gray-200 bg-white px-5 text-center text-lg font-black text-gray-900 outline-none transition focus:border-red-500 focus:ring-4 focus:ring-red-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
-                                    <button type="submit" disabled={submitting || feedback || !answer.trim()} className="min-h-12 w-full rounded-2xl bg-red-600 px-5 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+                                    <input autoFocus type="text" value={answer} onChange={(event) => setAnswer(event.target.value)} disabled={submitting || feedback} placeholder={type === 'listening' ? 'Ketik jawaban dari audio...' : 'Ketik jawaban...'} className="min-h-14 w-full rounded-2xl border-2 border-gray-200 bg-white px-5 text-center text-lg font-black text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-focus/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                                    <button type="submit" disabled={submitting || feedback || !answer.trim()} className="min-h-12 w-full rounded-2xl bg-action-primary px-5 text-sm font-black text-ink-900 transition hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:opacity-50">
                                         {submitting ? 'Memeriksa...' : 'Periksa jawaban'}
                                     </button>
                                 </form>
                             )}
                         </div>
 
-                        {error && <p role="alert" className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p>}
+                        {error && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p>}
                     </motion.section>
                 </AnimatePresence>
             </main>

@@ -33,8 +33,8 @@ class KelasDemoSeeder extends Seeder
             ['level_name' => 'JLPT N3'],
             ['curriculum_track_id' => $track->id, 'stage' => 3, 'is_premium' => true]
         );
-        $globalAdmin = Pengguna::where('email', 'admin@japanlingo.com')->first();
-        $mentor = Pengguna::where('email', 'admin.kloter@japanlingo.com')->first();
+        $globalAdmin = Pengguna::where('email', 'admin@toku-up.com')->first();
+        $mentor = Pengguna::where('email', 'admin.kloter@toku-up.com')->first();
 
         foreach ($this->programs() as $index => $programData) {
             $program = ProgramPembelajaran::updateOrCreate(
@@ -342,14 +342,14 @@ class KelasDemoSeeder extends Seeder
                 'slug' => self::MANDIRI_SLUG,
                 'title' => 'JLPT N3 Mandiri',
                 'description' => 'Belajar mandiri melalui roadmap Week dan Day dengan repetisi, kuis, serta ujian mingguan.',
-                'instructor_name' => 'Tim Akademik JapanLingo',
+                'instructor_name' => 'Tim Akademik TOKU-UP',
                 'thumbnail_url' => '/images/kelas-n3-mingguan.jpg',
             ],
             [
                 'slug' => self::MENTOR_SLUG,
                 'title' => 'JLPT N3 Bersama Mentor',
                 'description' => 'Kurikulum JLPT N3 dengan pendampingan mentor, kloter, dan sesi kelas live.',
-                'instructor_name' => 'Mentor JapanLingo',
+                'instructor_name' => 'Mentor TOKU-UP',
                 'thumbnail_url' => '/images/kelas-n3-mingguan.jpg',
             ],
         ];

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import theme from '@/Components/theme/themes';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
@@ -27,11 +27,11 @@ import VideoCameraFrontIcon from '@mui/icons-material/VideoCameraFront';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 
 const RESOURCE_COLORS = {
-    presentation: { color: '#0284c7', shadow: '#075985' },
-    day: { color: '#dc2626', shadow: '#991b1b' },
-    quiz: { color: '#e11d48', shadow: '#9f1239' },
-    exam: { color: '#16a34a', shadow: '#166534' },
-    live: { color: '#f97316', shadow: '#c2410c' },
+    day: { color: '#58cc02', shadow: '#46a302', foreground: '#2d3742' },
+    presentation: { color: '#2bc5b4', shadow: '#14998b', foreground: '#2d3742' },
+    live: { color: '#ff9600', shadow: '#d67800', foreground: '#2d3742' },
+    quiz: { color: '#ce82ff', shadow: '#a560d1', foreground: '#2d3742' },
+    exam: { color: '#ffc800', shadow: '#d7a900', foreground: '#2d3742' },
 };
 
 const todayInputValue = () => {
@@ -99,7 +99,7 @@ function ExamDatePicker({ value, onChange }) {
                     type="button"
                     onClick={() => moveMonth(-1)}
                     disabled={!canGoPrevious}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-white hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-25 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-red-300"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-white hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-25 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-brand-300"
                     aria-label="Bulan sebelumnya"
                 >
                     <ChevronLeftIcon />
@@ -108,14 +108,14 @@ function ExamDatePicker({ value, onChange }) {
                 <button
                     type="button"
                     onClick={() => moveMonth(1)}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-white hover:text-red-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-red-300"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-white hover:text-brand-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-brand-300"
                     aria-label="Bulan berikutnya"
                 >
                     <ChevronRightIcon />
                 </button>
             </div>
 
-            <div className="mt-2 grid grid-cols-7 text-center text-[8px] font-black uppercase text-gray-400 min-[360px]:text-[9px] sm:mt-3">
+            <div className="mt-2 grid grid-cols-7 text-center text-xs font-bold text-gray-600 dark:text-gray-300 sm:mt-3">
                 {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map((day) => (
                     <span key={day} className="py-1">{day}</span>
                 ))}
@@ -136,12 +136,12 @@ function ExamDatePicker({ value, onChange }) {
                             type="button"
                             disabled={isPast}
                             onClick={() => onChange(candidateValue)}
-                            className={`aspect-square min-h-8 rounded-lg text-[11px] font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 min-[360px]:text-xs ${
+                            className={`aspect-square min-h-10 rounded-lg text-xs font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${
                                 isSelected
-                                    ? 'bg-red-600 text-white shadow-[0_3px_0_#991b1b]'
+                                    ? 'bg-brand-600 text-ink-900 shadow-[0_3px_0_#15803d]'
                                     : isToday
-                                        ? 'border border-red-200 bg-white text-red-600 dark:border-red-900 dark:bg-gray-900 dark:text-red-300'
-                                        : 'text-gray-700 hover:bg-white hover:text-red-600 disabled:cursor-not-allowed disabled:text-gray-300 dark:text-gray-200 dark:hover:bg-gray-800 dark:hover:text-red-300 dark:disabled:text-gray-700'
+                                        ? 'border border-brand-300 bg-white text-brand-700 dark:border-brand-700 dark:bg-gray-900 dark:text-brand-300'
+                                        : 'text-gray-700 hover:bg-white hover:text-brand-700 disabled:cursor-not-allowed disabled:text-gray-300 dark:text-gray-200 dark:hover:bg-gray-800 dark:hover:text-brand-300 dark:disabled:text-gray-700'
                             }`}
                         >
                             {day}
@@ -214,7 +214,7 @@ function ExamTargetCard({ program, completedWeekCount, totalWeeks }) {
             <section className="mt-3 rounded-xl border border-white/80 bg-white/70 p-2.5 shadow-sm backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/70">
                 {target ? (
                     <div className="flex min-w-0 items-center gap-2.5">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-300">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 dark:bg-brand-950/50 dark:text-brand-300">
                             <CalendarMonthIcon sx={{ fontSize: 19 }} />
                         </span>
                         <div className="min-w-0 flex-1">
@@ -232,7 +232,7 @@ function ExamTargetCard({ program, completedWeekCount, totalWeeks }) {
                                 onClick={openForm}
                                 title="Ubah target ujian"
                                 aria-label="Ubah target ujian"
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-red-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-red-300"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-brand-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-brand-300"
                             >
                                 <EditCalendarIcon sx={{ fontSize: 17 }} />
                             </button>
@@ -241,7 +241,7 @@ function ExamTargetCard({ program, completedWeekCount, totalWeeks }) {
                                 onClick={requestDelete}
                                 title="Hapus target ujian"
                                 aria-label="Hapus target ujian"
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-300"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-950/40 dark:hover:text-red-300"
                             >
                                 <DeleteOutlineIcon sx={{ fontSize: 17 }} />
                             </button>
@@ -251,9 +251,9 @@ function ExamTargetCard({ program, completedWeekCount, totalWeeks }) {
                     <button
                         type="button"
                         onClick={openForm}
-                        className="flex w-full items-center gap-2.5 text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-300/40"
+                        className="flex w-full items-center gap-2.5 text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-400/50"
                     >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-300">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 dark:bg-brand-950/50 dark:text-brand-300">
                             <CalendarMonthIcon sx={{ fontSize: 19 }} />
                         </span>
                         <span className="min-w-0 flex-1">
@@ -262,7 +262,7 @@ function ExamTargetCard({ program, completedWeekCount, totalWeeks }) {
                                 Dapatkan hitung mundur dan ritme belajar.
                             </span>
                         </span>
-                        <EditCalendarIcon className="shrink-0 text-red-500" sx={{ fontSize: 18 }} />
+                        <EditCalendarIcon className="shrink-0 text-brand-500" sx={{ fontSize: 18 }} />
                     </button>
                 )}
             </section>
@@ -289,7 +289,7 @@ function ExamTargetCard({ program, completedWeekCount, totalWeeks }) {
                                 >
                             <div className="flex items-start justify-between gap-4">
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-red-600 dark:text-red-400">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-600 dark:text-brand-400">
                                         {program?.level || 'Target Ujian'}
                                     </p>
                                     <h2 className="mt-1 text-xl font-black text-gray-900 dark:text-white">Atur Target Ujian</h2>
@@ -331,7 +331,7 @@ function ExamTargetCard({ program, completedWeekCount, totalWeeks }) {
                                 <button
                                     type="submit"
                                     disabled={processing || !data.exam_date}
-                                    className="h-11 rounded-xl bg-red-600 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-wait disabled:opacity-60"
+                                    className="h-11 rounded-xl bg-brand-600 text-sm font-black text-white transition hover:bg-brand-700 disabled:cursor-wait disabled:opacity-60"
                                 >
                                     {processing ? 'Menyimpan...' : 'Simpan Target'}
                                 </button>
@@ -386,7 +386,7 @@ function CourseAccessPanel({ program, processing, error, onCheckout }) {
         return (
             <aside className="rounded-2xl border border-rose-200 bg-rose-50/85 p-4 text-rose-950 shadow-sm dark:border-rose-900/60 dark:bg-rose-950/25 dark:text-rose-100">
                 <div className="flex items-center gap-2 text-sm font-black"><LockIcon sx={{ fontSize: 18 }} />Pendaftaran tidak disetujui</div>
-                <p className="mt-2 text-sm leading-6 text-rose-800 dark:text-rose-200">Tim Japanlingo sedang menindaklanjuti refund pembayaran kelas mentor ini.</p>
+                <p className="mt-2 text-sm leading-6 text-rose-800 dark:text-rose-200">Tim TOKU-UP sedang menindaklanjuti refund pembayaran kelas mentor ini.</p>
             </aside>
         );
     }
@@ -396,16 +396,16 @@ function CourseAccessPanel({ program, processing, error, onCheckout }) {
     const canCheckout = !isMentored || Boolean(selectedKloterId);
 
     return (
-        <aside className="rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-lg shadow-red-950/5 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95 lg:sticky lg:top-6">
+        <aside className="rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-lg shadow-brand-950/5 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95 lg:sticky lg:top-6">
             <div className="flex items-start justify-between gap-3">
                 <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-red-600 dark:text-red-300">Buka akses kelas</p>
+                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-brand-600 dark:text-brand-300">Buka akses kelas</p>
                     <p className="mt-1 text-xl font-black text-gray-950 dark:text-white">{selectedPlan.price_formatted}</p>
                     <p className="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
                         {Number(selectedPlan.duration_days) > 0 ? `Akses ${selectedPlan.duration_days} hari` : 'Masa akses mengikuti paket'}
                     </p>
                 </div>
-                <WorkspacePremiumIcon className="text-red-500 dark:text-red-300" />
+                <WorkspacePremiumIcon className="text-brand-500 dark:text-brand-300" />
             </div>
 
             {plans.length > 1 && (
@@ -448,17 +448,11 @@ function itemStatusLabel(item) {
 }
 
 function nodeColors(item) {
-    if (item.status === 'done') {
-        return {
-            color: theme.doneColor || '#22c55e',
-            shadow: theme.doneShadow || '#15803d',
-        };
-    }
-
     if (['locked', 'unavailable'].includes(item.status)) {
         return {
             color: item.status === 'unavailable' ? '#f3f4f6' : '#e5e7eb',
             shadow: '#cbd5e1',
+            foreground: '#9ca3af',
         };
     }
 
@@ -466,8 +460,10 @@ function nodeColors(item) {
 }
 
 function iconFor(item, size) {
+    const foreground = nodeColors(item).foreground;
+
     if (item.status === 'done') {
-        return <CheckCircleIcon sx={{ fontSize: size, color: '#fff' }} />;
+        return <CheckCircleIcon sx={{ fontSize: size, color: foreground }} />;
     }
 
     if (['locked', 'unavailable'].includes(item.status)) {
@@ -475,19 +471,23 @@ function iconFor(item, size) {
     }
 
     if (item.kind === 'presentation') {
-        return <SlideshowIcon sx={{ fontSize: size - 3, color: '#fff' }} />;
+        return <SlideshowIcon sx={{ fontSize: size - 3, color: foreground }} />;
     }
 
     if (item.kind === 'live') {
-        return <VideoCameraFrontIcon sx={{ fontSize: size - 3, color: '#fff' }} />;
+        return <VideoCameraFrontIcon sx={{ fontSize: size - 3, color: foreground }} />;
     }
 
-    if (item.kind === 'quiz' || item.kind === 'exam') {
-        return <QuizIcon sx={{ fontSize: size - 3, color: '#fff' }} />;
+    if (item.kind === 'exam') {
+        return <QuizIcon sx={{ fontSize: size - 3, color: foreground }} />;
+    }
+
+    if (item.kind === 'quiz') {
+        return <QuizIcon sx={{ fontSize: size - 3, color: foreground }} />;
     }
 
     return (
-        <span className="text-center text-white">
+        <span className="text-center" style={{ color: foreground }}>
             <span className="block text-[8px] font-black uppercase">Hari</span>
             <span className="block text-xl font-black leading-none">{item.dayNumber}</span>
         </span>
@@ -702,7 +702,7 @@ function StatusBadge({ item, className = '' }) {
             item.status === 'done'
                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
                 : item.status === 'active'
-                    ? 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300'
+                    ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300'
                     : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
         }`}>
             {itemStatusLabel(item)}
@@ -712,7 +712,7 @@ function StatusBadge({ item, className = '' }) {
 
 function PathNode({ item, selected, onDayToggle }) {
     const locked = ['locked', 'unavailable'].includes(item.status);
-    const className = `group relative inline-flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-300 ${
+    const className = `group relative inline-flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-400 ${
         locked ? 'cursor-not-allowed' : ''
     }`;
 
@@ -760,22 +760,22 @@ function PathNodeLabel({ item }) {
         const isLive = item.status === 'active';
         const cardClassName = `relative mt-3 block w-48 overflow-hidden rounded-xl border px-3 py-2 text-left shadow-md transition sm:w-56 ${
             isLive
-                ? 'border-red-300 bg-white shadow-red-900/10 hover:-translate-y-0.5 hover:border-red-400 dark:border-red-800 dark:bg-gray-900'
+                ? 'border-green-300 bg-white shadow-green-900/10 hover:-translate-y-0.5 hover:border-green-400 dark:border-green-800 dark:bg-gray-900'
                 : 'border-orange-200 bg-white/95 shadow-orange-900/5 dark:border-orange-900/70 dark:bg-gray-900'
         }`;
         const cardContent = (
             <>
-                <span className={`absolute inset-y-0 left-0 w-1 ${isLive ? 'bg-red-500' : 'bg-orange-500'}`} />
+                <span className={`absolute inset-y-0 left-0 w-1 ${isLive ? 'bg-green-500' : 'bg-orange-500'}`} />
                 <div className="flex items-center justify-between gap-2 pl-1">
                     <span className="text-[9px] font-black uppercase tracking-[0.14em] text-orange-700 dark:text-orange-300">
                         {item.weekLabel} · Kelas Live
                     </span>
                     <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase ${
                         isLive
-                            ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300'
                             : 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300'
                     }`}>
-                        {isLive && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" aria-hidden="true" />}
+                        {isLive && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" aria-hidden="true" />}
                         {isLive ? 'Live' : 'Terjadwal'}
                     </span>
                 </div>
@@ -797,7 +797,7 @@ function PathNodeLabel({ item }) {
 
     return (
         <div className="relative mt-3 w-36 text-center sm:w-44">
-            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-red-600 dark:text-red-400">
+            <p className="text-xs font-black text-brand-700 dark:text-brand-300">
                 {item.eyebrow}
             </p>
             <h3 className="mt-0.5 line-clamp-2 text-[13px] font-black leading-4 text-gray-900 dark:text-white sm:text-sm sm:leading-5">
@@ -841,22 +841,31 @@ function DayDetailContent({ day, onClose, mobile = false }) {
     return (
         <div
             id={`day-materials-${day.id}`}
-            className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-black/20 dark:border-gray-800 dark:bg-gray-900"
+            className="overflow-hidden rounded-2xl border border-[#dce8df] bg-white shadow-[0_18px_50px_-24px_rgba(45,55,66,0.32)] dark:border-gray-700 dark:bg-gray-900"
         >
-            <div className={`flex items-start justify-between gap-4 px-5 py-4 text-white ${
-                completed ? 'bg-emerald-700 dark:bg-emerald-900' : 'bg-gray-950 dark:bg-black'
+            <div className={`flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6 sm:py-5 ${
+                completed
+                    ? 'border-emerald-200 bg-emerald-50 text-[#2d3742] dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-white'
+                    : 'border-[#d7edc8] bg-[#f1fbe9] text-[#2d3742] dark:border-green-900 dark:bg-green-950/25 dark:text-white'
             }`}>
                 <div className="min-w-0">
-                    <p className={`text-[10px] font-black uppercase tracking-[0.15em] ${
-                        completed ? 'text-emerald-100' : 'text-red-400'
-                    }`}>
-                        Hari {day.day_number} {completed ? '- Selesai' : '- Jalur Belajar'}
-                    </p>
-                    <h3 className="mt-1 text-base font-black leading-5">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-extrabold ${
+                            completed
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200'
+                                : 'bg-[#dff6cb] text-[#397d08] dark:bg-green-900/60 dark:text-green-200'
+                        }`}>
+                            Hari {day.day_number}
+                        </span>
+                        <span className="text-xs font-bold text-gray-500 dark:text-gray-300">
+                            {completed ? 'Selesai' : 'Jalur belajar'}
+                        </span>
+                    </div>
+                    <h3 className="mt-2 text-lg font-extrabold leading-6 text-[#2d3742] dark:text-white">
                         {day.title || `Hari ${day.day_number}`}
                     </h3>
                     {day.description && (
-                        <p className="mt-1 line-clamp-2 text-[11px] font-semibold leading-4 text-white/65">
+                        <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-gray-600 dark:text-gray-300 sm:text-[13px]">
                             {day.description}
                         </p>
                     )}
@@ -865,43 +874,56 @@ function DayDetailContent({ day, onClose, mobile = false }) {
                     type="button"
                     onClick={onClose}
                     aria-label="Tutup detail Hari"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-black/5 bg-white/75 text-gray-600 shadow-sm transition hover:bg-white hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 dark:border-white/10 dark:bg-gray-900/70 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
                 >
                     <CloseIcon sx={{ fontSize: 19 }} />
                 </button>
             </div>
 
-            <div className={`space-y-3 p-3 sm:p-4 ${mobile ? 'max-h-[65dvh] overflow-y-auto' : ''}`}>
+            <div className={`space-y-3 bg-[#f8faf8] p-3 sm:p-4 dark:bg-gray-900 ${mobile ? 'max-h-[65dvh] overflow-y-auto' : ''}`}>
                 {items.map((item, index) => {
                     const locked = ['locked', 'unavailable'].includes(item.status);
                     const row = (
                         <>
-                            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                            <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
                                 locked
-                                    ? 'bg-gray-200 text-gray-400 dark:bg-gray-700'
+                                    ? 'bg-gray-100 text-gray-400 dark:bg-gray-700'
                                     : completed
-                                        ? 'bg-emerald-700 text-white'
-                                        : 'bg-red-700 text-white'
+                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                        : 'bg-[#f1e4ff] text-[#7c3aed] dark:bg-violet-950/60 dark:text-violet-300'
                             }`}>
                                 <QuizIcon sx={{ fontSize: 24 }} />
                             </span>
                             <span className="min-w-0 flex-1">
-                                <span className="block text-sm font-black">
+                                <span className="flex flex-wrap items-center gap-2">
+                                    <span className="block text-sm font-extrabold leading-5 text-[#2d3742] dark:text-white sm:text-[15px]">
                                     {item.status === 'done' ? 'Ulangi Kuis & Repetisi' : 'Mulai Kuis & Repetisi'}
+                                    </span>
+                                    {!locked && (
+                                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                            completed
+                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                                : 'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300'
+                                        }`}>
+                                            {completed ? 'Selesai' : 'Siap dimulai'}
+                                        </span>
+                                    )}
                                 </span>
                                 {!locked && (
-                                    <span className="mt-0.5 block text-[10px] font-semibold opacity-75">
+                                    <span className="mt-1 block text-xs font-medium leading-5 text-gray-600 dark:text-gray-300">
                                         Flashcard, soal, dan latihan menulis tersedia dalam satu sesi.
                                     </span>
                                 )}
                                 {locked && (
-                                    <span className="mt-0.5 block line-clamp-2 text-[10px] font-semibold opacity-70">
+                                    <span className="mt-1 block line-clamp-2 text-xs font-medium leading-5 text-gray-500 dark:text-gray-400">
                                         {item.lockReason || 'Materi belum tersedia.'}
                                     </span>
                                 )}
                             </span>
                             <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                                locked ? 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-300' : 'bg-white/20'
+                                locked
+                                    ? 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'
+                                    : 'bg-violet-100 text-violet-700 transition group-hover:bg-violet-200 dark:bg-violet-950/60 dark:text-violet-300'
                             }`}>
                                 {locked
                                     ? <LockIcon sx={{ fontSize: 16 }} />
@@ -909,12 +931,10 @@ function DayDetailContent({ day, onClose, mobile = false }) {
                             </span>
                         </>
                     );
-                    const className = `group flex min-h-[78px] w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition sm:px-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/60 ${
+                    const className = `group flex min-h-[88px] w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition sm:px-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-200/70 ${
                         locked
-                            ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
-                            : completed
-                                ? 'bg-emerald-600 text-white shadow-[0_4px_0_#047857] hover:bg-emerald-500 active:translate-y-1 active:shadow-none'
-                                : 'bg-red-600 text-white shadow-[0_4px_0_#991b1b] hover:bg-red-500 active:translate-y-1 active:shadow-none'
+                            ? 'cursor-not-allowed border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
+                            : 'border-violet-200 bg-white shadow-[0_3px_0_#ddd6fe] hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/40 hover:shadow-[0_4px_0_#c4b5fd] active:translate-y-0.5 active:shadow-none dark:border-violet-900/70 dark:bg-gray-800 dark:hover:bg-violet-950/20'
                     }`;
 
                     return (
@@ -951,10 +971,10 @@ function DesktopDayPopover({ day, x, onClose }) {
                 ? { left: `calc(${x}% + 54px)` }
                 : { right: `calc(${100 - x}% + 54px)` }}
         >
-            <span className={`absolute top-9 h-4 w-4 rotate-45 border bg-gray-950 dark:bg-black ${
+            <span className={`absolute top-9 h-4 w-4 rotate-45 border bg-[#f1fbe9] dark:bg-gray-900 ${
                 openToRight
-                    ? '-left-2 border-b-0 border-l border-r-0 border-t border-gray-800'
-                    : '-right-2 border-b border-l-0 border-r border-t-0 border-gray-800'
+                    ? '-left-2 border-b-0 border-l border-r-0 border-t border-[#d7edc8] dark:border-gray-700'
+                    : '-right-2 border-b border-l-0 border-r border-t-0 border-[#d7edc8] dark:border-gray-700'
             }`} />
             <DayDetailContent day={day} onClose={onClose} />
         </motion.div>
@@ -1010,7 +1030,7 @@ function connectorColor(previousItem, item) {
     }
 
     if (previousItem.status === 'active' || item.status === 'active') {
-        return '#ef4444';
+        return '#58cc02';
     }
 
     return '#cbd5e1';
@@ -1182,9 +1202,9 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
                 }}
                 disabled={!canExpand}
                 aria-expanded={expanded}
-                className={`relative flex min-h-[76px] w-full items-center gap-3 overflow-hidden rounded-2xl border px-3 py-3 text-left shadow-lg shadow-red-900/5 transition sm:px-5 ${
+                className={`relative flex min-h-[76px] w-full items-center gap-3 overflow-hidden rounded-2xl border px-3 py-3 text-left shadow-lg shadow-brand-900/5 transition sm:px-5 ${
                     week.status === 'active'
-                        ? 'border-red-300 bg-white hover:border-red-400 hover:shadow-xl dark:border-red-900/70 dark:bg-gray-900'
+                        ? 'border-brand-300 bg-white hover:border-brand-500 hover:shadow-xl dark:border-brand-700/70 dark:bg-gray-900'
                         : week.status === 'done'
                             ? 'border-emerald-200 bg-white/90 hover:border-emerald-300 dark:border-emerald-900/60 dark:bg-gray-900'
                             : 'border-white/70 bg-white/75 hover:border-gray-200 dark:border-gray-800 dark:bg-gray-900/75'
@@ -1194,14 +1214,14 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
                     week.status === 'done'
                         ? 'bg-emerald-500'
                         : week.status === 'active'
-                            ? 'bg-red-500'
+                            ? 'bg-[#58cc02]'
                             : 'bg-gray-300 dark:bg-gray-700'
                 }`} />
                 <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-black ${
                     week.status === 'done'
                         ? 'bg-emerald-600 text-white'
                         : week.status === 'active'
-                            ? 'bg-red-600 text-white'
+                            ? 'bg-[#58cc02] text-[#2d3742] shadow-[0_4px_0_#46a302]'
                             : 'bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
                 }`}>
                     {week.status === 'done'
@@ -1212,14 +1232,14 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
                 </span>
                 <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
-                        <span className="block text-[10px] font-black uppercase tracking-[0.15em] text-red-600 dark:text-red-400">
+                        <span className="block text-xs font-black text-brand-700 dark:text-brand-300">
                             Minggu {week.week_number}
                         </span>
                         <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${
                             week.status === 'done'
                                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
                                 : week.status === 'active'
-                                    ? 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300'
+                                    ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300'
                                     : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
                         }`}>
                             {itemStatusLabel(week)}
@@ -1231,7 +1251,7 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
                     {!locked && days.length > 0 ? (
                         <span className="mt-1.5 flex items-center gap-3">
                             <span className="h-1.5 max-w-sm flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-                                <span className={`block h-full rounded-full ${week.status === 'done' ? 'bg-emerald-500' : 'bg-red-500'}`} style={{ width: `${progress}%` }} />
+                                <span className={`block h-full rounded-full ${week.status === 'done' ? 'bg-progress-complete' : 'bg-[#58cc02]'}`} style={{ width: `${progress}%` }} />
                             </span>
                             <span className="shrink-0 text-[10px] font-bold text-gray-500 dark:text-gray-400">{completedDays}/{days.length} Hari</span>
                         </span>
@@ -1252,7 +1272,7 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden"
                     >
-                        <div className="mt-3 rounded-2xl border border-white/70 bg-white/35 px-1 py-3 shadow-xl shadow-red-900/5 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/35 sm:mt-4 sm:px-6 sm:py-6">
+                        <div className="mt-3 rounded-2xl border border-[#cedbd2] bg-[#f1f6f3]/90 px-1 py-3 shadow-[0_18px_44px_-34px_rgba(45,55,66,0.45)] backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/45 sm:mt-4 sm:px-6 sm:py-6">
                             <DuolingoPath
                                 week={week}
                                 selectedDayId={selectedDayId}
@@ -1454,11 +1474,11 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
     }, [program?.thumbnail_url]);
 
     useEffect(() => {
-        setLibraryOpen(window.localStorage.getItem('japanlingo:roadmap-library-open') === 'true');
+        setLibraryOpen(window.localStorage.getItem('toku-up:roadmap-library-open') === 'true');
     }, []);
 
     useEffect(() => {
-        window.localStorage.setItem('japanlingo:roadmap-library-open', String(libraryOpen));
+        window.localStorage.setItem('toku-up:roadmap-library-open', String(libraryOpen));
     }, [libraryOpen]);
 
     useEffect(() => {
@@ -1530,12 +1550,13 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
     };
 
     return (
+        <MotionConfig reducedMotion="user">
         <AuthenticatedLayout header={false}>
-            <Head title={`${program?.title || 'Roadmap'} - Japanlingo`} />
+            <Head title={`${program?.title || 'Roadmap'} - TOKU-UP`} />
 
-            <div className="relative min-h-[100dvh] overflow-x-clip bg-[#f7efe6] text-gray-900 transition-colors duration-300 dark:bg-gray-950">
-                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(220,38,38,0.10)_0%,transparent_28%),linear-gradient(240deg,rgba(245,158,11,0.12)_0%,transparent_30%),repeating-linear-gradient(90deg,rgba(120,53,15,0.055)_0_1px,transparent_1px_82px),repeating-linear-gradient(0deg,rgba(120,53,15,0.045)_0_1px,transparent_1px_82px)] dark:bg-[linear-gradient(120deg,rgba(220,38,38,0.14)_0%,transparent_28%),linear-gradient(240deg,rgba(245,158,11,0.08)_0%,transparent_30%),repeating-linear-gradient(90deg,rgba(255,255,255,0.035)_0_1px,transparent_1px_82px),repeating-linear-gradient(0deg,rgba(255,255,255,0.028)_0_1px,transparent_1px_82px)]" />
-                <div className="pointer-events-none absolute left-4 top-40 hidden text-[13rem] font-black leading-none text-red-900/[0.045] dark:text-white/[0.035] lg:block">道</div>
+            <div className="relative min-h-[100dvh] overflow-x-clip bg-[#e7efea] text-gray-900 transition-colors duration-300 dark:bg-gray-950">
+                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(88,204,2,0.07)_0%,transparent_32%),linear-gradient(240deg,rgba(255,200,0,0.055)_0%,transparent_34%),repeating-linear-gradient(90deg,rgba(45,55,66,0.045)_0_1px,transparent_1px_82px),repeating-linear-gradient(0deg,rgba(45,55,66,0.04)_0_1px,transparent_1px_82px)] dark:bg-[linear-gradient(120deg,rgba(88,204,2,0.07)_0%,transparent_28%),linear-gradient(240deg,rgba(255,200,0,0.045)_0%,transparent_30%)]" />
+                <div className="pointer-events-none absolute left-4 top-40 hidden text-[13rem] font-black leading-none text-brand-900/[0.045] dark:text-white/[0.035] lg:block">道</div>
                 <div className="pointer-events-none absolute right-8 top-[560px] hidden text-[12rem] font-black leading-none text-amber-900/[0.05] dark:text-white/[0.03] lg:block">週</div>
 
                 <header className="relative z-10 px-4 pb-3 pt-5 sm:px-6 sm:pb-5 sm:pt-7 lg:px-20">
@@ -1544,13 +1565,13 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                             {back_url ? (
                                 <Link
                                     href={back_url}
-                                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/70 bg-white/75 px-3 text-xs font-black text-gray-600 shadow-sm transition hover:border-red-200 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900/75 dark:text-gray-300"
+                                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/70 bg-white/75 px-3 text-xs font-black text-gray-600 shadow-sm transition hover:border-brand-200 hover:text-brand-600 dark:border-gray-800 dark:bg-gray-900/75 dark:text-gray-300"
                                 >
                                     <ArrowBackIcon sx={{ fontSize: 16 }} />
                                     Pilih Program
                                 </Link>
                             ) : <span />}
-                            <span className="inline-flex min-h-9 items-center gap-2 rounded-full bg-red-600/10 px-3 text-[11px] font-black uppercase tracking-[0.12em] text-red-600">
+                            <span className="inline-flex min-h-9 items-center gap-2 rounded-full bg-brand-600/10 px-3 text-[11px] font-black uppercase tracking-[0.12em] text-brand-600">
                                 <AutoStoriesIcon sx={{ fontSize: 15 }} />
                                 {[program?.curriculum?.name, program?.level].filter(Boolean).join(' ') || 'Program belajar'}
                             </span>
@@ -1559,7 +1580,7 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                         <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
                             <div className="min-w-0">
                                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                                    <div className="relative aspect-video w-full max-w-xs overflow-hidden rounded-2xl bg-gradient-to-br from-red-600 to-amber-500 shadow-lg shadow-red-950/15 sm:w-56">
+                                    <div className="relative aspect-video w-full max-w-xs overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-amber-500 shadow-lg shadow-brand-950/15 sm:w-56">
                                         {program?.thumbnail_url && !thumbnailFailed ? (
                                             <img src={program.thumbnail_url} alt={program.title} className="h-full w-full object-cover" onError={() => setThumbnailFailed(true)} />
                                         ) : <AutoStoriesIcon className="absolute inset-0 m-auto text-white" sx={{ fontSize: 48 }} />}
@@ -1577,7 +1598,7 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                                             {program?.instructor_name && <span className="inline-flex items-center gap-1.5"><GroupsIcon sx={{ fontSize: 16 }} />{program.instructor_name}</span>}
                                             <span className="inline-flex items-center gap-1.5"><MenuBookIcon sx={{ fontSize: 16 }} />{program?.lessons || displayWeeks.length} Minggu</span>
                                         </div>
-                                        {!program?.has_class_access && <a href="#roadmap" className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl border border-red-200 bg-white/75 px-3.5 text-sm font-black text-red-700 transition hover:bg-red-50 dark:border-red-900/60 dark:bg-gray-900/75 dark:text-red-300 dark:hover:bg-red-950/30"><PlayArrowIcon sx={{ fontSize: 18 }} />Coba Week 1</a>}
+                                        {!program?.has_class_access && <a href="#roadmap" className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white/75 px-3.5 text-sm font-black text-brand-700 transition hover:bg-brand-50 dark:border-brand-900/60 dark:bg-gray-900/75 dark:text-brand-300 dark:hover:bg-brand-950/30"><PlayArrowIcon sx={{ fontSize: 18 }} />Coba Week 1</a>}
                                     </div>
                                 </div>
 
@@ -1588,7 +1609,7 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                                             <span>{roadmapProgress}%</span>
                                         </div>
                                         <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-white/80 shadow-inner dark:bg-gray-800">
-                                            <motion.div className="h-full rounded-full bg-red-600" initial={{ width: 0 }} animate={{ width: `${roadmapProgress}%` }} transition={{ duration: 0.55, ease: 'easeOut' }} />
+                                            <motion.div className="h-full rounded-full bg-[#58cc02]" initial={{ width: 0 }} animate={{ width: `${roadmapProgress}%` }} transition={{ duration: 0.45, ease: 'easeOut' }} />
                                         </div>
                                         {program?.id && <ExamTargetCard program={program} completedWeekCount={completedWeekCount} totalWeeks={displayWeeks.length} />}
                                     </div>
@@ -1646,5 +1667,6 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                 </main>
             </div>
         </AuthenticatedLayout>
+        </MotionConfig>
     );
 }

@@ -5,6 +5,7 @@ import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
 import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import UndoRoundedIcon from '@mui/icons-material/UndoRounded';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import Modal from '@/Components/Modal';
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
 import { loadStrokeCharacter } from './strokeData';
 
@@ -19,7 +20,7 @@ const initialResult = {
 function StrokeComparisonPreview({ label, paths, strokeColor = '#334155', userStrokes = false }) {
     return (
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-950/50">
-            <p className="mb-1.5 text-center text-[10px] font-black uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
+            <p className="mb-1.5 text-center text-[11px] font-black uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
                 {label}
             </p>
             <svg viewBox="0 0 109 109" className="mx-auto block w-full max-w-[138px]" role="img" aria-label={label}>
@@ -448,7 +449,7 @@ export default function KanjiHandwritingCanvas({
     };
 
     return (
-        <div className={`mx-auto w-full ${compact ? 'max-w-[260px]' : 'max-w-[460px]'}`}>
+        <div className={`mx-auto w-full ${compact ? 'max-w-[260px]' : 'max-w-[460px] [@media(max-height:820px)]:max-w-[300px]'}`}>
             <div className="mb-2 flex items-center justify-between gap-3 text-xs font-bold text-gray-500 dark:text-gray-400">
                 <span>
                     {strokeData
@@ -491,55 +492,52 @@ export default function KanjiHandwritingCanvas({
                 </div>
             )}
             {mode === 'quiz' && selfEvaluation && evaluation && evaluationPreview && (
-                <section
-                    role="dialog"
-                    aria-modal="false"
-                    aria-labelledby={`${containerId}-evaluation-title`}
-                    className="mt-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-lg shadow-gray-900/10 dark:border-gray-700 dark:bg-gray-900 dark:shadow-black/30 sm:p-4"
-                >
-                    <div className="text-center">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-600 dark:text-orange-300">Evaluasi tulisan</p>
-                        <h3 id={`${containerId}-evaluation-title`} className="mt-1 text-base font-black text-gray-900 dark:text-white">
-                            Bandingkan hasil tulisanmu
-                        </h3>
-                        <p className={`mt-1 text-sm font-black ${evaluation.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                            {evaluation.success ? 'Tepat' : 'Perlu diperbaiki'}
-                        </p>
-                        <p className="mt-0.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
-                            {evaluation.success
-                                ? `Semua ${evaluation.total} stroke sudah sesuai.`
-                                : `${evaluation.correct} dari ${evaluation.total} stroke sudah sesuai panduan.`}
-                        </p>
-                    </div>
+                <Modal show maxWidth="lg" closeable={false}>
+                    <section aria-labelledby={`${containerId}-evaluation-title`} className="p-4 sm:p-6">
+                        <div className="text-center">
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-600 dark:text-orange-300">Evaluasi tulisan</p>
+                            <h3 id={`${containerId}-evaluation-title`} className="mt-1.5 text-lg font-black text-gray-900 dark:text-white sm:text-xl">
+                                Bandingkan hasil tulisanmu
+                            </h3>
+                            <p className={`mt-1.5 text-sm font-black ${evaluation.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {evaluation.success ? 'Tepat' : 'Perlu diperbaiki'}
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-gray-600 dark:text-gray-300">
+                                {evaluation.success
+                                    ? `Semua ${evaluation.total} stroke sudah sesuai.`
+                                    : `${evaluation.correct} dari ${evaluation.total} stroke sudah sesuai panduan.`}
+                            </p>
+                        </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-2.5">
-                        <StrokeComparisonPreview label="Tulisanmu" paths={evaluationPreview.userPaths} userStrokes />
-                        <StrokeComparisonPreview label="Target" paths={evaluationPreview.targetPaths} />
-                    </div>
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                            <StrokeComparisonPreview label="Tulisanmu" paths={evaluationPreview.userPaths} userStrokes />
+                            <StrokeComparisonPreview label="Target" paths={evaluationPreview.targetPaths} />
+                        </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                        <button
-                            type="button"
-                            data-sound="none"
-                            onClick={retryEvaluation}
-                            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-3 text-xs font-black text-orange-700 transition hover:bg-orange-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300 dark:hover:bg-orange-900/60"
-                        >
-                            <RestartAltRoundedIcon sx={{ fontSize: 18 }} /> Coba Lagi
-                        </button>
-                        <button
-                            type="button"
-                            data-sound="none"
-                            onClick={continueAfterEvaluation}
-                            className={`inline-flex h-11 items-center justify-center rounded-xl px-3 text-xs font-black text-white shadow-sm transition focus-visible:outline-none focus-visible:ring-4 dark:text-gray-950 ${
-                                evaluation.success
-                                    ? 'bg-green-600 hover:bg-green-700 focus-visible:ring-green-300/60 dark:bg-green-500 dark:hover:bg-green-400'
-                                    : 'bg-gray-900 hover:bg-gray-800 focus-visible:ring-gray-300/60 dark:bg-gray-100 dark:hover:bg-white'
-                            }`}
-                        >
-                            {evaluation.success ? 'Lanjut latihan' : 'Lewati latihan'}
-                        </button>
-                    </div>
-                </section>
+                        <div className="mt-4 grid grid-cols-2 gap-2.5">
+                            <button
+                                type="button"
+                                data-sound="none"
+                                onClick={retryEvaluation}
+                                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-3 text-sm font-black text-orange-700 transition hover:bg-orange-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300 dark:hover:bg-orange-900/60"
+                            >
+                                <RestartAltRoundedIcon sx={{ fontSize: 18 }} /> Coba Lagi
+                            </button>
+                            <button
+                                type="button"
+                                data-sound="none"
+                                onClick={continueAfterEvaluation}
+                                className={`inline-flex min-h-11 items-center justify-center rounded-xl px-3 text-sm font-black text-white shadow-sm transition focus-visible:outline-none focus-visible:ring-4 dark:text-gray-950 ${
+                                    evaluation.success
+                                        ? 'bg-green-600 hover:bg-green-700 focus-visible:ring-green-300/60 dark:bg-green-500 dark:hover:bg-green-400'
+                                        : 'bg-gray-900 hover:bg-gray-800 focus-visible:ring-gray-300/60 dark:bg-gray-100 dark:hover:bg-white'
+                                }`}
+                            >
+                                {evaluation.success ? 'Lanjut latihan' : 'Lewati latihan'}
+                            </button>
+                        </div>
+                    </section>
+                </Modal>
             )}
             {mode === 'quiz' && strokeFeedback && (
                 <div role="alert" className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-left text-red-800 dark:border-red-900/60 dark:bg-red-950/35 dark:text-red-200">

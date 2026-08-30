@@ -14,11 +14,11 @@ const backgroundClass = {
     dark: 'bg-gray-950 text-white',
     sunrise: 'bg-gradient-to-br from-orange-100 via-amber-50 to-white text-gray-950',
     sakura: 'bg-gradient-to-br from-pink-100 via-white to-rose-50 text-gray-950',
-    ocean: 'bg-gradient-to-br from-cyan-100 via-white to-red-100 text-gray-950',
+    ocean: 'bg-gradient-to-br from-cyan-100 via-white to-brand-100 text-gray-950',
     forest: 'bg-gradient-to-br from-emerald-100 via-white to-lime-100 text-gray-950',
     paper: 'bg-[linear-gradient(#ffffff,#fff7ed)] text-gray-950',
     grid: 'bg-white text-gray-950 bg-[linear-gradient(rgba(15,23,42,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.06)_1px,transparent_1px)] bg-[size:28px_28px]',
-    indigo: 'bg-gradient-to-br from-indigo-950 via-gray-950 to-red-950 text-white',
+    indigo: 'bg-gradient-to-br from-indigo-950 via-gray-950 to-brand-950 text-white',
     matcha: 'bg-gradient-to-br from-lime-100 via-white to-emerald-100 text-gray-950',
     rose: 'bg-gradient-to-br from-rose-100 via-white to-orange-50 text-gray-950',
 };
@@ -144,7 +144,7 @@ export default function PresentasiPage({ program = {}, decks = [], modules = [],
 
     return (
         <AuthenticatedLayout header={false}>
-            <Head title={`PPT ${program.title || 'Kelas'} - Japanlingo`} />
+            <Head title={`PPT ${program.title || 'Kelas'} - TOKU-UP`} />
 
             <div className={`min-h-screen ${theme.sectionBg} px-3 py-4 text-gray-900 dark:bg-gray-950 dark:text-white sm:px-5 lg:px-6`}>
                 <main className="mx-auto max-w-7xl space-y-4">

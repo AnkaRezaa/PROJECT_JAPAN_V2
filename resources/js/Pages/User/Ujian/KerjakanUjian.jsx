@@ -7,6 +7,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
+import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
 
 const formatTime = (seconds) => {
     const safeSeconds = Math.max(0, Number(seconds) || 0);
@@ -49,7 +50,7 @@ export default function KerjakanUjian({
     );
     const unansweredCount = Math.max(0, questions.length - answeredCount);
     const draftKey = attemptSession
-        ? `japanlingo-exam-draft-${quiz.id}-${attemptSession.attempt_id}`
+        ? `toku-up-exam-draft-${quiz.id}-${attemptSession.attempt_id}`
         : null;
 
     useEffect(() => {
@@ -73,7 +74,7 @@ export default function KerjakanUjian({
             }
 
             const stored = window.localStorage.getItem(
-                `japanlingo-exam-draft-${quiz.id}-${response.data.attempt_id}`,
+                `toku-up-exam-draft-${quiz.id}-${response.data.attempt_id}`,
             );
             if (stored) {
                 try {
@@ -83,7 +84,7 @@ export default function KerjakanUjian({
                     setDraftSavedAt(draft.saved_at || null);
                 } catch {
                     window.localStorage.removeItem(
-                        `japanlingo-exam-draft-${quiz.id}-${response.data.attempt_id}`,
+                        `toku-up-exam-draft-${quiz.id}-${response.data.attempt_id}`,
                     );
                 }
             }
@@ -249,7 +250,7 @@ export default function KerjakanUjian({
                                                         <p className="text-xs font-bold uppercase text-gray-500">Soal {index + 1}</p>
                                                         <p className="text-xs font-bold text-gray-600">{review.earned_points}/{review.max_points} poin</p>
                                                     </div>
-                                                    <p className="mt-2 font-semibold text-gray-900">{review.question}</p>
+                                                    <JapaneseReading japanese={review.question} reading={review.question_reading} className="mt-2 font-semibold text-gray-900" />
                                                     <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                                                         <div>
                                                             <dt className="text-xs font-bold uppercase text-gray-500">Jawaban Anda</dt>
@@ -257,11 +258,15 @@ export default function KerjakanUjian({
                                                         </div>
                                                         <div>
                                                             <dt className="text-xs font-bold uppercase text-gray-500">Jawaban benar</dt>
-                                                            <dd className="mt-1 font-semibold text-gray-900">{review.correct_answer}</dd>
+                                                            <dd className="mt-1 font-semibold text-gray-900">
+                                                                <JapaneseReading japanese={review.correct_answer} reading={review.correct_answer_reading} />
+                                                            </dd>
                                                         </div>
                                                     </dl>
                                                     {review.explanation && (
-                                                        <p className="mt-3 border-t border-gray-200 pt-3 text-sm text-gray-600">{review.explanation}</p>
+                                                        <div className="mt-3 border-t border-gray-200 pt-3 text-sm text-gray-600">
+                                                            <JapaneseReading japanese={review.explanation} reading={review.explanation_reading} />
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
@@ -282,7 +287,7 @@ export default function KerjakanUjian({
                                     <button
                                         type="button"
                                         onClick={() => router.get(result.next_url || finish_url || back_url || route('user.kelas.index'))}
-                                        className="h-11 rounded-md bg-red-600 px-5 text-sm font-bold text-white hover:bg-red-700"
+                                        className="h-11 rounded-lg bg-brand-600 px-5 text-sm font-bold text-white hover:bg-brand-700"
                                     >
                                         Kembali ke roadmap
                                     </button>
@@ -298,7 +303,7 @@ export default function KerjakanUjian({
     return (
         <>
             <Head title={quiz.title || 'Ujian Mingguan'} />
-            <div className="min-h-screen bg-[#eef1f4] text-gray-900">
+            <div className="min-h-screen bg-surface-muted text-gray-900">
                 <header className="sticky top-0 z-40 border-b border-gray-200 bg-white shadow-sm">
                     <div className="mx-auto flex max-w-7xl items-center gap-3 px-3 py-3 sm:px-6">
                         <button
@@ -310,7 +315,7 @@ export default function KerjakanUjian({
                             <ArrowBackIcon fontSize="small" />
                         </button>
                         <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-bold uppercase text-red-600">Ujian Mingguan</p>
+                            <p className="truncate text-xs font-bold uppercase text-brand-700">Ujian Mingguan</p>
                             <h1 className="truncate text-sm font-bold sm:text-base">{quiz.title || 'Ujian Mingguan'}</h1>
                         </div>
                         <div className={`flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-bold ${hasTimeLimit && secondsLeft <= 60 ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-200 bg-gray-50 text-gray-700'}`}>
@@ -324,7 +329,7 @@ export default function KerjakanUjian({
                     <div className="min-w-0">
                         <section className="mb-5 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                             <div className="flex items-start gap-3">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-600">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
                                     <MenuBookOutlinedIcon />
                                 </div>
                                 <div>
@@ -388,14 +393,14 @@ export default function KerjakanUjian({
                                                 {question.type === 'listening' && question.audio_url && (
                                                     <audio controls className="mb-5 w-full" src={question.audio_url} />
                                                 )}
-                                                <p className="whitespace-pre-wrap text-base font-semibold leading-7 text-gray-900 sm:text-lg">{question.question}</p>
+                                                <JapaneseReading japanese={question.question} reading={question.question_reading} className="whitespace-pre-wrap text-base font-semibold leading-7 text-gray-900 sm:text-lg" />
 
                                                 {question.type === 'multiple_choice' ? (
                                                     <div className="mt-5 grid gap-3">
                                                         {(question.options || []).map((option, optionIndex) => (
                                                             <label
                                                                 key={`${question.id}-${optionIndex}`}
-                                                                className={`flex cursor-pointer items-start gap-3 rounded-md border p-3.5 transition ${answers[question.id] === option ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                                                                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition ${answers[question.id] === option ? 'border-brand-500 bg-brand-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
                                                             >
                                                                 <input
                                                                     type="radio"
@@ -403,11 +408,11 @@ export default function KerjakanUjian({
                                                                     value={option}
                                                                     checked={answers[question.id] === option}
                                                                     onChange={() => updateAnswer(question.id, option)}
-                                                                    className="mt-1 border-gray-300 text-red-600 focus:ring-red-500"
+                                                                    className="mt-1 border-gray-300 text-brand-600 focus:ring-focus"
                                                                 />
                                                                 <span className="text-sm leading-6 text-gray-800">
                                                                     <strong className="mr-2">{String.fromCharCode(65 + optionIndex)}.</strong>
-                                                                    {option}
+                                                                    <JapaneseReading japanese={option} reading={question.option_readings?.[optionIndex]} />
                                                                 </span>
                                                             </label>
                                                         ))}
@@ -419,7 +424,7 @@ export default function KerjakanUjian({
                                                             type="text"
                                                             value={answers[question.id] || ''}
                                                             onChange={(event) => updateAnswer(question.id, event.target.value)}
-                                                            className="h-12 w-full rounded-md border border-gray-300 px-4 text-sm text-gray-900 focus:border-red-500 focus:ring-red-500"
+                                                            className="h-12 w-full rounded-lg border border-gray-300 px-4 text-sm text-gray-900 focus:border-focus focus:ring-focus"
                                                             placeholder="Ketik jawaban"
                                                         />
                                                     </div>
@@ -431,7 +436,7 @@ export default function KerjakanUjian({
                                                         <button
                                                             type="button"
                                                             onClick={() => scrollToQuestion(questions[index + 1].id)}
-                                                            className="font-bold text-red-600 hover:text-red-700"
+                                                            className="font-bold text-brand-700 hover:text-brand-800"
                                                         >
                                                             Soal berikutnya
                                                         </button>
@@ -454,7 +459,7 @@ export default function KerjakanUjian({
                                     type="button"
                                     disabled={!attemptSession || submitting || questions.length === 0}
                                     onClick={() => setShowSubmitDialog(true)}
-                                    className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-red-600 px-5 text-sm font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0 sm:w-auto"
+                                    className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 text-sm font-bold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0 sm:w-auto"
                                 >
                                     <SendOutlinedIcon sx={{ fontSize: 18 }} />
                                     {submitting ? 'Mengirim...' : 'Periksa dan kirim'}
@@ -510,7 +515,7 @@ export default function KerjakanUjian({
                             type="button"
                             disabled={!attemptSession || submitting || questions.length === 0}
                             onClick={() => setShowSubmitDialog(true)}
-                            className="h-10 rounded-md bg-red-600 px-4 text-xs font-bold text-white disabled:opacity-50"
+                            className="h-10 rounded-lg bg-brand-600 px-4 text-xs font-bold text-white disabled:opacity-50"
                         >
                             Kirim
                         </button>
@@ -554,7 +559,7 @@ export default function KerjakanUjian({
                                 type="button"
                                 disabled={submitting}
                                 onClick={() => submitAttempt({ timeout: false })}
-                                className="h-11 flex-1 rounded-md bg-red-600 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                                className="h-11 flex-1 rounded-lg bg-brand-600 text-sm font-bold text-white hover:bg-brand-700 disabled:opacity-50"
                             >
                                 {submitting ? 'Mengirim...' : 'Kirim ujian'}
                             </button>

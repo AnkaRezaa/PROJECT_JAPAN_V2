@@ -3,7 +3,7 @@ import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { MedalIcon, ScrollIcon, KabutoIcon } from '@/Components/JapaneseIcons';
-import { motion, useInView } from 'framer-motion';
+import { motion, MotionConfig, useInView } from 'framer-motion';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import LockIcon from '@mui/icons-material/Lock';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -82,7 +82,7 @@ function CertCard({ item, idx }) {
                     {/* Header strip */}
                     <div className="flex justify-between items-center mb-2.5 relative z-10">
                         <span className="text-[9px] font-black tracking-[0.15em] text-amber-900 uppercase">★ HALL OF FAME ★</span>
-                        <span className="text-[9px] font-semibold text-amber-700">Sertifikat Resmi JapanLingo</span>
+                        <span className="text-[9px] font-semibold text-amber-700">Sertifikat Resmi TOKU-UP</span>
                     </div>
 
                     {/* Icon */}
@@ -190,6 +190,7 @@ function StepCard({ num, emoji, title, desc, delay }) {
 /* ─── Main Component ─────────────────────────────────────────── */
 export default function Certificate({ certificates = [] }) {
     return (
+        <MotionConfig reducedMotion="user">
         <AuthenticatedLayout
             header={
                 <h2 className="font-extrabold text-2xl text-slate-900 dark:text-gray-100 leading-tight tracking-tight transition-colors duration-300">
@@ -197,9 +198,9 @@ export default function Certificate({ certificates = [] }) {
                 </h2>
             }
         >
-            <Head title="Sertifikat | JapanLingo" />
+            <Head title="Sertifikat | TOKU-UP" />
 
-            <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#030712] pb-20 font-['Inter','Noto_Sans_JP',sans-serif] transition-colors duration-300">
+            <div className="min-h-screen bg-surface-muted pb-20 font-['Inter','Noto_Sans_JP',sans-serif] transition-colors duration-300">
 
                 {/* ── HERO ── */}
                 <motion.div
@@ -225,7 +226,7 @@ export default function Certificate({ certificates = [] }) {
                             Koleksi <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 dark:from-amber-400 dark:via-amber-500 dark:to-amber-300 bg-clip-text text-transparent transition-colors duration-300">Sertifikat</span>
                         </h1>
                         <p className="text-[1.05rem] text-slate-600 dark:text-gray-400 max-w-[520px] mx-auto leading-[1.7] transition-colors duration-300">
-                            Setiap sertifikat adalah bukti nyata kerja kerasmu. Selesaikan semua level dan raih sertifikat resmi JapanLingo.
+                            Setiap sertifikat adalah bukti nyata kerja kerasmu. Selesaikan semua level dan raih sertifikat resmi TOKU-UP.
                         </p>
                     </motion.div>
                 </motion.div>
@@ -291,5 +292,6 @@ export default function Certificate({ certificates = [] }) {
                 </div>
             </div>
         </AuthenticatedLayout>
+        </MotionConfig>
     );
 }

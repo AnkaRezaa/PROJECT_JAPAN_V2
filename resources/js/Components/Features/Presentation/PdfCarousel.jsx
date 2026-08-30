@@ -6,7 +6,7 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const debug = (...args) => console.log('[PdfCarousel]', ...args);
-const transportKey = new TextEncoder().encode('japanlingo-pdf-viewer');
+const transportKey = new TextEncoder().encode('toku-up-pdf-viewer');
 
 const normalizePdfUrl = (value) => {
     if (!value) return value;
@@ -31,7 +31,7 @@ const normalizePdfUrl = (value) => {
 
 const userLabel = (auth) => {
     const user = auth?.user || auth || {};
-    const name = user.username || user.name || 'Japanlingo User';
+    const name = user.username || user.name || 'Pengguna TOKU-UP';
     const email = user.email || 'verified account';
 
     return `${name} - ${email}`;
@@ -89,7 +89,7 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
                     headers: { Accept: 'application/octet-stream' },
                 });
                 const contentType = response.headers.get('content-type') || '';
-                const transport = response.headers.get('x-japanlingo-pdf-transport') || '';
+                const transport = response.headers.get('x-toku-up-pdf-transport') || '';
                 debug('load:response', { status: response.status, contentType, transport });
 
                 if (!response.ok) {

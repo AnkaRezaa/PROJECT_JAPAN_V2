@@ -14,31 +14,31 @@ function NewsCard({ item, featured = false }) {
                 {item.thumbnail_url || item.cover_url ? (
                     <img src={item.thumbnail_url || item.cover_url} alt={item.cover_image_alt || item.title} className="h-full w-full object-cover" />
                 ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-red-50 to-gray-100 text-4xl font-black text-red-200 dark:from-gray-800 dark:to-gray-900 dark:text-gray-700">
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-50 to-gray-100 text-4xl font-black text-brand-200 dark:from-gray-800 dark:to-gray-900 dark:text-gray-700">
                         JP
                     </div>
                 )}
                 {item.is_pinned && (
-                    <span className="absolute left-4 top-4 rounded-full bg-red-600 px-3 py-1 text-xs font-black uppercase tracking-wider text-white">
+                    <span className="absolute left-4 top-4 rounded-full bg-brand-600 px-3 py-1 text-xs font-black uppercase tracking-wider text-white">
                         Disematkan
                     </span>
                 )}
             </div>
             <div className={`flex flex-col ${featured ? 'p-8 lg:p-10' : 'p-5'}`}>
                 <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-                    <span className="rounded-full bg-red-50 px-2.5 py-1 text-red-700 dark:bg-red-900/20 dark:text-red-300">{item.category?.replaceAll('-', ' ') || 'platform'}</span>
+                    <span className="rounded-full bg-brand-50 px-2.5 py-1 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300">{item.category?.replaceAll('-', ' ') || 'platform'}</span>
                     <AccessTimeIcon sx={{ fontSize: 15 }} />
-                    {item.published_label || 'Japanlingo News'}
+                    {item.published_label || 'TOKU-UP News'}
                     <span aria-hidden="true">·</span>
                     <span>{item.reading_time_minutes || 1} menit</span>
                 </div>
-                <h2 className={`${featured ? 'text-3xl' : 'text-lg'} font-black leading-tight text-gray-900 transition-colors group-hover:text-red-600 dark:text-white dark:group-hover:text-red-400`}>
+                <h2 className={`${featured ? 'text-3xl' : 'text-lg'} font-black leading-tight text-gray-900 transition-colors group-hover:text-brand-600 dark:text-white dark:group-hover:text-brand-400`}>
                     {item.title}
                 </h2>
                 <p className={`mt-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400 ${featured ? '' : 'line-clamp-3'}`}>
-                    {item.excerpt || 'Baca berita terbaru dari Japanlingo.'}
+                    {item.excerpt || 'Baca berita terbaru dari TOKU-UP.'}
                 </p>
-                <div className="mt-6 flex items-center gap-2 text-sm font-black text-red-600 dark:text-red-400">
+                <div className="mt-6 flex items-center gap-2 text-sm font-black text-brand-600 dark:text-brand-400">
                     Baca Selengkapnya
                     <ArrowForwardIcon sx={{ fontSize: 17 }} />
                 </div>
@@ -54,12 +54,12 @@ export default function NewsIndex({ featured = null, news = { data: [], links: [
 
     return (
         <AuthenticatedLayout>
-            <Head title="Portal Berita - Japanlingo" />
+            <Head title="Portal Berita - TOKU-UP" />
 
             <main className="min-h-screen bg-transparent pb-16 dark:bg-gray-950">
                 <section className="border-b border-gray-100 bg-gray-50 py-10 dark:border-gray-800 dark:bg-gray-900/40">
                     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                        <p className="text-xs font-black uppercase tracking-[0.32em] text-red-600 dark:text-red-400">Japanlingo News</p>
+                        <p className="text-xs font-black uppercase tracking-[0.32em] text-brand-600 dark:text-brand-400">TOKU-UP News</p>
                         <h1 className="mt-3 text-3xl font-black tracking-tight text-gray-900 dark:text-white md:text-5xl">Portal Berita Jepang</h1>
                         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-gray-500 dark:text-gray-400">
                             Update pembelajaran, informasi platform, dan berita pilihan untuk menemani rutinitas belajar bahasa Jepang.
@@ -93,7 +93,7 @@ export default function NewsIndex({ featured = null, news = { data: [], links: [
                                             key={`${link.label}-${index}`}
                                             href={link.url || '#'}
                                             dangerouslySetInnerHTML={{ __html: link.label }}
-                                            className={`rounded-xl px-4 py-2 text-sm font-bold ${link.active ? 'bg-red-600 text-white' : 'border border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`}
+                                            className={`rounded-xl px-4 py-2 text-sm font-bold ${link.active ? 'bg-brand-600 text-white' : 'border border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`}
                                         />
                                     ))}
                                 </div>
@@ -109,10 +109,10 @@ export default function NewsIndex({ featured = null, news = { data: [], links: [
                                     ))}
                                 </div>
                             </div>
-                            <div className="rounded-3xl border border-red-100 bg-red-50 p-6 dark:border-red-900/30 dark:bg-red-900/20">
-                                <h3 className="text-sm font-black text-red-700 dark:text-red-400">Update Belajar</h3>
-                                <p className="mt-2 text-sm leading-relaxed text-red-700/80 dark:text-red-300/80">Kembali ke dashboard untuk melanjutkan lesson, quiz, dan streak harian.</p>
-                                <Link href={route('user.dashboard')} className="mt-4 inline-flex text-sm font-black text-red-700 dark:text-red-300">Ke Dashboard</Link>
+                            <div className="rounded-3xl border border-brand-100 bg-brand-50 p-6 dark:border-brand-900/30 dark:bg-brand-900/20">
+                                <h3 className="text-sm font-black text-brand-700 dark:text-brand-400">Update Belajar</h3>
+                                <p className="mt-2 text-sm leading-relaxed text-brand-700/80 dark:text-brand-300/80">Kembali ke dashboard untuk melanjutkan lesson, quiz, dan streak harian.</p>
+                                <Link href={route('user.dashboard')} className="mt-4 inline-flex text-sm font-black text-brand-700 dark:text-brand-300">Ke Dashboard</Link>
                             </div>
                         </aside>
                     </div>

@@ -26,7 +26,7 @@ export default function PresentationStage({ slide, contained = false, className 
     }
 
     const lines = String(slide.content || '').split('\n').filter(Boolean);
-    const accent = slide.accent_color || '#E64A19';
+    const accent = slide.accent_color || '#22C55E';
     const canvasSnapshot = slide.snapshot_url || slide.snapshot_data;
     const rootSize = contained ? 'h-full min-h-0 p-4 sm:p-6' : 'min-h-screen p-8 sm:p-12 lg:p-16';
     const titleSize = contained ? 'text-3xl sm:text-5xl lg:text-6xl' : 'text-6xl sm:text-8xl';
@@ -46,7 +46,7 @@ export default function PresentationStage({ slide, contained = false, className 
             <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-6xl flex-col">
                 {slide.layout === 'title' && (
                     <div className="my-auto">
-                        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.35em] sm:mb-6 sm:text-sm" style={{ color: accent }}>JapanLingo</p>
+                        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.35em] sm:mb-6 sm:text-sm" style={{ color: accent }}>TOKU-UP</p>
                         <h1 className={`${titleSize} font-black tracking-tight`}>{slide.title || 'Untitled'}</h1>
                         <p className={`mt-4 max-w-3xl font-bold leading-relaxed opacity-70 sm:mt-8 ${bodySize}`}>{slide.content}</p>
                     </div>

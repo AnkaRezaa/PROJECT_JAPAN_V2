@@ -64,7 +64,7 @@ it('lets a superadmin save portal metadata as a draft', function () {
             'category' => 'pengumuman',
             'is_pinned' => false,
             'seo_title' => 'Info Kelas Musim Panas',
-            'seo_description' => 'Informasi kelas musim panas Japanlingo.',
+            'seo_description' => 'Informasi kelas musim panas TOKU-UP.',
         ])
         ->assertRedirect();
 
@@ -72,5 +72,5 @@ it('lets a superadmin save portal metadata as a draft', function () {
 
     expect($news->status)->toBe('draft')
         ->and($news->category)->toBe('pengumuman')
-        ->and($news->seo_description)->toBe('Informasi kelas musim panas Japanlingo.');
+        ->and($news->seo_description)->toBe('Informasi kelas musim panas TOKU-UP.');
 });

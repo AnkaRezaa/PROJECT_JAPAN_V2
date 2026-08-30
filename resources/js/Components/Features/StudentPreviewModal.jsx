@@ -35,7 +35,7 @@ export default function StudentPreviewModal({ show, onClose, lessons, moduleTitl
             <div className="relative flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-[2.5rem] border border-white/20 bg-[#F8F9FA] shadow-2xl dark:border-gray-800 dark:bg-gray-950">
                 <header className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100 bg-white px-5 dark:border-gray-800 dark:bg-gray-900 sm:px-8">
                     <div className="flex min-w-0 items-center gap-3">
-                        <div className="rounded-full bg-red-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-red-600 dark:bg-red-900/30 dark:text-red-300">
+                        <div className="rounded-full bg-brand-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
                             Student Preview Mode
                         </div>
                         <span className="hidden text-gray-300 dark:text-gray-700 sm:inline">/</span>

@@ -494,7 +494,7 @@ export default function LiveClassRoom({
     const [index, setIndex] = useState(session?.current_slide_index || 0);
     const [stageMode, setStageMode] = useState(() => session?.stage_mode || (initialStageMode === 'board' || !hasSlides ? 'board' : 'slides'));
     const [tool, setTool] = useState('pointer');
-    const [color, setColor] = useState('#ef4444');
+    const [color, setColor] = useState('#22c55e');
     const [width, setWidth] = useState(3);
     const [strokes, setStrokes] = useState(session?.board_snapshot?.strokes || []);
     const [activeStroke, setActiveStroke] = useState(null);
@@ -520,13 +520,13 @@ export default function LiveClassRoom({
     const [cameraPosition, setCameraPosition] = useState(() => {
         if (typeof window === 'undefined') return { x: 86, y: 80 };
         try {
-            const saved = JSON.parse(window.localStorage.getItem('japanlingo:live-camera-position'));
+            const saved = JSON.parse(window.localStorage.getItem('toku-up:live-camera-position'));
             return Number.isFinite(saved?.x) && Number.isFinite(saved?.y) ? saved : { x: 86, y: 80 };
         } catch {
             return { x: 86, y: 80 };
         }
     });
-    const [lowDataMode, setLowDataMode] = useState(() => typeof window !== 'undefined' && window.localStorage.getItem('japanlingo:live-low-data') === '1');
+    const [lowDataMode, setLowDataMode] = useState(() => typeof window !== 'undefined' && window.localStorage.getItem('toku-up:live-low-data') === '1');
     const [speakingIds, setSpeakingIds] = useState([]);
     const [joinError, setJoinError] = useState('');
     const [mediaError, setMediaError] = useState('');
@@ -656,11 +656,11 @@ export default function LiveClassRoom({
     }, [strokes]);
 
     useEffect(() => {
-        window.localStorage.setItem('japanlingo:live-low-data', lowDataMode ? '1' : '0');
+        window.localStorage.setItem('toku-up:live-low-data', lowDataMode ? '1' : '0');
     }, [lowDataMode]);
 
     useEffect(() => {
-        window.localStorage.setItem('japanlingo:live-camera-position', JSON.stringify(cameraPosition));
+        window.localStorage.setItem('toku-up:live-camera-position', JSON.stringify(cameraPosition));
     }, [cameraPosition]);
 
     useEffect(() => {
@@ -1566,7 +1566,7 @@ export default function LiveClassRoom({
                         <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                             {visibleStrokes.map((stroke) => <polyline key={stroke.id} points={stroke.points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke={stroke.color} strokeWidth={stroke.width / 5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />)}
                         </svg>
-                        {pointer && tool === 'pointer' && <span className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-red-500 shadow-lg" style={{ left: `${pointer.x}%`, top: `${pointer.y}%` }} />}
+                        {pointer && tool === 'pointer' && <span className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-brand-500 shadow-lg" style={{ left: `${pointer.x}%`, top: `${pointer.y}%` }} />}
 
                         {showMentorCamera && (
                             <div

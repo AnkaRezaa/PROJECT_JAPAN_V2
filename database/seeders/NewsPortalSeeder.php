@@ -11,7 +11,7 @@ class NewsPortalSeeder extends Seeder
     public function run(): void
     {
         $authorId = Pengguna::query()
-            ->where('email', 'superadmin@japanlingo.com')
+            ->where('email', 'superadmin@toku-up.com')
             ->value('id');
 
         foreach ($this->articles() as $article) {

@@ -6,7 +6,7 @@ const canvasSize = {
     height: 720,
 };
 
-const colorOptions = ['#111827', '#E64A19', '#2563EB', '#16A34A', '#F59E0B', '#DC2626'];
+const colorOptions = ['#111827', '#F97316', '#2563EB', '#16A34A', '#F59E0B', '#DC2626'];
 
 export default function EditableBoardCanvas({ initialStrokes = [], onChange, className = '' }) {
     const canvasRef = useRef(null);

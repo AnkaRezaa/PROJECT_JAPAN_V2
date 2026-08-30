@@ -465,9 +465,12 @@ class ProgresController extends Controller
             return [
                 'question_id' => $question->id,
                 'question' => $question->question_text,
+                'question_reading' => $question->question_reading,
                 'user_answer' => $answer?->answer_text,
                 'correct_answer' => $question->correct_answer,
+                'correct_answer_reading' => $question->correct_answer_reading,
                 'explanation' => $question->explanation,
+                'explanation_reading' => $question->explanation_reading,
                 'is_correct' => (bool) ($answer?->is_correct),
                 'earned_points' => (int) ($answer?->earned_points ?? 0),
                 'max_points' => max(1, (int) ($question->points ?? 1)),

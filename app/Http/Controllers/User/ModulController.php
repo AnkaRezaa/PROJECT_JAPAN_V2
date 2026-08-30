@@ -758,6 +758,7 @@ class ModulController extends Controller
                     ? 'Urutan stroke selesai. Latihan masuk progres repetisi.'
                     : 'Panduan membantu menyelesaikan karakter. Latihan dicatat untuk diulang.',
                 'explanation' => $question->explanation,
+                'explanation_reading' => $question->explanation_reading,
             ]);
         }
 
@@ -770,6 +771,7 @@ class ModulController extends Controller
             'is_correct' => $penilaian->jawabanSama($validated['answer'], (string) $question->correct_answer),
             'practice_only' => false,
             'explanation' => $question->explanation,
+            'explanation_reading' => $question->explanation_reading,
         ]);
     }
 

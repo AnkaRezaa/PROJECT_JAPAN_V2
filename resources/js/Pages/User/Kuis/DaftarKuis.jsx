@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { ScrollIcon, KabutoIcon, ShurikenIcon, HitodamaIcon, DarumaIcon } from '@/Components/JapaneseIcons';
 import { Head, Link } from '@inertiajs/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import theme from '@/Components/theme/themes';
 
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -16,7 +16,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 
 // Kategori visual per tipe kuis
 const QUIZ_TYPE_META = {
-    multiple_choice: { emoji: <ShurikenIcon className="w-6 h-6" />, label: 'Pilihan Ganda', color: 'from-red-500 to-rose-600', glow: 'shadow-red-400/30 dark:shadow-red-900/30', badge: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' },
+    multiple_choice: { emoji: <ShurikenIcon className="w-6 h-6" />, label: 'Pilihan Ganda', color: 'from-brand-500 to-rose-600', glow: 'shadow-brand-400/30 dark:shadow-brand-900/30', badge: 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400' },
     fill_blank:      { emoji: <ScrollIcon className="w-6 h-6" />, label: 'Isi Jawaban',   color: 'from-rose-500 to-violet-600', glow: 'shadow-indigo-400/30 dark:shadow-indigo-900/30', badge: 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400' },
     listening:       { emoji: <HitodamaIcon className="w-6 h-6" />, label: 'Menyimak',      color: 'from-violet-500 to-purple-600', glow: 'shadow-violet-400/30 dark:shadow-violet-900/30', badge: 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400' },
     default:         { emoji: <ScrollIcon className="w-6 h-6" />, label: 'Kuis',          color: 'from-amber-500 to-orange-600', glow: 'shadow-amber-400/30 dark:shadow-amber-900/30', badge: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' },
@@ -48,6 +48,7 @@ export default function DaftarKuis({ quizzes = [] }) {
         : quizzes.filter(q => q.status === 'locked');
 
     return (
+        <MotionConfig reducedMotion="user">
         <AuthenticatedLayout>
             <Head title="Arena Kuis" />
 
@@ -56,7 +57,7 @@ export default function DaftarKuis({ quizzes = [] }) {
                 {/* ── HERO BANNER ── */}
                 <div className="relative overflow-hidden">
                     {/* Background layers */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${theme.heroBg} dark:from-gray-900 dark:via-red-950/40 dark:to-gray-950 transition-colors duration-300`} />
+                    <div className={`absolute inset-0 bg-gradient-to-br ${theme.heroBg} dark:from-gray-900 dark:via-brand-950/40 dark:to-gray-950 transition-colors duration-300`} />
                     <div className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.07] transition-opacity duration-300"
                         style={{ backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
                     {/* Giant kanji watermark */}
@@ -66,8 +67,8 @@ export default function DaftarKuis({ quizzes = [] }) {
 
                     <div className="relative z-10 mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-14">
                         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-                            className={`mb-5 inline-flex items-center gap-2 rounded-full ${theme.landingBadgeBg} dark:bg-red-500/20 border dark:border-red-500/30 px-4 py-1.5 text-xs font-black uppercase tracking-[0.2em] ${theme.landingBadgeText} dark:text-red-400 transition-colors duration-300`}>
-                            <span className={`w-2 h-2 rounded-full ${theme.landingBadgeDot} dark:bg-red-400 animate-pulse transition-colors duration-300`} />
+                            className={`mb-5 inline-flex items-center gap-2 rounded-full ${theme.landingBadgeBg} dark:bg-brand-500/20 border dark:border-brand-500/30 px-4 py-1.5 text-xs font-black uppercase tracking-[0.2em] ${theme.landingBadgeText} dark:text-brand-400 transition-colors duration-300`}>
+                            <span className={`w-2 h-2 rounded-full ${theme.landingBadgeDot} dark:bg-brand-400 animate-pulse transition-colors duration-300`} />
                                     ARENA EVALUASI
                         </motion.div>
 
@@ -75,7 +76,7 @@ export default function DaftarKuis({ quizzes = [] }) {
                             <div className="flex-1">
                                 <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
                                     className="mb-2 text-2xl font-black leading-tight tracking-normal text-gray-900 transition-colors duration-300 sm:mb-3 sm:text-5xl lg:text-6xl dark:text-white">
-                                    Uji <span className={`text-transparent bg-clip-text bg-gradient-to-r ${theme.landingGradText} dark:from-red-400 dark:to-amber-400`}>実力</span>mu
+                                    Uji <span className={`text-transparent bg-clip-text bg-gradient-to-r ${theme.landingGradText} dark:from-brand-400 dark:to-amber-400`}>実力</span>mu
                                     <br className="hidden sm:block" /> Sekarang!
                                 </motion.h1>
                                 <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
@@ -265,5 +266,6 @@ export default function DaftarKuis({ quizzes = [] }) {
                 </div>
             </div>
         </AuthenticatedLayout>
+        </MotionConfig>
     );
 }

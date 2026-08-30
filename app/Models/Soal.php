@@ -17,9 +17,13 @@ class Soal extends Model
         'quiz_id',
         'type',
         'question_text',
+        'question_reading',
         'correct_answer',
+        'correct_answer_reading',
         'explanation',
+        'explanation_reading',
         'options',
+        'option_readings',
         'audio_url',
         'order',
         'points',
@@ -27,6 +31,7 @@ class Soal extends Model
 
     protected $casts = [
         'options' => 'array',
+        'option_readings' => 'array',
         'points' => 'integer',
     ];
 

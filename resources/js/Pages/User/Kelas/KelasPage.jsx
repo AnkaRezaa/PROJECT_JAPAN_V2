@@ -176,7 +176,7 @@ function OwnedCourseCard({ item }) {
                 <h3 className="truncate text-lg font-black text-slate-950 dark:text-white">{item.title}</h3>
                 {item.refund_required ? (
                     <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-gray-400">
-                        Pendaftaran mentor ditolak. Tim Japanlingo sedang menindaklanjuti refund pembayaran.
+                        Pendaftaran mentor ditolak. Tim TOKU-UP sedang menindaklanjuti refund pembayaran.
                     </p>
                 ) : item.waiting_for_approval ? (
                     <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-gray-400">
@@ -309,7 +309,7 @@ export default function KelasPage({ programs = [] }) {
 
     return (
         <AuthenticatedLayout header={false}>
-            <Head title="Kelas - Japanlingo" />
+            <Head title="Kelas - TOKU-UP" />
 
             <main className="relative min-h-screen overflow-hidden bg-slate-50 pb-14 text-slate-900 dark:bg-gray-950 dark:text-white">
                 <div
@@ -342,7 +342,7 @@ export default function KelasPage({ programs = [] }) {
                         ) : (
                             <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                                 <div className="max-w-3xl">
-                                    <p className="text-xs font-black uppercase tracking-[0.18em] text-rose-600 dark:text-rose-300">Kelas Japanlingo</p>
+                                    <p className="text-xs font-black uppercase tracking-[0.18em] text-rose-600 dark:text-rose-300">Kelas TOKU-UP</p>
                                     <h1 className="mt-3 text-2xl font-black leading-tight text-slate-950 sm:text-4xl dark:text-white">Temukan kelas yang sesuai dengan tujuan belajarmu</h1>
                                     <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-gray-300">Bandingkan materi, durasi akses, dan pilih kelas untuk mulai mengikuti roadmap belajar.</p>
                                 </div>

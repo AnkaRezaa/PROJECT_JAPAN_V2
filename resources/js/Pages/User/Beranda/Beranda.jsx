@@ -21,14 +21,14 @@ function SectionHeader({ eyebrow, title, actionHref, actionLabel }) {
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 {eyebrow && (
-                    <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-red-600 dark:text-red-400">
+                    <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400">
                         {eyebrow}
                     </p>
                 )}
                 <h2 className="text-xl font-black text-gray-900 dark:text-white md:text-2xl">{title}</h2>
             </div>
             {actionHref && (
-                <Link href={actionHref} className="inline-flex min-h-11 items-center gap-1 text-sm font-black text-red-600 transition lg:hover:text-red-700 dark:text-red-400 lg:dark:hover:text-red-300">
+                <Link href={actionHref} className="inline-flex min-h-11 items-center gap-1 text-sm font-black text-learning-700 transition lg:hover:text-learning-600 dark:text-learning-200">
                     {actionLabel}
                     <ArrowRightAltIcon sx={{ fontSize: 20 }} />
                 </Link>
@@ -102,9 +102,9 @@ export default function BerandaUser({
     const recentActivities = recentProgress.length > 0 ? recentProgress.slice(0, 4) : rewardHistory.slice(0, 4);
 
     const resourceVisuals = {
-        presentasi: { icon: SlideshowIcon, tone: 'from-red-500 to-rose-600' },
-        kosakata: { icon: TranslateIcon, tone: 'from-emerald-500 to-teal-600' },
-        kuis: { icon: QuizIcon, tone: 'from-indigo-500 to-violet-600' },
+        presentasi: { icon: SlideshowIcon, tone: 'from-brand-500 to-brand-700' },
+        kosakata: { icon: TranslateIcon, tone: 'from-learning-500 to-learning-700' },
+        kuis: { icon: QuizIcon, tone: 'from-achievement-400 to-amber-600' },
     };
     const resourceCards = (learningDashboard?.resources || []).map((item) => ({
         ...item,
@@ -204,20 +204,20 @@ export default function BerandaUser({
         <AuthenticatedLayout header={false}>
             <Head title="Beranda Utama" />
 
-            <div className="relative min-h-screen w-full overflow-hidden bg-[#f6f0e8] pb-16 transition-colors duration-300 dark:bg-gray-950">
-                <div className="pointer-events-none absolute inset-x-0 top-[360px] h-[620px] bg-[radial-gradient(circle_at_18%_20%,rgba(244,63,94,0.14),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(245,158,11,0.16),transparent_32%),linear-gradient(180deg,rgba(246,240,232,0)_0%,rgba(246,240,232,0.78)_22%,rgba(255,247,237,0.88)_52%,rgba(254,242,242,0.8)_100%)] dark:bg-[radial-gradient(circle_at_18%_20%,rgba(244,63,94,0.12),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(245,158,11,0.10),transparent_32%),linear-gradient(180deg,rgba(3,7,18,0)_0%,rgba(3,7,18,0.58)_24%,rgba(17,24,39,0.88)_58%,rgba(3,7,18,1)_100%)]" />
-                <div className="pointer-events-none absolute left-8 top-[560px] hidden text-[11rem] font-black leading-none text-red-900/[0.04] dark:text-white/[0.035] lg:block">学</div>
+            <div className="relative min-h-screen w-full overflow-hidden bg-[#F7FAF8] pb-16 transition-colors duration-300 dark:bg-gray-950">
+                <div className="pointer-events-none absolute inset-x-0 top-[360px] h-[620px] bg-[radial-gradient(circle_at_18%_20%,rgba(48,192,96,0.08),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(37,99,235,0.07),transparent_32%),linear-gradient(180deg,rgba(247,250,248,0)_0%,rgba(247,250,248,0.78)_22%,rgba(255,255,255,0.88)_52%,rgba(247,250,248,0.9)_100%)] dark:bg-[radial-gradient(circle_at_18%_20%,rgba(48,192,96,0.09),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(37,99,235,0.08),transparent_32%),linear-gradient(180deg,rgba(3,7,18,0)_0%,rgba(3,7,18,0.58)_24%,rgba(17,24,39,0.88)_58%,rgba(3,7,18,1)_100%)]" />
+                <div className="pointer-events-none absolute left-8 top-[560px] hidden text-[11rem] font-black leading-none text-brand-900/[0.04] dark:text-white/[0.035] lg:block">学</div>
                 <div className="pointer-events-none absolute right-10 top-[860px] hidden text-[10rem] font-black leading-none text-amber-900/[0.05] dark:text-white/[0.03] lg:block">語</div>
 
                 <div
                     className="relative w-full overflow-hidden bg-cover bg-center pb-20 pt-12 sm:pb-24 sm:pt-16"
                     style={{ backgroundImage: `url(${MountFujiBg})` }}
                 >
-                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.54)_52%,rgba(246,240,232,0.92)_86%,#f6f0e8_100%)] transition-colors duration-300 dark:bg-[linear-gradient(180deg,rgba(3,7,18,0.20)_0%,rgba(3,7,18,0.55)_56%,rgba(3,7,18,0.92)_88%,#030712_100%)]" />
-                    <div className="pointer-events-none absolute inset-x-0 -bottom-px h-40 bg-gradient-to-b from-transparent via-[#f6f0e8]/90 to-[#f6f0e8] dark:via-gray-950/90 dark:to-gray-950" />
+                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.22)_0%,rgba(255,255,255,0.58)_52%,rgba(247,250,248,0.94)_86%,#F7FAF8_100%)] transition-colors duration-300 dark:bg-[linear-gradient(180deg,rgba(3,7,18,0.20)_0%,rgba(3,7,18,0.55)_56%,rgba(3,7,18,0.92)_88%,#030712_100%)]" />
+                    <div className="pointer-events-none absolute inset-x-0 -bottom-px h-40 bg-gradient-to-b from-transparent via-[#F7FAF8]/90 to-[#F7FAF8] dark:via-gray-950/90 dark:to-gray-950" />
 
                     <div className="relative z-10 mx-auto flex max-w-7xl flex-col items-center px-4 text-center sm:px-6 lg:px-8">
-                        <p className="mb-3 text-xs font-black uppercase tracking-[0.28em] text-red-600 dark:text-red-300">
+                        <p className="mb-3 text-xs font-black uppercase tracking-[0.28em] text-brand-600 dark:text-brand-300">
                             Learning Hub
                         </p>
                         <h1 className="mb-7 text-3xl font-black tracking-tight text-gray-900 dark:text-white md:text-5xl">
@@ -257,7 +257,7 @@ export default function BerandaUser({
                                             setActiveSuggestionIndex((index) => Math.max(index - 1, 0));
                                         }
                                     }}
-                                    className="h-12 w-full rounded-full border-0 bg-transparent py-3 pl-12 pr-20 text-sm font-medium text-gray-800 outline-none placeholder:text-gray-500 focus:ring-2 focus:ring-red-100 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:ring-red-900/50"
+                                    className="h-12 w-full rounded-full border-0 bg-transparent py-3 pl-12 pr-20 text-sm font-medium text-gray-800 outline-none placeholder:text-gray-500 focus:ring-2 focus:ring-learning-200 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:ring-learning-900/50"
                                     placeholder="Cari materi di kelas aktif..."
                                 />
                                 {searchQuery && (
@@ -272,13 +272,13 @@ export default function BerandaUser({
                                         Hapus
                                     </button>
                                 )}
-                                <button type="submit" aria-label="Buka hasil pencarian" className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-600 transition hover:text-red-600 dark:text-gray-300 dark:hover:text-red-300">
+                                <button type="submit" aria-label="Buka hasil pencarian" className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-600 transition hover:text-learning-700 dark:text-gray-300 dark:hover:text-learning-200">
                                     <ArrowRightAltIcon sx={{ fontSize: 22 }} />
                                 </button>
                             </div>
 
                             {isSearchOpen && isSearchReady && (
-                                <div id="dashboard-search-results" role="listbox" className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl border border-white/80 bg-white/95 p-1.5 text-left shadow-xl shadow-red-950/10 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
+                                <div id="dashboard-search-results" role="listbox" className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl border border-white/80 bg-white/95 p-1.5 text-left shadow-xl shadow-brand-950/10 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
                                     {searchResults.length > 0 ? searchResults.map((item, index) => {
                                         const Icon = item.icon;
                                         const isActive = index === activeSuggestionIndex;
@@ -291,9 +291,9 @@ export default function BerandaUser({
                                                 aria-selected={isActive}
                                                 onMouseEnter={() => setActiveSuggestionIndex(index)}
                                                 onClick={() => setIsSearchOpen(false)}
-                                                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition ${isActive ? 'bg-red-50 dark:bg-red-950/30' : 'hover:bg-gray-50 dark:hover:bg-gray-800/70'}`}
+                                                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition ${isActive ? 'bg-learning-50 dark:bg-learning-950/30' : 'hover:bg-gray-50 dark:hover:bg-gray-800/70'}`}
                                             >
-                                                <Icon sx={{ fontSize: 20 }} className="shrink-0 text-red-600 dark:text-red-300" />
+                                                <Icon sx={{ fontSize: 20 }} className="shrink-0 text-learning-700 dark:text-learning-200" />
                                                 <div className="min-w-0 flex-1">
                                                     <p className="truncate text-sm font-black text-gray-900 dark:text-white">{item.title}</p>
                                                     <p className="truncate text-xs font-medium text-gray-700 dark:text-gray-300">{item.subtitle}</p>
@@ -319,13 +319,13 @@ export default function BerandaUser({
                                         key={item.label}
                                         href={item.href}
                                         className={`group inline-flex min-h-12 min-w-0 items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-xs font-black shadow-sm backdrop-blur transition sm:min-w-36 ${isPrimary
-                                            ? 'border-red-600 bg-red-600 text-white hover:bg-red-700'
+                                            ? 'border-[var(--toku-brand-border)] bg-[var(--toku-primary-soft)] text-[#2D3742] hover:border-brand-500 hover:bg-brand-100'
                                             : isQuiz
-                                                ? 'border-gray-900 bg-gray-950 text-white hover:border-red-700 hover:bg-red-700 dark:border-white dark:bg-white dark:text-gray-950 dark:hover:border-red-300 dark:hover:bg-red-100'
-                                                : 'border-white/80 bg-white/90 text-gray-700 hover:border-red-200 hover:bg-white hover:text-red-600 dark:border-gray-800 dark:bg-gray-900/90 dark:text-gray-200 dark:hover:border-red-900 dark:hover:text-red-300'}`}
+                                                ? 'border-[#A9C5F3] bg-[#DBEAFE] text-learning-800 hover:border-learning-400 hover:bg-learning-100 dark:border-learning-700 dark:bg-learning-950/40 dark:text-learning-200'
+                                                : 'border-white/80 bg-white/90 text-gray-700 hover:border-learning-200 hover:bg-white hover:text-learning-700 dark:border-gray-800 dark:bg-gray-900/90 dark:text-gray-200 dark:hover:border-learning-800 dark:hover:text-learning-200'}`}
                                     >
                                         <span className="flex min-w-0 items-center gap-2">
-                                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isPrimary || isQuiz ? 'bg-white/15 dark:bg-gray-950/10' : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300'}`}>
+                                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isPrimary ? 'bg-white/60 text-brand-800' : isQuiz ? 'bg-white/60 text-learning-700' : 'bg-learning-50 text-learning-700 dark:bg-learning-950/40 dark:text-learning-200'}`}>
                                                 <Icon sx={{ fontSize: 18 }} />
                                             </span>
                                             <span className="truncate">{item.label}</span>
@@ -339,7 +339,7 @@ export default function BerandaUser({
                         <dl className="grid w-full max-w-2xl grid-cols-3 divide-x divide-gray-200/80 overflow-hidden rounded-xl border border-white/80 bg-white/90 text-left shadow-sm backdrop-blur dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900/90">
                             <div className="min-w-0 px-3 py-3 sm:px-5">
                                 <dt className="flex items-center gap-1.5 text-[10px] font-black uppercase text-gray-500 dark:text-gray-400">
-                                    <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-red-600 dark:bg-red-950/40 dark:text-red-300">Lv.{user.level || 1}</span>
+                                    <span className="rounded-md bg-achievement-100 px-1.5 py-0.5 text-achievement-900 dark:bg-achievement-900/40 dark:text-achievement-100">Lv.{user.level || 1}</span>
                                     <span className="truncate">Total XP</span>
                                 </dt>
                                 <dd className="mt-1 text-lg font-black tabular-nums text-gray-950 dark:text-white sm:text-xl">{user.xp || 0}</dd>
@@ -369,15 +369,15 @@ export default function BerandaUser({
                 </div>
 
                 <div className="relative z-10 mx-auto -mt-10 max-w-7xl space-y-10 px-4 sm:px-6 lg:px-8">
-                    <section className="overflow-hidden rounded-[1.5rem] border border-red-100/80 bg-gradient-to-br from-red-600 via-rose-600 to-amber-500 p-1 shadow-2xl shadow-red-900/12 sm:rounded-[2rem] dark:border-red-900/50">
+                    <section className="overflow-hidden rounded-[1.5rem] border border-[var(--toku-border)] bg-white shadow-lg sm:rounded-[2rem] dark:border-gray-800 dark:bg-gray-950">
                         <div className="grid gap-5 rounded-[1.4rem] bg-white p-4 sm:gap-6 sm:rounded-[1.8rem] sm:p-7 dark:bg-gray-950 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-center">
                             <div className="grid gap-5">
                                 <div className="flex items-start gap-4">
-                                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white shadow-lg shadow-red-600/25">
+                                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#A9C5F3] bg-[#DBEAFE] text-learning-700 shadow-sm">
                                         <DashboardIcon sx={{ fontSize: 28 }} />
                                     </div>
                                     <div>
-                                    <p className="mb-1 text-xs font-black uppercase tracking-[0.18em] text-red-600 dark:text-red-400">
+                                    <p className="mb-1 text-xs font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">
                                         Belajar Hari Ini
                                     </p>
                                     <h2 className="text-xl font-black text-gray-900 sm:text-2xl dark:text-white">
@@ -389,7 +389,7 @@ export default function BerandaUser({
                                             : 'Pilih kelas untuk memulai roadmap belajar dan membuka materi mingguan.'}
                                     </p>
                                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-black sm:mt-4">
-                                        <span className="rounded-full bg-red-50 px-3 py-1.5 text-red-700 dark:bg-red-950/40 dark:text-red-300">
+                                        <span className="rounded-full bg-brand-50 px-3 py-1.5 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
                                             {totalModules} modul tersedia
                                         </span>
                                         <span className="rounded-full bg-amber-50 px-3 py-1.5 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
@@ -405,7 +405,7 @@ export default function BerandaUser({
                             <div className="grid gap-3">
                                 <Link
                                     href={nextAction?.href || activeLearning?.roadmap_url || route('user.kelas.index')}
-                                    className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r ${theme.ctaBg} px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-900/15 transition lg:hover:-translate-y-0.5 lg:hover:brightness-95`}
+                                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-action-primary px-6 py-3 text-sm font-black text-ink-900 shadow-sm transition lg:hover:-translate-y-0.5 lg:hover:bg-action-primary-hover"
                                 >
                                     {nextAction?.label || (activeLearning ? 'Buka Roadmap' : 'Jelajahi Kelas')}
                                     <ArrowRightAltIcon sx={{ fontSize: 22 }} />
@@ -415,7 +415,7 @@ export default function BerandaUser({
                                         const Icon = item.icon;
 
                                         return (
-                                            <Link key={item.category} href={item.href} className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-red-100 bg-white px-2 text-xs font-black text-gray-700 transition hover:border-red-300 hover:text-red-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:text-red-300">
+                                            <Link key={item.category} href={item.href} className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 text-xs font-black text-gray-700 transition hover:border-learning-300 hover:text-learning-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:text-learning-200">
                                                 <Icon sx={{ fontSize: 16 }} />
                                                 {item.title}
                                             </Link>
@@ -428,7 +428,7 @@ export default function BerandaUser({
                         </div>
                     </section>
 
-                    <section className="rounded-[1.5rem] border border-white/70 bg-white/55 p-4 shadow-xl shadow-red-900/5 backdrop-blur-md sm:rounded-[2rem] sm:p-7 dark:border-gray-800 dark:bg-gray-900/55">
+                    <section className="rounded-[1.5rem] border border-white/70 bg-white/55 p-4 shadow-xl shadow-brand-900/5 backdrop-blur-md sm:rounded-[2rem] sm:p-7 dark:border-gray-800 dark:bg-gray-900/55">
                         <SectionHeader
                             eyebrow="Kelas Saya"
                             title="Roadmap yang dapat kamu ikuti"
@@ -441,11 +441,11 @@ export default function BerandaUser({
                                 const cardClass = 'relative grid grid-cols-[72px_minmax(0,1fr)] gap-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition sm:grid-cols-[96px_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:p-4 dark:border-gray-800 dark:bg-gray-950';
                                 const content = (
                                     <>
-                                        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(220,38,38,0.15),transparent_48%),repeating-linear-gradient(90deg,rgba(153,27,27,0.09)_0_1px,transparent_1px_42px),repeating-linear-gradient(0deg,rgba(153,27,27,0.07)_0_1px,transparent_1px_42px)] dark:bg-[linear-gradient(135deg,rgba(248,113,113,0.14),transparent_48%),repeating-linear-gradient(90deg,rgba(255,255,255,0.06)_0_1px,transparent_1px_42px),repeating-linear-gradient(0deg,rgba(255,255,255,0.045)_0_1px,transparent_1px_42px)]" />
-                                        <span aria-hidden="true" className="pointer-events-none absolute -bottom-5 right-2 text-5xl font-black leading-none text-red-900/[0.14] sm:-bottom-7 sm:right-3 sm:text-7xl dark:text-white/[0.11]">学</span>
+                                    <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(48,192,96,0.11),transparent_48%),repeating-linear-gradient(90deg,rgba(21,128,61,0.06)_0_1px,transparent_1px_42px),repeating-linear-gradient(0deg,rgba(21,128,61,0.05)_0_1px,transparent_1px_42px)] dark:bg-[linear-gradient(135deg,rgba(74,222,128,0.10),transparent_48%),repeating-linear-gradient(90deg,rgba(255,255,255,0.06)_0_1px,transparent_1px_42px),repeating-linear-gradient(0deg,rgba(255,255,255,0.045)_0_1px,transparent_1px_42px)]" />
+                                        <span aria-hidden="true" className="pointer-events-none absolute -bottom-5 right-2 text-5xl font-black leading-none text-brand-900/[0.14] sm:-bottom-7 sm:right-3 sm:text-7xl dark:text-white/[0.11]">学</span>
                                         <span aria-hidden="true" className="pointer-events-none absolute -top-3 right-16 text-3xl font-black leading-none text-amber-700/[0.12] sm:right-28 sm:text-4xl dark:text-amber-200/[0.09]">語</span>
                                         <div className="relative z-10 h-16 w-[72px] overflow-hidden rounded-lg bg-slate-100 sm:h-[72px] sm:w-24 dark:bg-gray-800">
-                                            <div className="flex h-full items-center justify-center bg-gradient-to-br from-red-500 to-rose-600 text-white">
+                                            <div className="flex h-full items-center justify-center bg-gradient-to-br from-brand-500 to-brand-700 text-white">
                                                 <SchoolIcon sx={{ fontSize: 26 }} />
                                             </div>
                                             {program.thumbnail_url && (
@@ -476,7 +476,7 @@ export default function BerandaUser({
                                             {!program.waiting_for_kloter && (
                                                 <div className="mt-3 flex items-center gap-3">
                                                     <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-gray-800">
-                                                        <div className="h-full rounded-full bg-red-600" style={{ width: `${program.progress}%` }} />
+                                                        <div className="h-full rounded-full bg-brand-600" style={{ width: `${program.progress}%` }} />
                                                     </div>
                                                     <span className="shrink-0 text-xs font-black text-slate-700 dark:text-gray-300">{program.progress}%</span>
                                                 </div>
@@ -484,7 +484,7 @@ export default function BerandaUser({
                                         </div>
                                         <span className={`relative z-10 col-span-2 inline-flex min-h-10 items-center justify-center gap-1 rounded-lg px-4 text-sm font-black sm:col-auto sm:min-h-11 ${program.waiting_for_kloter
                                             ? 'bg-slate-100 text-slate-700 dark:bg-gray-800 dark:text-gray-300'
-                                            : 'bg-red-600 text-white lg:group-hover:bg-red-700'}`}>
+                                            : 'bg-brand-600 text-white lg:group-hover:bg-brand-700'}`}>
                                             {program.waiting_for_kloter ? 'Menunggu jadwal' : 'Lanjutkan'}
                                             {!program.waiting_for_kloter && <ArrowRightAltIcon sx={{ fontSize: 20 }} />}
                                         </span>
@@ -494,17 +494,17 @@ export default function BerandaUser({
                                 return program.waiting_for_kloter ? (
                                     <article key={program.id} className={cardClass}>{content}</article>
                                 ) : (
-                                    <Link key={program.id} href={program.roadmap_url} className={`group ${cardClass} hover:border-red-200 hover:shadow-md lg:dark:hover:border-red-900/60`}>
+                                    <Link key={program.id} href={program.roadmap_url} className={`group ${cardClass} hover:border-brand-200 hover:shadow-md lg:dark:hover:border-brand-900/60`}>
                                         {content}
                                     </Link>
                                 );
                             })}
                             {ownedPrograms.length === 0 && (
                                 <div className="rounded-2xl border border-dashed border-gray-300 bg-white/70 px-5 py-8 text-center dark:border-gray-700 dark:bg-gray-950/70">
-                                    <SchoolIcon sx={{ fontSize: 30 }} className="mb-2 text-red-500" />
+                                    <SchoolIcon sx={{ fontSize: 30 }} className="mb-2 text-brand-500" />
                                     <p className="font-black text-gray-900 dark:text-white">Belum ada kelas aktif</p>
                                     <p className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">Pilih kelas untuk memulai roadmap belajar.</p>
-                                    <Link href={route('user.kelas.index')} className="mt-4 inline-flex min-h-11 items-center gap-1 text-sm font-black text-red-600 dark:text-red-400">
+                                    <Link href={route('user.kelas.index')} className="mt-4 inline-flex min-h-11 items-center gap-1 text-sm font-black text-brand-600 dark:text-brand-400">
                                         Jelajahi kelas <ArrowRightAltIcon sx={{ fontSize: 20 }} />
                                     </Link>
                                 </div>
@@ -512,14 +512,14 @@ export default function BerandaUser({
                         </div>
                     </section>
 
-                    <section className="overflow-hidden rounded-[1.5rem] border border-red-100/80 bg-white/72 p-4 shadow-xl shadow-red-900/5 backdrop-blur-md sm:rounded-[2rem] sm:p-7 dark:border-gray-800 dark:bg-gray-900/72">
+                    <section className="overflow-hidden rounded-[1.5rem] border border-brand-100/80 bg-white/72 p-4 shadow-xl shadow-brand-900/5 backdrop-blur-md sm:rounded-[2rem] sm:p-7 dark:border-gray-800 dark:bg-gray-900/72">
                         <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-center lg:justify-between">
                             <div className="flex items-start gap-4">
-                                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white shadow-lg shadow-red-600/25">
+                                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/25">
                                     <QuizIcon sx={{ fontSize: 28 }} />
                                 </div>
                                 <div>
-                                    <p className="mb-1 text-xs font-black uppercase tracking-[0.18em] text-red-600 dark:text-red-400">
+                                    <p className="mb-1 text-xs font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">
                                         Quick Quiz
                                     </p>
                                     <h2 className="text-xl font-black text-gray-900 dark:text-white">
@@ -542,7 +542,7 @@ export default function BerandaUser({
                                             <span className="rounded-full bg-gray-100 px-3 py-1.5 text-gray-600 dark:bg-gray-900 dark:text-gray-300">
                                                 {quickQuiz.target_count} target
                                             </span>
-                                            <span className="rounded-full bg-red-50 px-3 py-1.5 text-red-700 dark:bg-red-950/40 dark:text-red-300">
+                                            <span className="rounded-full bg-brand-50 px-3 py-1.5 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
                                                 {quickQuiz.program_count} kelas
                                             </span>
                                             {!quickQuiz.active && quickQuiz.programs?.length > 1 && (
@@ -572,20 +572,20 @@ export default function BerandaUser({
                                     type="button"
                                     onClick={openQuickQuiz}
                                     disabled={isStartingQuickQuiz}
-                                    className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-gray-900/15 transition-all disabled:cursor-wait disabled:opacity-70 sm:w-auto lg:hover:-translate-y-0.5 lg:hover:bg-red-700 dark:bg-white dark:text-gray-950 lg:dark:hover:bg-red-100"
+                                    className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-gray-900/15 transition-all disabled:cursor-wait disabled:opacity-70 sm:w-auto lg:hover:-translate-y-0.5 lg:hover:bg-brand-700 dark:bg-white dark:text-gray-950 lg:dark:hover:bg-brand-100"
                                 >
                                     {isStartingQuickQuiz ? 'Menyiapkan...' : (quickQuiz.active ? 'Lanjutkan' : 'Mulai latihan')}
                                     <ArrowRightAltIcon sx={{ fontSize: 22 }} />
                                 </button>
                             ) : (
-                                <Link href={activeLearning?.roadmap_url || route('user.kelas.index')} className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-gray-900/15 transition-all sm:w-auto lg:hover:-translate-y-0.5 lg:hover:bg-red-700 dark:bg-white dark:text-gray-950 lg:dark:hover:bg-red-100">
+                                <Link href={activeLearning?.roadmap_url || route('user.kelas.index')} className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-gray-900/15 transition-all sm:w-auto lg:hover:-translate-y-0.5 lg:hover:bg-brand-700 dark:bg-white dark:text-gray-950 lg:dark:hover:bg-brand-100">
                                     Buka roadmap <ArrowRightAltIcon sx={{ fontSize: 22 }} />
                                 </Link>
                             )}
                         </div>
                     </section>
 
-                    <section className="rounded-[1.5rem] border border-white/70 bg-white/55 p-4 shadow-xl shadow-red-900/5 backdrop-blur-md sm:rounded-[2rem] sm:p-7 dark:border-gray-800 dark:bg-gray-900/55">
+                    <section className="rounded-[1.5rem] border border-white/70 bg-white/55 p-4 shadow-xl shadow-brand-900/5 backdrop-blur-md sm:rounded-[2rem] sm:p-7 dark:border-gray-800 dark:bg-gray-900/55">
                         <SectionHeader
                             eyebrow="Progress Mingguan"
                             title="Aktivitas belajar terbaru"
@@ -594,9 +594,9 @@ export default function BerandaUser({
                         />
 
                         <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-                            <div className="rounded-2xl border border-red-100/80 bg-white/85 p-4 sm:rounded-[1.5rem] sm:p-5 dark:border-gray-800 dark:bg-gray-950/80">
+                            <div className="rounded-2xl border border-brand-100/80 bg-white/85 p-4 sm:rounded-[1.5rem] sm:p-5 dark:border-gray-800 dark:bg-gray-950/80">
                                 <div className="mb-3 flex items-center gap-3 sm:mb-4">
-                                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${theme.ctaBg} text-white`}>
+                                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#A9C5F3] bg-[#DBEAFE] text-learning-700">
                                         <CheckCircleIcon />
                                     </div>
                                     <div>
@@ -605,8 +605,8 @@ export default function BerandaUser({
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-3 gap-2 text-center">
-                                    <div className="rounded-xl bg-red-50 px-2 py-2.5 sm:rounded-2xl sm:px-3 sm:py-3 dark:bg-red-950/30">
-                                        <p className="text-xl font-black text-red-600 dark:text-red-300">{user.xp || 0}</p>
+                                    <div className="rounded-xl bg-achievement-50 px-2 py-2.5 sm:rounded-2xl sm:px-3 sm:py-3 dark:bg-achievement-900/30">
+                                        <p className="text-xl font-black text-achievement-700 dark:text-achievement-100">{user.xp || 0}</p>
                                         <p className="text-[11px] font-bold uppercase text-gray-700 dark:text-gray-300">XP</p>
                                     </div>
                                     <div className="rounded-xl bg-amber-50 px-2 py-2.5 sm:rounded-2xl sm:px-3 sm:py-3 dark:bg-amber-950/30">
@@ -618,12 +618,12 @@ export default function BerandaUser({
                                         <p className="text-[11px] font-bold uppercase text-gray-700 dark:text-gray-300">Log</p>
                                     </div>
                                 </div>
-                                <Link href={route('user.leaderboard')} className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-xl border border-gray-100 bg-white px-3 py-2 text-xs font-black text-gray-600 transition hover:border-red-200 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:text-red-300">
+                                <Link href={route('user.leaderboard')} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-xl border border-gray-100 bg-white px-3 py-2 text-xs font-black text-gray-600 transition hover:border-learning-200 hover:text-learning-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:text-learning-200">
                                     Lihat peringkat liga <ArrowRightAltIcon sx={{ fontSize: 17 }} />
                                 </Link>
                             </div>
 
-                            <div className="overflow-hidden rounded-2xl border border-red-100/70 bg-white/85 sm:rounded-[1.5rem] dark:border-gray-800 dark:bg-gray-950/80">
+                            <div className="overflow-hidden rounded-2xl border border-brand-100/70 bg-white/85 sm:rounded-[1.5rem] dark:border-gray-800 dark:bg-gray-950/80">
                                 {recentActivities.length > 0 ? (
                                     <div className="divide-y divide-gray-50 dark:divide-gray-800">
                                         {recentActivities.map((activity, index) => (
@@ -677,7 +677,7 @@ export default function BerandaUser({
                                         {item.thumbnail_url || item.cover_url ? (
                                             <img src={item.thumbnail_url || item.cover_url} alt={item.cover_image_alt || item.title} className="h-full w-full object-cover transition-transform duration-500 lg:group-hover:scale-105" />
                                         ) : (
-                                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-red-50 to-gray-100 text-3xl font-black text-red-200 dark:from-gray-800 dark:to-gray-900 dark:text-gray-700">
+                                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-50 to-gray-100 text-3xl font-black text-brand-200 dark:from-gray-800 dark:to-gray-900 dark:text-gray-700">
                                                 JP
                                             </div>
                                         )}
@@ -685,25 +685,25 @@ export default function BerandaUser({
                                     <div className="flex flex-grow flex-col p-4 sm:p-6">
                                         {item.is_pinned && (
                                             <div className="mb-3">
-                                                <span className="rounded-md bg-red-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                                                <span className="rounded-md bg-brand-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">
                                                     PIN Disematkan
                                                 </span>
                                             </div>
                                         )}
                                         <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
-                                            <span className="rounded-full bg-red-50 px-2 py-0.5 font-bold text-red-700 dark:bg-red-900/20 dark:text-red-300">{item.category?.replaceAll('-', ' ') || 'platform'}</span>
+                                            <span className="rounded-full bg-brand-50 px-2 py-0.5 font-bold text-brand-700 dark:bg-brand-900/20 dark:text-brand-300">{item.category?.replaceAll('-', ' ') || 'platform'}</span>
                                             <AccessTimeIcon sx={{ fontSize: 14 }} />
                                             {item.published_at
                                                 ? new Date(item.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-                                                : 'Japanlingo News'}
+                                                : 'TOKU-UP News'}
                                         </div>
-                                        <h3 className="mb-2 text-lg font-extrabold leading-snug text-gray-900 transition-colors sm:mb-3 lg:group-hover:text-red-600 dark:text-white lg:dark:group-hover:text-red-400">
+                                        <h3 className="mb-2 text-lg font-extrabold leading-snug text-gray-900 transition-colors sm:mb-3 lg:group-hover:text-brand-600 dark:text-white lg:dark:group-hover:text-brand-400">
                                             {item.title}
                                         </h3>
                                         <p className="mb-4 line-clamp-2 flex-grow text-sm font-medium leading-relaxed text-gray-700 sm:mb-6 sm:line-clamp-3 dark:text-gray-300">
-                                            {item.excerpt || (item.body ? `${item.body.replace(/<[^>]*>/g, '').substring(0, 100)}...` : 'Baca update terbaru dari Japanlingo.')}
+                                            {item.excerpt || (item.body ? `${item.body.replace(/<[^>]*>/g, '').substring(0, 100)}...` : 'Baca update terbaru dari TOKU-UP.')}
                                         </p>
-                                        <div className="mt-auto flex items-center gap-2 text-sm font-black text-red-600 dark:text-red-400">
+                                        <div className="mt-auto flex items-center gap-2 text-sm font-black text-brand-600 dark:text-brand-400">
                                             Baca selengkapnya
                                             <ArrowRightAltIcon sx={{ fontSize: 20 }} />
                                         </div>

@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import HighlightedLearningText from '@/Components/Features/Learning/HighlightedLearningText';
+import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
 import JapaneseSpeechButton from '@/Components/UI/JapaneseSpeechButton';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -28,7 +29,7 @@ const typeLabels = {
 
 const typeTones = {
     kosakata: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
-    kanji: 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300',
+    kanji: 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300',
     bunpo: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
 };
 
@@ -83,7 +84,7 @@ function MaterialDetail({ item, onClose }) {
             >
                 <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white/95 px-5 py-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-red-600 dark:text-red-400">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-600 dark:text-brand-400">
                             {typeLabels[item.content_type] || 'Materi'}
                         </p>
                         <h2 id="material-detail-title" className="mt-0.5 text-base font-black text-gray-900 dark:text-white">
@@ -120,16 +121,17 @@ function MaterialDetail({ item, onClose }) {
 
                         <div className="mt-5 flex items-start justify-between gap-4">
                             <div className="min-w-0">
-                                <p className="break-words text-4xl font-black leading-tight text-gray-950 dark:text-white">{item.word}</p>
-                                {item.reading && (
-                                    <p className="mt-1 break-words text-base font-bold text-gray-500 dark:text-gray-400">{item.reading}</p>
-                                )}
+                                <JapaneseReading
+                                    japanese={item.word}
+                                    reading={item.reading}
+                                    className="text-4xl font-black leading-tight text-gray-950 dark:text-white"
+                                />
                             </div>
                             <JapaneseSpeechButton
                                 text={item.word || item.reading}
                                 audioUrl={item.audio_url}
                                 title={`Dengarkan ${item.word || 'kata ini'}`}
-                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-600 text-white shadow-sm transition hover:bg-red-500 active:scale-95"
+                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-action-secondary text-white shadow-sm transition hover:bg-action-secondary-hover active:scale-95"
                                 iconClassName="text-[21px]"
                             />
                         </div>
@@ -152,23 +154,16 @@ function MaterialDetail({ item, onClose }) {
                                 <JapaneseSpeechButton
                                     text={item.example_sentence || item.example_reading}
                                     title="Dengarkan contoh kalimat"
-                                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition hover:bg-brand-50 hover:text-brand-600 dark:text-gray-400 dark:hover:bg-brand-950/40 dark:hover:text-brand-400"
                                     iconClassName="text-[19px]"
                                 />
                             </div>
-                            <p className="mt-2 break-words text-base font-black leading-7 text-gray-900 dark:text-white">
-                                <HighlightedLearningText text={item.example_sentence || '-'} term={item.word} />
-                            </p>
-                            {item.example_reading && (
-                                <p className="mt-1 break-words text-sm font-semibold text-gray-500 dark:text-gray-400">
-                                    <HighlightedLearningText text={item.example_reading} term={item.reading} />
-                                </p>
-                            )}
-                            {item.example_meaning && (
-                                <p className="mt-2 break-words text-sm leading-6 text-gray-600 dark:text-gray-300">
-                                    <HighlightedLearningText text={item.example_meaning} term={item.meaning_id || item.meaning_en} />
-                                </p>
-                            )}
+                            <JapaneseReading
+                                japanese={<HighlightedLearningText text={item.example_sentence || '-'} term={item.word} />}
+                                reading={item.example_reading}
+                                translation={item.example_meaning}
+                                className="mt-2 text-base font-black leading-7 text-gray-900 dark:text-white"
+                            />
                         </section>
                     )}
 
@@ -254,7 +249,7 @@ export default function KosakataPage({
 
     return (
         <AuthenticatedLayout header={false}>
-            <Head title={`Pustaka Materi - ${program.title || 'Japanlingo'}`} />
+            <Head title={`Pustaka Materi - ${program.title || 'TOKU-UP'}`} />
 
             <div className="min-h-[100dvh] bg-gray-50 text-gray-900 transition-colors dark:bg-gray-950 dark:text-white">
                 <main className="mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
@@ -262,7 +257,7 @@ export default function KosakataPage({
                         <Link
                             href={program.roadmap_url || route('user.kelas.index')}
                             aria-label="Kembali ke roadmap"
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-500 transition hover:bg-white hover:text-red-600 hover:shadow-sm dark:hover:bg-gray-900 dark:hover:text-red-400"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-500 transition hover:bg-white hover:text-brand-600 hover:shadow-sm dark:hover:bg-gray-900 dark:hover:text-brand-400"
                         >
                             <ArrowBackIcon sx={{ fontSize: 21 }} />
                         </Link>
@@ -281,7 +276,7 @@ export default function KosakataPage({
 
                     <section className="sticky top-0 z-20 -mx-4 bg-gray-50/95 px-4 pb-3 pt-4 backdrop-blur dark:bg-gray-950/95 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
                         <form onSubmit={submitSearch} className="flex gap-2">
-                            <label className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-3 shadow-sm focus-within:border-red-400 focus-within:ring-4 focus-within:ring-red-100 dark:border-gray-800 dark:bg-gray-900 dark:focus-within:border-red-700 dark:focus-within:ring-red-950/50">
+                            <label className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-3 shadow-sm focus-within:border-learning-400 focus-within:ring-4 focus-within:ring-learning-100 dark:border-gray-800 dark:bg-gray-900 dark:focus-within:border-learning-600 dark:focus-within:ring-learning-950/50">
                                 <SearchIcon sx={{ fontSize: 20 }} className="shrink-0 text-gray-400" />
                                 <input
                                     value={search}
@@ -296,8 +291,8 @@ export default function KosakataPage({
                                 aria-expanded={filtersOpen}
                                 className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border shadow-sm transition ${
                                     filtersOpen || activeAdvancedFilterCount > 0
-                                        ? 'border-red-600 bg-red-600 text-white'
-                                        : 'border-gray-200 bg-white text-gray-600 hover:border-red-300 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                                        ? 'border-learning-700 bg-learning-700 text-white'
+                                        : 'border-gray-200 bg-white text-gray-600 hover:border-learning-300 hover:text-learning-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300'
                                 }`}
                             >
                                 <FilterListIcon sx={{ fontSize: 21 }} />
@@ -317,7 +312,7 @@ export default function KosakataPage({
                                     onClick={() => selectType(type.value)}
                                     className={`min-h-9 flex-1 whitespace-nowrap rounded-lg px-3 text-xs font-black transition ${
                                         contentType === type.value
-                                            ? 'bg-white text-red-600 shadow-sm dark:bg-gray-800 dark:text-red-400'
+                                            ? 'bg-white text-learning-700 shadow-sm dark:bg-gray-800 dark:text-learning-200'
                                             : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
                                     }`}
                                 >
@@ -336,7 +331,7 @@ export default function KosakataPage({
                                 >
                                     <div className="mt-3 grid gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-800 dark:bg-gray-900 sm:grid-cols-3">
                                         <label className="grid gap-1">
-                                            <span className="text-[10px] font-black uppercase tracking-wide text-gray-400">Week</span>
+                                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Minggu</span>
                                             <select value={moduleFilter} onChange={(event) => setModuleFilter(event.target.value)} className="h-10 rounded-lg border-gray-200 bg-white px-3 text-xs font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                                                 <option value="all">Semua Week</option>
                                                 {modules.map((module) => (
@@ -345,7 +340,7 @@ export default function KosakataPage({
                                             </select>
                                         </label>
                                         <label className="grid gap-1">
-                                            <span className="text-[10px] font-black uppercase tracking-wide text-gray-400">Kategori</span>
+                                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Kategori</span>
                                             <select value={category} onChange={(event) => setCategory(event.target.value)} className="h-10 rounded-lg border-gray-200 bg-white px-3 text-xs font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                                                 <option value="all">Semua Kategori</option>
                                                 {categories.map((item) => (
@@ -354,7 +349,7 @@ export default function KosakataPage({
                                             </select>
                                         </label>
                                         <label className="grid gap-1">
-                                            <span className="text-[10px] font-black uppercase tracking-wide text-gray-400">Level</span>
+                                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Level</span>
                                             <select value={jlptLevel} onChange={(event) => setJlptLevel(event.target.value)} className="h-10 rounded-lg border-gray-200 bg-white px-3 text-xs font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                                                 <option value="all">Semua Level</option>
                                                 {available_levels.map((level) => (
@@ -372,7 +367,7 @@ export default function KosakataPage({
                                                     applyFilters();
                                                     setFiltersOpen(false);
                                                 }}
-                                                className="h-9 rounded-lg bg-red-600 px-4 text-xs font-black text-white shadow-[0_3px_0_#991b1b] transition hover:bg-red-500 active:translate-y-0.5 active:shadow-none"
+                                                className="min-h-10 rounded-lg bg-action-secondary px-4 text-xs font-black text-white shadow-sm transition hover:bg-action-secondary-hover"
                                             >
                                                 Terapkan
                                             </button>
@@ -393,10 +388,11 @@ export default function KosakataPage({
                                             onClick={() => setSelectedItem(item)}
                                             className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-left sm:grid-cols-[minmax(150px,0.8fr)_minmax(0,1.2fr)_auto]"
                                         >
-                                            <span className="min-w-0">
-                                                <span className="block break-words text-xl font-black leading-tight text-gray-950 dark:text-white sm:text-2xl">{item.word}</span>
-                                                <span className="mt-0.5 block truncate text-xs font-bold text-gray-500 dark:text-gray-400">{item.reading || 'Tanpa reading'}</span>
-                                            </span>
+                                            <JapaneseReading
+                                                japanese={item.word}
+                                                reading={item.reading}
+                                                className="min-w-0 text-xl font-black leading-tight text-gray-950 dark:text-white sm:text-2xl"
+                                            />
                                             <span className="hidden min-w-0 sm:block">
                                                 <span className="block truncate text-sm font-bold text-gray-800 dark:text-gray-200">
                                                     {item.meaning_id || item.meaning_en || 'Arti belum tersedia'}
@@ -423,7 +419,7 @@ export default function KosakataPage({
                                             text={item.word || item.reading}
                                             audioUrl={item.audio_url}
                                             title={`Dengarkan ${item.word || 'kata ini'}`}
-                                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-brand-50 hover:text-brand-600 dark:text-gray-400 dark:hover:bg-brand-950/40 dark:hover:text-brand-400"
                                             iconClassName="text-[20px]"
                                         />
                                     </article>
@@ -449,8 +445,8 @@ export default function KosakataPage({
                                     preserveScroll
                                     className={`flex min-h-9 min-w-9 items-center justify-center rounded-lg px-2.5 text-xs font-black transition ${
                                         link.active
-                                            ? 'bg-red-600 text-white'
-                                            : 'border border-gray-200 bg-white text-gray-600 hover:border-red-300 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                                            ? 'bg-learning-700 text-white'
+                                            : 'border border-gray-200 bg-white text-gray-600 hover:border-learning-300 hover:text-learning-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300'
                                     } ${!link.url ? 'pointer-events-none opacity-35' : ''}`}
                                     dangerouslySetInnerHTML={{ __html: link.label }}
                                 />

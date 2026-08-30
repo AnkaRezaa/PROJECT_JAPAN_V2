@@ -92,7 +92,7 @@ const orderedCharacters = Object.fromEntries(
 fs.writeFileSync(
     path.join(outputRoot, 'manifest.json'),
     `${JSON.stringify({
-        schema: 'japanlingo-strokes-v1',
+        schema: 'toku-up-strokes-v1',
         version: '2026-07-28',
         coordinate_system: 109,
         characters: orderedCharacters,

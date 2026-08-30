@@ -110,12 +110,12 @@ export default function Progress({
         <AuthenticatedLayout
             header={
                 <h2 className="flex items-center gap-2 text-xl font-black text-slate-950 dark:text-white">
-                    <ShowChartIcon className="text-red-600 dark:text-red-400" />
+                    <ShowChartIcon className="text-brand-600 dark:text-brand-400" />
                     Progres Saya
                 </h2>
             }
         >
-            <Head title="Progres - Japanlingo" />
+            <Head title="Progres - TOKU-UP" />
 
             <div className="relative min-h-screen overflow-hidden bg-[#f3f7f5] pb-12 text-slate-900 dark:bg-slate-950 dark:text-white">
                 <div
