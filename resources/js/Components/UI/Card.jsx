@@ -1,6 +1,6 @@
 export default function Card({ children, className = '', padding = true, hover = false }) {
     return (
-        <div className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl ${padding ? 'p-6' : ''} ${hover ? 'hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer' : 'transition-colors'} ${className}`}>
+        <div className={`toku-surface border rounded-lg ${padding ? 'p-6' : ''} ${hover ? 'hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer' : 'transition-colors'} ${className}`}>
             {children}
         </div>
     );

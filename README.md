@@ -1,6 +1,6 @@
-# JapanLingo V2
+# TOKU-UP
 
-JapanLingo V2 adalah platform belajar bahasa Jepang berbasis kelas untuk program JLPT. Aplikasi menggabungkan roadmap Week/Day, presentasi, Bank Konten N3, kuis dan repetisi, ujian mingguan, handwriting kanji, progress, gamifikasi, pembayaran Midtrans, kloter mentor, serta ruang kelas realtime.
+TOKU-UP (Tokutei-Ginou Upgrade) adalah platform belajar bahasa Jepang berbasis kelas. Aplikasi menggabungkan roadmap Week/Day, presentasi, bank konten, kuis dan repetisi, ujian mingguan, handwriting kanji, progress, gamifikasi, pembayaran Midtrans, kloter mentor, serta ruang kelas realtime.
 
 ## Dokumentasi
 

@@ -22,19 +22,19 @@ export default function Register() {
         <GuestAuthLayout>
             <Head title="Daftar" />
 
-            <div className="rounded-2xl border border-white/70 bg-white/85 p-5 shadow-[0_24px_80px_-40px_rgba(127,29,29,0.45)] backdrop-blur-md sm:p-8">
+            <div className="rounded-2xl border border-white/70 bg-white/85 p-5 shadow-[0_24px_80px_-40px_rgba(48,192,96,0.32)] backdrop-blur-md sm:p-8">
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 mb-6">
                     <Link href={route('login')} className="flex-1 pb-3 text-sm font-medium text-gray-400 text-center no-underline hover:text-gray-600 transition-colors">
                         Masuk ログイン
                     </Link>
-                    <button className="flex-1 pb-3 text-sm font-bold text-red-600 border-b-2 border-red-600">
+                    <button className="flex-1 pb-3 text-sm font-bold text-brand-600 border-b-2 border-brand-600">
                         Daftar 登録
                     </button>
                 </div>
 
-                <h2 className="text-xl font-extrabold text-gray-900 mb-1">Buat akun baru</h2>
-                <p className="text-sm text-gray-500 mb-6">Mulai perjalanan belajar Bahasa Jepang Anda hari ini!</p>
+                <h2 className="mb-1 text-xl font-extrabold text-[#2D3742]">Buat akun baru</h2>
+                <p className="mb-6 text-sm text-[#55616D]">Mulai perjalanan belajar bahasa Jepang Anda hari ini.</p>
 
                 <form onSubmit={submit} className="space-y-4">
                     <div>
@@ -46,7 +46,7 @@ export default function Register() {
                                 value={data.name}
                                 onChange={(e) => setData('name', e.target.value)}
                                 placeholder="Nama Anda"
-                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600"
+                                className="toku-input w-full rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none"
                             />
                         </div>
                         {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
@@ -61,7 +61,7 @@ export default function Register() {
                                 value={data.email}
                                 onChange={(e) => setData('email', e.target.value)}
                                 placeholder="name@example.com"
-                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600"
+                                className="toku-input w-full rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none"
                             />
                         </div>
                         {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
@@ -77,7 +77,7 @@ export default function Register() {
                                 value={data.password}
                                 onChange={(e) => setData('password', e.target.value)}
                                 placeholder="••••••••"
-                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600"
+                                className="toku-input w-full rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none"
                             />
                         </div>
                         {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
@@ -92,7 +92,7 @@ export default function Register() {
                                 value={data.password_confirmation}
                                 onChange={(e) => setData('password_confirmation', e.target.value)}
                                 placeholder="••••••••"
-                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600"
+                                className="toku-input w-full rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none"
                             />
                         </div>
                         {errors.password_confirmation && <p className="mt-1 text-xs text-red-600">{errors.password_confirmation}</p>}
@@ -105,17 +105,17 @@ export default function Register() {
                                 type="checkbox"
                                 checked={data.terms_accepted}
                                 onChange={(e) => setData('terms_accepted', e.target.checked)}
-                                className="mt-1 w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2"
+                                className="mt-1 w-4 h-4 text-brand-600 bg-gray-100 border-gray-300 rounded focus:ring-focus focus:ring-2"
                                 required
                             />
                             <span className="text-sm text-gray-500">
-                                Saya menyetujui <Link href="/terms" className="font-medium text-red-600 hover:underline">Syarat & Ketentuan</Link> dan <Link href="/privacy-policy" className="font-medium text-red-600 hover:underline">Kebijakan Privasi</Link>.
+                                Saya menyetujui <Link href="/terms" className="font-medium text-brand-600 hover:underline">Syarat & Ketentuan</Link> dan <Link href="/privacy-policy" className="font-medium text-brand-600 hover:underline">Kebijakan Privasi</Link>.
                             </span>
                         </label>
                         {errors.terms_accepted && <p className="mt-1 text-xs text-red-600">{errors.terms_accepted}</p>}
                     </div>
 
-                    <button type="submit" disabled={processing || !data.terms_accepted} className="w-full py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all disabled:opacity-50 text-sm">
+                    <button type="submit" disabled={processing || !data.terms_accepted} className="w-full rounded-xl bg-brand-600 py-3 text-sm font-bold text-ink-900 transition-colors hover:bg-brand-700 hover:text-white disabled:opacity-50">
                         Daftar Akun (登録する)
                     </button>
 
@@ -134,7 +134,7 @@ export default function Register() {
             </div>
 
             <p className="text-center text-sm text-gray-500 mt-6">
-                Sudah punya akun? <Link href={route('login')} className="text-red-600 font-semibold no-underline hover:underline">Masuk</Link>
+                Sudah punya akun? <Link href={route('login')} className="text-brand-600 font-semibold no-underline hover:underline">Masuk</Link>
             </p>
         </GuestAuthLayout>
     );

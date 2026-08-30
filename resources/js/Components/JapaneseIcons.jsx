@@ -57,3 +57,13 @@ export const MedalIcon = ({ className = "w-6 h-6", ...props }) => (
         <path d="M10 14.5l-3 7 5-2 5 2-3-7-1.5 2.5z" />
     </svg>
 );
+
+const seigaihaPattern = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 48'%3E%3Cg fill='none' stroke='%2330c060' stroke-opacity='.16' stroke-width='1.35'%3E%3Cpath d='M0 48A24 24 0 0 1 48 48M8 48A16 16 0 0 1 40 48M16 48A8 8 0 0 1 32 48M48 48A24 24 0 0 1 96 48M56 48A16 16 0 0 1 88 48M64 48A8 8 0 0 1 80 48M24 24A24 24 0 0 1 72 24M32 24A16 16 0 0 1 64 24M40 24A8 8 0 0 1 56 24'/%3E%3C/g%3E%3C/svg%3E")`;
+
+export const SeigaihaBand = ({ className = '' }) => (
+    <div
+        aria-hidden="true"
+        className={`h-6 bg-[#F7FAF8] bg-repeat ${className}`}
+        style={{ backgroundImage: seigaihaPattern, backgroundSize: '72px 36px' }}
+    />
+);

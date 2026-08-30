@@ -35,8 +35,8 @@ class PurchaseReceiptNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Bukti pembayaran Japanlingo - '.$this->transactionCode)
-            ->greeting('Halo '.($notifiable->username ?? 'Japanlingo User').',')
+            ->subject('Bukti pembayaran TOKU-UP - '.$this->transactionCode)
+            ->greeting('Halo '.($notifiable->username ?? 'Pengguna TOKU-UP').',')
             ->line($this->pendingApproval
                 ? 'Pembayaran Anda berhasil diproses. Akses kelas sedang menunggu persetujuan mentor.'
                 : 'Pembayaran Anda berhasil diproses dan akses belajar telah diaktifkan.')
@@ -54,7 +54,7 @@ class PurchaseReceiptNotification extends Notification implements ShouldQueue
         return [
             'template' => 'purchase_receipt',
             'variables' => [
-                'user_name' => $notifiable->username ?? 'Japanlingo User',
+                'user_name' => $notifiable->username ?? 'Pengguna TOKU-UP',
                 'transaction_code' => $this->transactionCode,
                 'plan_name' => $this->planName,
                 'scope_label' => $this->scopeLabel,

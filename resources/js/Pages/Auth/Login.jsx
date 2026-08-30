@@ -23,10 +23,10 @@ export default function Login({ status, canResetPassword }) {
         <GuestAuthLayout>
             <Head title="Masuk" />
 
-            <div className="rounded-2xl border border-white/70 bg-white/85 p-5 shadow-[0_24px_80px_-40px_rgba(127,29,29,0.45)] backdrop-blur-md sm:p-8">
+            <div className="rounded-2xl border border-white/70 bg-white/85 p-5 shadow-[0_24px_80px_-40px_rgba(48,192,96,0.32)] backdrop-blur-md sm:p-8">
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 mb-6">
-                    <button className="flex-1 pb-3 text-sm font-bold text-red-600 border-b-2 border-red-600">
+                    <button className="flex-1 pb-3 text-sm font-bold text-brand-600 border-b-2 border-brand-600">
                         Masuk ログイン
                     </button>
                     <Link href={route('register')} className="flex-1 pb-3 text-sm font-medium text-gray-400 text-center no-underline hover:text-gray-600 transition-colors">
@@ -34,8 +34,8 @@ export default function Login({ status, canResetPassword }) {
                     </Link>
                 </div>
 
-                <h2 className="text-xl font-extrabold text-gray-900 mb-1">Selamat Datang Kembali!</h2>
-                <p className="text-sm text-gray-500 mb-6">Siap melanjutkan perjalanan N3 Anda?</p>
+                <h2 className="mb-1 text-xl font-extrabold text-[#2D3742]">Selamat Datang Kembali!</h2>
+                <p className="mb-6 text-sm text-[#55616D]">Siap melanjutkan perjalanan belajar Anda?</p>
 
                 {status && <div className="mb-4 text-sm font-medium text-green-600 bg-green-50 px-4 py-2 rounded-lg">{status}</div>}
 
@@ -49,7 +49,7 @@ export default function Login({ status, canResetPassword }) {
                                 value={data.email}
                                 onChange={(e) => setData('email', e.target.value)}
                                 placeholder="name@example.com"
-                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600"
+                                className="toku-input w-full rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none"
                             />
                         </div>
                         {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
@@ -59,7 +59,7 @@ export default function Login({ status, canResetPassword }) {
                         <div className="flex items-center justify-between mb-1.5">
                             <label className="text-sm font-medium text-gray-700">Kata Sandi</label>
                             {canResetPassword && (
-                                <Link href={route('password.request')} className="text-xs text-red-600 font-semibold no-underline hover:underline">
+                                <Link href={route('password.request')} className="text-xs text-brand-600 font-semibold no-underline hover:underline">
                                     Lupa kata sandi?
                                 </Link>
                             )}
@@ -71,14 +71,14 @@ export default function Login({ status, canResetPassword }) {
                                 value={data.password}
                                 onChange={(e) => setData('password', e.target.value)}
                                 placeholder="••••••••"
-                                className="w-full pl-10 pr-11 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600"
+                                className="toku-input w-full rounded-lg py-2.5 pl-10 pr-11 text-sm focus:outline-none"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword((visible) => !visible)}
                                 aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
                                 title={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
-                                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-600/20"
+                                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-focus/20"
                             >
                                 {showPassword ? <VisibilityOffIcon sx={{ fontSize: 19 }} /> : <VisibilityIcon sx={{ fontSize: 19 }} />}
                             </button>
@@ -87,11 +87,11 @@ export default function Login({ status, canResetPassword }) {
                     </div>
 
                     <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={data.remember} onChange={(e) => setData('remember', e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-600/20" />
+                        <input type="checkbox" checked={data.remember} onChange={(e) => setData('remember', e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-focus/20" />
                         <span className="text-sm text-gray-600">Ingat saya</span>
                     </label>
 
-                    <button type="submit" disabled={processing} className="w-full py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all disabled:opacity-50 text-sm">
+                    <button type="submit" disabled={processing} className="w-full rounded-xl bg-brand-600 py-3 text-sm font-bold text-ink-900 transition-colors hover:bg-brand-700 hover:text-white disabled:opacity-50">
                         Mulai Belajar (始める)
                     </button>
 
@@ -111,7 +111,7 @@ export default function Login({ status, canResetPassword }) {
             </div>
 
             <p className="text-center text-sm text-gray-500 mt-6">
-                Belum punya akun? <Link href={route('register')} className="text-red-600 font-semibold no-underline hover:underline">Daftar gratis</Link>
+                Belum punya akun? <Link href={route('register')} className="text-brand-600 font-semibold no-underline hover:underline">Daftar gratis</Link>
             </p>
         </GuestAuthLayout>
     );

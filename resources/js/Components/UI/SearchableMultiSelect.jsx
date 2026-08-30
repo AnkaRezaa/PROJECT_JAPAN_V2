@@ -63,7 +63,7 @@ export default function SearchableMultiSelect({
 
                             return (
                                 <button key={option.value} type="button" onClick={() => toggleOption(option.value)} className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-gray-800">
-                                    <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${selected ? 'border-red-600 bg-red-600 text-white' : 'border-gray-300 dark:border-gray-600'}`}>
+                                    <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${selected ? 'border-[var(--toku-primary)] bg-[var(--toku-primary)] text-white' : 'border-gray-300 dark:border-gray-600'}`}>
                                         {selected && <CheckIcon sx={{ fontSize: 13 }} />}
                                     </span>
                                     <span className="min-w-0">

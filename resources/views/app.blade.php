@@ -56,7 +56,7 @@
         <!-- Scripts -->
         @routes
         @php
-            $japanlingoTheme = ['activeTheme' => 'spring', 'customTheme' => []];
+            $tokuUpTheme = ['activeTheme' => 'tokuup', 'customTheme' => []];
 
             try {
                 if (\Illuminate\Support\Facades\Schema::hasTable('app_settings')) {
@@ -68,16 +68,16 @@
                         $decodedTheme = json_decode($themeSetting, true);
 
                         if (is_array($decodedTheme)) {
-                            $japanlingoTheme = array_merge($japanlingoTheme, $decodedTheme);
+                            $tokuUpTheme = array_merge($tokuUpTheme, $decodedTheme);
                         }
                     }
                 }
             } catch (\Throwable $e) {
-                $japanlingoTheme = ['activeTheme' => 'spring', 'customTheme' => []];
+                $tokuUpTheme = ['activeTheme' => 'tokuup', 'customTheme' => []];
             }
         @endphp
         <script>
-            window.__JAPANLINGO_THEME__ = @json($japanlingoTheme);
+            window.__TOKU_UP_THEME__ = @json($tokuUpTheme);
             (() => {
                 const mode = localStorage.getItem('theme') || 'system';
                 const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;

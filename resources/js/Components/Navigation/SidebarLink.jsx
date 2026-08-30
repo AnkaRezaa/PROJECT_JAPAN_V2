@@ -9,8 +9,12 @@ export default function SidebarLink({
     isExpanded = false,
     className = '',
     onNavigate,
+    activeTone = 'brand',
 }) {
     const label = typeof children === 'string' ? children : undefined;
+    const activeClasses = activeTone === 'learning'
+        ? 'border border-[var(--toku-brand-border)] bg-[var(--toku-primary-soft)] text-[#2D3742] dark:border-brand-700 dark:bg-brand-950 dark:text-brand-100'
+        : 'border border-[var(--toku-brand-border)] bg-[var(--toku-primary-soft)] text-[#2D3742] dark:border-brand-700 dark:bg-brand-950 dark:text-brand-100';
 
     return (
         <Link
@@ -19,12 +23,12 @@ export default function SidebarLink({
             aria-label={!isExpanded ? label : undefined}
             title={!isExpanded ? label : undefined}
             onClick={onNavigate}
-            className={`group relative mb-1.5 flex min-h-[52px] w-full items-center rounded-xl py-2.5 transition-all duration-200 ${
+            className={`group relative mb-1.5 flex min-h-[52px] w-full items-center rounded-xl border border-transparent py-2.5 transition-all duration-200 ${
                 isExpanded ? 'flex-row justify-start px-3.5' : 'justify-center px-2'
             } ${
                 active
-                    ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-red-500/20'
-                    : 'text-gray-500 hover:bg-white hover:text-red-700 hover:shadow-sm dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-red-300'
+                    ? activeClasses
+                    : 'text-[#55616D] hover:border-[var(--toku-border)] hover:bg-white hover:text-[#2D3742] hover:shadow-sm dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-brand-200'
             } ${className}`}
         >
             <span className={`flex shrink-0 items-center justify-center transition-transform duration-200 group-hover:scale-105 ${isExpanded ? 'mr-3' : ''}`}>

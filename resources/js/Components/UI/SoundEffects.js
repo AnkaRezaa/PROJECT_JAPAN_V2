@@ -1,4 +1,4 @@
-export const SOUND_EFFECTS_PREFERENCE_KEY = 'japanlingo.soundEffectsEnabled';
+export const SOUND_EFFECTS_PREFERENCE_KEY = 'toku-up.soundEffectsEnabled';
 
 const SOUND_EFFECTS = {
     correct: { src: '/audio/sfx/Audio/confirmation_001.ogg', volume: 0.26 },
@@ -28,7 +28,7 @@ export function setSoundEffectsEnabled(enabled) {
     if (typeof window === 'undefined') return;
 
     window.localStorage.setItem(SOUND_EFFECTS_PREFERENCE_KEY, enabled ? 'true' : 'false');
-    window.dispatchEvent(new CustomEvent('japanlingo:sound-effects-changed'));
+    window.dispatchEvent(new CustomEvent('toku-up:sound-effects-changed'));
 }
 
 export function playSoundEffect(name, { deduplicate = false } = {}) {

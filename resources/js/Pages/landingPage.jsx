@@ -1,56 +1,78 @@
 import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import BoltIcon from '@mui/icons-material/Bolt';
+import CheckIcon from '@mui/icons-material/Check';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import HeadsetIcon from '@mui/icons-material/Headset';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
+import PlayCircleIcon from '@mui/icons-material/PlayCircle';
+import VideogameAssetIcon from '@mui/icons-material/VideogameAsset';
+import { SakuraIcon, ScrollIcon, SeigaihaBand, ToriiIcon } from '@/Components/JapaneseIcons';
 import Button from '@/Components/UI/Button';
-import Badge from '@/Components/UI/Badge';
-import Card from '@/Components/UI/Card';
-import Avatar from '@/Components/UI/Avatar';
 import GuestNavbar from '@/Components/Layout/GuestNavbar';
 import Footer from '@/Components/Layout/GuestFooter';
 import WhatsAppContact from '@/Components/Marketing/WhatsAppContact';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import BoltIcon from '@mui/icons-material/Bolt';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import VideogameAssetIcon from '@mui/icons-material/VideogameAsset';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import ListAltIcon from '@mui/icons-material/ListAlt';
-import PlayCircleIcon from '@mui/icons-material/PlayCircle';
-import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
-import HeadsetIcon from '@mui/icons-material/Headset';
-import StarIcon from '@mui/icons-material/Star';
-import CheckIcon from '@mui/icons-material/Check';
-import rawTheme from '@/Components/theme/themes';
 import FallEffect from '@/Components/theme/FallEffect';
 import SeoHead from '@/Components/SEO/SeoHead';
 import heroStaticImage from '@/../Images/Mount-Fuji-New.jpg';
 
-// Map theme keys ke format yang dipakai landingPage
-const theme = {
-  heroBg: rawTheme.landingHeroBg,
-  heroGradText: rawTheme.landingGradText,
-  heroBadgeBg: rawTheme.landingBadgeBg,
-  heroBadgeDot: rawTheme.landingBadgeDot,
-  heroBadgeText: rawTheme.landingBadgeText,
-  heroGlow: rawTheme.landingGlow,
-  featureCardGlow: rawTheme.landingCardGlow,
-  highlightBorder: rawTheme.landingHighlightBorder,
-  highlightBadgeBg: rawTheme.landingHighlightBadge,
-  highlightBtnBg: rawTheme.landingHighlightBtn,
-  highlightLevel: rawTheme.landingHighlightLevel,
-  leagueBg: rawTheme.landingLeagueBg,
-  ctaBg: rawTheme.landingCtaBg,
-  ctaProBg: rawTheme.landingProBg,
-};
-
-
-const steps = [
-  { icon: <AssignmentIcon />, title: 'Masuk Kelas N3', desc: 'Pilih kelas JLPT N3 dan mulai dari week yang tersedia untuk akun Anda.' },
-  { icon: <BoltIcon />, title: 'Misi Mingguan', desc: 'Selesaikan PPT, kosakata, flashcard, dan kuis dalam satu jalur belajar yang jelas.' },
-  { icon: <EmojiEventsIcon />, title: 'Kumpulkan Progress', desc: 'XP, streak, badge, dan leaderboard membantu siswa melihat perkembangan belajarnya.' },
+const learningSteps = [
+  {
+    number: '01',
+    title: 'Pilih kelas',
+    description: 'Mulai dari kelas yang sesuai dengan target dan cara belajar Anda.',
+    icon: <AssignmentIcon sx={{ fontSize: 20 }} />,
+  },
+  {
+    number: '02',
+    title: 'Ikuti roadmap',
+    description: 'PPT, kosakata, flashcard, dan kuis tersusun dalam satu perjalanan.',
+    icon: <ListAltIcon sx={{ fontSize: 20 }} />,
+  },
+  {
+    number: '03',
+    title: 'Ulangi yang belum kuat',
+    description: 'Materi yang perlu diperkuat kembali muncul melalui repetisi belajar.',
+    icon: <BoltIcon sx={{ fontSize: 20 }} />,
+  },
+  {
+    number: '04',
+    title: 'Lihat perkembangan',
+    description: 'Progress, XP, streak, dan aktivitas tersimpan dalam satu akun.',
+    icon: <EmojiEventsIcon sx={{ fontSize: 20 }} />,
+  },
 ];
 
-const testimonials = [
-  { quote: 'Saya akhirnya lulus N3 setelah bertahun-tahun kesulitan dengan buku teks. Pendekatan gamifikasi ini membuat belajar jadi adiktif!', name: 'Sarah Jenkins', role: 'Lulus N3' },
-  { quote: 'Kualitas audionya luar biasa. Mendengar penutur asli sangat membantu pelafalan saya.', name: 'Michael Chen', role: 'Siswa N4' },
-  { quote: 'Investasi terbaik untuk belajar bahasa Jepang. Jalur terstruktur membuat saya tidak merasa kewalahan.', name: 'Jessica Lee', role: 'Peserta N2' },
+const roadmapWeeks = [
+  { week: 'W1', title: 'Fondasi N3', detail: 'Pengenalan kelas, kosakata dasar, dan kuis pembuka.', state: 'Preview tersedia', tone: 'brand' },
+  { week: 'W2', title: 'Grammar & Kotoba', detail: 'Pola kalimat dan repetisi kosakata harian.', state: 'Materi lanjutan', tone: 'blue' },
+  { week: 'W3', title: 'Kanji & Bacaan', detail: 'Kanji, contoh kalimat, dan latihan membaca.', state: 'Materi lanjutan', tone: 'amber' },
+  { week: 'W4', title: 'Review & Kuis', detail: 'Review terarah dan evaluasi progress.', state: 'Evaluasi', tone: 'ink' },
+];
+
+const benefits = [
+  {
+    icon: <VideogameAssetIcon sx={{ fontSize: 22 }} />,
+    title: 'Latihan yang terasa progresif',
+    description: 'Kuis, XP, streak, dan badge memberi penanda perkembangan tanpa mengganggu fokus belajar.',
+    tone: 'bg-brand-50 text-brand-700',
+  },
+  {
+    icon: <HeadsetIcon sx={{ fontSize: 22 }} />,
+    title: 'Materi saling terhubung',
+    description: 'Kosakata, audio, flashcard, presentasi, dan kuis tetap berada dalam konteks minggu yang sama.',
+    tone: 'bg-learning-50 text-learning-700',
+  },
+  {
+    icon: <AutoAwesomeIcon sx={{ fontSize: 22 }} />,
+    title: 'Urutan belajar lebih jelas',
+    description: 'Roadmap menunjukkan apa yang sudah selesai, sedang dipelajari, dan perlu dikerjakan berikutnya.',
+    tone: 'bg-achievement-50 text-achievement-700',
+  },
 ];
 
 const formatDuration = (days) => {
@@ -60,15 +82,32 @@ const formatDuration = (days) => {
   return `${days} hari`;
 };
 
-const LandingPage = ({ programs = [], seo = {} }) => {
-  const scrollToDemo = () => {
-    document.getElementById('demo-belajar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+const weekTone = {
+  brand: 'border-brand-300 bg-brand-50 text-brand-700',
+  blue: 'border-learning-200 bg-learning-50 text-learning-700',
+  amber: 'border-achievement-100 bg-achievement-50 text-achievement-700',
+  ink: 'border-ink-700 bg-ink-900 text-white',
+};
+
+export default function LandingPage({ programs = [], seo = {} }) {
+  const reduceMotion = useReducedMotion();
   const publicPlans = programs.flatMap((program) => (program.payment_plans || []).map((plan) => ({
     ...plan,
     programId: program.id,
     programTitle: program.title,
   })));
+  const reveal = reduceMotion
+    ? {}
+    : {
+      initial: { opacity: 0, y: 22 },
+      whileInView: { opacity: 1, y: 0 },
+      viewport: { once: true, amount: 0.16 },
+      transition: { duration: 0.55, ease: 'easeOut' },
+    };
+
+  const scrollToDemo = () => {
+    document.getElementById('demo-belajar')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  };
 
   return (
     <>
@@ -76,374 +115,240 @@ const LandingPage = ({ programs = [], seo = {} }) => {
       <SeoHead seo={seo} />
       <GuestNavbar />
 
-      {/* Hero */}
-      <section className={`relative flex flex-col lg:flex-row items-center justify-between px-6 py-16 lg:px-24 lg:py-32 ${theme.heroBg} gap-12 lg:gap-16 overflow-hidden`}>
-        <img
-          src={heroStaticImage}
-          alt="Gunung Fuji Japanlingo"
-          className="absolute inset-0 h-full w-full object-cover opacity-65"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-white/88 via-white/62 to-white/25" />
-        <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-transparent to-white/78" />
-        <div className="absolute inset-x-0 top-0 h-full w-full opacity-[0.04] pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '32px 32px' }}>
-        </div>
+      <main className="overflow-hidden bg-white">
+        <section className="relative isolate bg-white px-5 py-16 sm:px-8 sm:py-20 lg:min-h-[720px] lg:px-20 lg:py-24">
+          <img
+            src={heroStaticImage}
+            alt="Pemandangan Gunung Fuji dan pagoda Jepang"
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-[42%_center] sm:object-center"
+          />
+          <div className="absolute inset-0 -z-10 bg-white/55 sm:bg-white/45" />
 
-        <div className="max-w-xl lg:max-w-xl relative z-10">
-          <div className={`inline-flex items-center gap-2 px-3 py-1 ${theme.heroBadgeBg} rounded-full mb-6 border`}>
-            <span className={`w-2 h-2 rounded-full ${theme.heroBadgeDot} animate-pulse`}></span>
-            <span className={`text-xs font-bold ${theme.heroBadgeText} uppercase tracking-wider`}>Roadmap Belajar Bahasa Jepang</span>
-          </div>
+          <div className="mx-auto grid min-w-0 max-w-7xl items-center gap-14 lg:grid-cols-[1.04fr_0.96fr] lg:gap-20">
+            <div className="relative z-10 min-w-0 max-w-2xl">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/[0.85] px-3 py-1.5 shadow-sm backdrop-blur-sm">
+                <span className="h-2 w-2 rounded-full bg-brand-600 motion-safe:animate-pulse" />
+                <span className="text-xs font-bold uppercase text-brand-700">Roadmap belajar bahasa Jepang</span>
+              </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black leading-[1.1] mb-6 text-[#1A1A1A] tracking-tight">
-            Belajar Bahasa <br />
-            <span className={`bg-gradient-to-r ${theme.heroGradText} bg-clip-text text-transparent`}>
-              Jepang Terstruktur &amp; Gamified
-            </span>
-          </h1>
+              <h1 className="mb-6 break-words text-[2rem] font-black leading-[1.08] text-ink-900 sm:text-5xl lg:text-6xl">
+                Belajar Bahasa Jepang
+                <span className="mt-1 block text-[#15803D]">Lebih Terarah</span>
+              </h1>
+              <p className="max-w-xl text-base leading-8 text-ink-700 sm:text-lg">
+                Ikuti roadmap mingguan yang menghubungkan materi, flashcard, kuis, dan presentasi dalam satu progres belajar.
+              </p>
 
-          <p className="text-lg lg:text-xl text-gray-500 mb-10 leading-relaxed max-w-lg">
-            Kuasai JLPT N3 dengan roadmap mingguan, flashcard, kuis, PPT, dan progress belajar yang saling terhubung.
-          </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Button size="lg" href="/register" className="!h-14 !min-h-14 !w-full !shrink-0 !whitespace-nowrap !rounded-xl !bg-[#30C060] !px-7 !text-[#24303B] !shadow-[0_10px_24px_rgba(48,192,96,0.2)] hover:!translate-y-0 hover:!bg-[#15803D] hover:!text-white sm:!w-auto">
+                  Mulai Belajar Gratis <ArrowForwardIcon aria-hidden="true" sx={{ fontSize: 20 }} />
+                </Button>
+                <Button size="lg" variant="outline" type="button" onClick={scrollToDemo} className="!h-14 !min-h-14 !w-full !shrink-0 !whitespace-nowrap !rounded-xl !border-[#2D3742]/25 !bg-white/90 !px-7 !text-[#2D3742] hover:!translate-y-0 hover:!border-[#2D3742]/40 hover:!bg-white sm:!w-auto">
+                  <PlayCircleIcon sx={{ fontSize: 23 }} />
+                  Lihat Demo
+                </Button>
+              </div>
 
-          <div className="flex flex-wrap gap-4 mb-10">
-            <Button size="lg" href="/register" className="!rounded-full !px-8 !py-4 shadow-lg">
-              Mulai Belajar Gratis ➔
-            </Button>
-            <Button size="lg" variant="outline" type="button" onClick={scrollToDemo} className="!rounded-full !px-8 !py-4 !bg-white">
-              <PlayCircleIcon className="mr-2" sx={{ fontSize: 24 }} />
-              Lihat Demo
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-4 text-sm text-gray-500 font-medium">
-            <div className="flex -space-x-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-gray-200 overflow-hidden">
-                  <img src={`https://i.pravatar.cc/150?u=${i + 10}`} alt="user" className="w-full h-full object-cover" />
+              <div className="mt-9 flex min-w-0 max-w-md items-start gap-4 border-t border-ink-900/10 pt-5 text-sm text-ink-700 sm:items-center">
+                <div className="flex -space-x-2" aria-hidden="true">
+                  {['あ', '漢', '語'].map((label, index) => (
+                    <span key={label} className={`flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-xs font-black ${index === 0 ? 'bg-brand-100 text-brand-700' : index === 1 ? 'bg-learning-100 text-learning-700' : 'bg-achievement-100 text-achievement-700'}`}>
+                      {label}
+                    </span>
+                  ))}
                 </div>
+                <span className="min-w-0 break-words">Bergabunglah dengan <strong className="font-black text-ink-900">komunitas pembelajar</strong> TOKU-UP</span>
+              </div>
+
+              <div className="mt-6 hidden items-center gap-5 text-[11px] font-bold text-ink-600 sm:flex">
+                <span className="inline-flex items-center gap-1.5"><SakuraIcon className="h-4 w-4 text-pink-400" /> 学ぶ <span className="text-ink-500">Learn</span></span>
+                <span aria-hidden="true" className="h-px w-6 bg-ink-900/15" />
+                <span>合格 <span className="text-ink-500">Pass</span></span>
+                <span aria-hidden="true" className="h-px w-6 bg-ink-900/15" />
+                <span>向上 <span className="text-ink-500">Level up</span></span>
+              </div>
+            </div>
+
+            <motion.div {...reveal} className="relative mx-auto min-w-0 w-full max-w-full sm:max-w-xl lg:mx-0">
+              <div className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/[0.94] p-6 shadow-[0_24px_70px_rgba(37,48,58,0.16)] backdrop-blur-sm sm:p-8">
+                <div className="mb-8 flex items-start justify-between gap-5">
+                  <div>
+                    <p className="text-xs font-black uppercase text-brand-700">Hari ini</p>
+                    <h2 className="mt-2 flex items-center gap-2 text-xl font-black text-ink-900">
+                      <VideogameAssetIcon className="text-brand-600" sx={{ fontSize: 22 }} />
+                      Target Harian
+                    </h2>
+                    <p className="mt-1 text-sm text-ink-600">Jaga streak Anda tetap aktif!</p>
+                  </div>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-achievement-100 text-achievement-700"><LocalFireDepartmentIcon /></div>
+                </div>
+
+                <div className="space-y-6">
+                  {[
+                    { label: 'Latihan Kanji', value: 80, icon: 'あ', color: 'bg-brand-600' },
+                    { label: 'Mendengar N3', value: 45, icon: <HeadsetIcon sx={{ fontSize: 18 }} />, color: 'bg-learning-600' },
+                  ].map((item) => (
+                    <div key={item.label}>
+                      <div className="mb-2 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 font-black text-brand-700">{item.icon}</div>
+                          <span className="font-bold text-ink-900">{item.label}</span>
+                        </div>
+                        <span className="font-black text-ink-900">{item.value}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-gray-100"><div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.value}%` }} /></div>
+                    </div>
+                  ))}
+                </div>
+
+                <Button className="mt-8 h-14 w-full !rounded-xl !bg-ink-900 !py-4 !text-base !text-white hover:!translate-y-0 hover:!bg-ink-800" href="/register">Lanjutkan Belajar</Button>
+              </div>
+
+              <div className="absolute -bottom-7 -left-4 hidden items-center gap-3 rounded-xl border border-white bg-[#E4E2D5] px-4 py-3 shadow-lg sm:flex">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/70 text-xs font-black text-brand-700">N3</div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-ink-600">Tingkat saat ini</p>
+                  <p className="text-sm font-black text-ink-900">JLPT N3</p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        <SeigaihaBand />
+
+        <motion.section {...reveal} id="demo-belajar" className="scroll-mt-24 bg-[#123D38] px-5 py-16 text-white sm:px-8 lg:px-20 lg:py-24">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-12 grid gap-5 lg:grid-cols-[0.75fr_1.25fr] lg:items-end">
+              <div>
+                <p className="flex items-center gap-2 text-xs font-black uppercase text-brand-300"><ToriiIcon className="h-4 w-4" /> Satu ekosistem belajar</p>
+                <h2 className="mt-3 max-w-xl text-3xl font-black leading-tight sm:text-4xl">Dari memilih kelas sampai melihat progress.</h2>
+              </div>
+              <p className="max-w-2xl text-sm leading-7 text-white/[0.68] lg:justify-self-end sm:text-base">Setiap aktivitas tetap berada dalam konteks roadmap yang sama, sehingga siswa tidak perlu menebak apa yang harus dikerjakan berikutnya.</p>
+            </div>
+
+            <div className="grid border-y border-white/[0.14] md:grid-cols-2 xl:grid-cols-4">
+              {learningSteps.map((step, index) => (
+                <article key={step.number} className="relative min-h-56 border-b border-white/[0.14] px-1 py-7 md:px-6 xl:border-b-0 xl:border-r xl:last:border-r-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-brand-300">{step.number}</span>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.12] bg-white/[0.06] text-brand-300">{step.icon}</span>
+                  </div>
+                  <h3 className="mt-10 text-lg font-black">{step.title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-white/[0.62]">{step.description}</p>
+                  {index < learningSteps.length - 1 && <span aria-hidden="true" className="absolute -right-1 top-10 hidden h-2 w-2 rounded-full bg-brand-500 xl:block" />}
+                </article>
               ))}
             </div>
-            <span>Bergabunglah dengan <strong className="text-gray-900 font-bold">komunitas pembelajar</strong> Japanlingo</span>
           </div>
-        </div>
+        </motion.section>
 
-        {/* Floating Card UI */}
-        <div className="w-full max-w-lg relative lg:mr-10">
-          <div className={`absolute -inset-4 bg-gradient-to-tr ${theme.heroGlow} blur-3xl rounded-full opacity-50`}></div>
-
-          <div className="relative animate-float">
-            <div className="bg-white rounded-[2.5rem] shadow-2xl p-8 border border-gray-100 overflow-hidden">
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <h4 className="text-lg font-bold text-gray-900 leading-none flex items-center gap-2">
-                    <VideogameAssetIcon className="text-red-600" sx={{ fontSize: 20 }} />
-                    Target Harian
-                  </h4>
-                  <p className="text-sm text-gray-400 mt-1.5 font-medium">Jaga streak Anda tetap aktif!</p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-lg">
-                  <LocalFireDepartmentIcon className="text-orange-500" />
-                </div>
-              </div>
-
-              <div className="space-y-6 mb-8">
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center text-red-600">
-                        <span className="font-bold">あ</span>
-                      </div>
-                      <span className="font-bold text-gray-800">Latihan Kanji</span>
-                    </div>
-                    <span className="font-bold text-red-600">80%</span>
-                  </div>
-                  <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-red-600 rounded-full w-[80%]"></div>
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center text-red-600">
-                        <HeadsetIcon sx={{ fontSize: 18 }} />
-                      </div>
-                      <span className="font-bold text-gray-800">Mendengar N3</span>
-                    </div>
-                    <span className="font-bold text-red-600">45%</span>
-                  </div>
-                  <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-red-500 rounded-full w-[45%]"></div>
-                  </div>
-                </div>
-              </div>
-
-              <Button className="w-full !rounded-2xl !py-5 !bg-[#1A1A1A] !text-white !font-bold text-lg hover:!bg-black transition-colors" href="/register">
-                Lanjutkan Belajar
+        <motion.section {...reveal} className="bg-[#F7FAF8] px-5 py-16 sm:px-8 lg:px-20 lg:py-24">
+          <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:items-center lg:gap-20">
+            <div>
+              <p className="flex items-center gap-2 text-xs font-black uppercase text-brand-700"><ScrollIcon className="h-4 w-4" /> Roadmap mingguan</p>
+              <h2 className="mt-3 text-3xl font-black leading-tight text-ink-900 sm:text-4xl">Belajar dengan urutan yang terlihat jelas.</h2>
+              <p className="mt-5 max-w-lg text-sm leading-7 text-ink-600 sm:text-base">Materi disusun per minggu agar PPT, kosakata, flashcard, latihan, dan evaluasi tidak terpisah menjadi menu yang membingungkan.</p>
+              <Button
+                href="/roadmap"
+                variant="secondary"
+                className="mt-7 !h-12 !min-h-12 !rounded-lg !bg-[#2D3742] !px-5 !text-white hover:!translate-y-0 hover:!bg-[#1F2933]"
+              >
+                Lihat roadmap lengkap
+                <ArrowForwardIcon aria-hidden="true" sx={{ fontSize: 18 }} />
               </Button>
             </div>
 
-            <div className="absolute -left-12 -bottom-6 hidden animate-float-delayed sm:block">
-              <div className="bg-[#E4E2D5] rounded-3xl p-4 shadow-xl border border-white flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/50 border border-white flex items-center justify-center overflow-hidden">
-                  <div className="w-6 h-6 bg-[#C4C1B1] rounded-sm"></div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-tighter text-gray-500 font-bold">Tingkat Saat Ini</div>
-                  <div className="text-sm font-black text-red-700">JLPT N3</div>
-                </div>
+            <div className="relative border border-[var(--toku-border)] bg-white p-5 shadow-[0_20px_55px_rgba(37,48,58,0.08)] sm:p-7">
+              <div className="mb-6 flex items-center justify-between border-b border-gray-100 pb-5">
+                <div><p className="text-xs font-bold text-ink-600">JLPT N3 Mingguan</p><h3 className="mt-1 text-lg font-black text-ink-900">Perjalanan belajar Anda</h3></div>
+                <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-black text-brand-700">1 dari 4</span>
               </div>
-            </div>
-
-            <div className="absolute -right-8 -top-8 hidden animate-float-fast sm:block">
-              <div className="bg-white/90 backdrop-blur-md rounded-2xl p-3 shadow-xl border border-white flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center">
-                  <CheckIcon sx={{ fontSize: 16 }} />
-                </div>
-                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Akurasi</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="demo-belajar" className="scroll-mt-24 bg-white px-6 py-16 lg:px-24 lg:py-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-10 max-w-2xl">
-            <Badge color="red" className="mb-4">Demo Alur Belajar</Badge>
-            <h2 className="text-3xl font-black tracking-tight text-gray-950 sm:text-4xl">
-              Satu jalur belajar dari kelas sampai progress
-            </h2>
-            <p className="mt-4 text-sm leading-7 text-gray-500 sm:text-base">
-              Preview ini menunjukkan cara Japanlingo menghubungkan kelas, roadmap mingguan, flashcard, kuis, dan progress tanpa membuat siswa berpindah-pindah konteks.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-4">
-            {[
-              ['1', 'Pilih Kelas', 'Siswa masuk ke kelas JLPT N3 yang tersedia atau aktif setelah pembayaran/access key.'],
-              ['2', 'Ikuti Roadmap', 'Setiap week berisi PPT, kosakata, flashcard, dan kuis yang dibuka bertahap.'],
-              ['3', 'Latihan Repetisi', 'Flashcard dan kuis memakai review berulang agar kosakata yang belum kuat muncul lagi.'],
-              ['4', 'Pantau Progress', 'XP, streak, modul selesai, kuis selesai, dan aktivitas belajar tersimpan otomatis.'],
-            ].map(([step, title, desc]) => (
-              <div key={step} className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-red-600 text-sm font-black text-white">
-                  {step}
-                </div>
-                <h3 className="text-base font-black text-gray-950">{title}</h3>
-                <p className="mt-3 text-sm leading-6 text-gray-500">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Roadmap Section */}
-      <section className="px-6 lg:px-20 py-16 sm:py-24 bg-white overflow-hidden">
-        <div className="max-w-7xl mx-auto text-center">
-          <Badge color="red" className="mb-4">PETA PERJALANAN</Badge>
-          <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-4">Roadmap JLPT N3 Mingguan</h2>
-          <p className="text-gray-500 max-w-2xl mx-auto mb-10 sm:mb-16">
-            Fokus belajar dibuat per minggu agar siswa tahu urutan PPT, kosakata, flashcard, dan kuis yang harus diselesaikan.
-          </p>
-
-          <div className="-mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-5 text-left sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
-            {[
-              { level: 'W1', title: 'Fondasi N3', desc: 'Preview awal berisi pengantar kelas, pola belajar, kosakata dasar N3, dan kuis pembuka.', color: 'bg-red-500', label: 'Preview Gratis', highlight: true },
-              { level: 'W2', title: 'Grammar & Kotoba', desc: 'Latihan pola kalimat dan kosakata harian dengan flashcard repetisi.', color: 'bg-orange-500', label: 'Premium' },
-              { level: 'W3', title: 'Kanji & Bacaan', desc: 'Penguatan kanji, contoh kalimat, dan latihan membaca bertahap.', color: 'bg-amber-500', label: 'Premium' },
-              { level: 'W4', title: 'Review & Kuis', desc: 'Rekap materi mingguan, kuis adaptif, dan evaluasi progress siswa.', color: 'bg-gray-800', label: 'Premium' },
-            ].map((item, i) => (
-              <div
-                key={i}
-                className={`relative flex h-full w-[min(82vw,20rem)] shrink-0 snap-center flex-col rounded-[1.5rem] p-5 text-left transition-all duration-300 sm:w-auto sm:rounded-[2rem] sm:p-6 ${item.highlight
-                  ? theme.highlightBorder
-                  : 'bg-gray-50/50 border border-gray-100 hover:border-gray-200'
-                  }`}
-              >
-                {item.highlight && (
-                  <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 ${theme.highlightBadgeBg} text-[10px] font-black text-white rounded-full whitespace-nowrap tracking-wider`}>
-                    PALING POPULER
+              <div className="relative space-y-3 before:absolute before:bottom-8 before:left-[1.2rem] before:top-8 before:w-px before:bg-gray-200">
+                {roadmapWeeks.map((item, index) => (
+                  <div key={item.week} className={`relative grid gap-3 border p-4 sm:grid-cols-[auto_1fr_auto] sm:items-center ${index === 0 ? 'border-brand-200 bg-brand-50/[0.45]' : 'border-gray-100 bg-white'}`}>
+                    <span className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full border text-xs font-black ${weekTone[item.tone]}`}>{item.week}</span>
+                    <div><h4 className="text-sm font-black text-ink-900">{item.title}</h4><p className="mt-1 text-xs leading-5 text-ink-600">{item.detail}</p></div>
+                    <span className="text-xs font-bold text-ink-600 sm:text-right">{item.state}</span>
                   </div>
-                )}
-
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black mb-4 ${item.highlight ? theme.highlightLevel : 'bg-gray-100 text-gray-400'}`}>
-                  {item.level}
-                </div>
-
-                <h3 className="text-lg font-black text-gray-900 mb-2">{item.title}</h3>
-                <p className="text-xs text-gray-500 leading-relaxed mb-6 flex-grow">{item.desc}</p>
-
-                <div className="mt-auto">
-                  <div className={`h-1.5 w-full rounded-full mb-4 ${item.color} opacity-80`}></div>
-                  {item.highlight ? (
-                    <Button className={`w-full !rounded-xl !py-2 ${theme.highlightBtnBg} !text-white !text-xs !font-bold`} href="/register">
-                      Mulai Week 1
-                    </Button>
-                  ) : (
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.label}</span>
-                  )}
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </motion.section>
 
-      {/* Why Japanlingo Section */}
-      <section className="px-6 lg:px-20 py-24 bg-gray-50/50 overflow-hidden">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-20 items-center">
-            <div>
-              <Badge color="red" className="mb-4">MENGAPA JAPANLINGO?</Badge>
-              <h2 className="text-4xl lg:text-5xl font-black text-gray-900 mb-6 leading-[1.2]">
-                Belajar bahasa Jepang tidak harus terasa melelahkan.
-              </h2>
-              <p className="text-gray-500 mb-10 leading-relaxed italic">
-                Kami memadukan metode pembelajaran yang terbukti secara ilmiah dengan mekanika game agar Anda tetap termotivasi setiap hari.
-              </p>
-
-              <div className="space-y-8">
+        <motion.section {...reveal} className="bg-white px-5 py-16 sm:px-8 lg:px-20 lg:py-24">
+          <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:gap-20">
+            <div className="relative border border-[var(--toku-border)] bg-[#F7FAF8] p-5 sm:p-8">
+              <div className="flex items-start justify-between gap-5 border-b border-gray-200 pb-6">
+                <div><p className="text-xs font-black uppercase text-learning-700">Progress minggu ini</p><h3 className="mt-2 text-2xl font-black text-ink-900">Tetap fokus pada langkah berikutnya.</h3></div>
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand-100 text-brand-700"><BoltIcon /></div>
+              </div>
+              <div className="mt-7 grid gap-4 sm:grid-cols-3">
                 {[
-                  { icon: <VideogameAssetIcon />, title: 'Kuis Tergamifikasi', desc: 'Dapatkan XP, buka lencana, dan bersaing di papan peringkat sembari menguasai tata bahasa dan kosakata.', color: 'bg-red-100 text-red-600' },
-                  { icon: <AutoAwesomeIcon />, title: 'Audio Pendamping', desc: 'Dengarkan pelafalan saat mempelajari kosakata, flashcard, dan latihan bahasa Jepang.', color: 'bg-orange-100 text-orange-600' },
-                  { icon: <ListAltIcon />, title: 'Kurikulum Terstruktur', desc: 'Tidak ada lagi belajar acak. Ikuti jalur jelas yang dirancang untuk membantu Anda lulus JLPT.', color: 'bg-red-100 text-red-600' },
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-5 group">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 transition-transform group-hover:scale-110 ${item.color}`}>
-                      {item.icon}
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-bold text-gray-900 mb-1">{item.title}</h4>
-                      <p className="text-sm text-gray-500 leading-relaxed">{item.desc}</p>
-                    </div>
+                  ['Materi selesai', '8/12', 'text-brand-700'],
+                  ['Kuis terbaik', '88%', 'text-learning-700'],
+                  ['Streak aktif', '6 hari', 'text-achievement-700'],
+                ].map(([label, value, color]) => (
+                  <div key={label} className="border-l-2 border-gray-200 pl-4"><p className="text-xs font-bold text-ink-600">{label}</p><p className={`mt-2 text-2xl font-black ${color}`}>{value}</p></div>
+                ))}
+              </div>
+              <div className="mt-8 border border-gray-200 bg-white p-4">
+                <div className="flex items-center justify-between text-sm"><span className="font-bold text-ink-900">Minggu 1 - Fondasi N3</span><span className="font-black text-brand-700">67%</span></div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100"><div className="h-full w-2/3 rounded-full bg-brand-600" /></div>
+              </div>
+            </div>
+
+            <div>
+              <p className="flex items-center gap-2 text-xs font-black uppercase text-achievement-700"><SakuraIcon className="h-4 w-4 text-pink-400" /> Mengapa TOKU-UP</p>
+              <h2 className="mt-3 text-3xl font-black leading-tight text-ink-900 sm:text-4xl">Satu tampilan untuk belajar, mengulang, dan berkembang.</h2>
+              <div className="mt-9 space-y-7">
+                {benefits.map((item) => (
+                  <div key={item.title} className="group flex gap-4">
+                    <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${item.tone}`}>{item.icon}</span>
+                    <div><h3 className="font-black text-ink-900">{item.title}</h3><p className="mt-2 text-sm leading-6 text-ink-600">{item.description}</p></div>
                   </div>
                 ))}
               </div>
             </div>
+          </div>
+        </motion.section>
 
-            <div className="relative">
-              <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full ${theme.featureCardGlow} blur-[120px] rounded-full`}></div>
+        <SeigaihaBand />
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="animate-float">
-                  <div className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100 translate-y-10">
-                    <div className="text-red-500 mb-2">
-                      <AutoAwesomeIcon sx={{ fontSize: 24 }} />
-                    </div>
-                    <div className="text-sm font-bold text-gray-900">Streak: 42 Hari</div>
-                    <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-0.5">
-                      Anda luar biasa! <LocalFireDepartmentIcon sx={{ fontSize: 14 }} className="text-orange-500" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="animate-float-fast">
-                  <div className={`${theme.leagueBg} rounded-3xl p-6 shadow-2xl text-white relative h-full`}>
-                    <div className="absolute top-4 right-4 text-[8px] font-bold bg-black/20 px-2 py-0.5 rounded-full">TOP 1%</div>
-                    <div className="text-2xl mb-8">
-                      <EmojiEventsIcon sx={{ fontSize: 32 }} />
-                    </div>
-                    <div className="text-lg font-black">Liga Emas</div>
-                    <div className="text-xs opacity-80 mt-1">Terus belajar untuk tetap memimpin peringkat.</div>
-                  </div>
-                </div>
-
-                <div className="col-span-1 animate-float-delayed">
-                  <div className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100">
-                    <img src="https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=400&h=300&fit=crop" className="w-full h-24 object-cover" alt="Konteks" />
-                    <div className="p-4">
-                      <div className="text-xs font-bold text-gray-900">Konteks Dunia Nyata</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="animate-float">
-                  <div className="bg-white/90 backdrop-blur-md rounded-3xl p-4 shadow-xl flex flex-col gap-3 -translate-y-10 border border-white">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-red-100 overflow-hidden">
-                        <img src="https://i.pravatar.cc/100?u=ken" className="w-full h-full object-cover" alt="Ken" />
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-bold leading-none">Sensei Ken</div>
-                        <div className="text-[8px] text-green-500">Sedang Online</div>
-                      </div>
-                    </div>
-                    <div className="bg-gray-100 rounded-2xl p-3 text-[9px] text-gray-600 leading-relaxed">
-                      Jangan lupa, partikel 'wa' menandai topik pembicaraan!
-                    </div>
-                  </div>
-                </div>
-              </div>
+        <motion.section {...reveal} className="bg-[#0F171B] px-5 py-16 text-white sm:px-8 lg:px-20 lg:py-24">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+              <div><p className="flex items-center gap-2 text-xs font-black uppercase text-brand-300"><ToriiIcon className="h-4 w-4" /> Kelas TOKU-UP</p><h2 className="mt-3 max-w-2xl text-3xl font-black leading-tight sm:text-4xl">Pilih cara belajar yang sesuai dengan ritme Anda.</h2></div>
+              <p className="max-w-md text-sm leading-7 text-white/60">Harga, durasi, dan jenis akses selalu mengikuti pengaturan kelas yang sedang tersedia.</p>
+            </div>
+            <div className={`grid gap-4 ${publicPlans.length > 2 ? 'lg:grid-cols-3' : 'sm:grid-cols-2'}`}>
+              {publicPlans.length > 0 ? publicPlans.map((plan, index) => (
+                <article key={`${plan.programId}-${plan.id}`} className={`relative border p-6 ${index === 0 ? 'border-brand-300 bg-[#183B37]' : 'border-white/[0.12] bg-white/[0.045]'}`}>
+                  {index === 0 && <span className="absolute right-5 top-5 rounded-full border border-brand-300/40 bg-brand-300/10 px-2.5 py-1 text-[10px] font-black uppercase text-brand-300">Pilihan awal</span>}
+                  <p className="pr-24 text-[11px] font-black uppercase text-achievement-100">{plan.programTitle}</p>
+                  <h3 className="mt-3 text-xl font-black">{plan.name}</h3>
+                  <p className="mt-7 text-3xl font-black">{plan.price_formatted}</p>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-white/[0.55]"><span>{plan.scope_label}</span><span>{formatDuration(plan.duration_days)}</span></div>
+                  {plan.description && <p className="mt-5 line-clamp-2 text-sm leading-6 text-white/[0.68]">{plan.description}</p>}
+                  <ul className="mt-6 space-y-3 p-0">
+                    {(plan.features || []).slice(0, 3).map((feature) => <li key={feature} className="flex items-start gap-2 text-sm text-white/[0.78]"><CheckIcon sx={{ fontSize: 17 }} className="mt-0.5 shrink-0 text-brand-300" />{feature}</li>)}
+                  </ul>
+                </article>
+              )) : (
+                <div className="border border-dashed border-white/20 px-6 py-12 text-center sm:col-span-2"><p className="text-lg font-black">Paket kelas sedang disiapkan</p><p className="mt-2 text-sm text-white/60">Daftar untuk membuka preview kelas yang tersedia.</p></div>
+              )}
+            </div>
+            <div className="mt-10 flex flex-col items-start justify-between gap-5 border-t border-white/[0.12] pt-8 sm:flex-row sm:items-center">
+              <p className="max-w-xl text-sm leading-6 text-white/[0.65]">Bandingkan materi, tipe pendampingan, dan masa akses sebelum menentukan kelas.</p>
+              <Button href="/pricing" className="!rounded-lg !bg-[#D9FFB8] !text-ink-950 hover:!bg-white">Lihat kelas dan harga</Button>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="px-6 lg:px-20 py-16 lg:py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl lg:text-4xl font-extrabold text-gray-900">Apa Kata Mereka?</h2>
-        </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {testimonials.map((t, i) => (
-            <Card key={i} hover>
-              <div className="text-amber-400 flex gap-0.5 mb-4">
-                {[...Array(5)].map((_, idx) => (
-                  <StarIcon key={idx} sx={{ fontSize: 16 }} />
-                ))}
-              </div>
-              <blockquote className="text-sm text-gray-700 leading-relaxed mb-5 italic">"{t.quote}"</blockquote>
-              <div className="flex items-center gap-3">
-                <Avatar name={t.name} size="md" />
-                <div>
-                  <div className="text-sm font-semibold">{t.name}</div>
-                  <div className="text-xs text-gray-400">{t.role}</div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA + Pricing */}
-      <section className="px-4 sm:px-6 lg:px-20 py-12 sm:py-16 lg:py-20">
-        <div className={`${theme.ctaBg} rounded-2xl sm:rounded-3xl px-5 sm:px-6 lg:px-16 py-10 sm:py-14 text-center text-white`}>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-3">Pilih paket kelas yang tersedia</h2>
-          <p className="text-sm sm:text-base text-gray-300 max-w-lg mx-auto mb-7 sm:mb-10">Harga, durasi, dan jenis akses di bawah mengikuti pengaturan kelas yang sama dengan halaman harga.</p>
-          <div className={`grid gap-4 sm:gap-6 ${publicPlans.length > 2 ? 'lg:grid-cols-3' : 'sm:grid-cols-2'} max-w-5xl mx-auto`}>
-            {publicPlans.length > 0 ? publicPlans.map((plan, index) => (
-              <article key={`${plan.programId}-${plan.id}`} className={`${index === 0 ? theme.ctaProBg : 'bg-gray-800/50'} relative rounded-2xl border border-white/10 p-5 text-left sm:p-6`}>
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-amber-200">{plan.programTitle}</p>
-                <h3 className="mt-2 text-lg font-black text-white">{plan.name}</h3>
-                <div className="mt-4 flex items-end justify-between gap-3">
-                  <p className="text-3xl font-black text-white">{plan.price_formatted}</p>
-                  <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-bold text-white">{plan.scope_label}</span>
-                </div>
-                <p className="mt-1 text-xs font-bold text-white/70">{formatDuration(plan.duration_days)}</p>
-                {plan.description && <p className="mt-4 line-clamp-2 text-sm leading-6 text-white/80">{plan.description}</p>}
-                <ul className="mt-4 space-y-2 list-none p-0">
-                  {(plan.features || []).slice(0, 3).map((feature) => (
-                    <li key={feature} className="flex items-start gap-2 text-sm text-white/85"><CheckIcon sx={{ fontSize: 16 }} className="mt-0.5 shrink-0 text-emerald-300" />{feature}</li>
-                  ))}
-                </ul>
-              </article>
-            )) : (
-              <div className="rounded-2xl border border-dashed border-white/30 bg-white/5 px-6 py-10 sm:col-span-2">
-                <p className="text-lg font-black text-white">Paket kelas sedang disiapkan</p>
-                <p className="mt-2 text-sm text-white/75">Silakan daftar untuk membuka preview kelas yang tersedia.</p>
-              </div>
-            )}
-          </div>
-          <Button href="/pricing" className="mt-7 !bg-white !text-gray-900 hover:!bg-gray-100">Lihat detail kelas dan harga</Button>
-        </div>
-      </section>
+        </motion.section>
+      </main>
 
       <WhatsAppContact />
       <Footer />
     </>
   );
-};
-
-export default LandingPage;
+}

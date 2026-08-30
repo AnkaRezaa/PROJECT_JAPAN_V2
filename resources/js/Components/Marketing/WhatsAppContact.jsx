@@ -1,7 +1,7 @@
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 
 const phoneNumber = '6283892614774';
-const message = 'Halo Japanlingo, saya ingin bertanya tentang kelas JLPT N3.';
+const message = 'Halo TOKU-UP, saya ingin bertanya tentang kelas bahasa Jepang.';
 
 export const WHATSAPP_URL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
 

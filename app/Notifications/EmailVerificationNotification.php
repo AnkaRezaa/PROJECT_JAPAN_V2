@@ -19,8 +19,8 @@ class EmailVerificationNotification extends VerifyEmail
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Verifikasi alamat email Japanlingo')
-            ->greeting('Halo '.($notifiable->username ?? 'Japanlingo User').',')
+            ->subject('Verifikasi alamat email TOKU-UP')
+            ->greeting('Halo '.($notifiable->username ?? 'Pengguna TOKU-UP').',')
             ->line('Konfirmasikan alamat email Anda untuk menyelesaikan pendaftaran.')
             ->action('Verifikasi email', $this->verificationUrl($notifiable))
             ->line('Tautan ini akan kedaluwarsa dalam '.config('auth.verification.expire', 60).' menit.')
@@ -32,7 +32,7 @@ class EmailVerificationNotification extends VerifyEmail
         return [
             'template' => 'verify_email',
             'variables' => [
-                'user_name' => $notifiable->username ?? 'Japanlingo User',
+                'user_name' => $notifiable->username ?? 'Pengguna TOKU-UP',
                 'verify_url' => $this->verificationUrl($notifiable),
                 'expires_minutes' => (string) config('auth.verification.expire', 60),
             ],

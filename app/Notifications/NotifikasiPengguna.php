@@ -50,13 +50,13 @@ class NotifikasiPengguna extends Notification
     {
         $mail = (new MailMessage)
             ->subject($this->judul)
-            ->greeting('Halo ' . ($notifiable->username ?? 'Japanlingo User') . ',')
+            ->greeting('Halo ' . ($notifiable->username ?? 'Pengguna TOKU-UP') . ',')
             ->line($this->pesan);
 
         if ($this->url) {
-            $mail->action('Buka Japanlingo', $this->url);
+            $mail->action('Buka TOKU-UP', $this->url);
         }
 
-        return $mail->line('Notifikasi ini dikirim otomatis oleh Japanlingo.');
+        return $mail->line('Notifikasi ini dikirim otomatis oleh TOKU-UP.');
     }
 }

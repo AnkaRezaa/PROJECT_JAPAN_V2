@@ -10,7 +10,7 @@ import studentImage from '@/../Images/japannese_student.jpg';
 import MountFujiBg from '../../Images/Mount-Fuji-New.jpg';
 import SeoHead from '@/Components/SEO/SeoHead';
 
-// Ganti data sementara ini saat profil pengajar Japanlingo sudah siap dipublikasikan.
+// Ganti data sementara ini saat profil pengajar TOKU-UP sudah siap dipublikasikan.
 const teamMembers = [
     {
         name: 'Sensei Aiko',
@@ -69,10 +69,10 @@ export default function About({ seo = {} }) {
                                 Kelas N3 yang memberi arah belajar lebih jelas.
                             </h1>
                             <p className="mt-5 max-w-xl text-base font-medium leading-7 text-slate-200 sm:text-lg">
-                                Japanlingo menyatukan roadmap mingguan, presentasi kelas, kosakata, flashcard, dan kuis dalam satu pengalaman belajar JLPT N3.
+                                TOKU-UP, singkatan dari Tokutei-Ginou Upgrade, menyatukan roadmap mingguan, presentasi kelas, kosakata, flashcard, dan kuis dalam satu pengalaman belajar bahasa Jepang.
                             </p>
                             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                                <Link href="/pricing" className="inline-flex min-h-12 items-center justify-center gap-1 rounded-xl bg-red-600 px-5 text-sm font-black text-white shadow-lg shadow-red-950/40 transition hover:bg-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                                <Link href="/pricing" className="inline-flex min-h-12 items-center justify-center gap-1 rounded-xl bg-brand-600 px-5 text-sm font-black text-white shadow-lg shadow-brand-950/40 transition hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
                                     Lihat Kelas <ChevronRightIcon sx={{ fontSize: 18 }} />
                                 </Link>
                                 <Link href="/roadmap" className="inline-flex min-h-12 items-center justify-center gap-1 rounded-xl border border-white/40 bg-white/10 px-5 text-sm font-black text-white backdrop-blur-sm transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
@@ -87,18 +87,18 @@ export default function About({ seo = {} }) {
                     <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-[radial-gradient(circle_at_0%_0%,rgba(225,29,72,0.10),transparent_66%)] dark:bg-[radial-gradient(circle_at_0%_0%,rgba(244,63,94,0.16),transparent_66%)]" />
                     <div className="relative mx-auto grid max-w-7xl gap-12 px-5 sm:px-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:px-10">
                         <div className="max-w-lg">
-                            <p className="text-xs font-black uppercase tracking-[0.18em] text-red-600 dark:text-red-400">Tentang Japanlingo</p>
+                            <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Tentang TOKU-UP</p>
                             <h2 className="mt-3 text-3xl font-black leading-tight text-slate-950 dark:text-white sm:text-4xl">Kelas N3 yang terarah, dari materi sampai latihan.</h2>
                             <p className="mt-5 text-base font-medium leading-7 text-slate-700 dark:text-slate-200">
-                                Japanlingo menempatkan materi pengajar dan latihan dalam satu kelas, sehingga peserta tidak perlu menebak langkah belajar berikutnya.
+                                TOKU-UP menempatkan materi pengajar dan latihan dalam satu kelas, sehingga peserta tidak perlu menebak langkah belajar berikutnya.
                             </p>
-                            <div className="mt-7 border-l-2 border-red-500 pl-4 text-sm font-bold leading-6 text-slate-800 dark:text-slate-100">
+                            <div className="mt-7 border-l-2 border-brand-500 pl-4 text-sm font-bold leading-6 text-slate-800 dark:text-slate-100">
                                 Dibuat khusus untuk pembelajaran JLPT N3 berbasis kelas.
                             </div>
                         </div>
 
                         <figure className="relative mx-auto w-full max-w-lg">
-                            <div aria-hidden="true" className="absolute -bottom-5 -left-5 h-40 w-40 rounded-[2rem] bg-red-600" />
+                            <div aria-hidden="true" className="absolute -bottom-5 -left-5 h-40 w-40 rounded-[2rem] bg-brand-600" />
                             <div className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-950 shadow-2xl dark:border-slate-700">
                                 <img src={studentImage} alt="Peserta belajar bahasa Jepang" className="h-72 w-full object-cover object-center sm:h-80" />
                                 <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-slate-950/35 via-transparent to-transparent" />
@@ -131,7 +131,7 @@ export default function About({ seo = {} }) {
                     <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
                         <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-7 dark:border-slate-800 sm:flex-row sm:items-end">
                             <div>
-                                <p className="text-xs font-black uppercase tracking-[0.18em] text-red-600 dark:text-red-400">Tim Pengajar</p>
+                                <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Tim Pengajar</p>
                                 <h2 className="mt-3 text-3xl font-black leading-tight text-slate-950 dark:text-white">Pengajar yang mendampingi kelas N3.</h2>
                             </div>
                             <p className="max-w-sm text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">Setiap peran membantu menjaga materi dan latihan kelas tetap terarah.</p>
@@ -155,12 +155,12 @@ export default function About({ seo = {} }) {
                     </div>
                 </section>
 
-                <section className="relative overflow-hidden bg-red-600 px-5 py-16 text-center text-white sm:px-8 sm:py-20">
+                <section className="relative overflow-hidden bg-brand-600 px-5 py-16 text-center text-white sm:px-8 sm:py-20">
                     <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-20 [background-image:repeating-linear-gradient(90deg,rgba(255,255,255,0.22)_0_1px,transparent_1px_56px),repeating-linear-gradient(0deg,rgba(255,255,255,0.18)_0_1px,transparent_1px_56px)]" />
                     <div className="relative mx-auto max-w-2xl">
                         <h2 className="text-3xl font-black">Siap melihat kelas JLPT N3?</h2>
-                        <p className="mt-3 text-sm font-medium leading-6 text-red-100">Pilih kelas, lihat roadmap, lalu mulai dari modul yang tersedia untukmu.</p>
-                        <Link href="/pricing" className="mt-7 inline-flex min-h-12 items-center justify-center gap-1 rounded-xl bg-white px-5 text-sm font-black text-red-700 shadow-lg transition hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                        <p className="mt-3 text-sm font-medium leading-6 text-brand-100">Pilih kelas, lihat roadmap, lalu mulai dari modul yang tersedia untukmu.</p>
+                        <Link href="/pricing" className="mt-7 inline-flex min-h-12 items-center justify-center gap-1 rounded-xl bg-white px-5 text-sm font-black text-brand-700 shadow-lg transition hover:bg-brand-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
                             Lihat Kelas dan Harga <ChevronRightIcon sx={{ fontSize: 18 }} />
                         </Link>
                     </div>

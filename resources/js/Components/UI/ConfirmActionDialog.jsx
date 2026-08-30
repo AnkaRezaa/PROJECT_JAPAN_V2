@@ -21,7 +21,7 @@ const VARIANT = {
         icon: WarningAmberIcon,
         badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200',
         panel: 'border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30',
-        confirm: 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-500/20',
+        confirm: 'bg-amber-400 text-gray-950 hover:bg-amber-500 shadow-amber-500/20',
         title: 'text-amber-700 dark:text-amber-200',
     },
     success: {

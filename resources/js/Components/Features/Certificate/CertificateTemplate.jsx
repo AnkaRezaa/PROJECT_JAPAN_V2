@@ -5,7 +5,7 @@ export default function CertificateTemplate({ certificate, user }) {
     const levelLabel = [
         certificate?.level?.curriculum_track?.name,
         certificate?.level?.level_name,
-    ].filter(Boolean).join(' ') || 'Program JapanLingo';
+    ].filter(Boolean).join(' ') || 'Program TOKU-UP';
 
     return (
         <div id="certificate-content" className="w-full max-w-3xl mx-auto bg-white border-4 border-amber-400 rounded-3xl p-12 relative overflow-hidden shadow-2xl" style={{ fontFamily: "'Noto Serif JP', 'Georgia', serif" }}>
@@ -25,7 +25,7 @@ export default function CertificateTemplate({ certificate, user }) {
                 <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2">SERTIFIKAT KELULUSAN</h1>
                 <div className="flex items-center justify-center gap-3">
                     <div className="w-16 h-0.5 bg-amber-400"></div>
-                    <span className="text-sm font-black text-amber-600 tracking-[0.3em] uppercase">JapanLingo Academy</span>
+                    <span className="text-sm font-black text-amber-600 tracking-[0.3em] uppercase">TOKU-UP Academy</span>
                     <div className="w-16 h-0.5 bg-amber-400"></div>
                 </div>
             </div>
@@ -37,7 +37,7 @@ export default function CertificateTemplate({ certificate, user }) {
                     {user?.username || 'Nama Peserta'}
                 </h2>
                 <p className="text-gray-600 text-base mt-4 leading-relaxed max-w-lg mx-auto">
-                    Telah berhasil menyelesaikan seluruh program pembelajaran <strong className="text-red-600">{levelLabel}</strong> pada platform JapanLingo dengan dedikasi dan ketekunan yang luar biasa.
+                    Telah berhasil menyelesaikan seluruh program pembelajaran <strong className="text-brand-700">{levelLabel}</strong> pada platform TOKU-UP dengan dedikasi dan ketekunan yang luar biasa.
                 </p>
             </div>
 
@@ -55,7 +55,7 @@ export default function CertificateTemplate({ certificate, user }) {
                 </div>
                 <div className="text-center">
                     <p className="text-[10px] font-black text-gray-400 tracking-widest uppercase mb-1">Level</p>
-                    <p className="font-black text-red-600 text-sm">{levelLabel}</p>
+                    <p className="font-black text-brand-700 text-sm">{levelLabel}</p>
                 </div>
             </div>
 

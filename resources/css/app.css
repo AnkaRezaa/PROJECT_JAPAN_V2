@@ -3,13 +3,152 @@
 @tailwind utilities;
 
 @layer base {
+    :root {
+        --toku-theme-primary: #30c060;
+        --toku-theme-primary-hover: #15803d;
+        --toku-theme-primary-soft: #d2f0dd;
+        --toku-theme-brand: #30c060;
+        --toku-theme-brand-border: #9ddcb3;
+        --toku-theme-ink: #2d3742;
+        --toku-theme-text-body: #55616d;
+        --toku-theme-text-muted: #667085;
+        --toku-theme-info: #2563eb;
+        --toku-theme-info-soft: #dbeafe;
+        --toku-theme-info-border: #a9c5f3;
+        --toku-theme-achievement: #f2b705;
+        --toku-theme-achievement-soft: #fef0b8;
+        --toku-theme-achievement-border: #e8c95b;
+        --toku-theme-surface: #ffffff;
+        --toku-theme-surface-muted: #f7faf8;
+        --toku-theme-border: #dde7e1;
+        --toku-theme-control-border: #7c8a83;
+        --toku-theme-focus: #2563eb;
+        --toku-theme-focus-rgb: 37 99 235;
+        --toku-theme-primary-rgb: 48 192 96;
+        --toku-theme-primary-hover-rgb: 21 128 61;
+        --toku-theme-primary-soft-rgb: 210 240 221;
+        --toku-theme-brand-rgb: 48 192 96;
+        --toku-theme-ink-rgb: 45 55 66;
+        --toku-theme-border-rgb: 221 231 225;
+        --toku-theme-info-rgb: 37 99 235;
+        --toku-theme-achievement-rgb: 242 183 5;
+        --toku-action-primary: var(--toku-theme-primary);
+        --toku-action-primary-hover: var(--toku-theme-primary-hover);
+        --toku-action-secondary: var(--toku-theme-info);
+        --toku-action-secondary-hover: #1e40af;
+        --toku-state-success: #15803d;
+        --toku-state-info: var(--toku-theme-info);
+        --toku-state-warning: #b45309;
+        --toku-state-danger: #dc2626;
+        --toku-progress-active: var(--toku-theme-info);
+        --toku-progress-complete: #22c55e;
+        --toku-primary: var(--toku-theme-primary);
+        --toku-primary-hover: var(--toku-theme-primary-hover);
+        --toku-primary-soft: var(--toku-theme-primary-soft);
+        --toku-brand: var(--toku-theme-brand);
+        --toku-brand-border: var(--toku-theme-brand-border);
+        --toku-ink: var(--toku-theme-ink);
+        --toku-text-body: var(--toku-theme-text-body);
+        --toku-text-muted: var(--toku-theme-text-muted);
+        --toku-info: var(--toku-theme-info);
+        --toku-info-soft: var(--toku-theme-info-soft);
+        --toku-info-border: var(--toku-theme-info-border);
+        --toku-achievement: var(--toku-theme-achievement);
+        --toku-achievement-soft: var(--toku-theme-achievement-soft);
+        --toku-achievement-border: var(--toku-theme-achievement-border);
+        --toku-surface: var(--toku-theme-surface);
+        --toku-surface-muted: var(--toku-theme-surface-muted);
+        --toku-border: var(--toku-theme-border);
+        --toku-control-border: var(--toku-theme-control-border);
+        --toku-focus: var(--toku-theme-focus);
+        --toku-focus-rgb: var(--toku-theme-focus-rgb);
+        --toku-primary-rgb: var(--toku-theme-primary-rgb);
+        --toku-primary-hover-rgb: var(--toku-theme-primary-hover-rgb);
+        --toku-primary-soft-rgb: var(--toku-theme-primary-soft-rgb);
+        --toku-brand-rgb: var(--toku-theme-brand-rgb);
+        --toku-ink-rgb: var(--toku-theme-ink-rgb);
+        --toku-border-rgb: var(--toku-theme-border-rgb);
+        --toku-info-rgb: var(--toku-theme-info-rgb);
+        --toku-achievement-rgb: var(--toku-theme-achievement-rgb);
+    }
+
+    .dark {
+        --toku-primary: #4ade80;
+        --toku-primary-hover: #86efac;
+        --toku-primary-soft: #12351f;
+        --toku-brand: #4ade80;
+        --toku-ink: #f8fafc;
+        --toku-info: #60a5fa;
+        --toku-achievement: #fbbf24;
+        --toku-surface: #111827;
+        --toku-surface-muted: #0e151c;
+        --toku-border: #26372d;
+        --toku-focus: #4ade80;
+        --toku-focus-rgb: 74 222 128;
+        --toku-primary-rgb: 74 222 128;
+        --toku-primary-hover-rgb: 134 239 172;
+        --toku-primary-soft-rgb: 18 53 31;
+        --toku-brand-rgb: 74 222 128;
+        --toku-ink-rgb: 248 250 252;
+        --toku-border-rgb: 38 55 45;
+        --toku-info-rgb: 96 165 250;
+        --toku-achievement-rgb: 251 191 36;
+        --toku-action-primary: #4ade80;
+        --toku-action-primary-hover: #86efac;
+        --toku-action-secondary: #2563eb;
+        --toku-action-secondary-hover: #3b82f6;
+        --toku-state-success: #4ade80;
+        --toku-state-info: #60a5fa;
+        --toku-state-warning: #fbbf24;
+        --toku-state-danger: #f87171;
+        --toku-progress-active: #60a5fa;
+        --toku-progress-complete: #4ade80;
+    }
+
     html {
         scrollbar-width: none;
+    }
+
+    body {
+        background: var(--toku-surface-muted);
+        color: var(--toku-ink);
     }
 
     html::-webkit-scrollbar {
         display: none;
     }
+}
+
+@layer components {
+    .toku-focus {
+        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 dark:focus-visible:ring-focus dark:focus-visible:ring-offset-gray-950;
+    }
+
+    .toku-surface {
+        background-color: var(--toku-surface);
+        border-color: var(--toku-border);
+    }
+
+    .toku-input {
+        border-color: var(--toku-control-border);
+        color: var(--toku-ink);
+        background-color: var(--toku-surface);
+    }
+
+    .toku-input::placeholder {
+        color: var(--toku-text-muted);
+    }
+
+    .toku-input:focus {
+        border-color: var(--toku-focus);
+        box-shadow: 0 0 0 3px rgb(var(--toku-focus-rgb) / 0.14);
+    }
+}
+
+/* Hijau utama TOKU-UP adalah permukaan terang, sehingga teksnya harus gelap. */
+.bg-brand-500.text-white,
+.bg-brand-600.text-white {
+    color: #2d3742;
 }
 
 @layer utilities {

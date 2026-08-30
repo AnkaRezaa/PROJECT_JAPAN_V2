@@ -3,16 +3,14 @@ import { motion } from 'framer-motion';
 import theme from '@/Components/theme/themes';
 import { DarumaIcon, SakuraIcon, ToriiIcon, KabutoIcon, ShurikenIcon, ScrollIcon, HitodamaIcon } from '@/Components/JapaneseIcons';
 
-const themeGradient = theme.ctaBg || 'from-red-500 to-rose-600';
+const themeGradient = theme.ctaBg || 'from-brand-600 to-brand-700';
 
-export function SeasonalScene({ title, subtitle, label = 'Japanlingo Quest', icon = 'torii', children, compact = false }) {
+export function SeasonalScene({ title, subtitle, label = 'TOKU-UP Quest', icon = 'torii', children, compact = false }) {
     const Icon = icon === 'daruma' ? DarumaIcon : icon === 'kabuto' ? KabutoIcon : icon === 'scroll' ? ScrollIcon : ToriiIcon;
 
     return (
-        <section className={`relative overflow-hidden rounded-[2rem] border border-white/70 bg-gradient-to-br ${theme.heroBg || 'from-red-600 via-rose-500 to-red-700'} p-6 text-white shadow-xl shadow-red-900/10 dark:border-white/10 ${compact ? 'lg:p-6' : 'lg:p-8'}`}>
+        <section className={`relative overflow-hidden rounded-lg border border-white/70 bg-gradient-to-br ${theme.heroBg || 'from-brand-100 via-brand-300 to-learning-100'} p-6 ${theme.heroText || 'text-white'} shadow-lg dark:border-white/10 ${compact ? 'lg:p-6' : 'lg:p-8'}`}>
             <div className="absolute inset-0 opacity-15" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '28px 28px' }} />
-            <div className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/20 blur-2xl" />
-            <div className="absolute -bottom-14 left-10 h-40 w-40 rounded-full bg-yellow-200/20 blur-2xl" />
             <SakuraIcon className="absolute right-8 top-8 h-8 w-8 rotate-12 text-white/35" />
             <ToriiIcon className="absolute bottom-5 right-10 h-24 w-24 text-white/10" />
 
@@ -38,7 +36,7 @@ export function MascotGuide({ title = 'Sensei Daruma', message, tone = 'red' }) 
         ? 'from-emerald-100 to-teal-50 text-emerald-700 border-emerald-100'
         : tone === 'amber'
             ? 'from-amber-100 to-orange-50 text-amber-700 border-amber-100'
-            : 'from-red-100 to-rose-50 text-red-700 border-red-100';
+            : 'from-brand-100 to-brand-50 text-brand-700 border-brand-100';
 
     return (
         <div className={`relative overflow-hidden rounded-3xl border bg-gradient-to-br ${toneClass} p-5 shadow-sm dark:border-gray-800 dark:from-gray-900 dark:to-gray-950`}>
@@ -62,11 +60,12 @@ export function MascotGuide({ title = 'Sensei Daruma', message, tone = 'red' }) 
 
 export function LearningStatBadge({ icon, label, value, color = 'red' }) {
     const colorClass = {
-        red: 'from-red-500 to-rose-600 shadow-red-500/20',
+        red: 'from-brand-500 to-brand-700 shadow-brand-500/20',
+        brand: 'from-brand-500 to-brand-700 shadow-brand-500/20',
         amber: 'from-amber-400 to-orange-500 shadow-amber-500/20',
         green: 'from-emerald-400 to-teal-500 shadow-emerald-500/20',
         violet: 'from-violet-500 to-fuchsia-600 shadow-violet-500/20',
-    }[color] || 'from-red-500 to-rose-600 shadow-red-500/20';
+    }[color] || 'from-brand-500 to-brand-700 shadow-brand-500/20';
 
     return (
         <div className="rounded-2xl border border-gray-100 bg-white/85 p-4 shadow-sm backdrop-blur dark:border-gray-800 dark:bg-gray-900/85">
@@ -115,7 +114,7 @@ export function FloatingLearningDecor() {
     return (
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <SakuraIcon className="absolute left-[8%] top-[18%] h-6 w-6 rotate-12 text-pink-300/50" />
-            <ShurikenIcon className="absolute right-[12%] top-[28%] h-7 w-7 text-red-300/30" />
+            <ShurikenIcon className="absolute right-[12%] top-[28%] h-7 w-7 text-brand-300/30" />
             <ScrollIcon className="absolute bottom-[14%] left-[16%] h-8 w-8 -rotate-12 text-amber-300/40" />
         </div>
     );

@@ -3,7 +3,7 @@ export default function Checkbox({ label, error, className = '', ...props }) {
         <label className="flex items-center gap-2 cursor-pointer">
             <input
                 type="checkbox"
-                className={`w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-600/20 ${className}`}
+                className={`h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-focus/20 ${className}`}
                 {...props}
             />
             {label && <span className="text-sm text-gray-700">{label}</span>}

@@ -18,7 +18,7 @@ export default function QuizQuestion({ question, options = [], correctAnswer, on
     return (
         <div className="bg-white border border-gray-200 rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
-                <span className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-xs font-bold text-red-600">{index}</span>
+                <span className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center text-xs font-bold text-brand-700">{index}</span>
                 <h4 className="font-bold text-gray-900">{question}</h4>
             </div>
             <div className="space-y-2 mb-4">
@@ -45,7 +45,7 @@ export default function QuizQuestion({ question, options = [], correctAnswer, on
                 <button
                     onClick={handleSubmit}
                     disabled={!selected}
-                    className="w-full py-2.5 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-all disabled:opacity-40 disabled:pointer-events-none"
+                    className="min-h-11 w-full rounded-lg bg-[var(--toku-primary)] py-2.5 font-semibold text-white transition-all hover:bg-[var(--toku-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--toku-focus)] disabled:pointer-events-none disabled:opacity-40"
                 >
                     Check Answer
                 </button>

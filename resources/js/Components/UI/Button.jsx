@@ -1,12 +1,12 @@
 import { Link } from '@inertiajs/react';
 
 const variants = {
-    primary: 'bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-600/25',
-    secondary: 'bg-gray-900 text-white hover:bg-gray-800',
-    outline: 'border border-gray-200 text-gray-700 hover:border-red-600 hover:text-red-600 bg-transparent',
-    ghost: 'text-gray-500 hover:text-red-600 hover:bg-gray-50',
-    danger: 'bg-red-600 text-white hover:bg-red-700',
-    success: 'bg-green-600 text-white hover:bg-green-700',
+    primary: 'bg-action-primary text-ink-900 hover:bg-action-primary-hover hover:text-white shadow-sm',
+    secondary: 'bg-ink-900 text-white hover:bg-ink-800 dark:bg-white dark:text-ink-900 dark:hover:bg-gray-100',
+    outline: 'border border-[var(--toku-border)] bg-transparent text-gray-700 hover:border-[var(--toku-primary)] hover:bg-[var(--toku-primary-soft)] dark:text-gray-200',
+    ghost: 'text-gray-600 hover:bg-[var(--toku-primary-soft)] hover:text-[var(--toku-primary-hover)] dark:text-gray-300',
+    danger: 'bg-state-danger text-white hover:bg-red-700',
+    success: 'bg-state-success text-white hover:bg-green-700',
 };
 
 const sizes = {
@@ -16,7 +16,7 @@ const sizes = {
 };
 
 export default function Button({ children, variant = 'primary', size = 'md', href, className = '', disabled, ...props }) {
-    const classes = `inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none ${variants[variant]} ${sizes[size]} ${className}`;
+    const classes = `inline-flex min-h-11 items-center justify-center gap-2 font-semibold transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--toku-focus)] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none dark:focus-visible:ring-offset-gray-950 ${variants[variant]} ${sizes[size]} ${className}`;
 
     if (href) {
         return <Link href={href} className={classes} {...props}>{children}</Link>;

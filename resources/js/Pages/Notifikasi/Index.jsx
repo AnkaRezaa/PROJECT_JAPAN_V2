@@ -39,8 +39,8 @@ function NotificationItem({ notification }) {
     };
 
     return (
-        <article className={`relative border-b border-gray-200 px-4 py-4 last:border-b-0 sm:px-5 dark:border-gray-800 ${isUnread ? 'bg-red-50/50 dark:bg-red-950/10' : 'bg-white dark:bg-gray-950'}`}>
-            {isUnread && <span className="absolute left-0 top-0 h-full w-1 bg-red-600" aria-hidden="true" />}
+        <article className={`relative border-b border-gray-200 px-4 py-4 last:border-b-0 sm:px-5 dark:border-gray-800 ${isUnread ? 'bg-brand-50/50 dark:bg-brand-950/10' : 'bg-white dark:bg-gray-950'}`}>
+            {isUnread && <span className="absolute left-0 top-0 h-full w-1 bg-brand-600" aria-hidden="true" />}
             <div className="flex gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
                     <CategoryIcon sx={{ fontSize: 20 }} />
@@ -49,7 +49,7 @@ function NotificationItem({ notification }) {
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span className="text-[11px] font-bold uppercase text-gray-600 dark:text-gray-300">{category.label}</span>
                         <span className="text-[11px] text-gray-500 dark:text-gray-400">{notification.created_at}</span>
-                        {isUnread && <span className="h-2 w-2 rounded-full bg-red-600" aria-label="Belum dibaca" />}
+                        {isUnread && <span className="h-2 w-2 rounded-full bg-brand-600" aria-label="Belum dibaca" />}
                     </div>
                     <h2 className="mt-1 text-sm font-bold text-gray-950 sm:text-base dark:text-white">
                         {notification.data?.title || 'Pemberitahuan sistem'}
@@ -62,7 +62,7 @@ function NotificationItem({ notification }) {
                             <button
                                 type="button"
                                 onClick={() => markAsRead(true)}
-                                className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-gray-950 px-3 text-xs font-bold text-white transition-colors hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:bg-white dark:text-gray-950 dark:hover:bg-red-500 dark:hover:text-white"
+                                className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-gray-950 px-3 text-xs font-bold text-white transition-colors hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:bg-white dark:text-gray-950 dark:hover:bg-brand-200"
                             >
                                 Buka
                                 <ArrowForwardOutlinedIcon sx={{ fontSize: 16 }} />
@@ -72,7 +72,7 @@ function NotificationItem({ notification }) {
                             <button
                                 type="button"
                                 onClick={() => markAsRead(false)}
-                                className="min-h-10 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-700 transition-colors hover:border-gray-500 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-900"
+                                className="min-h-10 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-700 transition-colors hover:border-gray-500 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-900"
                             >
                                 Tandai dibaca
                             </button>
@@ -142,7 +142,7 @@ export default function NotificationIndex({ notifications, unreadCount = 0, filt
                 <button
                     type="button"
                     onClick={goBack}
-                    className="mb-4 inline-flex min-h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-900"
+                    className="mb-4 inline-flex min-h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-900"
                 >
                     <ArrowBackOutlinedIcon sx={{ fontSize: 18 }} />
                     Kembali
@@ -150,7 +150,7 @@ export default function NotificationIndex({ notifications, unreadCount = 0, filt
 
                 <header className="flex flex-col gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-end sm:justify-between dark:border-gray-800">
                     <div>
-                        <p className="text-xs font-bold uppercase text-red-600 dark:text-red-400">{notificationContext.eyebrow}</p>
+                        <p className="text-xs font-bold uppercase text-brand-600 dark:text-brand-400">{notificationContext.eyebrow}</p>
                         <h1 className="mt-1 text-2xl font-black text-gray-950 sm:text-3xl dark:text-white">{notificationContext.title}</h1>
                         <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                             {unreadCount > 0 ? `${unreadCount} pemberitahuan belum dibaca.` : 'Semua pemberitahuan sudah dibaca.'}
@@ -160,7 +160,7 @@ export default function NotificationIndex({ notifications, unreadCount = 0, filt
                         <button
                             type="button"
                             onClick={markAllAsRead}
-                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-bold text-gray-800 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:hover:bg-gray-900"
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-bold text-gray-800 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:hover:bg-gray-900"
                         >
                             <DoneAllOutlinedIcon sx={{ fontSize: 19 }} />
                             Tandai semua dibaca

@@ -91,7 +91,7 @@ export default function Status({ status = 500, home_url: homeUrl = '/' }) {
                 <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                     <Link
                         href={homeUrl}
-                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-black text-white transition hover:bg-red-700"
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-black text-white transition hover:bg-brand-700"
                     >
                         <HomeRoundedIcon sx={{ fontSize: 19 }} />
                         {primaryLabel}

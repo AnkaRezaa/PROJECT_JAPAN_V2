@@ -19,7 +19,7 @@ export default function CertificateCard({ title, level, date, status = 'locked',
             {date && <p className="text-xs text-gray-400 mb-3">{date}</p>}
             <div className="text-sm font-semibold text-gray-600">{s.label}</div>
             {status === 'earned' && onDownload && (
-                <button onClick={onDownload} className="mt-3 text-xs text-red-600 font-semibold hover:underline">
+                <button onClick={onDownload} className="mt-3 text-xs text-brand-700 font-semibold hover:underline">
                     Download PDF
                 </button>
             )}

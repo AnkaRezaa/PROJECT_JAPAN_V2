@@ -9,7 +9,7 @@ export default function LessonCard({ title, subtitle, progress, total, icon, loc
             className={`bg-white border border-gray-200 rounded-2xl p-5 transition-all duration-300 ${locked ? 'opacity-50' : 'hover:shadow-md hover:-translate-y-1 cursor-pointer'}`}
         >
             <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-2xl flex-shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center text-2xl flex-shrink-0">
                     {locked ? '<LockIcon className="w-5 h-5 inline-block" />' : icon}
                 </div>
                 <div className="flex-1 min-w-0">

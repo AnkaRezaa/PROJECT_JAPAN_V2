@@ -7,7 +7,7 @@ export default function Breadcrumb({ items = [], className = '' }) {
                 <span key={i} className="flex items-center gap-2">
                     {i > 0 && <span className="text-gray-300">/</span>}
                     {item.href ? (
-                        <Link href={item.href} className="text-gray-500 hover:text-red-600 transition-colors no-underline">
+                        <Link href={item.href} className="text-gray-500 hover:text-brand-700 transition-colors no-underline">
                             {item.label}
                         </Link>
                     ) : (

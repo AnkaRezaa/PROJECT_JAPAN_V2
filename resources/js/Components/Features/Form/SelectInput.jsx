@@ -3,7 +3,7 @@ export default function SelectInput({ label, error, options = [], placeholder, c
         <div className="w-full">
             {label && <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>}
             <select
-                className={`w-full px-4 py-2.5 border rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600 bg-white ${error ? 'border-red-500' : 'border-gray-200'} ${className}`}
+                className={`w-full rounded-lg border bg-white px-4 py-2.5 text-sm transition-colors focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/20 ${error ? 'border-red-500' : 'border-gray-200'} ${className}`}
                 {...props}
             >
                 {placeholder && <option value="">{placeholder}</option>}

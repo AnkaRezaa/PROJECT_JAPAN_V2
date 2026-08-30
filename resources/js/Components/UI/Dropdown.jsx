@@ -39,7 +39,7 @@ Dropdown.Content = function Content({ children, align = 'right', width = '48' })
 
 Dropdown.Link = function DropdownLink({ children, href, method, as, ...props }) {
     return (
-        <Link href={href} method={method} as={as} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-red-600 transition-colors" {...props}>
+        <Link href={href} method={method} as={as} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-brand-700 transition-colors" {...props}>
             {children}
         </Link>
     );

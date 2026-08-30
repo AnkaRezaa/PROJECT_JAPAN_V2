@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import SidebarLink from '@/Components/Navigation/SidebarLink';
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
+import ProductFeedbackButton from '@/Components/Features/Feedback/ProductFeedbackButton';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
@@ -133,7 +134,7 @@ function FlashToast({ notice, onDismiss, soundEnabled = false }) {
                     <button
                         type="button"
                         onClick={onDismiss}
-                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
                         aria-label="Tutup pesan"
                     >
                         <CloseIcon sx={{ fontSize: 18 }} />
@@ -154,7 +155,7 @@ const resolveSidebarExpanded = () => {
         return true;
     }
 
-    return window.localStorage.getItem('japanlingo:sidebar-expanded') !== 'false';
+    return window.localStorage.getItem('toku-up:sidebar-expanded') !== 'false';
 };
 
 export default function AuthenticatedLayout({ children }) {
@@ -226,7 +227,7 @@ export default function AuthenticatedLayout({ children }) {
         window.localStorage.setItem('theme', nextMode);
         setThemeMode(nextMode);
         applyDocumentTheme(nextMode);
-        window.dispatchEvent(new CustomEvent('japanlingo:theme-changed', { detail: { mode: nextMode } }));
+        window.dispatchEvent(new CustomEvent('toku-up:theme-changed', { detail: { mode: nextMode } }));
     };
 
     useEffect(() => {
@@ -509,7 +510,7 @@ export default function AuthenticatedLayout({ children }) {
 
     const setSidebarExpanded = (expanded) => {
         setIsExpanded(expanded);
-        window.localStorage.setItem('japanlingo:sidebar-expanded', String(expanded));
+        window.localStorage.setItem('toku-up:sidebar-expanded', String(expanded));
     };
     const handleNavigation = () => {
         setMobileOpen(false);
@@ -555,11 +556,11 @@ export default function AuthenticatedLayout({ children }) {
                         navigationExpanded ? 'flex-row justify-start px-3.5' : 'justify-center px-2'
                     } ${
                         groupActive
-                            ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
+                            ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300'
                             : 'text-gray-700 hover:bg-white hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
                     }`}
                 >
-                    <span className={`flex shrink-0 items-center justify-center ${navigationExpanded ? 'mr-3' : ''} ${groupActive ? 'text-red-600 dark:text-red-300' : ''}`}>
+                    <span className={`flex shrink-0 items-center justify-center ${navigationExpanded ? 'mr-3' : ''} ${groupActive ? 'text-brand-600 dark:text-brand-300' : ''}`}>
                         {item.icon}
                     </span>
                     {navigationExpanded && (
@@ -603,7 +604,7 @@ export default function AuthenticatedLayout({ children }) {
                 onClick={toggleThemeMode}
                 aria-label={isDarkModeActive ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'}
                 title={isDarkModeActive ? 'Mode terang' : 'Mode gelap'}
-                className={`${compact ? 'h-10 w-10' : 'h-11 px-3'} inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white text-sm font-black text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-red-200 hover:text-red-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-red-500/40 dark:hover:text-red-300`}
+                className={`${compact ? 'h-10 w-10' : 'h-11 px-3'} inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white text-sm font-black text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:text-brand-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-brand-500/40 dark:hover:text-brand-300`}
             >
                 {isDarkModeActive ? <LightModeIcon sx={{ fontSize: 19 }} /> : <DarkModeIcon sx={{ fontSize: 19 }} />}
                 {!compact && <span>{isDarkModeActive ? 'Terang' : 'Gelap'}</span>}
@@ -618,10 +619,10 @@ export default function AuthenticatedLayout({ children }) {
             <Link
                 href={profileHref}
                 onClick={handleNavigation}
-                className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500 dark:hover:bg-gray-800"
+                className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus dark:hover:bg-gray-800"
             >
                 <span className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600 text-lg font-black text-white shadow-sm">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-lg font-black text-white shadow-sm">
                         {user?.avatar ? (
                             <img src={user.avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                         ) : (
@@ -654,7 +655,7 @@ export default function AuthenticatedLayout({ children }) {
                 <Link
                     href={profileHref}
                     onClick={handleNavigation}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500 dark:text-gray-300 dark:hover:bg-gray-800"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus dark:text-gray-300 dark:hover:bg-gray-800"
                 >
                     <SettingsOutlinedIcon sx={{ fontSize: 18 }} className="text-gray-700 dark:text-gray-300" />
                     Pengaturan profil
@@ -690,12 +691,12 @@ export default function AuthenticatedLayout({ children }) {
                         aria-label="Buka navigasi"
                         aria-controls="main-sidebar"
                         aria-expanded={mobileOpen}
-                        className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                        className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
                     >
                         <MenuIcon sx={{ fontSize: 26 }} />
                     </button>
                     <div className="min-w-0">
-                        <span className="block truncate text-base font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-400">Japanlingo</span>
+                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="block h-5 w-auto max-w-[9rem] object-contain object-left" />
                         <span className="block truncate text-[11px] font-semibold text-gray-700 dark:text-gray-300">{workspaceTitle}</span>
                     </div>
                 </div>
@@ -711,7 +712,7 @@ export default function AuthenticatedLayout({ children }) {
                             aria-label="Buka menu akun"
                             aria-controls="mobile-account-menu"
                             aria-expanded={mobileAccountOpen}
-                            className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-red-600 text-sm font-black text-white shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+                            className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-sm font-black text-white shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
                         >
                             {user?.avatar ? (
                                 <img src={user.avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
@@ -743,26 +744,21 @@ export default function AuthenticatedLayout({ children }) {
                 <div className="relative mb-4 border-b border-gray-100 dark:border-gray-800">
                     <div className="flex h-14 items-center justify-between px-3 lg:hidden">
                         <div className="flex min-w-0 items-center gap-2.5">
-                            <img src="/logo.png" alt="Japanlingo" className="h-9 w-9 shrink-0 object-contain" />
-                            <span className="truncate text-lg font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-400">
-                                Japanlingo
-                            </span>
+                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-8 w-auto max-w-[10rem] shrink-0 object-contain object-left" />
                         </div>
                         <button
                             type="button"
                             onClick={closeMobileMenu}
                             aria-label="Tutup navigasi"
-                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
                         >
                             <CloseIcon sx={{ fontSize: 22 }} />
                         </button>
                     </div>
                     <div className={`hidden h-16 items-center p-3 lg:flex ${isExpanded ? 'gap-3' : 'justify-center'}`}>
-                        <img src="/logo.png" alt="Japanlingo" className={`${isExpanded ? 'h-10 w-10' : 'h-8 w-8'} object-contain transition-all duration-300`} />
+                        <img src="/images/logos/toku-up-mark.png" alt="TOKU-UP" className={`${isExpanded ? 'h-10 w-10' : 'h-8 w-8'} shrink-0 object-contain transition-all duration-300`} />
                         {isExpanded && (
-                            <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-400 text-lg tracking-tight animate-in fade-in slide-in-from-left-2 duration-300">
-                                Japanlingo
-                            </span>
+                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-7 w-auto max-w-[8.75rem] object-contain object-left animate-in fade-in slide-in-from-left-2 duration-300" />
                         )}
                     </div>
                     <button
@@ -771,7 +767,7 @@ export default function AuthenticatedLayout({ children }) {
                         aria-label={isExpanded ? 'Ciutkan sidebar' : 'Perluas sidebar'}
                         aria-expanded={isExpanded}
                         title={isExpanded ? 'Ciutkan sidebar' : 'Perluas sidebar'}
-                        className="absolute -right-3 top-[18px] hidden h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition hover:border-red-200 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-red-500/50 dark:hover:text-red-300 lg:flex"
+                        className="absolute -right-3 top-[18px] hidden h-7 w-7 items-center justify-center rounded-full border border-[var(--toku-border)] bg-white text-[#55616D] shadow-sm transition hover:border-[var(--toku-brand-border)] hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-brand-500/50 dark:hover:text-brand-300 lg:flex"
                     >
                         <KeyboardArrowRightIcon
                             sx={{ fontSize: 18 }}
@@ -789,6 +785,7 @@ export default function AuthenticatedLayout({ children }) {
                                 icon={item.icon} 
                                 active={isActiveItem(item)}
                                 isExpanded={navigationExpanded}
+                                activeTone={isUser ? 'learning' : 'brand'}
                                 onNavigate={handleNavigation}
                             >
                                 {item.label}
@@ -809,12 +806,12 @@ export default function AuthenticatedLayout({ children }) {
                         aria-controls="sidebar-notification-menu"
                         aria-expanded={notificationOpen}
                         title={!navigationExpanded ? notificationContext.label : undefined}
-                        className={`relative mb-2 flex min-h-11 w-full items-center rounded-xl text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white ${navigationExpanded ? 'justify-start px-3' : 'justify-center'}`}
+                        className={`relative mb-2 flex min-h-11 w-full items-center rounded-xl text-[#55616D] transition-colors hover:bg-gray-200 hover:text-[#2D3742] focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white ${navigationExpanded ? 'justify-start px-3' : 'justify-center'}`}
                     >
                         <NotificationsOutlinedIcon sx={{ fontSize: 24 }} />
                         {navigationExpanded && <span className="ml-3 text-sm font-semibold animate-in">{notificationContext.label}</span>}
                         {unreadCount > 0 && (
-                            <span className={`absolute inline-flex min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-600 px-1 text-[9px] font-black leading-4 text-white dark:border-gray-900 ${navigationExpanded ? 'right-2 top-2' : 'right-0.5 top-0.5'}`}>
+                            <span className={`absolute inline-flex min-w-5 items-center justify-center rounded-full border-2 border-white bg-brand-600 px-1 text-[9px] font-black leading-4 text-white dark:border-gray-900 ${navigationExpanded ? 'right-2 top-2' : 'right-0.5 top-0.5'}`}>
                                 {unreadCount > 99 ? '99+' : unreadCount}
                             </span>
                         )}
@@ -832,7 +829,7 @@ export default function AuthenticatedLayout({ children }) {
                                     <button
                                         type="button"
                                         onClick={handleMarkAllAsRead}
-                                        className="min-h-9 rounded-lg border border-gray-200 px-2.5 text-[10px] font-bold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-900"
+                                        className="min-h-9 rounded-lg border border-gray-200 px-2.5 text-[10px] font-bold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-900"
                                     >
                                         Tandai semua dibaca
                                     </button>
@@ -849,9 +846,9 @@ export default function AuthenticatedLayout({ children }) {
                                             type="button"
                                             key={notif.id}
                                             onClick={() => handleMarkAsRead(notif.id, notif.data.url)}
-                                            className="group relative block w-full border-b border-gray-100 p-4 text-left transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500 dark:border-gray-800 dark:hover:bg-gray-900"
+                                            className="group relative block w-full border-b border-gray-100 p-4 text-left transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus dark:border-gray-800 dark:hover:bg-gray-900"
                                         >
-                                            <span className="absolute right-4 top-4 h-1.5 w-1.5 rounded-full bg-red-500 transition-transform group-hover:scale-150" />
+                                            <span className="absolute right-4 top-4 h-1.5 w-1.5 rounded-full bg-brand-500 transition-transform group-hover:scale-150" />
                                             <span className={`mb-2 inline-flex items-center rounded-md border px-2 py-0.5 text-[9px] font-black ${notif.severity === 'danger' || notif.data?.severity === 'danger' ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300' : 'border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'}`}>
                                                 {notificationCategoryLabel(notif.category || notif.data?.category)}
                                             </span>
@@ -868,7 +865,7 @@ export default function AuthenticatedLayout({ children }) {
                                     setNotificationOpen(false);
                                     handleNavigation();
                                 }}
-                                className="flex min-h-11 items-center justify-center border-t border-gray-200 px-4 text-xs font-bold text-gray-800 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500 dark:border-gray-800 dark:text-gray-100 dark:hover:bg-gray-900"
+                                className="flex min-h-11 items-center justify-center border-t border-gray-200 px-4 text-xs font-bold text-gray-800 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus dark:border-gray-800 dark:text-gray-100 dark:hover:bg-gray-900"
                             >
                                 {notificationContext.allLabel}
                             </Link>
@@ -886,20 +883,20 @@ export default function AuthenticatedLayout({ children }) {
                         aria-controls="sidebar-profile-menu"
                         aria-expanded={profileMenuOpen}
                         title={!navigationExpanded ? 'Akun' : undefined}
-                        className={`relative flex min-h-11 w-full items-center overflow-hidden rounded-2xl ring-2 transition-all focus:outline-none focus-visible:ring-red-500 ${
+                        className={`relative flex min-h-11 w-full items-center overflow-hidden rounded-2xl ring-2 transition-all focus:outline-none focus-visible:ring-focus ${
                             navigationExpanded
                                 ? 'gap-3 border border-gray-200 bg-white px-2 py-1.5 shadow-sm dark:border-gray-700 dark:bg-gray-800'
                                 : 'justify-center'
                         } ${profileMenuOpen ? 'ring-gray-300 ring-offset-2 dark:ring-gray-600 dark:ring-offset-gray-900' : 'ring-transparent'}`}
                     >
-                        <div className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600 font-black text-white shadow-sm transition-all ${navigationExpanded ? 'h-8 w-8 text-sm' : 'h-[42px] w-[42px] text-xl'}`}>
+                        <div className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 font-black text-white shadow-sm transition-all ${navigationExpanded ? 'h-8 w-8 text-sm' : 'h-[42px] w-[42px] text-xl'}`}>
                             {user?.avatar ? (
                                 <img src={user.avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                             ) : (
                                 (user?.username || user?.name || 'User')?.charAt(0).toUpperCase()
                             )}
                             {isPremiumUser && (
-                                <span className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full bg-amber-400 text-white border-2 border-white dark:border-gray-800 flex items-center justify-center shadow-sm">
+                                <span className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full bg-amber-400 text-gray-950 border-2 border-white dark:border-gray-800 flex items-center justify-center shadow-sm">
                                     <WorkspacePremiumIcon sx={{ fontSize: 12 }} />
                                 </span>
                             )}
@@ -922,9 +919,7 @@ export default function AuthenticatedLayout({ children }) {
             <div className={`flex-1 w-full transition-all duration-300 ${isExpanded ? 'lg:ml-[240px]' : 'lg:ml-[88px]'}`}>
                 <header className="sticky top-0 z-20 hidden min-h-[64px] items-center justify-between border-b border-gray-200/80 bg-white/85 px-6 shadow-sm backdrop-blur-xl transition-colors duration-300 dark:border-gray-800 dark:bg-gray-950/80 lg:flex">
                     <div className="min-w-0">
-                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-red-500 dark:text-red-300">
-                            Japanlingo
-                        </p>
+                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-4 w-auto max-w-[7.5rem] object-contain object-left" />
                         <p className="truncate text-sm font-semibold text-slate-600 dark:text-slate-300">
                             {workspaceTitle}
                         </p>
@@ -937,9 +932,9 @@ export default function AuthenticatedLayout({ children }) {
                 {isUser && (
                     <footer className="border-t border-gray-200/80 bg-white px-4 py-2 text-xs font-medium text-gray-700 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300">
                         <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-1 text-center sm:flex-row sm:justify-between sm:gap-4 sm:text-left">
-                            <span>© {new Date().getFullYear()} Japanlingo</span>
-                            <Link href={route('about')} className="inline-flex min-h-11 items-center px-2 font-semibold text-gray-600 transition-colors hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:text-gray-300 dark:hover:text-red-400 dark:focus-visible:ring-offset-gray-950">
-                                Tentang Japanlingo
+                            <span>© {new Date().getFullYear()} TOKU-UP</span>
+                            <Link href={route('about')} className="inline-flex min-h-11 items-center px-2 font-semibold text-gray-600 transition-colors hover:text-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 dark:text-gray-300 dark:hover:text-brand-400 dark:focus-visible:ring-offset-gray-950">
+                                Tentang TOKU-UP
                             </Link>
                         </div>
                     </footer>
@@ -954,11 +949,13 @@ export default function AuthenticatedLayout({ children }) {
                 />
             )}
 
+            <ProductFeedbackButton />
+
             {toastAchievements.length > 0 && (
                 <div className="fixed inset-x-3 top-3 z-[100] flex flex-col gap-3 animate-in sm:inset-x-auto sm:right-6 sm:top-6">
                     {toastAchievements.map((ach, i) => (
-                        <div key={i} className="flex w-full min-w-0 items-center gap-3 rounded-2xl border-2 border-amber-300 bg-white p-4 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] sm:w-[320px] sm:gap-4 sm:p-5" style={{ animation: `fade-in-slide-up 0.4s ${i * 0.15}s both` }}>
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-2xl shadow-lg shadow-amber-400/30 sm:h-14 sm:w-14 sm:text-3xl">
+                        <div key={i} className="flex w-full min-w-0 items-center gap-3 rounded-2xl border-2 border-[#E8C95B] bg-white p-4 shadow-[0_10px_40px_-10px_rgba(45,55,66,0.25)] sm:w-[320px] sm:gap-4 sm:p-5" style={{ animation: `fade-in-slide-up 0.4s ${i * 0.15}s both` }}>
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#FEF0B8] text-2xl text-[#8A6100] shadow-lg shadow-amber-400/20 sm:h-14 sm:w-14 sm:text-3xl">
                                 {ach.icon || '<KabutoIcon className="w-5 h-5 inline-block text-yellow-500" />'}
                             </div>
                             <div className="min-w-0 flex-1">

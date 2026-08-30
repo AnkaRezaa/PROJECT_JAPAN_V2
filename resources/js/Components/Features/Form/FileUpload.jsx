@@ -12,7 +12,7 @@ export default function FileUpload({ label, accept, error, onChange, className =
     return (
         <div className={className}>
             {label && <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>}
-            <label className="flex items-center gap-3 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-red-600 hover:bg-red-50/30 transition-all">
+            <label className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed border-gray-200 px-4 py-3 transition-all hover:border-brand-600 hover:bg-brand-50/30">
                 <span className="text-2xl">📁</span>
                 <div>
                     <p className="text-sm font-medium text-gray-700">{fileName || 'Click to upload'}</p>

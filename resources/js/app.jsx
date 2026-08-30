@@ -5,13 +5,18 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { installInterfaceSoundEffects } from '@/Components/UI/SoundEffects';
+import { applyThemeVariables } from '@/Components/theme/themes';
 
-const seoSiteName = import.meta.env.VITE_SEO_SITE_NAME || 'Belajar Bahasa Jepang';
+const seoSiteName = import.meta.env.VITE_SEO_SITE_NAME || 'TOKU-UP';
+
+applyThemeVariables();
 
 createInertiaApp({
     title: (title) => {
         if (!title) return seoSiteName;
-        return title.includes(seoSiteName) ? title : `${title} | ${seoSiteName}`;
+        return title.toLowerCase().includes(seoSiteName.toLowerCase())
+            ? title
+            : `${title} | ${seoSiteName}`;
     },
     resolve: (name) =>
         resolvePageComponent(
@@ -32,6 +37,6 @@ createInertiaApp({
         }
     },
     progress: {
-        color: '#DC2626',
+        color: '#15803D',
     },
 });

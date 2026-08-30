@@ -28,8 +28,8 @@ class PasswordResetOtpNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Kode reset kata sandi Japanlingo')
-            ->greeting('Halo '.($notifiable->username ?? 'Japanlingo User').',')
+            ->subject('Kode reset kata sandi TOKU-UP')
+            ->greeting('Halo '.($notifiable->username ?? 'Pengguna TOKU-UP').',')
             ->line('Gunakan kode berikut untuk mengatur ulang kata sandi Anda:')
             ->line("**{$this->code}**")
             ->line("Kode berlaku selama {$this->expiresInMinutes} menit dan hanya dapat digunakan satu kali.")
@@ -41,7 +41,7 @@ class PasswordResetOtpNotification extends Notification
         return [
             'template' => 'password_reset_otp',
             'variables' => [
-                'user_name' => $notifiable->username ?? 'Japanlingo User',
+                'user_name' => $notifiable->username ?? 'Pengguna TOKU-UP',
                 'otp_code' => $this->code,
                 'expires_minutes' => (string) $this->expiresInMinutes,
             ],

@@ -1,12 +1,13 @@
 const colors = {
-    red: 'bg-red-600',
-    green: 'bg-green-500',
-    blue: 'bg-red-500',
+    red: 'bg-state-danger',
+    brand: 'bg-progress-complete',
+    green: 'bg-progress-complete',
+    blue: 'bg-progress-active',
     yellow: 'bg-amber-500',
-    gradient: 'bg-gradient-to-r from-red-500 to-amber-500',
+    gradient: 'bg-gradient-to-r from-brand-500 to-achievement-400',
 };
 
-export default function ProgressBar({ value = 0, max = 100, color = 'red', showLabel = false, size = 'md', className = '' }) {
+export default function ProgressBar({ value = 0, max = 100, color = 'brand', showLabel = false, size = 'md', className = '' }) {
     const percent = Math.min(Math.round((value / max) * 100), 100);
     const heights = { sm: 'h-1.5', md: 'h-2', lg: 'h-3' };
 
@@ -18,7 +19,7 @@ export default function ProgressBar({ value = 0, max = 100, color = 'red', showL
                     <span>{percent}%</span>
                 </div>
             )}
-            <div className={`${heights[size]} bg-gray-100 rounded-full overflow-hidden`}>
+            <div className={`${heights[size]} overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800`}>
                 <div className={`h-full rounded-full transition-all duration-700 ${colors[color]}`} style={{ width: `${percent}%` }} />
             </div>
         </div>

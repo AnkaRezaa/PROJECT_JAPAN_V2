@@ -52,7 +52,7 @@ export default function SearchableSelect({
                 type="button"
                 disabled={disabled}
                 onClick={() => setOpen((current) => !current)}
-                className="flex h-11 w-full items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 text-left text-sm outline-none transition hover:border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-500/10 disabled:cursor-not-allowed disabled:opacity-55 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                className="flex h-11 w-full items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 text-left text-sm outline-none transition hover:border-brand-300 focus:border-focus focus:ring-2 focus:ring-focus/10 disabled:cursor-not-allowed disabled:opacity-55 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                 aria-expanded={open}
             >
                 <span className={selected ? 'truncate font-bold text-gray-900 dark:text-white' : 'truncate text-gray-400'}>
@@ -69,7 +69,7 @@ export default function SearchableSelect({
                             value={query}
                             onChange={(event) => setQuery(event.target.value)}
                             placeholder={searchPlaceholder}
-                            className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-semibold text-gray-900 outline-none focus:border-red-400 focus:bg-white dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                            className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-semibold text-gray-900 outline-none focus:border-focus focus:bg-white dark:border-gray-700 dark:bg-gray-950 dark:text-white"
                         />
                     </div>
                     <div className="max-h-64 overflow-y-auto p-2">
@@ -81,7 +81,7 @@ export default function SearchableSelect({
                                 type="button"
                                 onClick={() => selectOption(option)}
                                 className={`w-full rounded-lg px-3 py-2.5 text-left transition ${String(option.value) === String(value)
-                                    ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
+                                    ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300'
                                     : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800'}`}
                             >
                                 <span className="block text-sm font-bold">{option.label}</span>

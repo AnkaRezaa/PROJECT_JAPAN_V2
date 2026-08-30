@@ -12,7 +12,7 @@ export default function XPBar({ current = 0, required = 100, level = 1, classNam
             </div>
             <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                 <div
-                    className="h-full bg-gradient-to-r from-red-500 to-amber-500 rounded-full transition-all duration-700"
+                    className="h-full bg-gradient-to-r from-brand-600 to-achievement-400 rounded-full transition-all duration-700"
                     style={{ width: `${percent}%` }}
                 />
             </div>

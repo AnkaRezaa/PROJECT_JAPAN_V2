@@ -13,10 +13,10 @@ export default function LegalPage({ title, updatedAt, intro, sections = [], seo 
             <main className="bg-slate-50">
                 <section className="border-b border-slate-200 bg-white px-5 py-12 sm:px-6 lg:px-20">
                     <div className="mx-auto max-w-4xl">
-                        <Link href="/" className="text-sm font-bold text-red-600 no-underline hover:text-red-700">
+                        <Link href="/" className="text-sm font-bold text-brand-700 no-underline hover:text-brand-600">
                             Kembali ke beranda
                         </Link>
-                        <p className="mt-8 text-xs font-black uppercase tracking-[0.22em] text-red-500">
+                        <p className="mt-8 text-xs font-black uppercase tracking-[0.22em] text-brand-700">
                             Dokumen Legal
                         </p>
                         <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">

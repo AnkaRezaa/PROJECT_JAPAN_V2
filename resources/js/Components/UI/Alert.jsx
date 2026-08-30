@@ -4,7 +4,7 @@ const styles = {
     success: { bg: 'bg-green-50 border-green-200', text: 'text-green-800', icon: '✓' },
     error: { bg: 'bg-red-50 border-red-200', text: 'text-red-800', icon: '✕' },
     warning: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-800', icon: '⚠' },
-    info: { bg: 'bg-red-50 border-red-200', text: 'text-red-800', icon: 'ℹ' },
+    info: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-800', icon: 'ℹ' },
 };
 
 export default function Alert({ type = 'info', children, dismissible = false, className = '' }) {

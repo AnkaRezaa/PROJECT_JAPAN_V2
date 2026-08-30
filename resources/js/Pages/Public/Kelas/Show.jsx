@@ -97,13 +97,13 @@ export default function PublicClassShow({ program, seo = {} }) {
         <section className="border-b border-gray-200 bg-gray-50 px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,480px)] lg:items-center">
             <div>
-              <Link href={route('pricing')} className="inline-flex items-center gap-1 text-sm font-bold text-red-700 hover:text-red-800">
+              <Link href={route('pricing')} className="inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:text-brand-800">
                 <ArrowBackIcon sx={{ fontSize: 18 }} /> Kembali ke daftar kelas
               </Link>
 
               <div className="mt-7 flex flex-wrap items-center gap-2 text-xs font-black">
                 {program.curriculum_track && <span className="rounded-full bg-gray-900 px-3 py-1.5 text-white">{program.curriculum_track}</span>}
-                {program.level && <span className="rounded-full bg-red-50 px-3 py-1.5 text-red-700">{program.level}</span>}
+                {program.level && <span className="rounded-full bg-brand-50 px-3 py-1.5 text-brand-700">{program.level}</span>}
                 <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-gray-600">
                   <MenuBookIcon sx={{ fontSize: 16 }} /> {program.weeks_count || 0} Week
                 </span>
@@ -113,7 +113,7 @@ export default function PublicClassShow({ program, seo = {} }) {
               {program.description && <p className="mt-5 max-w-2xl text-base leading-7 text-gray-600 sm:text-lg">{program.description}</p>}
               {program.instructor_name && (
                 <p className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-gray-700">
-                  <GroupsIcon sx={{ fontSize: 20 }} className="text-red-600" /> Pengajar: {program.instructor_name}
+                  <GroupsIcon sx={{ fontSize: 20 }} className="text-brand-600" /> Pengajar: {program.instructor_name}
                 </p>
               )}
             </div>
@@ -127,7 +127,7 @@ export default function PublicClassShow({ program, seo = {} }) {
         <section className="px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="max-w-2xl">
-              <p className="text-xs font-black uppercase text-red-600">Isi kelas</p>
+              <p className="text-xs font-black uppercase text-brand-600">Isi kelas</p>
               <h2 className="mt-2 text-2xl font-black sm:text-3xl">Roadmap yang akan dipelajari</h2>
               <p className="mt-3 text-sm leading-6 text-gray-600">Materi dibuka mengikuti aturan kelas dan progres belajar masing-masing peserta.</p>
             </div>
@@ -136,7 +136,7 @@ export default function PublicClassShow({ program, seo = {} }) {
               <div className="mt-8 divide-y divide-gray-200 border-y border-gray-200">
                 {modules.map((module) => (
                   <article key={module.id} className="grid gap-3 py-5 sm:grid-cols-[90px_minmax(0,1fr)_auto] sm:items-center sm:gap-5">
-                    <p className="text-xs font-black uppercase text-red-600">Week {module.week_number}</p>
+                    <p className="text-xs font-black uppercase text-brand-600">Week {module.week_number}</p>
                     <div>
                       <h3 className="text-base font-black text-gray-950">{module.title}</h3>
                       {module.description && <p className="mt-1 text-sm leading-6 text-gray-600">{module.description}</p>}
@@ -158,7 +158,7 @@ export default function PublicClassShow({ program, seo = {} }) {
         <section className="border-t border-gray-200 bg-gray-50 px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="max-w-2xl">
-              <p className="text-xs font-black uppercase text-red-600">Pilihan akses</p>
+              <p className="text-xs font-black uppercase text-brand-600">Pilihan akses</p>
               <h2 className="mt-2 text-2xl font-black sm:text-3xl">Pilih cara belajar</h2>
               <p className="mt-3 text-sm leading-6 text-gray-600">Kelas mandiri aktif setelah pembayaran berhasil. Kelas mentor mengikuti jadwal dan persetujuan kloter.</p>
             </div>

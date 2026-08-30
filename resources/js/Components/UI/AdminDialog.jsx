@@ -37,7 +37,7 @@ export default function AdminDialog({
             <section className={`relative flex max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-[1.5rem] bg-white shadow-2xl dark:bg-gray-900 sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-[1.5rem] ${maxWidth}`}>
                 <header className="flex shrink-0 items-start justify-between gap-4 border-b border-gray-100 px-5 py-4 dark:border-gray-800 sm:px-6">
                     <div className="min-w-0">
-                        {eyebrow && <p className="text-[11px] font-black uppercase tracking-[0.2em] text-red-600 dark:text-red-400">{eyebrow}</p>}
+                        {eyebrow && <p className="text-[11px] font-black uppercase tracking-[0.2em] text-brand-700 dark:text-brand-300">{eyebrow}</p>}
                         {title && <h2 className="mt-1 text-xl font-black text-gray-900 dark:text-white">{title}</h2>}
                         {description && <p className="mt-1 text-sm leading-6 text-gray-500 dark:text-gray-400">{description}</p>}
                     </div>

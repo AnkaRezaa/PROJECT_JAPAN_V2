@@ -40,6 +40,9 @@ const petalSVGs = {
     summer: () => null,
 };
 
+// Tema utama tetap memakai bunga jatuh yang sama seperti desain sebelumnya.
+petalSVGs.tokuup = petalSVGs.spring;
+
 // ── Theme particle configs ────────────────────────────────────
 const themeConfigs = {
     spring: {
@@ -78,6 +81,12 @@ const themeConfigs = {
         swayRange: 0,
         opacity: [0, 0],
     },
+};
+
+themeConfigs.tokuup = {
+    ...themeConfigs.spring,
+    count: 18,
+    colors: ['#F6B8C8', '#F8CAD5', '#F2A9BD', '#FFDDE5', '#EFA1B7'],
 };
 
 // ── Seeded PRNG ───────────────────────────────────────────────

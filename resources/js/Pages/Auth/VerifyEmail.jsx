@@ -36,9 +36,9 @@ export default function VerifyEmail({ status, sentAt = null }) {
         <GuestAuthLayout>
             <Head title="Verifikasi Email" />
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
+            <div className="rounded-2xl border border-[var(--toku-border)] bg-white p-5 shadow-sm sm:p-8">
                 <div className="mx-auto mb-6 max-w-sm text-center">
-                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
                         <MarkEmailReadOutlinedIcon sx={{ fontSize: 30 }} />
                     </div>
                     <h1 className="text-xl font-extrabold text-gray-900">Verifikasi alamat email</h1>
@@ -54,7 +54,7 @@ export default function VerifyEmail({ status, sentAt = null }) {
                 )}
 
                 {errors.verification && (
-                    <div className="mb-5 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm leading-relaxed text-red-700">
+                    <div className="mb-5 rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 text-sm leading-relaxed text-brand-700">
                         {errors.verification}
                     </div>
                 )}
@@ -63,7 +63,7 @@ export default function VerifyEmail({ status, sentAt = null }) {
                     <button
                         type="submit"
                         disabled={processing || secondsLeft > 0}
-                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-sm font-bold text-ink-900 transition-colors hover:bg-brand-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <RefreshOutlinedIcon sx={{ fontSize: 18 }} />
                         {processing
