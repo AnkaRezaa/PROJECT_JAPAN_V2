@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Models\LogAktivitas;
+use App\Models\KloterBelajar;
 use App\Models\Pengguna;
-use App\Models\RiwayatStatusPengguna;
+use App\Services\AccountSuspensionService;
+use App\Services\AccountDeletionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -14,7 +17,7 @@ use Inertia\Inertia;
 
 class SuperAdminPengelolaAdminController extends SuperAdminDasarController
 {
-    public function __invoke(Request $request)
+    public function __invoke(Request $request, AccountDeletionService $deletions)
     {
         $filters = [
             'search' => (string) $request->string('search'),
@@ -43,7 +46,7 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
         return Inertia::render('SuperAdmin/DataAdmin/DataAdmin', [
             'stats' => [
                 $this->stat('Admin Global', number_format(Pengguna::where('role', 'admin')->where('admin_scope', Pengguna::ADMIN_SCOPE_GLOBAL)->count()), 'G'),
-                $this->stat('Admin Kloter', number_format(Pengguna::where('role', 'admin')->where('admin_scope', Pengguna::ADMIN_SCOPE_KLOTER)->count()), 'K'),
+                $this->stat('Mentor Kelas', number_format(Pengguna::where('role', 'admin')->where('admin_scope', Pengguna::ADMIN_SCOPE_KLOTER)->count()), 'M'),
                 $this->stat('Superadmin', number_format(Pengguna::where('role', 'superadmin')->count()), 'S'),
                 $this->stat('Nonaktif', number_format(Pengguna::whereIn('role', ['admin', 'superadmin'])->where('status', '!=', 'active')->count()), 'X', '0', 'down'),
             ],
@@ -55,15 +58,20 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
                 'raw_scope' => $user->admin_scope,
                 'raw_status' => $user->status,
                 'is_self' => $request->user()->is($user),
+                'kloter_ids' => $user->kloterDikelola()->pluck('id')->map(fn ($id) => (int) $id)->values(),
+                'scheduled_anonymization_label' => optional($user->scheduled_anonymization_at)->translatedFormat('d M Y H:i'),
                 'role' => ucfirst($user->role),
                 'scope' => $user->role === 'superadmin'
                     ? 'Role terpisah'
-                    : ($user->isAdminKloter() ? 'Admin Kloter' : 'Admin Global'),
+                    : ($user->isMentor() ? 'Mentor Kelas' : 'Admin Global'),
                 'focus' => $user->role === 'superadmin'
                     ? 'Operasional platform'
-                    : ($user->isAdminKloter() ? 'Konten bersama dan siswa kloter' : 'Seluruh operasional admin'),
+                    : ($user->isMentor() ? 'Kelas dan siswa dari kloter yang diampu' : 'Seluruh operasional admin'),
                 'updated' => optional($user->updated_at)->diffForHumans() ?? '-',
                 'status' => $this->displayStatus($user->status),
+                'can_permanently_delete' => $deletions->canPermanentlyDelete($user, $request->user()),
+                'can_anonymize' => $deletions->canAnonymize($user, $request->user()),
+                'deletion_blockers' => $deletions->blockers($user, $request->user()),
             ]),
             'activities' => LogAktivitas::with('actor:id,username')
                 ->whereHas('actor', fn ($query) => $query->whereIn('role', ['admin', 'superadmin']))
@@ -73,6 +81,18 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
                 ->map(fn (LogAktivitas $log) => $log->description ?: $log->action)
                 ->values(),
             'filters' => $filters,
+            'kloterOptions' => KloterBelajar::query()
+                ->with(['programPembelajaran:id,title', 'admin:id,username'])
+                ->orderBy('nama')
+                ->get()
+                ->map(fn (KloterBelajar $kloter) => [
+                    'id' => $kloter->id,
+                    'name' => $kloter->nama,
+                    'program' => $kloter->programPembelajaran?->title,
+                    'mentor' => $kloter->admin?->username,
+                    'status' => $kloter->status,
+                ])
+                ->values(),
         ]);
     }
 
@@ -81,7 +101,7 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
         $validated = $request->validate([
             'username' => ['required', 'string', 'max:255', 'unique:users,username'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['nullable', 'string', 'min:8'],
+            'password' => ['nullable', 'string', 'min:12'],
             'role' => ['required', 'in:admin,superadmin'],
             'admin_scope' => [
                 'nullable',
@@ -90,7 +110,7 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
             ],
         ]);
 
-        $password = $validated['password'] ?: Str::password(10, true, true, false, false);
+        $password = $validated['password'] ?: Str::password(12, true, true, false, false);
 
         $admin = Pengguna::create([
             'username' => $validated['username'],
@@ -109,6 +129,50 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
         return redirect()->back()->with('generated_password', $validated['password'] ? null : $password);
     }
 
+    public function update(Request $request, Pengguna $user)
+    {
+        abort_if(! in_array($user->role, ['admin', 'superadmin'], true), 404);
+
+        $validated = $request->validate([
+            'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user->id)],
+            'status' => ['required', 'in:active,suspended'],
+            'password' => ['nullable', 'string', 'min:12'],
+            'kloter_ids' => ['array'],
+            'kloter_ids.*' => ['integer', Rule::exists('kloter_belajar', 'id')],
+        ]);
+
+        abort_if($request->user()->is($user) && $validated['status'] === 'suspended', 422, 'Tidak bisa menangguhkan akun sendiri.');
+
+        if ($user->isMentor() && $validated['status'] === 'suspended' && ! empty($validated['kloter_ids'])) {
+            throw ValidationException::withMessages([
+                'kloter_ids' => 'Aktifkan kembali Mentor Kelas sebelum memberinya kloter.',
+            ]);
+        }
+
+        DB::transaction(function () use ($request, $user, $validated): void {
+            $attributes = ['username' => $validated['username']];
+            if (filled($validated['password'] ?? null)) {
+                $attributes['password'] = Hash::make($validated['password']);
+                $attributes['password_login_enabled'] = true;
+            }
+            $user->update($attributes);
+
+            if ($user->isMentor()) {
+                $kloterIds = collect($validated['kloter_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
+                KloterBelajar::where('admin_id', $user->id)->whereNotIn('id', $kloterIds)->update(['admin_id' => null]);
+                KloterBelajar::whereIn('id', $kloterIds)->update(['admin_id' => $user->id]);
+            }
+
+            if ($validated['status'] !== $user->status) {
+                app(AccountSuspensionService::class)->changeStatus($user, $validated['status'], null, $request->user());
+            }
+        });
+
+        $this->logActivity($request, 'admin.updated', 'user', $user->id, "Memperbarui akun pengelola {$user->username}");
+
+        return back()->with('success', 'Data pengelola berhasil diperbarui.');
+    }
+
     public function updateScope(Request $request, Pengguna $user)
     {
         abort_unless($user->role === 'admin', 404);
@@ -119,7 +183,7 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
 
         if (
             $validated['admin_scope'] === Pengguna::ADMIN_SCOPE_GLOBAL
-            && $user->isAdminKloter()
+            && $user->isMentor()
             && $user->kloterDikelola()->exists()
         ) {
             throw ValidationException::withMessages([
@@ -142,7 +206,7 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
         return back()->with('success', 'Cakupan admin berhasil diperbarui.');
     }
 
-    public function updateStatus(Request $request, Pengguna $user)
+    public function updateStatus(Request $request, Pengguna $user, AccountSuspensionService $suspensions)
     {
         abort_if(! in_array($user->role, ['admin', 'superadmin'], true), 404);
         abort_if($request->user()->id === $user->id && $request->input('status') === 'suspended', 422, 'Tidak bisa menonaktifkan akun sendiri.');
@@ -153,20 +217,7 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
         ]);
 
         $oldStatus = $user->status ?? 'active';
-
-        $user->update([
-            'status' => $validated['status'],
-            'suspended_at' => $validated['status'] === 'suspended' ? now() : null,
-            'suspended_reason' => $validated['status'] === 'suspended' ? ($validated['reason'] ?? null) : null,
-        ]);
-
-        RiwayatStatusPengguna::create([
-            'user_id' => $user->id,
-            'changed_by' => $request->user()->id,
-            'old_status' => $oldStatus,
-            'new_status' => $validated['status'],
-            'reason' => $validated['reason'] ?? null,
-        ]);
+        $suspensions->changeStatus($user, $validated['status'], $validated['reason'] ?? null, $request->user());
 
         $this->logActivity(
             $request,
@@ -185,7 +236,7 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
         abort_if(! in_array($user->role, ['admin', 'superadmin'], true), 404);
         abort_if($request->user()->is($user), 422, 'Tidak bisa mereset password akun sendiri dari halaman ini.');
 
-        $password = Str::password(10, true, true, false, false);
+        $password = Str::password(12, true, true, false, false);
 
         $user->update([
             'password' => Hash::make($password),
@@ -194,5 +245,25 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
         $this->logActivity($request, 'admin.password_reset', 'user', $user->id, "Reset password {$user->role} {$user->username}");
 
         return redirect()->back()->with('generated_password', $password);
+    }
+
+    public function destroy(Request $request, Pengguna $user, AccountDeletionService $deletions)
+    {
+        abort_if(! in_array($user->role, ['admin', 'superadmin'], true), 404);
+        $name = $user->username;
+        $deletions->permanentlyDelete($user, $request->user());
+        $this->logActivity($request, 'admin.deleted', 'user', $user->id, "Menghapus permanen pengelola {$name}");
+
+        return back()->with('success', 'Akun pengelola berhasil dihapus permanen.');
+    }
+
+    public function anonymize(Request $request, Pengguna $user, AccountDeletionService $deletions)
+    {
+        abort_if(! in_array($user->role, ['admin', 'superadmin'], true), 404);
+        $name = $user->username;
+        $deletions->anonymize($user, $request->user());
+        $this->logActivity($request, 'admin.anonymized', 'user', $user->id, "Menganonimkan pengelola {$name}");
+
+        return back()->with('success', 'Identitas pengelola berhasil dianonimkan.');
     }
 }

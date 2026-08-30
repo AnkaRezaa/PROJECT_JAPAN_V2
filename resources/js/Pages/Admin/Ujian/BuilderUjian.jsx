@@ -195,7 +195,7 @@ function StudentExamPreview({ quiz, questions, onClose }) {
             <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
                 <div className="mx-auto flex min-h-16 max-w-7xl items-center gap-3 px-3 py-3 sm:px-6">
                     <div className="min-w-0 flex-1">
-                        <p className="truncate text-[11px] font-black uppercase tracking-[0.18em] text-red-600 dark:text-red-400">Pratinjau siswa</p>
+                        <p className="truncate text-[11px] font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Pratinjau siswa</p>
                         <h2 className="truncate text-sm font-black sm:text-base">{quiz.title || 'Ujian Mingguan'}</h2>
                     </div>
                     <span className="hidden rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 sm:block">
@@ -215,7 +215,7 @@ function StudentExamPreview({ quiz, questions, onClose }) {
             <main className="mx-auto grid max-w-7xl gap-5 px-3 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_260px] lg:py-8">
                 <div className="min-w-0">
                     <section className="mb-5 border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-                        <p className="text-xs font-black uppercase tracking-[0.16em] text-red-600 dark:text-red-400">Ujian Mingguan</p>
+                        <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-600 dark:text-brand-400">Ujian Mingguan</p>
                         <h1 className="mt-2 text-xl font-black sm:text-2xl">{quiz.title || 'Ujian Mingguan'}</h1>
                         <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
                             Ini adalah tampilan yang akan dilihat siswa. Jawaban pada mode preview tidak disimpan.
@@ -253,7 +253,7 @@ function StudentExamPreview({ quiz, questions, onClose }) {
                                             <div className="mt-5 grid gap-3">
                                                 {(question.options || []).filter(Boolean).map((option, optionIndex) => (
                                                     <label key={optionIndex} className="flex items-start gap-3 rounded-md border border-slate-200 p-3.5 dark:border-slate-700">
-                                                        <input type="radio" disabled className="mt-1 border-slate-300 text-red-600" />
+                                                        <input type="radio" disabled className="mt-1 border-slate-300 text-brand-600" />
                                                         <span className="text-sm leading-6">
                                                             <strong className="mr-2">{optionLabels[optionIndex] || String.fromCharCode(65 + optionIndex)}.</strong>
                                                             {option}
@@ -283,7 +283,7 @@ function StudentExamPreview({ quiz, questions, onClose }) {
                                     key={question.id || index}
                                     type="button"
                                     onClick={() => document.getElementById(`preview-question-${index}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                                    className="flex aspect-square items-center justify-center rounded-md border border-slate-200 text-xs font-bold hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:border-slate-700 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                                    className="flex aspect-square items-center justify-center rounded-md border border-slate-200 text-xs font-bold hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 dark:border-slate-700 dark:hover:bg-brand-950/30 dark:hover:text-brand-300"
                                 >
                                     {index + 1}
                                 </button>
@@ -509,7 +509,7 @@ export default function BuilderUjian({ quiz, questions: initialQuestions = [] })
     return (
         <AuthenticatedLayout>
             <Head title={`Builder ${quiz.title || 'Ujian Mingguan'}`} />
-            <div className="min-h-screen bg-[#eef1f4] pb-24 dark:bg-gray-950">
+            <div className="min-h-screen bg-surface-muted pb-24 dark:bg-gray-950">
                 <header className="sticky top-16 z-30 border-b border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:top-0">
                     <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-3 py-3 sm:px-6">
                         <button
@@ -523,7 +523,7 @@ export default function BuilderUjian({ quiz, questions: initialQuestions = [] })
                             <ArrowBackIcon fontSize="small" />
                         </button>
                         <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold uppercase text-red-600">Builder Ujian LMS</p>
+                            <p className="text-xs font-bold uppercase text-brand-600">Builder Ujian LMS</p>
                             <h1 className="truncate text-sm font-bold text-gray-900 dark:text-white sm:text-base">{quiz.title || 'Ujian Mingguan'}</h1>
                         </div>
                         <span className={`rounded-full px-3 py-1 text-xs font-bold ${quiz.status === 'published' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'}`}>
@@ -539,7 +539,7 @@ export default function BuilderUjian({ quiz, questions: initialQuestions = [] })
                             <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
                             <span className="hidden sm:inline">Pratinjau siswa</span>
                         </button>
-                        <button type="button" onClick={saveExam} disabled={processing} className="flex h-10 items-center gap-2 rounded-md bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50">
+                        <button type="button" onClick={saveExam} disabled={processing} className="flex h-10 items-center gap-2 rounded-md bg-brand-600 px-4 text-xs font-bold text-white hover:bg-brand-700 disabled:opacity-50">
                             <SaveOutlinedIcon sx={{ fontSize: 18 }} />
                             {processing ? 'Menyimpan...' : 'Simpan ujian'}
                         </button>
@@ -578,7 +578,7 @@ export default function BuilderUjian({ quiz, questions: initialQuestions = [] })
                             </div>
                         </div>
                         {(errors.time_limit || errors.passing_score || errors.questions) && (
-                            <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+                            <p className="mt-4 rounded-md border border-brand-200 bg-brand-50 p-3 text-xs font-bold text-brand-700 dark:border-brand-900 dark:bg-brand-950/30 dark:text-brand-300">
                                 {errors.time_limit || errors.passing_score || errors.questions}
                             </p>
                         )}
@@ -601,7 +601,7 @@ export default function BuilderUjian({ quiz, questions: initialQuestions = [] })
                         <button type="button" onClick={resetToSaved} disabled={!hasUnsavedChanges} className="flex h-10 items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
                             <RestartAltIcon sx={{ fontSize: 18 }} /> Reset
                         </button>
-                        <button type="button" onClick={removeAllQuestions} disabled={data.questions.length === 0} className="flex h-10 items-center gap-2 rounded-md border border-red-200 bg-white px-3 text-xs font-bold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-900/50 dark:bg-gray-900 dark:hover:bg-red-950/20">
+                        <button type="button" onClick={removeAllQuestions} disabled={data.questions.length === 0} className="flex h-10 items-center gap-2 rounded-md border border-brand-200 bg-white px-3 text-xs font-bold text-brand-600 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-brand-900/50 dark:bg-gray-900 dark:hover:bg-brand-950/20">
                             <DeleteSweepOutlinedIcon sx={{ fontSize: 18 }} /> Hapus semua soal
                         </button>
                         <div className="ml-auto text-xs font-semibold text-gray-500">
@@ -616,9 +616,9 @@ export default function BuilderUjian({ quiz, questions: initialQuestions = [] })
                                 <label><span className="mb-1 block text-xs font-bold text-gray-500">Mode</span><select value={generator.data.mode} onChange={(event) => generator.setData('mode', event.target.value)} className="h-10 w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-950 dark:text-white"><option value="word_to_meaning">Kata ke arti</option><option value="meaning_to_word">Arti ke kata</option><option value="reading_to_word">Bacaan ke kata</option></select></label>
                                 <label><span className="mb-1 block text-xs font-bold text-gray-500">Jumlah</span><input type="number" min="1" max="50" value={generator.data.count} onChange={(event) => generator.setData('count', event.target.value)} className="h-10 w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-950 dark:text-white" /></label>
                                 <label><span className="mb-1 block text-xs font-bold text-gray-500">Status sumber</span><select value={generator.data.status} onChange={(event) => generator.setData('status', event.target.value)} className="h-10 w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-950 dark:text-white"><option value="published">Published</option><option value="draft">Draft</option><option value="all">Semua</option></select></label>
-                                <button type="button" disabled={generator.processing} onClick={generateQuestions} className="mt-auto h-10 rounded-md bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50">{generator.processing ? 'Membuat...' : 'Tambahkan soal'}</button>
+                                <button type="button" disabled={generator.processing} onClick={generateQuestions} className="mt-auto h-10 rounded-md bg-brand-600 px-4 text-xs font-bold text-white hover:bg-brand-700 disabled:opacity-50">{generator.processing ? 'Membuat...' : 'Tambahkan soal'}</button>
                             </div>
-                            {Object.keys(generator.errors).length > 0 && <p className="mt-3 text-xs font-bold text-red-600">{Object.values(generator.errors)[0]}</p>}
+                            {Object.keys(generator.errors).length > 0 && <p className="mt-3 text-xs font-bold text-brand-600">{Object.values(generator.errors)[0]}</p>}
                         </section>
                     )}
 
@@ -663,7 +663,7 @@ export default function BuilderUjian({ quiz, questions: initialQuestions = [] })
                             </p>
                             <p className="mt-1 text-xs text-gray-500">Periksa pratinjau siswa sebelum mengubah status menjadi Published di Bank Kuis.</p>
                         </div>
-                        <button type="button" onClick={saveExam} disabled={processing || firstErrorIndex >= 0} className="h-11 rounded-md bg-red-600 px-6 text-sm font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+                        <button type="button" onClick={saveExam} disabled={processing || firstErrorIndex >= 0} className="h-11 rounded-md bg-brand-600 px-6 text-sm font-bold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50">
                             {processing ? 'Menyimpan...' : 'Simpan seluruh soal'}
                         </button>
                     </div>

@@ -440,8 +440,8 @@ class AdminPresentasiController extends Controller
             'Cache-Control' => 'private, no-store, max-age=0',
             'Pragma' => 'no-cache',
             'X-Content-Type-Options' => 'nosniff',
-            'X-Japanlingo-Pdf-Transport' => 'xor-v1',
-            'X-Japanlingo-Pdf-Size' => (string) filesize($path),
+            'X-Toku-Up-Pdf-Transport' => 'xor-v1',
+            'X-Toku-Up-Pdf-Size' => (string) filesize($path),
         ]);
     }
 
@@ -706,7 +706,7 @@ class AdminPresentasiController extends Controller
             return true;
         }
 
-        return $user->isAdminKloter()
+        return $user->isMentor()
             && $user->kloterDikelola()
                 ->where('program_pembelajaran_id', $module->program_pembelajaran_id)
                 ->exists();
@@ -801,7 +801,7 @@ class AdminPresentasiController extends Controller
 
     private function xorPdfChunk(string $chunk, int $offset = 0): string
     {
-        $key = 'japanlingo-pdf-viewer';
+        $key = 'toku-up-pdf-viewer';
         $keyLength = strlen($key);
         $length = strlen($chunk);
         $encoded = '';

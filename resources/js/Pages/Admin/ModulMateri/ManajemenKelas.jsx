@@ -31,7 +31,7 @@ const emptyForm = {
     sort_order: 1,
 };
 
-const inputClass = 'w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition focus:border-[#E64A19] focus:ring-4 focus:ring-orange-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:focus:ring-orange-900/30';
+const inputClass = 'w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30';
 
 function StatusBadge({ status }) {
     const isPublished = status === 'published';
@@ -199,16 +199,16 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
         <AuthenticatedLayout>
             <Head title="Admin - Kelas" />
 
-            <div className="min-h-screen bg-[#F8F9FB] dark:bg-gray-950">
+            <div className="min-h-screen bg-surface-muted">
                 <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
                     <section className="overflow-hidden rounded-[1.5rem] border border-orange-100 bg-gradient-to-br from-orange-50 via-white to-amber-50 p-5 shadow-sm dark:border-orange-900/30 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900">
                         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                             <div className="flex items-start gap-4">
-                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#E64A19] text-white">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-white">
                                     <SchoolIcon sx={{ fontSize: 25 }} />
                                 </div>
                                 <div>
-                                    <p className="text-xs font-black uppercase tracking-[0.28em] text-[#E64A19]">Pengelolaan Kelas</p>
+                                    <p className="text-xs font-black uppercase tracking-[0.28em] text-brand-700">Pengelolaan Kelas</p>
                                     <h1 className="mt-1 text-3xl font-black text-gray-900 dark:text-white">Manajemen Kelas</h1>
                                     <p className="mt-2 max-w-2xl text-sm font-semibold text-gray-500 dark:text-gray-400">
                                         Atur thumbnail, judul, pengajar, status, dan urutan kelas yang tampil di halaman user.
@@ -216,7 +216,7 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                 </div>
                             </div>
 
-                            <button onClick={openCreate} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#E64A19] px-5 text-sm font-black text-white shadow-sm shadow-orange-500/20 transition-colors hover:bg-[#D84315]">
+                            <button onClick={openCreate} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-brand-600 px-5 text-sm font-black text-white shadow-sm shadow-brand-500/20 transition-colors hover:bg-brand-700">
                                 <AddIcon sx={{ fontSize: 18 }} />
                                 Tambah Kelas
                             </button>
@@ -275,7 +275,7 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                     <button
                                         type="button"
                                         onClick={() => setManagingProgram(program)}
-                                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#E64A19] px-4 py-2.5 text-sm font-black text-white shadow-sm shadow-orange-500/20 transition-colors hover:bg-[#D84315]"
+                                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-black text-white shadow-sm shadow-brand-500/20 transition-colors hover:bg-brand-700"
                                     >
                                         <MenuBookIcon sx={{ fontSize: 18 }} />
                                         Kelola Isi
@@ -300,7 +300,7 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                     key={`${link.label}-${index}`}
                                     href={link.url || '#'}
                                     dangerouslySetInnerHTML={{ __html: link.label }}
-                                    className={`rounded-xl px-4 py-2 text-sm font-bold transition-all ${link.active ? 'bg-[#E64A19] text-white shadow-md' : 'border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400'} ${!link.url ? 'pointer-events-none opacity-50' : ''}`}
+                                    className={`rounded-xl px-4 py-2 text-sm font-bold transition-all ${link.active ? 'bg-brand-600 text-white shadow-md' : 'border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400'} ${!link.url ? 'pointer-events-none opacity-50' : ''}`}
                                 />
                             ))}
                         </div>
@@ -334,7 +334,7 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                     >
                         <div className="sticky top-0 z-10 -mx-5 -mt-5 flex items-start justify-between gap-4 border-b border-gray-100 bg-white/95 px-5 py-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95 sm:-mx-6 sm:-mt-6 sm:px-6">
                             <div className="min-w-0">
-                                <p className="text-xs font-black uppercase tracking-[0.2em] text-[#E64A19]">Kelola Isi Kelas</p>
+                                <p className="text-xs font-black uppercase tracking-[0.2em] text-brand-700">Kelola Isi Kelas</p>
                                 <h2 id="manage-class-title" className="mt-1 truncate text-xl font-black text-gray-900 dark:text-white">
                                     {managingProgram.title}
                                 </h2>
@@ -406,7 +406,7 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                     setManagingProgram(null);
                                     setDeleteTarget(program);
                                 }}
-                                className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-red-100 px-3 py-2 text-xs font-black text-red-600 transition hover:bg-red-50 dark:border-red-900/40 dark:hover:bg-red-950/20"
+                                className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-brand-100 px-3 py-2 text-xs font-black text-brand-600 transition hover:bg-brand-50 dark:border-brand-900/40 dark:hover:bg-brand-950/20"
                             >
                                 <DeleteOutlineIcon sx={{ fontSize: 16 }} />
                                 Hapus Kelas
@@ -520,11 +520,11 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                     </Field>
                                 </div>
 
-                                {Object.values(form.errors).length > 0 && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:bg-red-950/30">{Object.values(form.errors)[0]}</p>}
+                                {Object.values(form.errors).length > 0 && <p className="mt-4 rounded-2xl bg-brand-50 px-4 py-3 text-sm font-bold text-brand-600 dark:bg-brand-950/30">{Object.values(form.errors)[0]}</p>}
 
                                 <div className="sticky bottom-0 mt-6 flex justify-end gap-3 border-t border-gray-100 bg-white/95 pt-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
                                     <button type="button" onClick={closeForm} className="rounded-2xl border border-gray-200 px-5 py-3 text-sm font-black text-gray-600 dark:border-gray-700 dark:text-gray-300">Batal</button>
-                                    <button disabled={form.processing} className="rounded-2xl bg-[#E64A19] px-6 py-3 text-sm font-black text-white disabled:opacity-50">{form.processing ? 'Menyimpan...' : 'Simpan Kelas'}</button>
+                                    <button disabled={form.processing} className="rounded-2xl bg-brand-600 px-6 py-3 text-sm font-black text-white disabled:opacity-50">{form.processing ? 'Menyimpan...' : 'Simpan Kelas'}</button>
                                 </div>
                             </div>
                         </form>

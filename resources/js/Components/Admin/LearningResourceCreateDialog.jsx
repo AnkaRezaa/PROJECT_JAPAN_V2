@@ -12,16 +12,16 @@ const RESOURCE_CONFIG = {
     quiz: {
         label: 'Kuis',
         routeName: 'admin.quizzes.store',
-        accent: 'bg-red-600 hover:bg-red-700',
+        accent: 'bg-brand-600 hover:bg-brand-700',
     },
     presentation: {
         label: 'Presentasi',
         routeName: 'admin.presentations.store',
-        accent: 'bg-orange-600 hover:bg-orange-700',
+        accent: 'bg-learning-700 hover:bg-learning-600',
     },
 };
 
-const inputClass = 'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:focus:ring-orange-900/30';
+const inputClass = 'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-focus/15 dark:border-gray-700 dark:bg-gray-950 dark:text-white';
 
 const initialData = (resourceType, module, day, weekSlot = null) => ({
     title: resourceType === 'presentation'

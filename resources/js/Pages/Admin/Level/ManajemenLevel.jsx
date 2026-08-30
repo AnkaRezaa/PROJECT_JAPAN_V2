@@ -96,12 +96,12 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
 
     return (
         <AuthenticatedLayout>
-            <Head title="Manajemen Level - Japanlingo" />
+            <Head title="Manajemen Level - TOKU-UP" />
 
-            <div className="min-h-screen bg-[#F8F9FB] font-sans">
+            <div className="min-h-screen bg-surface-muted font-sans">
                 <header className="sticky top-16 z-40 flex flex-col gap-4 border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:top-0 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E64A19] text-white">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white">
                             <LayersOutlinedIcon sx={{ fontSize: 20 }} />
                         </div>
                         <div>
@@ -114,7 +114,7 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
                         <button onClick={() => openTrackModal()} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold text-gray-700 hover:bg-gray-50">
                             <AddIcon sx={{ fontSize: 18 }} /> Jalur
                         </button>
-                        <button onClick={openCreateModal} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-[#E64A19] px-5 text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-colors hover:bg-[#D84315]">
+                        <button onClick={openCreateModal} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-bold text-white shadow-md shadow-brand-500/20 transition-colors hover:bg-brand-700">
                             <AddIcon sx={{ fontSize: 18 }} /> Level
                         </button>
                     </div>
@@ -161,7 +161,7 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
                                         <tr key={level.id} className="transition-colors hover:bg-gray-50/80">
                                             <td className="px-4 py-4 text-sm font-bold text-gray-600 sm:px-6">{level.curriculum_track?.name || '-'}</td>
                                             <td className="px-4 py-4 sm:px-6">
-                                                <div className="inline-flex rounded-full bg-orange-50 px-3 py-1 text-xs font-black text-[#E64A19]">
+                                                <div className="inline-flex rounded-full bg-orange-50 px-3 py-1 text-xs font-black text-brand-700">
                                                     {level.level_name}
                                                 </div>
                                             </td>
@@ -172,13 +172,13 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
                                                 <div className="flex items-center justify-end gap-2">
                                                     <button
                                                         onClick={() => openEditModal(level)}
-                                                        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                                                        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-brand-50 hover:text-brand-600"
                                                     >
                                                         <EditOutlinedIcon sx={{ fontSize: 18 }} />
                                                     </button>
                                                     <button
                                                         onClick={() => setDeleteConfirm(level)}
-                                                        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                                                        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-brand-50 hover:text-brand-600"
                                                     >
                                                         <DeleteOutlineIcon sx={{ fontSize: 18 }} />
                                                     </button>
@@ -204,7 +204,7 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
 
                         <form onSubmit={handleSubmit} className="space-y-4 p-6">
                             <div>
-                                <label className="mb-1.5 block text-sm font-bold text-gray-700">Jalur Kurikulum <span className="text-red-500">*</span></label>
+                                <label className="mb-1.5 block text-sm font-bold text-gray-700">Jalur Kurikulum <span className="text-brand-500">*</span></label>
                                 <select value={data.curriculum_track_id} onChange={(e) => setData('curriculum_track_id', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-medium text-gray-900 outline-none focus:border-orange-200 focus:ring-4 focus:ring-orange-500/10">
                                     <option value="">Pilih jalur</option>
                                     {tracks.map((track) => <option key={track.id} value={track.id}>{track.name}</option>)}
@@ -213,7 +213,7 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
                             </div>
                             <div>
                                 <label className="mb-1.5 block text-sm font-bold text-gray-700">
-                                    Nama Level <span className="text-red-500">*</span>
+                                    Nama Level <span className="text-brand-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -227,7 +227,7 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
 
                             <div>
                                 <label className="mb-1.5 block text-sm font-bold text-gray-700">
-                                    Stage <span className="text-red-500">*</span>
+                                    Stage <span className="text-brand-500">*</span>
                                 </label>
                                 <input
                                     type="number"
@@ -254,7 +254,7 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
                                 <button
                                     type="submit"
                                     disabled={processing}
-                                    className="rounded-xl bg-[#E64A19] px-5 py-2.5 text-sm font-black text-white shadow-md shadow-orange-500/20 transition-colors hover:bg-[#D84315] disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white shadow-md shadow-brand-500/20 transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {processing ? 'Menyimpan...' : editingLevel ? 'Simpan Perubahan' : 'Tambah Level'}
                                 </button>
@@ -289,7 +289,7 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
                             {editingTrack && <button type="button" onClick={() => { setShowTrackModal(false); setDeleteTrackConfirm(editingTrack); }} className="text-sm font-bold text-red-600">Hapus jalur</button>}
                             <div className="flex justify-end gap-3 pt-2">
                                 <button type="button" onClick={() => setShowTrackModal(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold text-gray-600">Batal</button>
-                                <button disabled={trackForm.processing} className="rounded-xl bg-[#E64A19] px-5 py-2.5 text-sm font-black text-white disabled:opacity-60">Simpan</button>
+                                <button disabled={trackForm.processing} className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-60">Simpan</button>
                             </div>
                         </form>
                     </div>

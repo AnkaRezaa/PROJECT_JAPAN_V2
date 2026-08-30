@@ -13,6 +13,7 @@ use App\Services\ImportSpreadsheetService;
 use App\Services\NotifikasiPenggunaService;
 use App\Services\SoalKuisService;
 use App\Services\TemplateExcelService;
+use App\Services\KloterBelajarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -22,11 +23,16 @@ use Inertia\Inertia;
 
 class AdminKuisController extends Controller
 {
+    public function __construct(private readonly KloterBelajarService $kloterService)
+    {
+    }
+
     public function store(
         KuisRequest $request,
         NotifikasiPenggunaService $notifikasi
     ) {
         $validated = $request->validated();
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $validated['module_id']);
         $stayOnRoadmap = (bool) Arr::pull($validated, 'stay_on_roadmap', false);
         $validated['available_at'] = filled($validated['module_day_id'] ?? null)
             ? null
@@ -61,6 +67,7 @@ class AdminKuisController extends Controller
 
     public function update(KuisRequest $request, Kuis $quiz, NotifikasiPenggunaService $notifikasi)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $quiz->module_id);
         $oldStatus = $quiz->status;
         $validated = $request->validated();
         $validated['available_at'] = filled($validated['module_day_id'] ?? null)
@@ -104,6 +111,7 @@ class AdminKuisController extends Controller
 
     public function updateStatus(Request $request, Kuis $quiz, NotifikasiPenggunaService $notifikasi)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $quiz->module_id);
         $oldStatus = $quiz->status;
         $validated = $request->validate([
             'status' => ['required', 'in:draft,published'],
@@ -124,8 +132,9 @@ class AdminKuisController extends Controller
         return redirect()->back()->with('success', 'Status kuis berhasil diperbarui');
     }
 
-    public function destroy(Kuis $quiz)
+    public function destroy(Request $request, Kuis $quiz)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $quiz->module_id);
         $module = $quiz->module()->first(['id', 'program_pembelajaran_id']);
         $dayId = $quiz->module_day_id;
 
@@ -167,6 +176,7 @@ class AdminKuisController extends Controller
 
     public function builder(Kuis $quiz, Request $request)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $quiz->module_id);
         $quiz->load([
             'module:id,program_pembelajaran_id,title,week_number,level_id',
             'module.level:id,level_name',
@@ -252,9 +262,13 @@ class AdminKuisController extends Controller
                     'id' => $question->id,
                     'type' => $question->type ?: ($quiz->type ?: 'multiple_choice'),
                     'question_text' => $question->question_text,
+                    'question_reading' => $question->question_reading,
                     'correct_answer' => $question->correct_answer,
+                    'correct_answer_reading' => $question->correct_answer_reading,
                     'options' => $question->options ?? [],
+                    'option_readings' => $question->option_readings ?? [],
                     'explanation' => $question->explanation,
+                    'explanation_reading' => $question->explanation_reading,
                     'audio_url' => $question->audio_url,
                     'order' => $question->order,
                     'points' => (int) ($question->points ?? 1),
@@ -277,9 +291,14 @@ class AdminKuisController extends Controller
             'questions.*.id' => 'nullable|integer',
             'questions.*.type' => ['required', Rule::in(['multiple_choice', 'fill_blank', 'listening'])],
             'questions.*.question_text' => 'required|string|max:5000',
+            'questions.*.question_reading' => 'nullable|string|max:5000',
             'questions.*.correct_answer' => 'required|string|max:1000',
+            'questions.*.correct_answer_reading' => 'nullable|string|max:1000',
             'questions.*.options' => 'nullable|array',
+            'questions.*.option_readings' => 'nullable|array',
+            'questions.*.option_readings.*' => 'nullable|string|max:1000',
             'questions.*.explanation' => 'nullable|string|max:5000',
+            'questions.*.explanation_reading' => 'nullable|string|max:5000',
             'questions.*.audio_url' => 'nullable|string|max:2048',
             'questions.*.points' => ['nullable', 'integer', 'min:1', 'max:1000'],
         ]);
@@ -373,13 +392,13 @@ class AdminKuisController extends Controller
 
         $headers = $questions->importHeaders();
         $rows = $questions->templateRows($quiz);
-        $filename = 'japanlingo-quiz-import-template-v1.'.$format;
+        $filename = 'toku-up-quiz-import-template-v1.'.$format;
 
         if ($format === 'csv') {
             return $templates->csvResponse($headers, $rows, $filename);
         }
 
-        $path = $templates->xlsxPath($headers, $rows, 'Kuis Import', 'japanlingo_quiz_template_');
+        $path = $templates->xlsxPath($headers, $rows, 'Kuis Import', 'toku_up_quiz_template_');
 
         return response()
             ->download($path, $filename, [

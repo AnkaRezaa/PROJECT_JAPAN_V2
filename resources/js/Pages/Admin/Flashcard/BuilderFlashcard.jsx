@@ -315,7 +315,7 @@ export function FlashcardEditorWorkspace({
                             <AddIcon sx={{ fontSize: 18 }} />
                             Kartu Baru
                         </button>
-                        <button onClick={saveCards} className="flex h-11 items-center gap-2 rounded-xl bg-[#14B8A6] px-5 text-sm font-black text-white">
+                        <button onClick={saveCards} className="flex h-11 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-black text-white transition-colors hover:bg-brand-700">
                             <SaveOutlinedIcon sx={{ fontSize: 18 }} />
                             Simpan Flashcard
                         </button>
@@ -366,7 +366,7 @@ export function FlashcardEditorWorkspace({
                             const index = activeIndex;
 
                             return (
-                            <Card key={`${card.id || 'new'}-${card.vocabulary_id || 'manual'}-${index}`} className="overflow-hidden border-l-4 border-l-[#14B8A6]">
+                            <Card key={`${card.id || 'new'}-${card.vocabulary_id || 'manual'}-${index}`} className="overflow-hidden border-l-4 border-l-brand-600">
                                 <div className="mb-4 flex flex-col gap-3 border-b border-gray-100 pb-4 dark:border-gray-800 sm:flex-row sm:items-start sm:justify-between">
                                     <div>
                                         <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-600">Kartu #{index + 1}</p>
@@ -430,7 +430,7 @@ export function FlashcardEditorWorkspace({
 
                                 <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
                                         <div className="mb-3">
-                                            <p className="text-xs font-black uppercase tracking-[0.2em] text-red-600">Detail Kanji (Opsional)</p>
+                                            <p className="text-xs font-black uppercase tracking-[0.2em] text-brand-600">Detail Kanji (Opsional)</p>
                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Isi untuk kartu yang memuat kanji. Data yang sama akan tersimpan di bank konten.</p>
                                         </div>
                                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -467,7 +467,7 @@ export function FlashcardEditorWorkspace({
                     </div>
 
                     <aside className={`${showLibrary ? 'fixed inset-0 z-[110] flex justify-end bg-gray-950/60' : 'hidden'} xl:sticky xl:top-6 xl:block xl:self-start xl:bg-transparent`}>
-                        <div className={`${showLibrary ? 'h-full w-full max-w-md space-y-4 overflow-y-auto bg-[#F8F9FB] p-4 dark:bg-gray-950' : 'space-y-4'}`}>
+                        <div className={`${showLibrary ? 'h-full w-full max-w-md space-y-4 overflow-y-auto bg-surface-muted p-4 dark:bg-gray-950' : 'space-y-4'}`}>
                             <div className="flex items-center justify-between xl:hidden">
                                 <div>
                                     <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-600">Sumber Kartu</p>
@@ -570,13 +570,13 @@ export function FlashcardEditorWorkspace({
                                         <option value="published">Published</option>
                                     </select>
                                 </label>
-                                {Object.keys(settingsForm.errors).length > 0 && <p className="text-sm font-bold text-red-600">{Object.values(settingsForm.errors)[0]}</p>}
+                                {Object.keys(settingsForm.errors).length > 0 && <p className="text-sm font-bold text-brand-600">{Object.values(settingsForm.errors)[0]}</p>}
                             </div>
                             <div className="mt-6 flex flex-col-reverse gap-3 border-t border-gray-100 pt-5 dark:border-gray-800 sm:flex-row sm:justify-between">
                                 <button type="button" onClick={deleteSet} className="h-11 rounded-xl border border-red-200 px-4 text-sm font-black text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-950/20">Hapus set</button>
                                 <div className="flex gap-3">
                                     <button type="button" onClick={() => setShowSetSettings(false)} className="h-11 flex-1 rounded-xl border border-gray-200 px-4 text-sm font-black text-gray-600 dark:border-gray-700 dark:text-gray-300 sm:flex-none">Batal</button>
-                                    <button disabled={settingsForm.processing} className="h-11 flex-1 rounded-xl bg-teal-600 px-5 text-sm font-black text-white disabled:opacity-50 sm:flex-none">{settingsForm.processing ? 'Menyimpan...' : 'Simpan'}</button>
+                                    <button disabled={settingsForm.processing} className="h-11 flex-1 rounded-xl bg-brand-600 px-5 text-sm font-black text-white transition-colors hover:bg-brand-700 disabled:opacity-50 sm:flex-none">{settingsForm.processing ? 'Menyimpan...' : 'Simpan'}</button>
                                 </div>
                             </div>
                         </form>

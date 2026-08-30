@@ -15,6 +15,7 @@ const emptyNews = {
     title: '',
     excerpt: '',
     body: '',
+    reading_blocks: [],
     slug: '',
     category: 'platform',
     status: 'draft',
@@ -31,11 +32,11 @@ const emptyNews = {
 };
 
 function statusClass(status) {
-    if (status === 'Pinned') return 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400';
+    if (status === 'Pinned') return 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400';
     if (status === 'Published') return 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400';
     if (status === 'Scheduled') return 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400';
     if (status === 'Archived') return 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400';
-    return 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400';
+    return 'bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400';
 }
 
 export default function Konten({
@@ -84,6 +85,7 @@ export default function Konten({
             title: item.title || '',
             excerpt: item.excerpt || '',
             body: item.body || '',
+            reading_blocks: item.reading_blocks || [],
             slug: item.slug || '',
             category: item.category || 'platform',
             status: item.raw_status || 'draft',
@@ -133,6 +135,23 @@ export default function Konten({
             forceFormData: true,
             onSuccess: closeForm,
         });
+    };
+
+    const addReadingBlock = () => {
+        setData('reading_blocks', [
+            ...(data.reading_blocks || []),
+            { japanese: '', reading: '', translation: '' },
+        ]);
+    };
+
+    const updateReadingBlock = (index, field, value) => {
+        setData('reading_blocks', data.reading_blocks.map((block, blockIndex) => (
+            blockIndex === index ? { ...block, [field]: value } : block
+        )));
+    };
+
+    const removeReadingBlock = (index) => {
+        setData('reading_blocks', data.reading_blocks.filter((_, blockIndex) => blockIndex !== index));
     };
 
     const deleteNews = () => {
@@ -195,7 +214,7 @@ export default function Konten({
             <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
-                        <p className="text-xs font-black uppercase tracking-[0.3em] text-red-600 dark:text-red-400">Superadmin</p>
+                        <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-600 dark:text-brand-400">Superadmin</p>
                         <h1 className="text-2xl font-black text-gray-900 dark:text-white">Konten & News Maker</h1>
                         <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
                             Portal berita, review status publish, dan attachment dasar untuk dashboard student.
@@ -203,7 +222,7 @@ export default function Konten({
                     </div>
                     <button
                         onClick={openCreate}
-                        className="rounded-xl bg-red-600 px-5 py-3 text-sm font-black text-white shadow-md shadow-red-500/20 transition-colors hover:bg-red-700"
+                        className="rounded-xl bg-brand-600 px-5 py-3 text-sm font-black text-white shadow-md shadow-brand-500/20 transition-colors hover:bg-brand-700"
                     >
                         Buat News
                     </button>
@@ -284,7 +303,7 @@ export default function Konten({
                                             {item.thumbnail_url ? (
                                             <img src={item.thumbnail_url} alt={item.cover_image_alt || item.title} className="h-full w-full object-cover" />
                                             ) : (
-                                                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-red-50 to-gray-100 text-2xl font-black text-red-200 dark:from-gray-800 dark:to-gray-900 dark:text-gray-700">
+                                                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-50 to-gray-100 text-2xl font-black text-brand-200 dark:from-gray-800 dark:to-gray-900 dark:text-gray-700">
                                                     JP
                                                 </div>
                                             )}
@@ -300,7 +319,7 @@ export default function Konten({
                                         </span>
                                             </div>
                                             <div className="mt-3 flex flex-wrap gap-2">
-                                                <span className="rounded-full bg-red-50 px-3 py-1 text-[11px] font-bold text-red-700 dark:bg-red-900/20 dark:text-red-300">{item.category?.replaceAll('-', ' ')}</span>
+                                                <span className="rounded-full bg-brand-50 px-3 py-1 text-[11px] font-bold text-brand-700 dark:bg-brand-900/20 dark:text-brand-300">{item.category?.replaceAll('-', ' ')}</span>
                                                 <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-[11px] font-bold text-gray-600 dark:text-gray-400">{item.audience}</span>
                                                 <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-[11px] font-bold text-gray-600 dark:text-gray-400">{item.attachments.length} attachment</span>
                                             </div>
@@ -315,7 +334,7 @@ export default function Konten({
                                                     </button>
                                                     <button
                                                         onClick={() => setDeleteTarget(item)}
-                                                        className="rounded-lg border border-red-100 dark:border-red-900/30 px-3 py-2 text-xs font-black text-red-600 dark:text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                        className="rounded-lg border border-brand-100 dark:border-brand-900/30 px-3 py-2 text-xs font-black text-brand-600 dark:text-brand-400 transition-colors hover:bg-brand-50 dark:hover:bg-brand-900/20"
                                                     >
                                                         Hapus
                                                     </button>
@@ -334,7 +353,7 @@ export default function Konten({
                                         key={`${link.label}-${index}`}
                                         href={link.url || '#'}
                                         dangerouslySetInnerHTML={{ __html: link.label }}
-                                        className={`rounded-xl px-4 py-2 text-sm font-bold ${link.active ? 'bg-red-600 text-white' : 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`}
+                                        className={`rounded-xl px-4 py-2 text-sm font-bold ${link.active ? 'bg-brand-600 text-white' : 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`}
                                     />
                                 ))}
                             </div>
@@ -371,7 +390,7 @@ export default function Konten({
                                         <p className="text-sm font-black text-gray-900 dark:text-white">{item.item}</p>
                                         <div className="mt-2 flex flex-wrap gap-2">
                                             <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-bold text-gray-600 dark:text-gray-400">{item.by}</span>
-                                            <span className="rounded-full bg-red-50 dark:bg-red-900/20 px-3 py-1 text-xs font-black text-red-700 dark:text-red-400">{item.state}</span>
+                                            <span className="rounded-full bg-brand-50 dark:bg-brand-900/20 px-3 py-1 text-xs font-black text-brand-700 dark:text-brand-400">{item.state}</span>
                                         </div>
                                     </div>
                                 ))}
@@ -411,6 +430,38 @@ export default function Konten({
                                         />
                                         {errors.body && <p className="mt-1 text-xs font-bold text-red-500">{errors.body}</p>}
                                     </div>
+                                    <section className="rounded-2xl border border-sky-100 bg-sky-50/50 p-4 dark:border-sky-900/40 dark:bg-sky-950/20 sm:p-5">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <h4 className="text-sm font-black text-gray-900 dark:text-white">Bantuan Baca Jepang</h4>
+                                                <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">Tambahkan reading kana dan terjemahan per bagian. Romaji dibuat dari reading, bukan ditebak dari kanji.</p>
+                                            </div>
+                                            <button type="button" onClick={addReadingBlock} className="shrink-0 rounded-xl bg-sky-600 px-4 py-2.5 text-xs font-black text-white hover:bg-sky-700">Tambah Bagian</button>
+                                        </div>
+                                        <div className="mt-4 space-y-3">
+                                            {(data.reading_blocks || []).map((block, index) => (
+                                                <div key={index} className="rounded-xl border border-sky-100 bg-white p-4 dark:border-sky-900/40 dark:bg-gray-900">
+                                                    <div className="grid gap-3 lg:grid-cols-2">
+                                                        <label className="space-y-1.5">
+                                                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Teks Jepang</span>
+                                                            <textarea rows={2} value={block.japanese} onChange={(event) => updateReadingBlock(index, 'japanese', event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                                        </label>
+                                                        <label className="space-y-1.5">
+                                                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Reading kana</span>
+                                                            <textarea rows={2} value={block.reading} onChange={(event) => updateReadingBlock(index, 'reading', event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                                        </label>
+                                                        <label className="space-y-1.5 lg:col-span-2">
+                                                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Terjemahan Indonesia</span>
+                                                            <textarea rows={2} value={block.translation} onChange={(event) => updateReadingBlock(index, 'translation', event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                                        </label>
+                                                    </div>
+                                                    <button type="button" onClick={() => removeReadingBlock(index)} className="mt-3 text-xs font-black text-rose-600 hover:text-rose-700">Hapus bagian</button>
+                                                </div>
+                                            ))}
+                                            {(data.reading_blocks || []).length === 0 && <p className="rounded-xl border border-dashed border-sky-200 px-4 py-6 text-center text-xs font-bold text-sky-700 dark:border-sky-900/50 dark:text-sky-300">Belum ada bantuan baca.</p>}
+                                        </div>
+                                        {errors.reading_blocks && <p className="mt-2 text-xs font-bold text-red-500">{errors.reading_blocks}</p>}
+                                    </section>
                                 </div>
 
                                 <div className="min-h-0 space-y-4 overflow-y-auto border-t border-gray-100 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-gray-900/40 sm:p-6 xl:border-l xl:border-t-0">
@@ -453,7 +504,7 @@ export default function Konten({
                                             {editingNews?.cover_url && !data.cover_image && (
                                                 <img src={editingNews.cover_url} alt={editingNews.cover_image_alt || editingNews.title} className="mb-3 aspect-[16/9] w-full rounded-lg object-cover" />
                                             )}
-                                            <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={(e) => setData('cover_image', e.target.files?.[0] || null)} className="block w-full text-xs text-gray-600 dark:text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-red-50 file:px-3 file:py-2 file:font-bold file:text-red-700 dark:file:bg-red-900/30 dark:file:text-red-300" />
+                                            <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={(e) => setData('cover_image', e.target.files?.[0] || null)} className="block w-full text-xs text-gray-600 dark:text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-bold file:text-brand-700 dark:file:bg-brand-900/30 dark:file:text-brand-300" />
                                             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">JPG, PNG, atau WebP. Maksimum 4 MB.</p>
                                         </div>
                                         <div>
@@ -490,7 +541,7 @@ export default function Konten({
                                         <input type="datetime-local" value={data.ends_at} onChange={(e) => setData('ends_at', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm text-gray-900 dark:text-white" />
                                     </div>
                                     <label className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300">
-                                        <input type="checkbox" checked={data.is_pinned} onChange={(e) => setData('is_pinned', e.target.checked)} className="rounded border-gray-300 text-red-600 focus:ring-red-500" />
+                                        <input type="checkbox" checked={data.is_pinned} onChange={(e) => setData('is_pinned', e.target.checked)} className="rounded border-gray-300 text-brand-600 focus:ring-focus" />
                                         Pin di dashboard
                                     </label>
 
@@ -508,8 +559,8 @@ export default function Konten({
                                                             </div>
                                                                             <button type="button" onClick={() => deleteAttachment(attachment)} className="text-xs font-black text-red-600 dark:text-red-400">Hapus</button>
                                                         </div>
-                                                        {attachment.url && <a href={attachment.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-bold text-red-600 dark:text-red-400">Buka file</a>}
-                                                        {attachment.video_embed_url && <a href={attachment.video_embed_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-bold text-red-600 dark:text-red-400">Buka video</a>}
+                                                        {attachment.url && <a href={attachment.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-bold text-brand-600 dark:text-brand-400">Buka file</a>}
+                                                        {attachment.video_embed_url && <a href={attachment.video_embed_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-bold text-brand-600 dark:text-brand-400">Buka video</a>}
                                                     </div>
                                                 ))}
                                             </div>
@@ -523,7 +574,7 @@ export default function Konten({
                                                 {attachmentType === 'video_embed' ? (
                                                     <input value={videoEmbedUrl} onChange={(e) => setVideoEmbedUrl(e.target.value)} placeholder="https://youtube.com/..." className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm text-gray-900 dark:text-white" />
                                                 ) : (
-                                                    <input type="file" onChange={(e) => setAttachmentFile(e.target.files[0] || null)} accept={attachmentType === 'image' ? '.jpg,.jpeg,.png,.webp' : '.pdf,.doc,.docx'} className="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-4 file:rounded-xl file:border-0 file:bg-red-50 file:px-4 file:py-3 file:text-sm file:font-black file:text-red-600" />
+                                                    <input type="file" onChange={(e) => setAttachmentFile(e.target.files[0] || null)} accept={attachmentType === 'image' ? '.jpg,.jpeg,.png,.webp' : '.pdf,.doc,.docx'} className="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-4 file:rounded-xl file:border-0 file:bg-brand-50 file:px-4 file:py-3 file:text-sm file:font-black file:text-brand-600" />
                                                 )}
                                                 <button type="button" onClick={uploadAttachment} className="w-full rounded-xl bg-gray-900 px-4 py-3 text-sm font-black text-white dark:bg-white dark:text-gray-900">Tambah Attachment</button>
                                             </div>
@@ -534,10 +585,10 @@ export default function Konten({
 
                             <div className="flex shrink-0 justify-end gap-3 border-t border-gray-100 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6">
                                 <button type="button" onClick={closeForm} className="rounded-xl border border-gray-200 dark:border-gray-700 px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-300">Batal</button>
-                                <button type="button" onClick={() => setShowPreview(true)} className="rounded-xl border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-black text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300">
+                                <button type="button" onClick={() => setShowPreview(true)} className="rounded-xl border border-brand-200 bg-brand-50 px-5 py-2.5 text-sm font-black text-brand-700 transition-colors hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-900/20 dark:text-brand-300">
                                     Preview
                                 </button>
-                                <button disabled={processing} className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-black text-white shadow-md shadow-red-500/20 transition-colors hover:bg-red-700 disabled:opacity-60">
+                                <button disabled={processing} className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white shadow-md shadow-brand-500/20 transition-colors hover:bg-brand-700 disabled:opacity-60">
                                     {processing ? 'Menyimpan...' : editingNews ? 'Simpan News' : 'Buat News'}
                                 </button>
                             </div>
@@ -552,7 +603,7 @@ export default function Konten({
                     <div className="mx-auto max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-gray-950">
                         <div className="flex flex-col gap-4 border-b border-gray-100 p-5 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between sm:p-6">
                             <div>
-                                <p className="text-xs font-black uppercase tracking-[0.3em] text-red-600 dark:text-red-400">Preview News</p>
+                                <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-600 dark:text-brand-400">Preview News</p>
                                 <h3 className="mt-1 text-lg font-black text-gray-900 dark:text-white">Tampilan sebelum publish</h3>
                             </div>
                             <button type="button" onClick={() => setShowPreview(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold text-gray-600 dark:border-gray-700 dark:text-gray-300">
@@ -563,7 +614,7 @@ export default function Konten({
                         <article>
                             <header className="bg-gray-50 px-5 py-8 dark:bg-gray-900/40 sm:px-8">
                                 <div className="flex flex-wrap gap-2 text-xs font-black uppercase tracking-wider">
-                                    <span className="rounded-full bg-red-50 px-3 py-1 text-red-600 dark:bg-red-900/20 dark:text-red-300">{data.category?.replaceAll('-', ' ') || 'platform'}</span>
+                                    <span className="rounded-full bg-brand-50 px-3 py-1 text-brand-600 dark:bg-brand-900/20 dark:text-brand-300">{data.category?.replaceAll('-', ' ') || 'platform'}</span>
                                     <span className="rounded-full bg-gray-100 px-3 py-1 text-gray-600 dark:bg-gray-800 dark:text-gray-300">{data.status || 'draft'}</span>
                                     <span className="rounded-full bg-gray-100 px-3 py-1 text-gray-600 dark:bg-gray-800 dark:text-gray-300">{data.audience || 'students'}</span>
                                     {data.is_pinned && <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">Pinned</span>}

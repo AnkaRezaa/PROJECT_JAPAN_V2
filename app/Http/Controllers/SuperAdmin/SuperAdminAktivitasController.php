@@ -5,20 +5,30 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Models\LogAktivitas;
 use App\Models\Pengguna;
 use App\Models\RiwayatLogin;
+use App\Models\UmpanBalikProduk;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SuperAdminAktivitasController extends SuperAdminDasarController
 {
     public function __invoke(Request $request)
     {
         $filters = [
+            'view' => $request->string('view')->value() === 'feedback' ? 'feedback' : 'activity',
             'date_from' => $request->date('date_from')?->toDateString(),
             'date_to' => $request->date('date_to')?->toDateString(),
             'actor_id' => $request->integer('actor_id') ?: null,
             'action' => $request->string('action')->value() ?: 'all',
             'login_status' => $request->string('login_status')->value() ?: 'all',
+            'feedback_category' => $request->string('feedback_category')->value() ?: 'all',
+            'feedback_status' => $request->string('feedback_status')->value() ?: 'all',
+            'feedback_role' => $request->string('feedback_role')->value() ?: 'all',
+            'feedback_search' => trim($request->string('feedback_search')->value()),
         ];
 
         $timeline = LogAktivitas::with('actor:id,username')
@@ -52,6 +62,27 @@ class SuperAdminAktivitasController extends SuperAdminDasarController
                 'device' => str($history->user_agent ?? '-')->limit(48)->toString(),
             ]);
 
+        $feedback = $this->feedbackQuery($filters)
+            ->with(['user:id,username,email', 'handler:id,username'])
+            ->latest()
+            ->paginate(15, ['*'], 'feedback_page')
+            ->withQueryString()
+            ->through(fn (UmpanBalikProduk $item) => [
+                'id' => $item->id,
+                'reporter' => $item->user?->username ?? 'Akun dihapus',
+                'email' => $item->user?->email,
+                'role' => $item->role_snapshot,
+                'category' => $item->category,
+                'status' => $item->status,
+                'message' => $item->message,
+                'page_url' => $item->page_url,
+                'device' => Str::limit((string) $item->user_agent, 80),
+                'resolution_note' => $item->resolution_note,
+                'handler' => $item->handler?->username,
+                'created_at' => $item->created_at?->format('d M Y H:i'),
+                'handled_at' => $item->handled_at?->format('d M Y H:i'),
+            ]);
+
         return Inertia::render('SuperAdmin/Aktivitas/Aktivitas', [
             'activityStats' => [
                 $this->stat('Aksi Hari Ini', number_format(LogAktivitas::whereDate('created_at', today())->count()), 'L'),
@@ -61,6 +92,12 @@ class SuperAdminAktivitasController extends SuperAdminDasarController
             ],
             'timeline' => $timeline,
             'logins' => $logins,
+            'productFeedback' => $feedback,
+            'feedbackStats' => [
+                'new' => UmpanBalikProduk::where('status', 'new')->count(),
+                'reviewing' => UmpanBalikProduk::where('status', 'reviewing')->count(),
+                'resolved' => UmpanBalikProduk::where('status', 'resolved')->count(),
+            ],
             'riskyEvents' => $this->riskyEvents(),
             'filters' => $filters,
             'filterOptions' => [
@@ -79,6 +116,95 @@ class SuperAdminAktivitasController extends SuperAdminDasarController
                     ->values(),
             ],
         ]);
+    }
+
+    public function updateFeedback(Request $request, UmpanBalikProduk $feedback): RedirectResponse
+    {
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(['new', 'reviewing', 'resolved'])],
+            'resolution_note' => ['nullable', 'string', 'max:3000'],
+        ]);
+
+        $feedback->update([
+            'status' => $validated['status'],
+            'resolution_note' => trim((string) ($validated['resolution_note'] ?? '')) ?: null,
+            'handled_by' => $validated['status'] === 'new' ? null : $request->user()->id,
+            'handled_at' => $validated['status'] === 'new' ? null : now(),
+        ]);
+
+        $this->logActivity(
+            $request,
+            'product_feedback.status_changed',
+            'product_feedback',
+            $feedback->id,
+            "Mengubah status feedback #{$feedback->id} menjadi {$validated['status']}"
+        );
+
+        return back()->with('success', 'Status feedback berhasil diperbarui.');
+    }
+
+    public function exportFeedback(Request $request): StreamedResponse
+    {
+        $filters = [
+            'feedback_category' => $request->string('feedback_category')->value() ?: 'all',
+            'feedback_status' => $request->string('feedback_status')->value() ?: 'all',
+            'feedback_role' => $request->string('feedback_role')->value() ?: 'all',
+            'feedback_search' => trim($request->string('feedback_search')->value()),
+        ];
+
+        $fileName = 'feedback-toku-up-'.now()->format('Ymd-His').'.csv';
+
+        return response()->streamDownload(function () use ($filters): void {
+            $handle = fopen('php://output', 'wb');
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, ['ID', 'Tanggal', 'Pelapor', 'Role', 'Kategori', 'Status', 'Halaman', 'Pesan', 'Catatan Penyelesaian', 'Ditangani Oleh']);
+
+            $this->feedbackQuery($filters)
+                ->with(['user:id,username', 'handler:id,username'])
+                ->oldest()
+                ->chunkById(250, function ($items) use ($handle): void {
+                    foreach ($items as $item) {
+                        fputcsv($handle, array_map([$this, 'safeCsvCell'], [
+                            $item->id,
+                            $item->created_at?->format('Y-m-d H:i:s'),
+                            $item->user?->username ?? 'Akun dihapus',
+                            $item->role_snapshot,
+                            $item->category,
+                            $item->status,
+                            $item->page_url,
+                            $item->message,
+                            $item->resolution_note,
+                            $item->handler?->username,
+                        ]));
+                    }
+                });
+
+            fclose($handle);
+        }, $fileName, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function feedbackQuery(array $filters): Builder
+    {
+        return UmpanBalikProduk::query()
+            ->when(($filters['feedback_category'] ?? 'all') !== 'all', fn (Builder $query) => $query->where('category', $filters['feedback_category']))
+            ->when(($filters['feedback_status'] ?? 'all') !== 'all', fn (Builder $query) => $query->where('status', $filters['feedback_status']))
+            ->when(($filters['feedback_role'] ?? 'all') !== 'all', fn (Builder $query) => $query->where('role_snapshot', $filters['feedback_role']))
+            ->when($filters['feedback_search'] ?? null, function (Builder $query, string $search): void {
+                $query->where(function (Builder $inner) use ($search): void {
+                    $inner->where('message', 'like', "%{$search}%")
+                        ->orWhere('page_url', 'like', "%{$search}%")
+                        ->orWhereHas('user', fn (Builder $user) => $user
+                            ->where('username', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%"));
+                });
+            });
+    }
+
+    public function safeCsvCell(mixed $value): string
+    {
+        $value = str_replace(["\r\n", "\r"], "\n", (string) ($value ?? ''));
+
+        return preg_match('/^[=+\-@]/', ltrim($value)) ? "'{$value}" : $value;
     }
 
     private function displayAction(string $action): string

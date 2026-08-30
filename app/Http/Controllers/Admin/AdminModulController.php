@@ -10,6 +10,7 @@ use App\Models\LevelPembelajaran;
 use App\Models\Modul;
 use App\Models\ProgramPembelajaran;
 use App\Services\NotifikasiPenggunaService;
+use App\Services\KloterBelajarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -18,12 +19,17 @@ use Inertia\Inertia;
 
 class AdminModulController extends Controller
 {
+    public function __construct(private readonly KloterBelajarService $kloterService)
+    {
+    }
+
     public function programsIndex(Request $request)
     {
         $query = ProgramPembelajaran::with(['level', 'curriculumTrack'])
             ->withCount(['modules' => fn ($query) => $query->where('status', 'published')])
             ->orderBy('sort_order')
             ->orderBy('id');
+        $this->kloterService->batasiProgramDikelola($query, $request->user());
 
         if ($request->filled('search')) {
             $search = $request->string('search')->toString();
@@ -47,6 +53,7 @@ class AdminModulController extends Controller
 
     public function storeProgram(Request $request)
     {
+        abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang dapat membuat kelas.');
         $validated = $this->prepareProgramInput($request);
         $validated['slug'] = $this->uniqueProgramSlug($validated['title']);
 
@@ -57,6 +64,7 @@ class AdminModulController extends Controller
 
     public function updateProgram(Request $request, ProgramPembelajaran $program)
     {
+        abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang dapat mengubah informasi kelas.');
         $previousThumbnailUrl = $program->thumbnail_url;
         $program->update($this->prepareProgramInput($request, $program));
 
@@ -67,8 +75,9 @@ class AdminModulController extends Controller
         return redirect()->back()->with('success', 'Kelas berhasil diperbarui.');
     }
 
-    public function destroyProgram(ProgramPembelajaran $program)
+    public function destroyProgram(Request $request, ProgramPembelajaran $program)
     {
+        abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang dapat menghapus kelas.');
         if ($program->modules()->exists()) {
             return redirect()->back()->withErrors([
                 'delete' => 'Kelas tidak dapat dihapus karena masih memiliki modul.',
@@ -127,11 +136,16 @@ class AdminModulController extends Controller
             ->orderBy('level_id')
             ->orderBy('week_number');
 
+        if ($request->user()->isMentor()) {
+            $query->whereIn('program_pembelajaran_id', $this->kloterService->programIdsDikelola($request->user()));
+        }
+
         if ($request->filled('search')) {
             $query->where('title', 'like', '%'.$request->search.'%');
         }
 
         if ($request->filled('program_id') && $request->program_id !== 'all') {
+            $this->kloterService->abortJikaProgramDiLuarCakupan($request->user(), $request->integer('program_id'));
             $query->where('program_pembelajaran_id', $request->integer('program_id'));
         } else {
             // The roadmap is a class workspace; never mix weeks from multiple classes.

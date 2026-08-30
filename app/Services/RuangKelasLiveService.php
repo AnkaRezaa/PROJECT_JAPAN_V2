@@ -80,7 +80,7 @@ class RuangKelasLiveService
                 'kloter_belajar_id' => $kloter->id,
                 'presentation_deck_id' => $deck?->id,
                 'mentor_id' => $mentor->id,
-                'room_name' => 'japanlingo-'.Str::lower((string) Str::ulid()),
+                'room_name' => 'toku-up-'.Str::lower((string) Str::ulid()),
                 'join_code' => $this->uniqueJoinCode(),
                 'status' => $scheduledAt ? 'scheduled' : 'draft',
                 'stage_mode' => $deck ? 'slides' : 'board',

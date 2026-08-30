@@ -53,7 +53,7 @@ const canvasShape = (left, top, width, height, options = {}) => ({
     width,
     height,
     fill: options.fill || '#FFF1E8',
-    stroke: options.stroke || '#E64A19',
+    stroke: options.stroke || '#22C55E',
     strokeWidth: options.strokeWidth || 2,
 });
 const templateCanvas = (layout, title, content = '') => {
@@ -62,7 +62,7 @@ const templateCanvas = (layout, title, content = '') => {
 
     if (layout === 'title') {
         return { ...base, backgroundColor: '#FFF7ED', objects: [
-            canvasText('JAPANLINGO', 90, 120, 1080, 24, { fill: '#E64A19', fontWeight: '900' }),
+            canvasText('TOKU-UP', 90, 120, 1080, 24, { fill: '#22C55E', fontWeight: '900' }),
             canvasText(title, 90, 190, 1080, 68, { fontWeight: '900' }),
             canvasText(content, 90, 310, 880, 30, { fill: '#4B5563' }),
         ] };
@@ -81,7 +81,7 @@ const templateCanvas = (layout, title, content = '') => {
 
     if (layout === 'vocabulary') {
         return { ...base, backgroundColor: '#ECFEFF', objects: [
-            canvasText('KOSAKATA', 90, 60, 1100, 22, { fill: '#E64A19', fontWeight: '900', textAlign: 'center' }),
+            canvasText('KOSAKATA', 90, 60, 1100, 22, { fill: '#22C55E', fontWeight: '900', textAlign: 'center' }),
             canvasText(title, 90, 125, 1100, 112, { fontWeight: '900', textAlign: 'center' }),
             canvasText(lines[0] || 'reading', 90, 300, 1100, 38, { fill: '#475569', textAlign: 'center' }),
             canvasText(lines[1] || 'arti', 90, 385, 1100, 48, { fontWeight: '900', textAlign: 'center' }),
@@ -99,7 +99,7 @@ const templateCanvas = (layout, title, content = '') => {
 
     if (layout === 'question') {
         return { ...base, backgroundColor: '#FFF1F2', objects: [
-            canvasText('PERTANYAAN PEMANTIK', 90, 100, 1100, 22, { fill: '#E64A19', fontWeight: '900', textAlign: 'center' }),
+            canvasText('PERTANYAAN PEMANTIK', 90, 100, 1100, 22, { fill: '#22C55E', fontWeight: '900', textAlign: 'center' }),
             canvasText(title, 110, 200, 1060, 62, { fontWeight: '900', textAlign: 'center' }),
             canvasText(content, 180, 380, 920, 34, { fill: '#4B5563', textAlign: 'center' }),
         ] };
@@ -125,7 +125,7 @@ const emptySlide = {
     content: '',
     media_url: '',
     background: 'light',
-    accent_color: '#E64A19',
+    accent_color: '#22C55E',
     speaker_notes: '',
     board_data: { strokes: [] },
     snapshot_data: null,
@@ -154,11 +154,11 @@ const backgroundClass = {
     dark: 'bg-gray-950 text-white',
     sunrise: 'bg-gradient-to-br from-orange-100 via-amber-50 to-white text-gray-950',
     sakura: 'bg-gradient-to-br from-pink-100 via-white to-rose-50 text-gray-950',
-    ocean: 'bg-gradient-to-br from-cyan-100 via-white to-red-100 text-gray-950',
+    ocean: 'bg-gradient-to-br from-cyan-100 via-white to-brand-100 text-gray-950',
     forest: 'bg-gradient-to-br from-emerald-100 via-white to-lime-100 text-gray-950',
     paper: 'bg-[linear-gradient(#ffffff,#fff7ed)] text-gray-950',
     grid: 'bg-white text-gray-950 bg-[linear-gradient(rgba(15,23,42,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.06)_1px,transparent_1px)] bg-[size:28px_28px]',
-    indigo: 'bg-gradient-to-br from-indigo-950 via-gray-950 to-red-950 text-white',
+    indigo: 'bg-gradient-to-br from-indigo-950 via-gray-950 to-brand-950 text-white',
     matcha: 'bg-gradient-to-br from-lime-100 via-white to-emerald-100 text-gray-950',
     rose: 'bg-gradient-to-br from-rose-100 via-white to-orange-50 text-gray-950',
 };
@@ -231,7 +231,7 @@ const builderSnapshot = (slides, status, placement = {}) => JSON.stringify({
 
 function SlidePreview({ slide, small = false }) {
     const lines = String(slide.content || '').split('\n').filter(Boolean);
-    const accent = slide.accent_color || '#E64A19';
+    const accent = slide.accent_color || '#22C55E';
     const visualUrl = slide.snapshot_url || slide.snapshot_data || slide.media_url;
     const framePadding = small ? 'p-2' : 'p-5 sm:p-6';
     const titleSize = small ? 'text-xs' : 'text-2xl';
@@ -243,7 +243,7 @@ function SlidePreview({ slide, small = false }) {
             <div className={`relative z-10 flex h-full w-full flex-col ${framePadding}`}>
                 {slide.layout === 'title' && (
                     <div className="my-auto">
-                        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: accent }}>JapanLingo</p>
+                        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: accent }}>TOKU-UP</p>
                         <h2 className={`${small ? 'text-base' : 'text-3xl sm:text-4xl'} font-black tracking-tight`}>{slide.title || 'Untitled'}</h2>
                         <p className={`${small ? 'mt-1 text-[10px]' : 'mt-3 text-sm'} max-w-2xl font-bold opacity-70`}>{slide.content}</p>
                     </div>
@@ -327,7 +327,7 @@ function SlidePreview({ slide, small = false }) {
                 {slide.layout === 'pdf' && (
                     <div className="flex h-full min-h-0 flex-col">
                         {!small && <h2 className={`${titleSize} mb-5 font-black`}>{slide.title || 'PDF'}</h2>}
-                        <div className="grid min-h-0 flex-1 place-items-center rounded-2xl bg-red-50 font-black text-red-700">
+                        <div className="grid min-h-0 flex-1 place-items-center rounded-2xl bg-brand-50 font-black text-brand-700">
                             PDF
                         </div>
                     </div>
@@ -939,7 +939,7 @@ export default function BuilderPresentasi({
                 content: slide.content || '',
                 media_url: slide.media_url || '',
                 background: slide.background || 'light',
-                accent_color: slide.accent_color || '#E64A19',
+                accent_color: slide.accent_color || '#22C55E',
                 speaker_notes: slide.speaker_notes || '',
                 board_data: slide.board_data || { strokes: [] },
                 snapshot_data: slide.snapshot_data || null,
@@ -1118,7 +1118,7 @@ export default function BuilderPresentasi({
         <AuthenticatedLayout>
             <Head title={`Presentasi Minggu ${moduleContext.week_number || '-'} - ${moduleContext.title || 'Builder'}`} />
 
-            <div className="min-h-screen bg-[#F8F9FB] dark:bg-gray-950">
+            <div className="min-h-screen bg-surface-muted">
                 {deck && isImporting && (
                 <div className="fixed inset-0 z-[110] grid place-items-center bg-gray-950/45 px-4 backdrop-blur-sm">
                         <div className="w-full max-w-xs rounded-2xl border border-white/20 bg-white p-5 text-center shadow-2xl dark:bg-gray-900">
@@ -1161,7 +1161,7 @@ export default function BuilderPresentasi({
                                 <button
                                     type="button"
                                     onClick={leaveWorkspace}
-                                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 text-xs font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 dark:border-gray-700 dark:text-gray-200 dark:hover:border-red-900/60 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 text-xs font-black text-gray-700 transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 dark:border-gray-700 dark:text-gray-200 dark:hover:border-brand-900/60 dark:hover:bg-brand-950/30 dark:hover:text-brand-300"
                                 >
                                     <LogoutIcon sx={{ fontSize: 17 }} />
                                     Keluar Builder
@@ -1290,7 +1290,7 @@ export default function BuilderPresentasi({
                                     </div>
                                 )}
                             </div>
-                            <button onClick={saveSlides} className="flex h-9 shrink-0 items-center gap-2 rounded-xl bg-[#E64A19] px-3 text-xs font-black text-white shadow-sm shadow-orange-500/20"><SaveOutlinedIcon sx={{ fontSize: 17 }} /><span className="hidden sm:inline">Simpan</span></button>
+                            <button onClick={saveSlides} className="flex h-9 shrink-0 items-center gap-2 rounded-xl bg-brand-600 px-3 text-xs font-black text-white shadow-sm shadow-brand-500/20"><SaveOutlinedIcon sx={{ fontSize: 17 }} /><span className="hidden sm:inline">Simpan</span></button>
                                 </>
                             )}
                         </div>
@@ -1352,7 +1352,7 @@ export default function BuilderPresentasi({
                                     value={newDeckTitle}
                                     onChange={(event) => setNewDeckTitle(event.target.value)}
                                     autoFocus
-                                    className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                    className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                 />
                             </label>
                             {!isMentorDeck && <div className="mt-4 rounded-lg bg-gray-100 px-3 py-2.5 dark:bg-gray-900">
@@ -1459,7 +1459,7 @@ export default function BuilderPresentasi({
                             </>
                         ) : (
                             <div className="grid min-h-[320px] place-items-center rounded-2xl border-2 border-dashed border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-                                <button onClick={() => addSlide()} className="rounded-xl bg-[#E64A19] px-5 py-2.5 text-xs font-black text-white">Tambah Slide Pertama</button>
+                                <button onClick={() => addSlide()} className="rounded-xl bg-brand-600 px-5 py-2.5 text-xs font-black text-white">Tambah Slide Pertama</button>
                             </div>
                         )}
                     </section>
@@ -1540,7 +1540,7 @@ export default function BuilderPresentasi({
                                                 <option key={value} value={value}>{label}</option>
                                             ))}
                                         </select>
-                                        <input type="color" value={activeSlide.accent_color || '#E64A19'} onChange={(event) => updateSlide('accent_color', event.target.value)} className="h-9 w-full rounded-xl border border-gray-200 bg-white p-1.5 dark:border-gray-700 dark:bg-gray-950" />
+                                        <input type="color" value={activeSlide.accent_color || '#22C55E'} onChange={(event) => updateSlide('accent_color', event.target.value)} className="h-9 w-full rounded-xl border border-gray-200 bg-white p-1.5 dark:border-gray-700 dark:bg-gray-950" />
                                     </div>
                                     <textarea value={activeSlide.speaker_notes || ''} onChange={(event) => updateSlide('speaker_notes', event.target.value)} placeholder="Catatan sensei, hanya tampil di presenter mode." className="min-h-20 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                 </div>

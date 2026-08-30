@@ -25,6 +25,7 @@ class RuangKelasLiveController extends Controller
     {
         $program = ProgramPembelajaran::query()->findOrFail($request->integer('program_id'));
         $user = $request->user();
+        $kloterService->abortJikaProgramDiLuarCakupan($user, $program);
         $decks = DeckPresentasi::query()
             ->with(['module:id,title,week_number', 'creator:id,username'])
             ->withCount('slides')

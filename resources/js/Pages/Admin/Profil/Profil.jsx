@@ -65,11 +65,11 @@ export default function ProfilAdmin() {
 
         syncThemeLabel();
         window.addEventListener('storage', syncThemeLabel);
-        window.addEventListener('japanlingo:theme-changed', syncThemeLabel);
+        window.addEventListener('toku-up:theme-changed', syncThemeLabel);
 
         return () => {
             window.removeEventListener('storage', syncThemeLabel);
-            window.removeEventListener('japanlingo:theme-changed', syncThemeLabel);
+            window.removeEventListener('toku-up:theme-changed', syncThemeLabel);
         };
     }, []);
 
@@ -80,9 +80,9 @@ export default function ProfilAdmin() {
 
     return (
         <AuthenticatedLayout header={false}>
-            <Head title="Profil Admin — Japanlingo" />
+            <Head title="Profil Admin — TOKU-UP" />
 
-            <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-950 py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
+            <div className="min-h-screen bg-surface-muted py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
                 <div className="max-w-7xl mx-auto">
                     
                     {/* Header */}
@@ -99,7 +99,7 @@ export default function ProfilAdmin() {
                             
                             {/* Card 1: Profil Admin */}
                             <div className="bg-white dark:bg-gray-900 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-800 p-8 flex flex-col items-center text-center transition-colors duration-300">
-                                <div className="w-32 h-32 rounded-[2rem] bg-gradient-to-br from-rose-500 to-red-600 p-1 shadow-lg mb-6 relative group cursor-pointer transform transition-transform duration-300 hover:scale-105">
+                                <div className="w-32 h-32 rounded-[2rem] bg-gradient-to-br from-rose-500 to-brand-600 p-1 shadow-lg mb-6 relative group cursor-pointer transform transition-transform duration-300 hover:scale-105">
                                     <div className="w-full h-full rounded-[1.8rem] bg-white/10 backdrop-blur-sm flex items-center justify-center text-5xl font-black text-white overflow-hidden relative">
                                         {user.username?.charAt(0).toUpperCase()}
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">

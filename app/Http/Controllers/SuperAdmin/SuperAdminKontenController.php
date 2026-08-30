@@ -219,6 +219,10 @@ class SuperAdminKontenController extends SuperAdminDasarController
             'slug' => ['nullable', 'string', 'max:255'],
             'excerpt' => ['nullable', 'string', 'max:500'],
             'body' => ['nullable', 'string'],
+            'reading_blocks' => ['nullable', 'array', 'max:100'],
+            'reading_blocks.*.japanese' => ['required', 'string', 'max:1000'],
+            'reading_blocks.*.reading' => ['required', 'string', 'max:1000'],
+            'reading_blocks.*.translation' => ['nullable', 'string', 'max:2000'],
             'status' => ['required', 'in:draft,scheduled,published,archived'],
             'audience' => ['required', 'in:students,admins,all'],
             'category' => ['required', 'in:'.implode(',', $this->categories())],
@@ -234,6 +238,15 @@ class SuperAdminKontenController extends SuperAdminDasarController
         ]);
 
         $validated['body'] = app(HtmlSanitizerService::class)->clean($validated['body'] ?? '');
+        $validated['reading_blocks'] = collect($validated['reading_blocks'] ?? [])
+            ->map(fn (array $block) => [
+                'japanese' => trim($block['japanese']),
+                'reading' => trim($block['reading']),
+                'translation' => trim($block['translation'] ?? ''),
+            ])
+            ->filter(fn (array $block) => $block['japanese'] !== '' && $block['reading'] !== '')
+            ->values()
+            ->all();
 
         return $validated;
     }
@@ -301,6 +314,7 @@ class SuperAdminKontenController extends SuperAdminDasarController
             'slug' => $news->slug,
             'excerpt' => $news->excerpt,
             'body' => $news->body,
+            'reading_blocks' => $news->reading_blocks ?? [],
             'raw_status' => $news->status,
             'raw_audience' => $news->audience,
             'category' => $news->category,

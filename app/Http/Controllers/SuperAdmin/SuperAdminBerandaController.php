@@ -154,7 +154,7 @@ class SuperAdminBerandaController extends SuperAdminDasarController
         $attentionQueue = [
             $this->attentionItem('Pembayaran menunggu', $pendingPayments, 'Transaksi belum memiliki status final.', 'warning', route('superadmin.payments')),
             $this->attentionItem('Bayar, belum masuk kloter', $paidWithoutCohort, 'Siswa premium aktif tetapi belum menjadi anggota kloter.', 'danger', route('superadmin.kloters')),
-            $this->attentionItem('Kloter tanpa mentor', $withoutMentor, 'Kloter aktif harus memiliki Admin Kloter yang aktif.', 'danger', route('superadmin.kloters')),
+            $this->attentionItem('Kloter tanpa mentor', $withoutMentor, 'Kloter aktif harus memiliki Mentor Kelas yang aktif.', 'danger', route('superadmin.kloters')),
             $this->attentionItem('Kloter hampir penuh', $nearCapacity, 'Kapasitas sudah mencapai minimal 85%.', 'warning', route('superadmin.kloters')),
             $this->attentionItem('Materi minggu ini belum siap', $contentNotReady, 'Modul aktif belum tersedia atau belum dipublikasikan.', 'info', route('superadmin.content')),
             $this->attentionItem('Pembayaran gagal 7 hari', $failedPayments, 'Periksa bila pola kegagalan meningkat.', 'info', route('superadmin.payments')),

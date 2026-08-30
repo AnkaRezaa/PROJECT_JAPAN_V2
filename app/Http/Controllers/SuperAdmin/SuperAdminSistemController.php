@@ -26,12 +26,22 @@ class SuperAdminSistemController extends SuperAdminDasarController
     public function updateTheme(Request $request)
     {
         $validated = $request->validate([
-            'active_theme' => ['required', 'in:spring,autumn,winter,summer'],
+            'active_theme' => ['required', 'in:tokuup,spring,autumn,winter,summer'],
             'custom_theme' => ['nullable', 'array'],
             'custom_theme.activeColor' => ['nullable', 'string', 'max:30'],
             'custom_theme.activeShadow' => ['nullable', 'string', 'max:30'],
             'custom_theme.doneColor' => ['nullable', 'string', 'max:30'],
             'custom_theme.doneShadow' => ['nullable', 'string', 'max:30'],
+            'custom_theme.primaryColor' => ['nullable', 'hex_color'],
+            'custom_theme.primaryHover' => ['nullable', 'hex_color'],
+            'custom_theme.primarySoft' => ['nullable', 'hex_color'],
+            'custom_theme.brandColor' => ['nullable', 'hex_color'],
+            'custom_theme.inkColor' => ['nullable', 'hex_color'],
+            'custom_theme.infoColor' => ['nullable', 'hex_color'],
+            'custom_theme.achievementColor' => ['nullable', 'hex_color'],
+            'custom_theme.surfaceColor' => ['nullable', 'hex_color'],
+            'custom_theme.surfaceMuted' => ['nullable', 'hex_color'],
+            'custom_theme.borderColor' => ['nullable', 'hex_color'],
             'custom_theme.heroBg' => ['nullable', 'string', 'max:255'],
             'custom_theme.ctaBg' => ['nullable', 'string', 'max:255'],
             'custom_theme.landingHeroBg' => ['nullable', 'string', 'max:255'],
@@ -68,7 +78,7 @@ class SuperAdminSistemController extends SuperAdminDasarController
         $decoded = $value ? json_decode($value, true) : [];
 
         return array_merge([
-            'activeTheme' => 'spring',
+            'activeTheme' => 'tokuup',
             'customTheme' => [],
         ], is_array($decoded) ? $decoded : []);
     }

@@ -76,7 +76,7 @@ export default function ModePresentasi({ deck }) {
                             <button type="button" onClick={() => setNotesOpen((value) => !value)} className={`grid h-10 w-10 place-items-center rounded-xl transition ${notesOpen ? 'bg-orange-500 text-white' : 'bg-white/5 hover:bg-white/10'}`} aria-label="Catatan pembicara" aria-pressed={notesOpen}><DescriptionOutlinedIcon sx={{ fontSize: 19 }} /></button>
                         )}
                         <button type="button" onClick={() => document.documentElement.requestFullscreen?.()} className="hidden h-10 w-10 place-items-center rounded-xl bg-white/5 transition hover:bg-white/10 sm:grid" aria-label="Layar penuh"><FullscreenIcon sx={{ fontSize: 19 }} /></button>
-                        <Link href={route('admin.presentations.builder', deck.id)} className="grid h-10 w-10 place-items-center rounded-xl bg-red-500/15 text-red-300 transition hover:bg-red-500/25" aria-label="Keluar dari presentasi" title="Keluar"><ArrowBackIcon sx={{ fontSize: 19 }} /></Link>
+                        <Link href={route('admin.presentations.builder', deck.id)} className="grid h-10 w-10 place-items-center rounded-xl bg-brand-500/15 text-brand-300 transition hover:bg-brand-500/25" aria-label="Keluar dari presentasi" title="Keluar"><ArrowBackIcon sx={{ fontSize: 19 }} /></Link>
                     </div>
 
                     {notesOpen && activeSlide?.speaker_notes && (

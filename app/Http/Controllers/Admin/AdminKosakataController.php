@@ -287,13 +287,13 @@ class AdminKosakataController extends Controller
         $headers = $this->importHeaders();
         $rows = $this->templateRows($level);
         $slug = str($program?->slug ?: 'umum')->slug()->toString();
-        $filename = "japanlingo-bank-konten-{$slug}.{$format}";
+        $filename = "toku-up-bank-konten-{$slug}.{$format}";
 
         if ($format === 'csv') {
             return $templates->csvResponse($headers, $rows, $filename);
         }
 
-        $path = $templates->xlsxPath($headers, $rows, 'Bank Konten', 'japanlingo_bank_konten_template_');
+        $path = $templates->xlsxPath($headers, $rows, 'Bank Konten', 'toku_up_bank_konten_template_');
 
         return response()
             ->download($path, $filename, [

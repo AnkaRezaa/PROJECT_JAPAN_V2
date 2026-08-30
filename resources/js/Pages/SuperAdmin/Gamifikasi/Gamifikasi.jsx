@@ -70,7 +70,7 @@ function NumberField({ label, value, onChange, helper, min = 0, max = 100000 }) 
                 max={max}
                 value={value}
                 onChange={(event) => onChange(Number(event.target.value))}
-                className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-black text-gray-900 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-red-900/30"
+                className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-black text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
             />
             {helper && <span className="mt-1 block text-xs font-semibold text-gray-400">{helper}</span>}
         </label>
@@ -262,11 +262,11 @@ export default function Gamification({
                 <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div className="flex items-start gap-4">
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-white">
                                 <SettingsIcon sx={{ fontSize: 25 }} />
                             </div>
                             <div>
-                                <p className="text-xs font-black uppercase tracking-[0.3em] text-red-600 dark:text-red-400">Superadmin</p>
+                                <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-600 dark:text-brand-400">Superadmin</p>
                                 <h1 className="mt-1 text-2xl font-black text-gray-900 dark:text-white">Gamification Control Center</h1>
                                 <p className="mt-2 max-w-2xl text-sm font-semibold text-gray-500 dark:text-gray-400">
                                     Atur angka XP global, bonus streak, dan evaluasi achievement tanpa mengubah alur kuis yang sudah berjalan.
@@ -298,7 +298,7 @@ export default function Gamification({
                 <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
                     <ChartCard title="XP Terdistribusi" subtitle="Reward yang benar-benar dicatat per hari" action={<ChartPeriodSelect routeName="superadmin.gamification" filters={filters} />}>
                         {xpSeries.some((item) => item.xp > 0) ? (
-                            <ChartContainer config={{ xp: { label: 'XP', theme: { light: '#dc2626', dark: '#f87171' } } }}>
+                            <ChartContainer config={{ xp: { label: 'XP', theme: { light: '#fbbf24', dark: '#fcd34d' } } }}>
                                 <BarChart data={xpSeries} margin={{ top: 8, right: 4, left: -20, bottom: 0 }}>
                                     <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-800" />
                                     <XAxis dataKey="label" tickLine={false} axisLine={false} className="fill-gray-400 text-xs" />
@@ -340,7 +340,7 @@ export default function Gamification({
                                 <button
                                     type="button"
                                     onClick={resetAchievementForm}
-                                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:border-red-200 hover:text-red-600 dark:border-gray-700 dark:text-gray-300"
+                                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:border-brand-200 hover:text-brand-600 dark:border-gray-700 dark:text-gray-300"
                                     title="Batal edit"
                                 >
                                     <CloseIcon sx={{ fontSize: 18 }} />
@@ -357,7 +357,7 @@ export default function Gamification({
                                         onChange={(event) => setAchievementForm({ ...achievementForm, icon: event.target.value })}
                                         maxLength={10}
                                         placeholder="Badge"
-                                        className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-center text-sm font-black text-gray-900 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-red-900/30"
+                                        className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-center text-sm font-black text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
                                     />
                                 </label>
                                 <label className="block">
@@ -366,7 +366,7 @@ export default function Gamification({
                                         required
                                         value={achievementForm.name}
                                         onChange={(event) => setAchievementForm({ ...achievementForm, name: event.target.value })}
-                                        className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-900 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-red-900/30"
+                                        className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
                                     />
                                 </label>
                             </div>
@@ -376,7 +376,7 @@ export default function Gamification({
                                 <input
                                     value={achievementForm.description}
                                     onChange={(event) => setAchievementForm({ ...achievementForm, description: event.target.value })}
-                                    className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-red-900/30"
+                                    className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
                                 />
                             </label>
 
@@ -386,7 +386,7 @@ export default function Gamification({
                                     <select
                                         value={achievementForm.condition_type}
                                         onChange={(event) => setAchievementForm({ ...achievementForm, condition_type: event.target.value })}
-                                        className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-black text-gray-900 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-red-900/30"
+                                        className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-black text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
                                     >
                                         {Object.entries(achievementConditions).map(([value, label]) => (
                                             <option key={value} value={value}>{label}</option>
@@ -401,7 +401,7 @@ export default function Gamification({
                                         min="1"
                                         value={achievementForm.condition_value}
                                         onChange={(event) => setAchievementForm({ ...achievementForm, condition_value: Math.max(1, Number(event.target.value) || 1) })}
-                                        className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-black text-gray-900 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-red-900/30"
+                                        className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-black text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
                                     />
                                 </label>
                             </div>
@@ -414,7 +414,7 @@ export default function Gamification({
                                     min="0"
                                     value={achievementForm.xp_reward}
                                     onChange={(event) => setAchievementForm({ ...achievementForm, xp_reward: Math.max(0, Number(event.target.value) || 0) })}
-                                    className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-900 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-red-900/30"
+                                    className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
                                 />
                             </label>
 
@@ -424,7 +424,7 @@ export default function Gamification({
                                         Batal
                                     </button>
                                 )}
-                                <button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-700">
+                                <button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-brand-700">
                                     {editingAchievementId ? <SaveIcon sx={{ fontSize: 17 }} /> : <AddIcon sx={{ fontSize: 17 }} />}
                                     {editingAchievementId ? 'Simpan' : 'Tambah lencana'}
                                 </button>
@@ -441,7 +441,7 @@ export default function Gamification({
                             {achievements.length === 0 && <p className="p-8 text-center text-sm font-bold text-gray-400">Belum ada lencana.</p>}
                             {achievements.map((achievement) => (
                                 <article key={achievement.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-sm font-black text-red-600 dark:bg-red-900/20 dark:text-red-300">
+                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-sm font-black text-brand-600 dark:bg-brand-900/20 dark:text-brand-300">
                                         {achievement.icon || <EmojiEventsIcon sx={{ fontSize: 20 }} />}
                                     </div>
                                     <div className="min-w-0 flex-1">
@@ -455,7 +455,7 @@ export default function Gamification({
                                         </div>
                                     </div>
                                     <div className="flex justify-end gap-2">
-                                        <button type="button" onClick={() => editAchievement(achievement)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:border-red-200 hover:text-red-600 dark:border-gray-700 dark:text-gray-300" title="Edit lencana">
+                                        <button type="button" onClick={() => editAchievement(achievement)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:border-brand-200 hover:text-brand-600 dark:border-gray-700 dark:text-gray-300" title="Edit lencana">
                                             <EditIcon sx={{ fontSize: 18 }} />
                                         </button>
                                         <button type="button" onClick={() => confirmDeleteAchievement(achievement)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-100 text-red-600 transition hover:bg-red-50 dark:border-red-900/40" title="Hapus lencana">
@@ -490,7 +490,7 @@ export default function Gamification({
                         </div>
 
                         {Object.keys(errors).length > 0 && (
-                            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-200">
+                            <div className="mt-4 rounded-2xl border border-brand-200 bg-brand-50 p-4 text-sm font-bold text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/30 dark:text-brand-200">
                                 Periksa lagi input konfigurasi gamifikasi.
                             </div>
                         )}
@@ -514,7 +514,7 @@ export default function Gamification({
                                 type="checkbox"
                                 checked={Boolean(data.streak.enabled)}
                                 onChange={(event) => setData('streak', { ...data.streak, enabled: event.target.checked })}
-                                className="h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                                className="h-5 w-5 rounded border-gray-300 text-brand-600 focus:ring-focus"
                             />
                         </label>
 
@@ -538,7 +538,7 @@ export default function Gamification({
                         <button
                             type="button"
                             onClick={addMilestone}
-                            className="mt-4 rounded-2xl border border-dashed border-gray-300 px-4 py-3 text-sm font-black text-gray-600 transition hover:border-red-300 hover:text-red-600 dark:border-gray-700 dark:text-gray-300"
+                            className="mt-4 rounded-2xl border border-dashed border-gray-300 px-4 py-3 text-sm font-black text-gray-600 transition hover:border-brand-300 hover:text-brand-600 dark:border-gray-700 dark:text-gray-300"
                         >
                             Tambah Milestone
                         </button>
@@ -556,7 +556,7 @@ export default function Gamification({
                         <div className="mt-5 space-y-3">
                             {data.leagues.map((league, index) => (
                                 <div key={`${league.name}-${index}`} className="grid grid-cols-[88px_1fr_160px_120px_auto] items-end gap-3 rounded-2xl border border-gray-100 p-3 dark:border-gray-800">
-                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-rose-700 text-white shadow-lg shadow-red-500/20">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-rose-700 text-white shadow-lg shadow-brand-500/20">
                                         <LeagueIcon iconKey={league.icon} className="h-6 w-6" />
                                     </div>
                                     <label className="block">
@@ -564,7 +564,7 @@ export default function Gamification({
                                         <input
                                             value={league.name || ''}
                                             onChange={(event) => updateLeague(index, 'name', event.target.value)}
-                                            className="mt-2 h-11 w-full rounded-2xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-900 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-red-900/30"
+                                            className="mt-2 h-11 w-full rounded-2xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
                                         />
                                     </label>
                                     <label className="block">
@@ -572,7 +572,7 @@ export default function Gamification({
                                         <select
                                             value={league.icon || 'bronze_kabuto'}
                                             onChange={(event) => updateLeague(index, 'icon', event.target.value)}
-                                            className="mt-2 h-11 w-full rounded-2xl border border-gray-200 bg-white px-3 text-sm font-black text-gray-900 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-red-900/30"
+                                            className="mt-2 h-11 w-full rounded-2xl border border-gray-200 bg-white px-3 text-sm font-black text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
                                         >
                                             {LEAGUE_ICON_OPTIONS.map((option) => (
                                                 <option key={option.key} value={option.key}>{option.label}</option>
@@ -595,7 +595,7 @@ export default function Gamification({
                         <button
                             type="button"
                             onClick={addLeague}
-                            className="mt-4 rounded-2xl border border-dashed border-gray-300 px-4 py-3 text-sm font-black text-gray-600 transition hover:border-red-300 hover:text-red-600 dark:border-gray-700 dark:text-gray-300"
+                            className="mt-4 rounded-2xl border border-dashed border-gray-300 px-4 py-3 text-sm font-black text-gray-600 transition hover:border-brand-300 hover:text-brand-600 dark:border-gray-700 dark:text-gray-300"
                         >
                             Tambah Liga
                         </button>
@@ -608,7 +608,7 @@ export default function Gamification({
                             {leaderboard.map((item) => (
                                 <div key={item.rank} className="flex items-center justify-between rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
                                     <div className="flex items-center gap-4">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 font-black text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 font-black text-brand-600 dark:bg-brand-900/20 dark:text-brand-400">
                                             {item.rank}
                                         </div>
                                         <div>
@@ -679,7 +679,7 @@ export default function Gamification({
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-red-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-red-600/20 transition hover:bg-red-700 disabled:opacity-50"
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-50"
                             >
                                 <SaveIcon sx={{ fontSize: 18 }} />
                                 {processing ? 'Menyimpan...' : 'Simpan Config Global'}

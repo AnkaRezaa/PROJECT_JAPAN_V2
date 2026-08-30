@@ -29,7 +29,7 @@ const InputField = ({ label, type = 'text', defaultValue, placeholder, disabled 
             defaultValue={defaultValue}
             placeholder={placeholder}
             disabled={disabled}
-            className="w-full bg-slate-50 dark:bg-gray-900/50 border border-slate-200 dark:border-gray-800 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/30 focus:border-red-400 dark:focus:border-red-500 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full bg-slate-50 dark:bg-gray-900/50 border border-slate-200 dark:border-gray-800 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/30 focus:border-focus dark:focus:border-focus transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
         />
     </div>
 );
@@ -40,7 +40,7 @@ const BentoCard = ({ children, className = '' }) => (
     </div>
 );
 
-const SectionTitle = ({ icon, children, subtitle, color = 'text-red-500 dark:text-red-400' }) => (
+const SectionTitle = ({ icon, children, subtitle, color = 'text-brand-500 dark:text-brand-400' }) => (
     <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
             <span className={`transition-colors duration-300 ${color}`}>{icon}</span>
@@ -80,11 +80,11 @@ export default function ProfilSuperAdmin() {
 
         syncThemeLabel();
         window.addEventListener('storage', syncThemeLabel);
-        window.addEventListener('japanlingo:theme-changed', syncThemeLabel);
+        window.addEventListener('toku-up:theme-changed', syncThemeLabel);
 
         return () => {
             window.removeEventListener('storage', syncThemeLabel);
-            window.removeEventListener('japanlingo:theme-changed', syncThemeLabel);
+            window.removeEventListener('toku-up:theme-changed', syncThemeLabel);
         };
     }, []);
 
@@ -95,9 +95,9 @@ export default function ProfilSuperAdmin() {
 
     return (
         <AuthenticatedLayout header={false}>
-            <Head title="Profil SuperAdmin — Japanlingo" />
+            <Head title="Profil SuperAdmin — TOKU-UP" />
 
-            <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-950 py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
+            <div className="min-h-screen bg-surface-muted py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
                 <div className="max-w-7xl mx-auto">
                     {/* Header Page */}
                     <div className="mb-8">
@@ -112,10 +112,10 @@ export default function ProfilSuperAdmin() {
                             
                             {/* Card 1: Profil */}
                             <BentoCard className="flex flex-col items-center text-center relative overflow-hidden group">
-                                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-red-50 dark:from-red-900/20 to-transparent transition-colors duration-300" />
+                                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-brand-50 dark:from-brand-900/20 to-transparent transition-colors duration-300" />
                                 
                                 <div className="relative mb-4">
-                                    <div className="w-28 h-28 rounded-[2rem] bg-gradient-to-br from-red-600 to-rose-900 dark:from-red-600 dark:to-rose-900 flex items-center justify-center text-4xl font-black text-white shadow-lg shadow-red-200/50 dark:shadow-red-900/30 ring-4 ring-white dark:ring-gray-900 transition-all duration-300">
+                                    <div className="w-28 h-28 rounded-[2rem] bg-gradient-to-br from-brand-300 to-learning-100 dark:from-brand-600 dark:to-learning-700 flex items-center justify-center text-4xl font-black text-ink-900 dark:text-white shadow-lg shadow-brand-200/50 dark:shadow-brand-900/30 ring-4 ring-white dark:ring-gray-900 transition-all duration-300">
                                         {user.username?.charAt(0).toUpperCase()}
                                     </div>
                                     <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-white dark:bg-gray-800 flex items-center justify-center text-lg shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
@@ -131,7 +131,7 @@ export default function ProfilSuperAdmin() {
                                     <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1 transition-colors duration-300">{user.email}</p>
                                     
                                     <div className="mt-4 flex justify-center">
-                                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/50 transition-colors duration-300">
+                                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 border border-brand-100 dark:border-brand-900/50 transition-colors duration-300">
                                             <ShieldIcon sx={{ fontSize: 14 }} /> Root SuperAdmin
                                         </span>
                                     </div>
@@ -152,7 +152,7 @@ export default function ProfilSuperAdmin() {
                                                         ? 'bg-slate-900 dark:bg-slate-800 text-white shadow-md dark:shadow-none' 
                                                         : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-gray-800 hover:text-slate-900 dark:hover:text-white'}`}
                                             >
-                                                <span className={`transition-colors duration-300 ${isActive ? 'text-red-400' : 'text-slate-400 dark:text-slate-500'}`}>{tab.icon}</span>
+                                                <span className={`transition-colors duration-300 ${isActive ? 'text-brand-400' : 'text-slate-400 dark:text-slate-500'}`}>{tab.icon}</span>
                                                 {tab.label}
                                             </button>
                                         );
@@ -231,7 +231,7 @@ export default function ProfilSuperAdmin() {
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             {[
                                                 { label: 'Status Sistem', value: 'Online', icon: '<CheckCircleIcon className="w-5 h-5 text-emerald-500 inline-block" />', bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-100 dark:border-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-400' },
-                                                { label: 'Mode Akses', value: 'Produksi', icon: '<RocketLaunchIcon className="w-5 h-5 inline-block text-red-500" />', bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-100 dark:border-red-900/30', text: 'text-red-700 dark:text-red-400' },
+                                                { label: 'Mode Akses', value: 'Produksi', icon: '<RocketLaunchIcon className="w-5 h-5 inline-block text-brand-500" />', bg: 'bg-brand-50 dark:bg-brand-900/20', border: 'border-brand-100 dark:border-brand-900/30', text: 'text-brand-700 dark:text-brand-400' },
                                                 { label: 'Role Aktif', value: 'Root', icon: '<WorkspacePremiumIcon className="w-5 h-5 text-amber-500 inline-block" />', bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-100 dark:border-rose-900/30', text: 'text-rose-700 dark:text-rose-400' },
                                             ].map(stat => (
                                                 <BentoCard key={stat.label} className={`!p-6 ${stat.bg} ${stat.border}`}>
@@ -246,18 +246,18 @@ export default function ProfilSuperAdmin() {
                                             ))}
                                         </div>
 
-                                        <BentoCard className="border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-900/10">
+                                        <BentoCard className="border-brand-200 dark:border-brand-900/50 bg-brand-50/50 dark:bg-brand-900/10">
                                             <div className="flex items-center gap-3 mb-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 transition-colors duration-300">
+                                                <div className="w-12 h-12 rounded-2xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 transition-colors duration-300">
                                                     <WarningAmberIcon sx={{ fontSize: 24 }} />
                                                 </div>
                                                 <div>
                                                     <h3 className="font-black text-red-700 dark:text-red-400 text-lg transition-colors duration-300">Danger Zone</h3>
-                                                    <p className="text-sm text-red-600/80 dark:text-red-400/80 font-medium transition-colors duration-300">Tindakan berdampak pada seluruh operasional platform.</p>
+                                                    <p className="text-sm text-brand-600/80 dark:text-brand-400/80 font-medium transition-colors duration-300">Tindakan berdampak pada seluruh operasional platform.</p>
                                                 </div>
                                             </div>
 
-                                            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-red-100 dark:border-red-900/30 p-5 mt-6 transition-colors duration-300">
+                                            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-brand-100 dark:border-brand-900/30 p-5 mt-6 transition-colors duration-300">
                                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
                                                     <div>
                                                         <p className="font-bold text-slate-900 dark:text-white flex items-center gap-2 transition-colors duration-300">
@@ -267,7 +267,7 @@ export default function ProfilSuperAdmin() {
                                                     </div>
                                                     <button
                                                         onClick={() => setConfirmMaintenance(true)}
-                                                        className="shrink-0 px-6 py-3 rounded-xl font-bold text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors duration-300 border border-red-100 dark:border-red-900/30"
+                                                        className="shrink-0 px-6 py-3 rounded-xl font-bold text-sm text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20 hover:bg-brand-100 dark:hover:bg-brand-900/40 transition-colors duration-300 border border-brand-100 dark:border-brand-900/30"
                                                     >
                                                         Aktifkan Mode
                                                     </button>

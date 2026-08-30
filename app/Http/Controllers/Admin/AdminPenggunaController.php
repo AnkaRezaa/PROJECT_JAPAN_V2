@@ -433,7 +433,7 @@ class AdminPenggunaController extends Controller
             $membership->user,
             'kloter_approval_rejected',
             'Pendaftaran kelas ditolak',
-            'Pendaftaran mentor ditolak. Tim Japanlingo akan menindaklanjuti refund pembayaran.',
+            'Pendaftaran mentor ditolak. Tim TOKU-UP akan menindaklanjuti refund pembayaran.',
             route('user.checkout', $membership->transaction->transaction_code),
             ['kloter_id' => $kloter->id, 'transaction_id' => $membership->transaction_id],
             'access',

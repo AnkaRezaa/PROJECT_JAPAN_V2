@@ -92,7 +92,7 @@ export default function System({
                 <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div>
-                            <p className="text-xs font-black uppercase tracking-[0.3em] text-red-600 dark:text-red-400">Superadmin</p>
+                            <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-600 dark:text-brand-400">Superadmin</p>
                             <h1 className="mt-1 text-2xl font-black text-gray-900 dark:text-white">Pengaturan Sistem</h1>
                             <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-gray-500 dark:text-gray-400">
                                 Kontrol global yang aman untuk operasional: status aplikasi, konfigurasi ringan, dan tema frontend.
@@ -123,7 +123,7 @@ export default function System({
                                 Panel ini sengaja ringan, bukan pengganti monitoring server penuh.
                             </p>
                             <div className="mt-5 space-y-3">
-                                <InfoRow label="Aplikasi" value="Japanlingo V2" />
+                                <InfoRow label="Aplikasi" value="TOKU-UP" />
                                 <InfoRow label="Scope aktif" value="N3 + Gamification" />
                                 <InfoRow label="Queue" value="Database worker" />
                                 <InfoRow label="Storage" value="Public / Local" />
@@ -146,7 +146,7 @@ export default function System({
                     <Card>
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                             <div>
-                                <p className="text-xs font-black uppercase tracking-[0.25em] text-red-600 dark:text-red-400">Theme Control</p>
+                                <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-600 dark:text-brand-400">Theme Control</p>
                                 <h2 className="mt-1 text-lg font-black text-gray-900 dark:text-white">Tema Frontend Global</h2>
                                 <p className="mt-1 max-w-2xl text-sm font-medium text-gray-500 dark:text-gray-400">
                                     Pilih preset cepat untuk landing, roadmap, dan komponen user. Override detail hanya dipakai saat benar-benar perlu.
@@ -164,7 +164,7 @@ export default function System({
                                     type="button"
                                     onClick={applyTheme}
                                     disabled={!isDirty}
-                                    className="rounded-xl bg-red-600 px-5 py-2 text-sm font-black text-white shadow-lg shadow-red-600/20 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none dark:disabled:bg-gray-700"
+                                    className="rounded-xl bg-brand-600 px-5 py-2 text-sm font-black text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none dark:disabled:bg-gray-700"
                                 >
                                     {isDirty ? 'Simpan Tema' : 'Sudah Tersimpan'}
                                 </button>
@@ -190,7 +190,7 @@ export default function System({
                                                     key={key}
                                                     type="button"
                                                     onClick={() => setSelectedTheme(key)}
-                                                    className={`rounded-2xl border p-4 text-left transition ${active ? 'border-red-500 bg-red-50 ring-2 ring-red-500/20 dark:bg-red-900/20' : 'border-gray-200 bg-white hover:border-red-200 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-red-900/40'}`}
+                                                    className={`rounded-2xl border p-4 text-left transition ${active ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20 dark:bg-brand-900/20' : 'border-gray-200 bg-white hover:border-brand-200 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-brand-900/40'}`}
                                                 >
                                                     <div className="mb-3 flex items-center gap-2">
                                                         {[item.activeColor, item.doneColor, item.activeShadow].map((color) => (
@@ -237,6 +237,16 @@ export default function System({
                                         <div className="mt-4 space-y-4">
                                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                                 {[
+                                                    ['primaryColor', 'Tombol utama'],
+                                                    ['primaryHover', 'Tombol saat hover'],
+                                                    ['primarySoft', 'Latar aksen lembut'],
+                                                    ['brandColor', 'Aksen merek'],
+                                                    ['inkColor', 'Teks utama'],
+                                                    ['infoColor', 'Informasi dan progres'],
+                                                    ['achievementColor', 'XP dan pencapaian'],
+                                                    ['surfaceColor', 'Permukaan kartu'],
+                                                    ['surfaceMuted', 'Latar halaman'],
+                                                    ['borderColor', 'Border lembut'],
                                                     ['activeColor', 'Warna aktif'],
                                                     ['activeShadow', 'Shadow aktif'],
                                                     ['doneColor', 'Warna selesai'],
@@ -246,7 +256,7 @@ export default function System({
                                                         <div className="flex items-center gap-3">
                                                             <input
                                                                 type="color"
-                                                                value={previewTheme[key] || '#E64A19'}
+                                                                value={previewTheme[key] || '#15803D'}
                                                                 onChange={(event) => updateCustom(key, event.target.value)}
                                                                 className="h-10 w-12 rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-900"
                                                             />
@@ -261,52 +271,34 @@ export default function System({
                                                 ))}
                                             </div>
 
-                                            <div className="grid grid-cols-1 gap-4">
-                                                {[
-                                                    ['heroBg', 'Hero gradient class'],
-                                                    ['ctaBg', 'CTA gradient class'],
-                                                    ['landingHeroBg', 'Landing background class'],
-                                                ].map(([key, label]) => (
-                                                    <Field key={key} label={label} helper="Isi dengan class Tailwind yang sudah ada di project.">
-                                                        <input
-                                                            type="text"
-                                                            value={previewTheme[key] || ''}
-                                                            onChange={(event) => updateCustom(key, event.target.value)}
-                                                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
-                                                            placeholder="Contoh: from-pink-50 via-white to-rose-50"
-                                                        />
-                                                    </Field>
-                                                ))}
-                                            </div>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="rounded-3xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-950/50">
-                                <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${previewTheme.heroBg} p-6`}>
-                                    <div className={`absolute -right-10 -top-10 h-36 w-36 rounded-full blur-3xl opacity-40 ${previewTheme.heroBlob1}`} />
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-950/50">
+                                <div className="relative overflow-hidden rounded-lg border p-6" style={{ backgroundColor: previewTheme.surfaceMuted, borderColor: previewTheme.borderColor }}>
                                     <div className="relative">
-                                        <p className={`text-xs font-black uppercase tracking-[0.25em] ${previewTheme.heroAccent}`}>Preview</p>
-                                        <h3 className="mt-3 text-3xl font-black text-gray-900">Japanlingo Theme</h3>
-                                        <p className="mt-2 text-sm font-medium text-gray-600">Simulasi warna untuk landing, quiz, dan roadmap.</p>
+                                        <p className="text-xs font-black uppercase tracking-[0.25em]" style={{ color: previewTheme.primaryColor }}>Preview</p>
+                                        <h3 className="mt-3 text-3xl font-black" style={{ color: previewTheme.inkColor }}>Tema TOKU-UP</h3>
+                                        <p className="mt-2 text-sm font-medium text-gray-600">Simulasi warna tombol, progres, dan pencapaian.</p>
                                         <button
                                             type="button"
-                                            className={`mt-6 rounded-2xl bg-gradient-to-r px-5 py-3 text-sm font-black text-white shadow-lg ${previewTheme.ctaBg}`}
-                                            style={{ boxShadow: `0 6px 0 0 ${previewTheme.activeShadow}` }}
+                                            className="mt-6 min-h-11 rounded-lg px-5 py-3 text-sm font-black text-white shadow-md"
+                                            style={{ backgroundColor: previewTheme.primaryColor }}
                                         >
                                             Mulai Belajar
                                         </button>
                                     </div>
                                 </div>
                                 <div className="mt-4 grid grid-cols-2 gap-3">
-                                    <div className="rounded-2xl bg-white p-4 dark:bg-gray-900">
-                                        <p className="text-xs font-black text-gray-400">Active</p>
-                                        <div className="mt-3 h-10 rounded-xl" style={{ backgroundColor: previewTheme.activeColor }} />
+                                    <div className="rounded-lg bg-white p-4 dark:bg-gray-900">
+                                        <p className="text-xs font-black text-gray-400">Belajar</p>
+                                        <div className="mt-3 h-10 rounded-lg" style={{ backgroundColor: previewTheme.infoColor }} />
                                     </div>
-                                    <div className="rounded-2xl bg-white p-4 dark:bg-gray-900">
-                                        <p className="text-xs font-black text-gray-400">Done</p>
-                                        <div className="mt-3 h-10 rounded-xl" style={{ backgroundColor: previewTheme.doneColor }} />
+                                    <div className="rounded-lg bg-white p-4 dark:bg-gray-900">
+                                        <p className="text-xs font-black text-gray-400">Level Up</p>
+                                        <div className="mt-3 h-10 rounded-lg" style={{ backgroundColor: previewTheme.achievementColor }} />
                                     </div>
                                 </div>
                             </div>

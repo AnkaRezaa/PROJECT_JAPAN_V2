@@ -142,8 +142,24 @@ export default function QuizBuilder({
         clearErrors();
         const updated = [...data.questions];
         const opts = [...(updated[qIndex].options || ['', '', '', ''])];
+        const previousValue = opts[optIndex];
         opts[optIndex] = value;
-        updated[qIndex] = { ...updated[qIndex], options: opts };
+        updated[qIndex] = {
+            ...updated[qIndex],
+            options: opts,
+            correct_answer: updated[qIndex].correct_answer === previousValue
+                ? value
+                : updated[qIndex].correct_answer,
+        };
+        setData('questions', updated);
+    };
+
+    const updateOptionReading = (qIndex, optIndex, value) => {
+        clearErrors();
+        const updated = [...data.questions];
+        const readings = [...(updated[qIndex].option_readings || ['', '', '', ''])];
+        readings[optIndex] = value;
+        updated[qIndex] = { ...updated[qIndex], option_readings: readings };
         setData('questions', updated);
     };
 
@@ -164,6 +180,9 @@ export default function QuizBuilder({
             options: newType === 'multiple_choice' && Array.isArray(updated[index].options) && updated[index].options.length
                 ? updated[index].options
                 : nextDefaults.options,
+            option_readings: newType === 'multiple_choice' && Array.isArray(updated[index].option_readings) && updated[index].option_readings.length
+                ? updated[index].option_readings
+                : nextDefaults.option_readings,
         };
         setData('questions', updated);
     };
@@ -392,7 +411,7 @@ export default function QuizBuilder({
         const qType = activeQ.type || 'multiple_choice';
 
         return (
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 border-l-4 border-l-[#E64A19] overflow-hidden">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 border-l-4 border-l-brand-600 overflow-hidden">
                 {/* Editor Header */}
                 <div className="flex flex-col gap-3 p-4 border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-wrap items-center gap-3">
@@ -420,10 +439,10 @@ export default function QuizBuilder({
                                 max="1000"
                                 value={activeQ.points || 1}
                                 onChange={(event) => updateQuestion(activeIndex, 'points', Number(event.target.value))}
-                                className="h-8 w-20 rounded-lg border border-gray-200 bg-white px-2 text-sm font-black text-gray-800 outline-none focus:border-red-400 dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                                className="h-8 w-20 rounded-lg border border-gray-200 bg-white px-2 text-sm font-black text-gray-800 outline-none focus:border-focus dark:border-gray-700 dark:bg-gray-950 dark:text-white"
                             />
                         </label>
-                        <button onClick={() => removeQuestion(activeIndex)} className="text-gray-300 hover:text-red-500 transition-colors">
+                        <button onClick={() => removeQuestion(activeIndex)} className="text-gray-300 hover:text-brand-500 transition-colors">
                             <DeleteOutlineIcon sx={{ fontSize: 20 }} />
                         </button>
                     </div>
@@ -431,7 +450,7 @@ export default function QuizBuilder({
 
                 <div className="p-4 space-y-6 sm:p-8 sm:space-y-8">
                     {errors.questions && (
-                        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+                        <div className="rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm font-bold text-brand-700 dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-300">
                             {errors.questions}
                         </div>
                     )}
@@ -446,7 +465,7 @@ export default function QuizBuilder({
                                 value={activeQ.audio_url || ''}
                                 onChange={(e) => updateQuestion(activeIndex, 'audio_url', e.target.value)}
                                 placeholder="https://example.com/audio.mp3"
-                                className="w-full rounded-xl border border-transparent bg-gray-50 p-4 text-sm font-medium text-gray-900 outline-none transition-all focus:border-red-100 focus:bg-white focus:ring-4 focus:ring-red-500/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-red-900/30 dark:focus:bg-gray-950"
+                                className="w-full rounded-xl border border-transparent bg-gray-50 p-4 text-sm font-medium text-gray-900 outline-none transition-all focus:border-brand-100 focus:bg-white focus:ring-4 focus:ring-focus/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-brand-900/30 dark:focus:bg-gray-950"
                             />
                             {activeQ.audio_url && (
                                 <div className="mt-3 bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-xl p-3 flex items-center gap-3">
@@ -478,9 +497,16 @@ export default function QuizBuilder({
                                         ? 'e.g. 音声で言っていることは何ですか？'
                                         : 'Contoh: Pilih cara baca yang benar untuk 経済'
                                 }
-                                className="w-full min-h-[100px] rounded-xl border border-transparent bg-gray-50 p-4 text-base font-medium text-gray-900 outline-none transition-all resize-none focus:border-red-100 focus:bg-white focus:ring-4 focus:ring-red-500/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-red-900/30 dark:focus:bg-gray-950"
+                                className="w-full min-h-[100px] rounded-xl border border-transparent bg-gray-50 p-4 text-base font-medium text-gray-900 outline-none transition-all resize-none focus:border-brand-100 focus:bg-white focus:ring-4 focus:ring-focus/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-brand-900/30 dark:focus:bg-gray-950"
                             />
                         </div>
+                        <input
+                            type="text"
+                            value={activeQ.question_reading || ''}
+                            onChange={(e) => updateQuestion(activeIndex, 'question_reading', e.target.value)}
+                            placeholder="Cara baca kana (opsional), contoh: けいざい"
+                            className="mt-2 h-11 w-full rounded-xl border border-sky-100 bg-sky-50/60 px-4 text-sm font-medium text-sky-900 outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-500/10 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-200"
+                        />
                     </div>
 
                     {/* ─── Multiple Choice: Options Grid ─── */}
@@ -490,7 +516,7 @@ export default function QuizBuilder({
                                 const isCorrect = activeQ.correct_answer === opt && opt !== '';
                                 return (
                                     <div key={optIdx} className="relative group">
-                                        <div className={`absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded flex items-center justify-center text-xs font-bold z-10 ${isCorrect ? 'bg-green-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 group-hover:bg-gray-200'}`}>
+                                        <div className={`absolute left-4 top-7 -translate-y-1/2 w-6 h-6 rounded flex items-center justify-center text-xs font-bold z-10 ${isCorrect ? 'bg-green-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 group-hover:bg-gray-200'}`}>
                                             {optLabels[optIdx]}
                                         </div>
                                         <input
@@ -504,10 +530,17 @@ export default function QuizBuilder({
                                                     : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 focus:border-gray-400'
                                             }`}
                                         />
+                                        <input
+                                            type="text"
+                                            value={activeQ.option_readings?.[optIdx] || ''}
+                                            onChange={(e) => updateOptionReading(activeIndex, optIdx, e.target.value)}
+                                            placeholder="Cara baca kana (opsional)"
+                                            className="mt-2 h-10 w-full rounded-lg border border-sky-100 bg-sky-50/60 px-3 text-xs font-medium text-sky-900 outline-none focus:border-sky-300 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-200"
+                                        />
                                         <button
                                             type="button"
                                             onClick={() => setCorrectAnswer(activeIndex, opt)}
-                                            className={`absolute right-4 top-1/2 -translate-y-1/2 ${isCorrect ? 'text-green-500' : 'text-gray-300 hover:text-gray-400 dark:text-gray-500'}`}
+                                            className={`absolute right-4 top-7 -translate-y-1/2 ${isCorrect ? 'text-green-500' : 'text-gray-300 hover:text-gray-400 dark:text-gray-500'}`}
                                         >
                                             {isCorrect ? <CheckCircleIcon sx={{ fontSize: 22 }} /> : <RadioButtonUncheckedIcon sx={{ fontSize: 22 }} />}
                                         </button>
@@ -547,6 +580,13 @@ export default function QuizBuilder({
                                     placeholder="Contoh: 学校"
                                     className="w-full h-14 bg-white dark:bg-gray-950 border-2 border-purple-300 dark:border-purple-800 rounded-xl px-4 text-lg font-bold text-purple-900 dark:text-purple-200 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500"
                                 />
+                                <input
+                                    type="text"
+                                    value={activeQ.correct_answer_reading || ''}
+                                    onChange={(e) => updateQuestion(activeIndex, 'correct_answer_reading', e.target.value)}
+                                    placeholder="Cara baca kana (opsional)"
+                                    className="mt-2 h-11 w-full rounded-xl border border-sky-100 bg-sky-50/60 px-4 text-sm font-medium text-sky-900 outline-none focus:border-sky-300 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-200"
+                                />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Hint (Opsional)</label>
@@ -560,6 +600,13 @@ export default function QuizBuilder({
                                     }}
                                     placeholder="e.g. がっこう (petunjuk membaca)"
                                     className="w-full h-12 rounded-xl border border-transparent bg-gray-50 px-4 text-sm font-medium text-gray-600 outline-none focus:border-gray-300 focus:bg-white focus:ring-4 focus:ring-gray-500/10 dark:bg-gray-800/50 dark:text-gray-300 dark:focus:border-gray-600 dark:focus:bg-gray-950"
+                                />
+                                <input
+                                    type="text"
+                                    value={activeQ.correct_answer_reading || ''}
+                                    onChange={(e) => updateQuestion(activeIndex, 'correct_answer_reading', e.target.value)}
+                                    placeholder="Cara baca kana (opsional)"
+                                    className="mt-2 h-11 w-full rounded-xl border border-sky-100 bg-sky-50/60 px-4 text-sm font-medium text-sky-900 outline-none focus:border-sky-300 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-200"
                                 />
                             </div>
                         </div>
@@ -595,7 +642,14 @@ export default function QuizBuilder({
                             value={activeQ.explanation || ''}
                             onChange={(e) => updateQuestion(activeIndex, 'explanation', e.target.value)}
                             placeholder="Contoh: 経済 (keizai) berarti ekonomi."
-                            className="w-full min-h-[80px] rounded-xl border border-transparent bg-gray-50 p-4 text-sm font-medium text-gray-500 outline-none transition-all resize-none focus:border-red-100 focus:bg-white focus:ring-4 focus:ring-red-500/10 dark:bg-gray-800/50 dark:text-gray-300 dark:focus:border-red-900/30 dark:focus:bg-gray-950"
+                            className="w-full min-h-[80px] rounded-xl border border-transparent bg-gray-50 p-4 text-sm font-medium text-gray-500 outline-none transition-all resize-none focus:border-brand-100 focus:bg-white focus:ring-4 focus:ring-focus/10 dark:bg-gray-800/50 dark:text-gray-300 dark:focus:border-brand-900/30 dark:focus:bg-gray-950"
+                        />
+                        <input
+                            type="text"
+                            value={activeQ.explanation_reading || ''}
+                            onChange={(e) => updateQuestion(activeIndex, 'explanation_reading', e.target.value)}
+                            placeholder="Cara baca kana untuk teks Jepang pada pembahasan (opsional)"
+                            className="mt-2 h-11 w-full rounded-xl border border-sky-100 bg-sky-50/60 px-4 text-sm font-medium text-sky-900 outline-none focus:border-sky-300 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-200"
                         />
                     </div>
                 </div>
@@ -607,7 +661,7 @@ export default function QuizBuilder({
     const renderSettings = () => (
         <div className="max-w-3xl mx-auto space-y-6">
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 space-y-6">
-                <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2"><SettingsIcon sx={{ fontSize: 20 }} className="text-[#E64A19]" /> Pengaturan Kuis</h2>
+                <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2"><SettingsIcon sx={{ fontSize: 20 }} className="text-brand-700" /> Pengaturan Kuis</h2>
 
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <div>
@@ -617,7 +671,7 @@ export default function QuizBuilder({
                             min="0"
                             value={data.time_limit ?? ''}
                             onChange={(e) => setData('time_limit', e.target.value)}
-                            className="w-full h-12 rounded-xl border border-transparent bg-gray-50 px-4 text-sm font-bold text-gray-900 outline-none focus:border-red-100 focus:bg-white focus:ring-4 focus:ring-red-500/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-red-900/30 dark:focus:bg-gray-950"
+                            className="w-full h-12 rounded-xl border border-transparent bg-gray-50 px-4 text-sm font-bold text-gray-900 outline-none focus:border-brand-100 focus:bg-white focus:ring-4 focus:ring-focus/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-brand-900/30 dark:focus:bg-gray-950"
                             placeholder="Kosong = tanpa batas"
                         />
                         {errors.time_limit && <p className="mt-1 text-[10px] font-bold text-red-600">{errors.time_limit}</p>}
@@ -630,7 +684,7 @@ export default function QuizBuilder({
                             max="100"
                             value={data.passing_score ?? 70}
                             onChange={(e) => setData('passing_score', e.target.value)}
-                            className="w-full h-12 rounded-xl border border-transparent bg-gray-50 px-4 text-sm font-bold text-gray-900 outline-none focus:border-red-100 focus:bg-white focus:ring-4 focus:ring-red-500/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-red-900/30 dark:focus:bg-gray-950"
+                            className="w-full h-12 rounded-xl border border-transparent bg-gray-50 px-4 text-sm font-bold text-gray-900 outline-none focus:border-brand-100 focus:bg-white focus:ring-4 focus:ring-focus/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-brand-900/30 dark:focus:bg-gray-950"
                             placeholder="Default 70"
                         />
                         {errors.passing_score && <p className="mt-1 text-[10px] font-bold text-red-600">{errors.passing_score}</p>}
@@ -688,8 +742,8 @@ export default function QuizBuilder({
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {[
-                        { label: 'Total Soal', value: qCount, color: 'text-[#E64A19]' },
-                        { label: 'Multiple Choice', value: mcCount, color: 'text-red-600 dark:text-red-400' },
+                        { label: 'Total Soal', value: qCount, color: 'text-brand-700' },
+                        { label: 'Multiple Choice', value: mcCount, color: 'text-brand-600 dark:text-brand-400' },
                         { label: 'Fill in Blank', value: fillCount, color: 'text-purple-600' },
                         { label: 'Listening', value: listenCount, color: 'text-green-600' },
                     ].map((item, i) => (
@@ -702,9 +756,9 @@ export default function QuizBuilder({
 
                 {/* Completeness */}
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-                    <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2"><BarChartIcon sx={{ fontSize: 18 }} className="text-[#E64A19]" /> Kelengkapan Soal</h3>
+                    <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2"><BarChartIcon sx={{ fontSize: 18 }} className="text-brand-700" /> Kelengkapan Soal</h3>
                     <div className="w-full h-3 bg-gray-100 dark:bg-gray-800 rounded-full mb-3">
-                        <div className="h-3 bg-gradient-to-r from-[#E64A19] to-[#FF7043] rounded-full transition-all" style={{ width: `${qCount > 0 ? (filledCount / qCount) * 100 : 0}%` }}></div>
+                        <div className="h-3 bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all" style={{ width: `${qCount > 0 ? (filledCount / qCount) * 100 : 0}%` }}></div>
                     </div>
                     <p className="text-xs font-bold text-gray-500 dark:text-gray-400">{filledCount}/{qCount} soal terisi lengkap ({qCount > 0 ? Math.round((filledCount / qCount) * 100) : 0}%)</p>
                 </div>
@@ -712,7 +766,7 @@ export default function QuizBuilder({
                 {/* Per-Question Analysis Table */}
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                     <div className="p-5 border-b border-gray-100 dark:border-gray-800">
-                        <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2"><TrendingUpIcon sx={{ fontSize: 18 }} className="text-[#E64A19]" /> Item Analysis</h3>
+                        <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2"><TrendingUpIcon sx={{ fontSize: 18 }} className="text-brand-700" /> Item Analysis</h3>
                         <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Analisis tiap soal — data akan terisi setelah ada percobaan siswa</p>
                     </div>
                     <div className="overflow-x-auto">
@@ -757,11 +811,11 @@ export default function QuizBuilder({
                     </div>
                 </div>
 
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-2xl p-5 flex items-start gap-3">
-                    <HelpOutlineIcon className="text-red-500 shrink-0 mt-0.5" sx={{ fontSize: 18 }} />
+                <div className="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 rounded-2xl p-5 flex items-start gap-3">
+                    <HelpOutlineIcon className="text-brand-500 shrink-0 mt-0.5" sx={{ fontSize: 18 }} />
                     <div>
-                        <p className="text-sm font-bold text-red-900">Tentang Item Analysis</p>
-                        <p className="text-xs text-red-700 dark:text-red-400 mt-1 leading-relaxed">
+                        <p className="text-sm font-bold text-brand-900">Tentang Item Analysis</p>
+                        <p className="text-xs text-brand-700 dark:text-brand-400 mt-1 leading-relaxed">
                             <strong>Difficulty (p-value)</strong>: Proporsi siswa yang menjawab benar. Rentang 0.0 (semua salah) — 1.0 (semua benar). Ideal: 0.3–0.7.<br />
                             <strong>Discrimination</strong>: Seberapa baik soal membedakan siswa pintar vs kurang. Positif = baik. Nol/negatif = soal perlu direvisi.
                         </p>
@@ -776,13 +830,13 @@ export default function QuizBuilder({
         const qType = question.type || 'multiple_choice';
         return (
             <div className={`relative flex flex-col overflow-hidden border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900 ${fullScreen ? 'h-full min-h-0 rounded-2xl' : 'h-[500px] rounded-[2rem]'}`}>
-                <div className="bg-[#E64A19] h-12 flex items-center px-4 justify-between shrink-0">
+                <div className="bg-brand-600 h-12 flex items-center px-4 justify-between shrink-0">
                     <span className="text-[10px] font-black text-white uppercase tracking-widest">Pratinjau Siswa</span>
                     <div className="w-2 h-2 rounded-full bg-white dark:bg-gray-900/50"></div>
                 </div>
                 <div className="flex-1 p-6 flex flex-col overflow-y-auto">
                     <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full mb-6">
-                        <div className="h-1.5 bg-[#E64A19] rounded-full" style={{ width: `${data.questions.length > 0 ? ((index + 1) / data.questions.length) * 100 : 0}%` }}></div>
+                        <div className="h-1.5 bg-brand-600 rounded-full" style={{ width: `${data.questions.length > 0 ? ((index + 1) / data.questions.length) * 100 : 0}%` }}></div>
                     </div>
 
                     {qType === 'listening' && question.audio_url && (
@@ -841,8 +895,8 @@ export default function QuizBuilder({
 
     return (
         <AuthenticatedLayout>
-            <div className="min-h-screen bg-[#F8F9FB] dark:bg-gray-950 flex flex-col font-sans">
-            <Head title="Editor Kuis & Repetisi - Japanlingo" />
+            <div className="min-h-screen bg-surface-muted flex flex-col font-sans">
+            <Head title="Editor Kuis & Repetisi - TOKU-UP" />
 
             {/* Top Nav */}
             <header className="sticky top-16 z-40 shrink-0 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900 lg:top-0 lg:min-h-16 lg:px-6">
@@ -853,7 +907,7 @@ export default function QuizBuilder({
                     </button>
                     <div className="h-6 w-px bg-gray-200"></div>
                     <div className="flex min-w-0 items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 text-xs font-bold text-white">JP</div>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-xs font-bold text-white">JP</div>
                         <div className="min-w-0">
                             <h1 className="truncate text-sm font-black leading-none tracking-tight text-gray-900 dark:text-white">Editor Kuis &amp; Repetisi</h1>
                             <p className="mt-0.5 truncate text-[11px] font-medium text-gray-400 dark:text-gray-500">
@@ -889,7 +943,7 @@ export default function QuizBuilder({
                                 setActiveTab(tab.value);
                             }}
                             className={`flex h-9 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-bold transition-colors ${
-                                activeTab === tab.value ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white'
+                                activeTab === tab.value ? 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white'
                             }`}
                         >
                             {tab.icon}
@@ -912,7 +966,7 @@ export default function QuizBuilder({
                         <button
                             type="button"
                             onClick={() => setShowAddMenu(value => !value)}
-                            className="flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 transition-colors hover:border-red-300 hover:text-red-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                            className="flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 transition-colors hover:border-brand-300 hover:text-brand-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
                         >
                             <AddIcon sx={{ fontSize: 18 }} />
                             Tambah / Import
@@ -991,7 +1045,7 @@ export default function QuizBuilder({
                         <VisibilityIcon sx={{ fontSize: 18 }} />
                         Pratinjau Siswa
                     </button>}
-                    <button onClick={handleSave} disabled={processing} className="bg-[#E64A19] hover:bg-[#D84315] disabled:opacity-50 text-white rounded-xl px-6 h-9 shadow-md shadow-orange-500/20 text-sm font-bold flex items-center gap-2 transition-colors">
+                    <button onClick={handleSave} disabled={processing} className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl px-6 h-9 shadow-md shadow-brand-500/20 text-sm font-bold flex items-center gap-2 transition-colors">
                         <SaveOutlinedIcon sx={{ fontSize: 18 }} />
                         {processing ? 'Menyimpan...' : 'Simpan & Publish'}
                     </button>
@@ -1009,7 +1063,7 @@ export default function QuizBuilder({
                     <aside className="flex w-full shrink-0 flex-col border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 lg:w-72 lg:border-b-0 lg:border-r">
                         <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
                             <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Questions ({data.questions.length})</span>
-                            <span className="text-xs font-bold text-red-600 dark:text-red-400">Points: {totalPoints}</span>
+                            <span className="text-xs font-bold text-brand-600 dark:text-brand-400">Points: {totalPoints}</span>
                         </div>
                         <div className="flex-1 overflow-x-auto p-3 lg:overflow-y-auto">
                             <div className="flex min-w-max gap-2 lg:min-w-0 lg:block lg:space-y-2">
@@ -1022,15 +1076,15 @@ export default function QuizBuilder({
                                         key={i}
                                         onClick={() => setActiveIndex(i)}
                                         className={`w-56 shrink-0 rounded-xl border p-3 text-left transition-all lg:w-full ${
-                                            activeIndex === i ? 'border-red-500 bg-red-50 dark:bg-red-900/20 shadow-sm ring-1 ring-red-500' : 'border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                                            activeIndex === i ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 shadow-sm ring-1 ring-brand-500' : 'border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                                         }`}
                                     >
                                         <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-[10px] font-black uppercase tracking-widest ${activeIndex === i ? 'text-red-700 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}`}>Q{i + 1}</span>
+                                            <span className={`text-[10px] font-black uppercase tracking-widest ${activeIndex === i ? 'text-brand-700 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'}`}>Q{i + 1}</span>
                                             <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${tColor}`}>{tLabel}</span>
                                             {itemError && <span className="ml-auto h-2 w-2 rounded-full bg-yellow-500" title={itemError}></span>}
                                         </div>
-                                        <p className={`text-sm font-bold truncate ${activeIndex === i ? 'text-red-900 dark:text-red-100' : 'text-gray-700 dark:text-gray-300'}`}>
+                                        <p className={`text-sm font-bold truncate ${activeIndex === i ? 'text-brand-900 dark:text-brand-100' : 'text-gray-700 dark:text-gray-300'}`}>
                                             {q.question_text || 'Pertanyaan baru...'}
                                         </p>
                                     </button>
@@ -1067,7 +1121,7 @@ export default function QuizBuilder({
                                         onClick={() => setActiveFlashcardSetId(set.id)}
                                         className={`shrink-0 rounded-xl px-4 py-2 text-sm font-black ${
                                             activeFlashcardSet?.id === set.id
-                                                ? 'bg-teal-600 text-white'
+                                                ? 'bg-brand-600 text-white'
                                                 : 'border border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'
                                         }`}
                                     >
@@ -1096,7 +1150,7 @@ export default function QuizBuilder({
                                 <button
                                     type="button"
                                     onClick={() => router.visit(builderReturnUrl)}
-                                    className="mt-5 rounded-xl bg-teal-600 px-5 py-3 text-sm font-black text-white"
+                                    className="mt-5 rounded-xl bg-brand-600 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-brand-700"
                                 >
                                     Kembali ke Roadmap
                                 </button>
@@ -1140,7 +1194,7 @@ export default function QuizBuilder({
                                 }
                                 setPreviewIndex((index) => index + 1);
                             }}
-                            className="h-11 rounded-xl bg-[#E64A19] px-5 text-sm font-black text-white"
+                            className="h-11 rounded-xl bg-brand-600 px-5 text-sm font-black text-white"
                         >
                             {previewIndex >= data.questions.length - 1 ? 'Selesai' : 'Berikutnya'}
                         </button>
@@ -1224,11 +1278,11 @@ export default function QuizBuilder({
                         <div className="mt-6 flex justify-end gap-3">
                             <button type="button" onClick={() => setShowVocabularyGenerate(false)} className="rounded-xl border border-gray-200 px-5 py-3 text-sm font-black text-gray-600 dark:border-gray-700 dark:text-gray-300">Batal</button>
                             {vocabularyPreview ? (
-                                <button type="button" onClick={confirmGenerateVocabularyQuestions} className="rounded-xl bg-[#E64A19] px-6 py-3 text-sm font-black text-white">
+                                <button type="button" onClick={confirmGenerateVocabularyQuestions} className="rounded-xl bg-brand-600 px-6 py-3 text-sm font-black text-white">
                                     Tambahkan {vocabularyPreview.count} Soal
                                 </button>
                             ) : (
-                                <button disabled={vocabularyGeneratorLoading} className="rounded-xl bg-[#E64A19] px-6 py-3 text-sm font-black text-white disabled:opacity-50">
+                                <button disabled={vocabularyGeneratorLoading} className="rounded-xl bg-brand-600 px-6 py-3 text-sm font-black text-white disabled:opacity-50">
                                     {vocabularyGeneratorLoading ? 'Membuat Preview...' : 'Pratinjau'}
                                 </button>
                             )}
@@ -1242,7 +1296,7 @@ export default function QuizBuilder({
                         <div className="border-b border-gray-100 p-5 dark:border-gray-800 sm:p-6">
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
-                                    <p className="text-xs font-black uppercase tracking-[0.25em] text-red-600">Preview Import</p>
+                                    <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-600">Preview Import</p>
                                     <h2 className="mt-1 text-2xl font-black text-gray-900 dark:text-white">Cek Soal Sebelum Import</h2>
                                     <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
                                         {importPreview.file_name} - {Math.max(1, Math.round((importPreview.file_size || 0) / 1024))} KB
@@ -1265,9 +1319,9 @@ export default function QuizBuilder({
                                     <p className="text-[10px] font-black uppercase tracking-widest text-green-600">Valid</p>
                                     <p className="mt-1 text-2xl font-black text-green-700 dark:text-green-300">{importPreview.valid_count}</p>
                                 </div>
-                                <div className="rounded-2xl bg-red-50 p-4 dark:bg-red-900/20">
+                                <div className="rounded-2xl bg-brand-50 p-4 dark:bg-brand-900/20">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-red-600">Error</p>
-                                    <p className="mt-1 text-2xl font-black text-red-700 dark:text-red-300">{importPreview.invalid_count}</p>
+                                    <p className="mt-1 text-2xl font-black text-brand-700 dark:text-brand-300">{importPreview.invalid_count}</p>
                                 </div>
                             </div>
                         </div>
@@ -1340,7 +1394,7 @@ export default function QuizBuilder({
                                     type="button"
                                     onClick={handleConfirmImport}
                                     disabled={importProcessing || importPreview.valid_count <= 0}
-                                    className="rounded-xl bg-[#E64A19] px-6 py-3 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition-colors hover:bg-[#D84315] disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-xl bg-brand-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-brand-500/20 transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {importProcessing ? 'Import...' : `Import ${importPreview.valid_count} Soal`}
                                 </button>

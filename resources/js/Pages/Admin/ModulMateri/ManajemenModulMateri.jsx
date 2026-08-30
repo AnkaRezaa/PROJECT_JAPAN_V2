@@ -91,7 +91,7 @@ function ResourceRow({
     const toneClasses = {
         blue: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300',
         teal: 'bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300',
-        red: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300',
+        red: 'bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300',
         orange: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300',
     };
 
@@ -178,7 +178,7 @@ function DailyPracticeRow({ module, day, onCreate, focused = false }) {
             }`}
         >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300">
                     <QuizOutlinedIcon sx={{ fontSize: 19 }} />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -448,9 +448,9 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
 
     return (
         <AuthenticatedLayout>
-            <Head title={`${pageCopy.title} Kelas - Japanlingo`} />
+            <Head title={`${pageCopy.title} Kelas - TOKU-UP`} />
 
-            <div className="min-h-screen bg-[#F8F9FB] dark:bg-gray-950">
+            <div className="min-h-screen bg-surface-muted">
                 <main className="mx-auto max-w-6xl space-y-5 px-4 py-5 sm:px-6 lg:px-8">
                     <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-6">
                         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -790,7 +790,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                     </select>
                                 </label>
                             </div>
-                            {Object.values(moduleForm.errors).length > 0 && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{Object.values(moduleForm.errors)[0]}</p>}
+                            {Object.values(moduleForm.errors).length > 0 && <p className="rounded-xl bg-brand-50 px-4 py-3 text-sm font-bold text-brand-700">{Object.values(moduleForm.errors)[0]}</p>}
                             <div className="grid grid-cols-2 gap-3">
                                 <button type="button" onClick={() => setShowModuleDialog(false)} className="h-11 rounded-xl border border-gray-200 text-sm font-black text-gray-600 dark:border-gray-700 dark:text-gray-300">Batal</button>
                                 <button disabled={moduleForm.processing} className="h-11 rounded-xl bg-orange-600 text-sm font-black text-white disabled:opacity-50">{moduleForm.processing ? 'Menyimpan...' : 'Simpan Minggu'}</button>

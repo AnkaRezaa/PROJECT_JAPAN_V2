@@ -14,9 +14,9 @@ import LinkIcon from '@mui/icons-material/Link';
 import RedoIcon from '@mui/icons-material/Redo';
 import UndoIcon from '@mui/icons-material/Undo';
 
-const toolbarButton = (active = false) => `flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${
+const toolbarButton = (active = false) => `flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
     active
-        ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+        ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300'
         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
 }`;
 
@@ -143,7 +143,7 @@ export default function NewsEditor({ value, onChange, uploadImageUrl }) {
             </div>
 
             {isImagePanelOpen && (
-                <div className="grid gap-3 border-b border-gray-200 bg-red-50/60 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end dark:border-gray-700 dark:bg-red-950/20">
+                <div className="grid gap-3 border-b border-gray-200 bg-brand-50/60 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end dark:border-gray-700 dark:bg-brand-950/20">
                     <label className="block text-xs font-bold text-gray-700 dark:text-gray-200">
                         Gambar
                         <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setImageFile(event.target.files?.[0] || null)} className="mt-1 block w-full text-xs" />
@@ -152,7 +152,7 @@ export default function NewsEditor({ value, onChange, uploadImageUrl }) {
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-200">Alt text<input value={imageAlt} onChange={(event) => setImageAlt(event.target.value)} placeholder="Deskripsikan isi gambar" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-200">Caption opsional<input value={imageCaption} onChange={(event) => setImageCaption(event.target.value)} placeholder="Keterangan gambar" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
                     </div>
-                    <button type="button" disabled={!imageFile || !imageAlt.trim() || isUploading} onClick={uploadImage} className="min-h-10 rounded-lg bg-red-600 px-4 text-sm font-black text-white disabled:opacity-50">{isUploading ? 'Mengunggah...' : 'Sisipkan'}</button>
+                    <button type="button" disabled={!imageFile || !imageAlt.trim() || isUploading} onClick={uploadImage} className="min-h-11 rounded-lg bg-[var(--toku-primary)] px-4 text-sm font-black text-white transition hover:bg-[var(--toku-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--toku-focus)] disabled:opacity-50">{isUploading ? 'Mengunggah...' : 'Sisipkan'}</button>
                 </div>
             )}
 

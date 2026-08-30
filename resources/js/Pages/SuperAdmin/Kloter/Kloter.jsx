@@ -158,7 +158,7 @@ export default function Kloter({
             <div className="mx-auto w-full max-w-[1600px] space-y-5 px-3 py-4 sm:px-5 sm:py-6 lg:px-6 2xl:px-8">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div className="min-w-0">
-                        <p className="text-xs font-black uppercase tracking-[0.3em] text-red-600 dark:text-red-400">Superadmin</p>
+                        <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-600 dark:text-brand-400">Superadmin</p>
                         <h1 className="text-2xl font-black text-gray-900 dark:text-white">Kloter Belajar</h1>
                         <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
                             Atur batch belajar, admin pengampu, anggota, dan access key untuk membuka kelas per kloter.
@@ -167,7 +167,7 @@ export default function Kloter({
                     <button
                         type="button"
                         onClick={openCreate}
-                        className="min-h-11 w-full rounded-xl bg-red-600 px-5 py-3 text-sm font-black text-white shadow-md shadow-red-500/20 hover:bg-red-700 sm:w-auto"
+                        className="min-h-11 w-full rounded-xl bg-brand-600 px-5 py-3 text-sm font-black text-white shadow-md shadow-brand-500/20 hover:bg-brand-700 sm:w-auto"
                     >
                         Buat Kloter
                     </button>
@@ -193,7 +193,7 @@ export default function Kloter({
 
                     <ChartCard className="min-w-0 p-4 sm:p-6" title="Anggota per Kloter" subtitle="Delapan kloter dengan anggota aktif terbanyak">
                         {enrollmentByKloter.length > 0 ? (
-                            <ChartContainer config={{ members: { label: 'Anggota aktif', color: '#dc2626' } }}>
+                            <ChartContainer config={{ members: { label: 'Anggota aktif', color: '#1d4ed8' } }}>
                                 <BarChart data={enrollmentByKloter} layout="vertical" margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                                     <CartesianGrid horizontal={false} strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-800" />
                                     <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} className="fill-gray-400 text-xs" />
@@ -245,7 +245,7 @@ export default function Kloter({
                                     key={item.id}
                                     href={route('superadmin.kloters', { ...filters, selected: item.id })}
                                     preserveScroll
-                                    className={`block min-w-0 rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:shadow-md ${selectedId === item.id ? 'border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-900/20' : 'border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900'}`}
+                                    className={`block min-w-0 rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:shadow-md ${selectedId === item.id ? 'border-brand-200 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-900/20' : 'border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900'}`}
                                 >
                                     <div className="flex min-w-0 items-start justify-between gap-3">
                                         <div className="min-w-0">
@@ -274,7 +274,7 @@ export default function Kloter({
                                         key={`${link.label}-${index}`}
                                         href={link.url || '#'}
                                         dangerouslySetInnerHTML={{ __html: link.label }}
-                                        className={`rounded-xl px-4 py-2 text-sm font-bold ${link.active ? 'bg-red-600 text-white' : 'border border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`}
+                                        className={`rounded-xl px-4 py-2 text-sm font-bold ${link.active ? 'bg-brand-600 text-white' : 'border border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`}
                                     />
                                 ))}
                             </div>
@@ -335,7 +335,7 @@ export default function Kloter({
                                                         onFinish: closeConfirm,
                                                     }),
                                                 })}
-                                                className="min-h-10 w-full rounded-xl border border-red-100 px-4 py-2 text-xs font-black text-red-600 dark:border-red-900/40 dark:text-red-400 sm:w-auto"
+                                                className="min-h-10 w-full rounded-xl border border-brand-100 px-4 py-2 text-xs font-black text-brand-600 dark:border-brand-900/40 dark:text-brand-400 sm:w-auto"
                                             >
                                                 Arsipkan
                                             </button>
@@ -370,7 +370,7 @@ export default function Kloter({
                                                 </div>
                                                 <div className="mt-4">
                                                     <div className="mb-1 flex justify-between text-[11px] font-black text-gray-400"><span>Progres</span><span>{item.progress_done}/{item.progress_total} · {item.progress_percent}%</span></div>
-                                                    <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800"><div className="h-full rounded-full bg-red-600" style={{ width: `${item.progress_percent || 0}%` }} /></div>
+                                                    <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800"><div className="h-full rounded-full bg-brand-600" style={{ width: `${item.progress_percent || 0}%` }} /></div>
                                                 </div>
                                                 {item.status === 'active' && (
                                                     <button
@@ -383,7 +383,7 @@ export default function Kloter({
                                                             details: [{ label: 'User', value: item.user_name }, { label: 'Kloter', value: selectedKloter.nama }],
                                                             onConfirm: () => router.delete(route('superadmin.kloters.users.destroy', [selectedKloter.id, item.user_id]), { preserveScroll: true, onFinish: closeConfirm }),
                                                         })}
-                                                        className="mt-4 w-full rounded-xl border border-red-100 px-3 py-2 text-xs font-black text-red-600 dark:border-red-900/40 dark:text-red-400"
+                                                        className="mt-4 w-full rounded-xl border border-brand-100 px-3 py-2 text-xs font-black text-brand-600 dark:border-brand-900/40 dark:text-brand-400"
                                                     >
                                                         Keluarkan dari Kloter
                                                     </button>
@@ -422,7 +422,7 @@ export default function Kloter({
                                                                     <span>{item.progress_percent}%</span>
                                                                 </div>
                                                                 <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-                                                                    <div className="h-full rounded-full bg-red-600" style={{ width: `${item.progress_percent || 0}%` }} />
+                                                                    <div className="h-full rounded-full bg-brand-600" style={{ width: `${item.progress_percent || 0}%` }} />
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -447,7 +447,7 @@ export default function Kloter({
                                                                             onFinish: closeConfirm,
                                                                         }),
                                                                     })}
-                                                                    className="rounded-lg border border-red-100 px-3 py-2 text-xs font-black text-red-600 dark:border-red-900/40 dark:text-red-400"
+                                                                    className="rounded-lg border border-brand-100 px-3 py-2 text-xs font-black text-brand-600 dark:border-brand-900/40 dark:text-brand-400"
                                                                 >
                                                                     Keluarkan
                                                                 </button>
@@ -479,11 +479,11 @@ export default function Kloter({
                                     </div>
                                 </section>
 
-                                <section className="rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-900/40 dark:bg-red-950/20">
+                                <section className="rounded-2xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-900/40 dark:bg-brand-950/20">
                                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="min-w-0">
                                             <h3 className="text-sm font-black uppercase tracking-[0.18em] text-red-600 dark:text-red-300">Danger Zone</h3>
-                                            <p className="mt-2 text-sm font-semibold leading-6 text-red-700/80 dark:text-red-200/80">
+                                            <p className="mt-2 text-sm font-semibold leading-6 text-brand-700/80 dark:text-brand-200/80">
                                                 Hapus kloter akan menghapus daftar anggota kloter. Data transaksi, langganan, dan access key tidak dihapus, hanya dilepas dari kloter ini.
                                             </p>
                                         </div>
@@ -504,7 +504,7 @@ export default function Kloter({
                                                     onFinish: closeConfirm,
                                                 }),
                                             })}
-                                            className="min-h-11 w-full shrink-0 rounded-xl bg-red-600 px-5 py-3 text-sm font-black text-white shadow-md shadow-red-500/20 hover:bg-red-700 sm:w-auto"
+                                            className="min-h-11 w-full shrink-0 rounded-xl bg-brand-600 px-5 py-3 text-sm font-black text-white shadow-md shadow-brand-500/20 hover:bg-brand-700 sm:w-auto"
                                         >
                                             Delete Kloter
                                         </button>
@@ -551,7 +551,7 @@ export default function Kloter({
                             </Field>
                             <Field label="Default payment" help="Jika aktif, user yang bayar kelas ini otomatis masuk kloter ini selama belum penuh.">
                                 <label className="flex h-11 items-center gap-3 rounded-xl border border-gray-200 px-4 text-sm font-bold dark:border-gray-700">
-                                    <input type="checkbox" checked={kloterForm.data.is_default} onChange={(event) => kloterForm.setData('is_default', event.target.checked)} className="rounded border-gray-300 text-red-600 focus:ring-red-500" />
+                                    <input type="checkbox" checked={kloterForm.data.is_default} onChange={(event) => kloterForm.setData('is_default', event.target.checked)} className="rounded border-gray-300 text-brand-600 focus:ring-focus" />
                                     Jadikan default
                                 </label>
                             </Field>
@@ -561,7 +561,7 @@ export default function Kloter({
                         </Field>
                         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                             <button type="button" onClick={() => setShowKloterForm(false)} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
-                            <button disabled={kloterForm.processing} className="min-h-11 w-full rounded-xl bg-red-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-60 sm:w-auto">{kloterForm.processing ? 'Menyimpan...' : 'Simpan'}</button>
+                            <button disabled={kloterForm.processing} className="min-h-11 w-full rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-60 sm:w-auto">{kloterForm.processing ? 'Menyimpan...' : 'Simpan'}</button>
                         </div>
                     </form>
                 </Modal>
@@ -574,7 +574,7 @@ export default function Kloter({
                             Kapasitas kloter: {selectedKloter.kapasitas_label || `${selectedKloter.anggota_aktif_count || 0}/-`}. Dropdown dibatasi 20 hasil teratas agar tetap ringan; gunakan search untuk mempersempit pilihan.
                         </div>
                         {isKloterFull && (
-                            <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300">
+                            <div className="rounded-2xl border border-brand-100 bg-brand-50 p-4 text-sm font-bold text-brand-700 dark:border-brand-900/40 dark:bg-brand-900/20 dark:text-brand-300">
                                 Kloter ini sudah penuh. Naikkan kapasitas atau keluarkan anggota sebelum menambah user.
                             </div>
                         )}
@@ -662,7 +662,7 @@ export default function Kloter({
                         </p>
                         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                             <button type="button" onClick={() => setShowAccessKeyForm(false)} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
-                            <button disabled={keyForm.processing} className="min-h-11 w-full rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-black text-white disabled:opacity-60 sm:w-auto">{keyForm.processing ? 'Membuat...' : 'Buat Key'}</button>
+                            <button disabled={keyForm.processing} className="min-h-11 w-full rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-black text-gray-950 disabled:opacity-60 sm:w-auto">{keyForm.processing ? 'Membuat...' : 'Buat Key'}</button>
                         </div>
                     </form>
                 </Modal>

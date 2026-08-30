@@ -17,9 +17,9 @@ class KloterDemoSeeder extends Seeder
 
     public function run(): void
     {
-        $mandiriStudent = Pengguna::where('email', 'student@japanlingo.com')->firstOrFail();
-        $mentorStudent = Pengguna::where('email', 'student2@japanlingo.com')->firstOrFail();
-        $mentorAdmin = Pengguna::where('email', 'admin.kloter@japanlingo.com')->firstOrFail();
+        $mandiriStudent = Pengguna::where('email', 'student@toku-up.com')->firstOrFail();
+        $mentorStudent = Pengguna::where('email', 'student2@toku-up.com')->firstOrFail();
+        $mentorAdmin = Pengguna::where('email', 'admin.kloter@toku-up.com')->firstOrFail();
         $mandiriProgram = ProgramPembelajaran::where('slug', KelasDemoSeeder::MANDIRI_SLUG)->firstOrFail();
         $mentorProgram = ProgramPembelajaran::where('slug', KelasDemoSeeder::MENTOR_SLUG)->firstOrFail();
         $mandiriPlan = PaketPembayaran::where('slug', ProgramPaymentPlanSeeder::MANDIRI_PLAN_SLUG)->firstOrFail();

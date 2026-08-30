@@ -33,12 +33,12 @@ class AdminBerandaController extends Controller
         $period = $chartData->resolvePeriod($request);
 
         $payload = [
-            'adminScope' => $admin->isAdminKloter() ? Pengguna::ADMIN_SCOPE_KLOTER : Pengguna::ADMIN_SCOPE_GLOBAL,
+            'adminScope' => $admin->isMentor() ? Pengguna::ADMIN_SCOPE_KLOTER : Pengguna::ADMIN_SCOPE_GLOBAL,
             'kloters' => $kloterService->pilihanKloterAdmin($admin),
             'filters' => ['kloter' => $selectedKloter?->id, 'period' => $period],
         ];
 
-        if ($admin->isAdminKloter()) {
+        if ($admin->isMentor()) {
             $payload = [...$payload, ...$this->kloterWorkspace($admin, $selectedKloter, $programIds, $period, $chartData, $kloterService)];
         } else {
             $payload = [...$payload, ...$this->contentWorkspace($programIds)];

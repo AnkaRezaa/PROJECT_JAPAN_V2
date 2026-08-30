@@ -7,6 +7,8 @@ use App\Models\KloterBelajar;
 use App\Models\KodeAkses;
 use App\Models\Langganan;
 use App\Models\Pengguna;
+use App\Models\Modul;
+use App\Models\ProgramPembelajaran;
 use App\Models\Transaksi;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -19,7 +21,7 @@ class KloterBelajarService
         abort_unless($admin->role === 'admin', 403);
 
         return KloterBelajar::query()
-            ->when($admin->isAdminKloter(), fn (Builder $query) => $query->where('admin_id', $admin->id));
+            ->when($admin->isMentor(), fn (Builder $query) => $query->where('admin_id', $admin->id));
     }
 
     public function resolveKloterDikelola(Pengguna $admin, ?int $kloterId): ?KloterBelajar
@@ -70,6 +72,27 @@ class KloterBelajarService
             ->values();
     }
 
+    public function batasiProgramDikelola(Builder $query, Pengguna $admin): Builder
+    {
+        $programIds = $this->programIdsDikelola($admin);
+
+        return $programIds === null ? $query : $query->whereIn('id', $programIds);
+    }
+
+    public function abortJikaProgramDiLuarCakupan(Pengguna $admin, ProgramPembelajaran|int $program): void
+    {
+        $programId = $program instanceof ProgramPembelajaran ? $program->id : $program;
+        $allowed = $this->batasiProgramDikelola(ProgramPembelajaran::query()->whereKey($programId), $admin)->exists();
+
+        abort_unless($allowed, 403, 'Kelas ini berada di luar cakupan Mentor Kelas Anda.');
+    }
+
+    public function abortJikaModulDiLuarCakupan(Pengguna $admin, Modul|int $module): void
+    {
+        $model = $module instanceof Modul ? $module : Modul::query()->findOrFail($module);
+        $this->abortJikaProgramDiLuarCakupan($admin, (int) $model->program_pembelajaran_id);
+    }
+
     public function batasiSiswaDikelola(Builder $query, Pengguna $admin, ?KloterBelajar $kloter = null): Builder
     {
         if ($admin->isAdminGlobal() && ! $kloter) {
@@ -81,7 +104,7 @@ class KloterBelajarService
                 ->where('status', 'active')
                 ->whereHas('kloterBelajar', function (Builder $kloterQuery) use ($admin, $kloter) {
                     $kloterQuery
-                        ->when($admin->isAdminKloter(), fn (Builder $query) => $query->where('admin_id', $admin->id))
+                        ->when($admin->isMentor(), fn (Builder $query) => $query->where('admin_id', $admin->id))
                         ->when($kloter, fn (Builder $query) => $query->whereKey($kloter->id));
                 });
         });
@@ -102,7 +125,7 @@ class KloterBelajarService
     public function abortJikaKloterDiLuarCakupan(Pengguna $admin, KloterBelajar $kloter): void
     {
         abort_unless(
-            $admin->isAdminGlobal() || ($admin->isAdminKloter() && $kloter->admin_id === $admin->id),
+            $admin->isAdminGlobal() || ($admin->isMentor() && $kloter->admin_id === $admin->id),
             403,
             'Kloter ini berada di luar cakupan akun Anda.'
         );

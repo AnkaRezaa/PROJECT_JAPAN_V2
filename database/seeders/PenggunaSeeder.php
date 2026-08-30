@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\Hash;
 
 class PenggunaSeeder extends Seeder
 {
-    public const DEMO_PASSWORD = 'password';
+    public const DEMO_PASSWORD = 'TOKU-UP#2026';
 
     public function run(): void
     {
-        $this->seedAccount('admin@japanlingo.com', [
-            'username' => 'Admin Global JapanLingo',
+        $this->seedAccount('admin@toku-up.com', [
+            'username' => 'Admin Global TOKU-UP',
             'email_verified_at' => now(),
             'password_login_enabled' => true,
             'role' => 'admin',
@@ -21,8 +21,8 @@ class PenggunaSeeder extends Seeder
             'status' => 'active',
         ]);
 
-        $this->seedAccount('admin.kloter@japanlingo.com', [
-            'username' => 'Mentor JapanLingo',
+        $this->seedAccount('admin.kloter@toku-up.com', [
+            'username' => 'Mentor TOKU-UP',
             'email_verified_at' => now(),
             'password_login_enabled' => true,
             'role' => 'admin',
@@ -30,8 +30,8 @@ class PenggunaSeeder extends Seeder
             'status' => 'active',
         ]);
 
-        $this->seedAccount('superadmin@japanlingo.com', [
-            'username' => 'Superadmin JapanLingo',
+        $this->seedAccount('superadmin@toku-up.com', [
+            'username' => 'Superadmin TOKU-UP',
             'email_verified_at' => now(),
             'password_login_enabled' => true,
             'role' => 'superadmin',
@@ -39,7 +39,7 @@ class PenggunaSeeder extends Seeder
             'status' => 'active',
         ]);
 
-        $this->seedAccount('student@japanlingo.com', [
+        $this->seedAccount('student@toku-up.com', [
             'username' => 'Siswa Mandiri Demo',
             'email_verified_at' => now(),
             'password_login_enabled' => true,
@@ -52,7 +52,7 @@ class PenggunaSeeder extends Seeder
             'last_activity_date' => null,
         ]);
 
-        $this->seedAccount('student2@japanlingo.com', [
+        $this->seedAccount('student2@toku-up.com', [
             'username' => 'Siswa Mentor Demo',
             'email_verified_at' => now(),
             'password_login_enabled' => true,

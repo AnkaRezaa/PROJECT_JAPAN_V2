@@ -53,6 +53,33 @@ export default function DataUser({
         });
     };
 
+    const removeUser = (user) => {
+        const anonymize = !user.can_permanently_delete && user.can_anonymize;
+
+        openConfirm({
+            variant: 'danger',
+            title: anonymize ? 'Anonimkan Akun Student?' : 'Hapus Permanen Student?',
+            message: anonymize
+                ? 'Identitas pribadi akan dihapus, sedangkan riwayat transaksi dan belajar tetap disimpan untuk kebutuhan audit.'
+                : 'Akun dan data yang tidak memiliki kewajiban retensi akan dihapus permanen dan tidak dapat dipulihkan.',
+            details: [
+                { label: 'Student', value: user.name },
+                { label: 'Proses', value: anonymize ? 'Anonimisasi data' : 'Hapus permanen' },
+            ],
+            confirmLabel: anonymize ? 'Anonimkan Akun' : 'Hapus Permanen',
+            onConfirm: () => {
+                const options = { preserveScroll: true, onFinish: closeConfirm };
+
+                if (anonymize) {
+                    router.post(route('superadmin.users.anonymize', user.id), {}, options);
+                    return;
+                }
+
+                router.delete(route('superadmin.users.destroy', user.id), options);
+            },
+        });
+    };
+
     const submitFilters = (e) => {
         e.preventDefault();
         router.get(route('superadmin.users'), filterForm.data, { preserveState: true, preserveScroll: true });
@@ -65,7 +92,7 @@ export default function DataUser({
             <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
                 <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
                     <div>
-                        <p className="text-xs font-black uppercase tracking-[0.3em] text-red-600 dark:text-red-400">Superadmin</p>
+                        <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-600 dark:text-brand-400">Superadmin</p>
                         <h1 className="text-2xl font-black text-gray-900 dark:text-white">Data User</h1>
                         <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
                             Monitoring student, status akun, dan progres belajar dengan filter dan pagination.
@@ -141,7 +168,7 @@ export default function DataUser({
                                             <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{item.streak}</td>
                                             <td className="px-6 py-4">
                                                 <div className="w-28 rounded-full bg-gray-100 dark:bg-gray-800">
-                                                    <div className="rounded-full bg-red-500 px-2 py-1 text-[10px] font-black text-white" style={{ width: item.progress }}>{item.progress}</div>
+                                                    <div className="rounded-full bg-brand-600 px-2 py-1 text-[10px] font-black text-white" style={{ width: item.progress }}>{item.progress}</div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -150,8 +177,17 @@ export default function DataUser({
                                                     <button onClick={() => setStatusTarget(item)} className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs font-black text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
                                                         {item.raw_status === 'suspended' ? 'Activate' : 'Suspend'}
                                                     </button>
-                                                    <button onClick={() => resetPassword(item)} className="rounded-lg border border-red-100 dark:border-red-900/30 px-3 py-2 text-xs font-black text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                                    <button onClick={() => resetPassword(item)} className="rounded-lg border border-brand-100 dark:border-brand-900/30 px-3 py-2 text-xs font-black text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20">
                                                         Reset
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeUser(item)}
+                                                        disabled={!item.can_permanently_delete && !item.can_anonymize}
+                                                        title={(item.deletion_blockers || []).join(' ') || 'Hapus atau anonimkan akun'}
+                                                        className="rounded-lg bg-brand-600 px-3 py-2 text-xs font-black text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 dark:disabled:bg-gray-800"
+                                                    >
+                                                        Hapus
                                                     </button>
                                                 </div>
                                             </td>
@@ -167,7 +203,7 @@ export default function DataUser({
                                         key={`${link.label}-${index}`}
                                         href={link.url || '#'}
                                         dangerouslySetInnerHTML={{ __html: link.label }}
-                                        className={`rounded-xl px-4 py-2 text-sm font-bold ${link.active ? 'bg-red-600 text-white' : 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`}
+                                        className={`rounded-xl px-4 py-2 text-sm font-bold ${link.active ? 'bg-brand-600 text-white' : 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`}
                                     />
                                 ))}
                             </div>
@@ -177,7 +213,7 @@ export default function DataUser({
                     <Card>
                         <h2 className="text-lg font-black text-gray-900 dark:text-white">Aksi Tersedia</h2>
                         <div className="mt-4 grid grid-cols-1 gap-3">
-                            {['Suspend atau activate akun student', 'Reset password student', 'Semua aksi tercatat ke activity log', 'Search dan filter sudah aktif'].map((item) => (
+                            {['Suspend atau aktifkan akun student', 'Reset password student', 'Hapus aman atau anonimisasi akun', 'Semua aksi tercatat ke activity log'].map((item) => (
                                 <div key={item} className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300">
                                     {item}
                                 </div>

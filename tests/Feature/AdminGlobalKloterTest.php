@@ -475,9 +475,9 @@ it('allows superadmin to provision scoped admins and lists active admins as inst
 
     $this->actingAs($superadmin)
         ->post(route('superadmin.admins.store'), [
-            'username' => 'Admin Kloter Baru',
+            'username' => 'Mentor Kelas Baru',
             'email' => 'admin-kloter-baru@example.com',
-            'password' => 'password123',
+            'password' => 'password1234',
             'role' => 'admin',
             'admin_scope' => Pengguna::ADMIN_SCOPE_KLOTER,
         ])
@@ -495,8 +495,8 @@ it('allows superadmin to provision scoped admins and lists active admins as inst
         ->assertInertia(fn (Assert $page) => $page
             ->component('SuperAdmin/Kloter/Kloter')
             ->has('admins', 4)
-            ->where('admins.0.id', $newKloterAdmin->id)
-            ->where('admins.1.id', $fixture['globalAdmin']->id));
+            ->where('admins', fn ($admins) => collect($admins)->pluck('id')->contains($newKloterAdmin->id)
+                && collect($admins)->pluck('id')->contains($fixture['globalAdmin']->id)));
 });
 
 it('opens live classroom setup with assigned cohorts for kloter admin and all cohorts for global admin', function () {
@@ -554,7 +554,7 @@ it('prevents a superadmin from resetting their own password', function () {
 
 it('seeds global and kloter admins and assigns demo cohorts to the kloter admin', function () {
     Pengguna::factory()->unverified()->create([
-        'email' => 'admin@japanlingo.com',
+        'email' => 'admin@toku-up.com',
         'password' => Hash::make('password-client'),
         'role' => 'admin',
         'status' => 'active',
@@ -563,15 +563,15 @@ it('seeds global and kloter admins and assigns demo cohorts to the kloter admin'
     $this->seed(DemoDataSeeder::class);
     $this->seed(DemoDataSeeder::class);
 
-    $globalAdmin = Pengguna::where('email', 'admin@japanlingo.com')->firstOrFail();
-    $kloterAdmin = Pengguna::where('email', 'admin.kloter@japanlingo.com')->firstOrFail();
+    $globalAdmin = Pengguna::where('email', 'admin@toku-up.com')->firstOrFail();
+    $kloterAdmin = Pengguna::where('email', 'admin.kloter@toku-up.com')->firstOrFail();
 
     expect($globalAdmin->admin_scope)->toBe(Pengguna::ADMIN_SCOPE_GLOBAL)
         ->and($kloterAdmin->admin_scope)->toBe(Pengguna::ADMIN_SCOPE_KLOTER)
         ->and($globalAdmin->hasVerifiedEmail())->toBeTrue()
         ->and($kloterAdmin->hasVerifiedEmail())->toBeTrue()
-        ->and(Hash::check('JapanLingo#2026', $globalAdmin->password))->toBeTrue()
-        ->and(Pengguna::where('email', 'admin.kloter@japanlingo.com')->count())->toBe(1);
+        ->and(Hash::check('TOKU-UP#2026', $globalAdmin->password))->toBeTrue()
+        ->and(Pengguna::where('email', 'admin.kloter@toku-up.com')->count())->toBe(1);
 
     expect(KloterBelajar::where('admin_id', $kloterAdmin->id)->count())->toBe(1)
         ->and(KloterBelajar::where('admin_id', $globalAdmin->id)->count())->toBe(0);

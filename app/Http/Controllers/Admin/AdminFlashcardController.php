@@ -10,6 +10,7 @@ use App\Models\Soal;
 use App\Services\ImportSpreadsheetService;
 use App\Services\NotifikasiPenggunaService;
 use App\Services\TemplateExcelService;
+use App\Services\KloterBelajarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -18,9 +19,14 @@ use Inertia\Inertia;
 
 class AdminFlashcardController extends Controller
 {
+    public function __construct(private readonly KloterBelajarService $kloterService)
+    {
+    }
+
     public function store(Request $request, NotifikasiPenggunaService $notifikasi)
     {
         $validated = $this->validateSet($request);
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $validated['module_id']);
         $set = SetFlashcard::create($validated + ['source_type' => 'vocabulary']);
 
         if ($set->status === 'published') {
@@ -32,6 +38,7 @@ class AdminFlashcardController extends Controller
 
     public function update(Request $request, SetFlashcard $flashcardSet, NotifikasiPenggunaService $notifikasi)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $flashcardSet->module_id);
         $oldStatus = $flashcardSet->status;
         $flashcardSet->update($this->validateSet($request));
 
@@ -42,8 +49,9 @@ class AdminFlashcardController extends Controller
         return redirect()->back()->with('success', 'Flashcard set berhasil diperbarui.');
     }
 
-    public function destroy(SetFlashcard $flashcardSet)
+    public function destroy(Request $request, SetFlashcard $flashcardSet)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $flashcardSet->module_id);
         $module = $flashcardSet->module()->first(['id', 'program_pembelajaran_id']);
         $dayId = $flashcardSet->module_day_id;
         $flashcardSet->delete();
@@ -60,6 +68,7 @@ class AdminFlashcardController extends Controller
 
     public function builder(SetFlashcard $flashcardSet, Request $request)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $flashcardSet->module_id);
         $flashcardSet->load([
             'level:id,level_name',
             'module:id,program_pembelajaran_id,title,week_number,level_id',
@@ -277,13 +286,13 @@ class AdminFlashcardController extends Controller
 
         $headers = $this->flashcardImportHeaders();
         $rows = $this->flashcardTemplateRows($flashcardSet);
-        $filename = 'japanlingo-flashcard-template.'.$format;
+        $filename = 'toku-up-flashcard-template.'.$format;
 
         if ($format === 'csv') {
             return $templates->csvResponse($headers, $rows, $filename);
         }
 
-        $path = $templates->xlsxPath($headers, $rows, 'Flashcard Import', 'japanlingo_flashcard_template_');
+        $path = $templates->xlsxPath($headers, $rows, 'Flashcard Import', 'toku_up_flashcard_template_');
 
         return response()
             ->download($path, $filename, [

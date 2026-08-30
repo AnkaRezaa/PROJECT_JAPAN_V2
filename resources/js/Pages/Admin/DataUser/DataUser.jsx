@@ -151,8 +151,8 @@ export default function Users({
             <div className="space-y-5 px-4 py-5 sm:px-6 lg:px-8">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <p className="text-xs font-black uppercase tracking-[0.2em] text-red-600 dark:text-red-400">
-                            {adminScope === 'kloter' ? 'Admin Kloter' : 'Admin Global'}
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400">
+                                    {adminScope === 'kloter' ? 'Mentor Kelas' : 'Admin Global'}
                         </p>
                         <h1 className="text-2xl font-black text-gray-900 dark:text-white">Kloter & Siswa</h1>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Pantau progress, nilai, aktivitas, jadwal, dan roster belajar.</p>
@@ -163,13 +163,13 @@ export default function Users({
                 </div>
 
                 <div className="flex w-full gap-2 overflow-x-auto border-b border-gray-200 dark:border-gray-800">
-                    <button type="button" onClick={() => setActiveTab('students')} className={`border-b-2 px-3 py-3 text-sm font-black transition ${activeTab === 'students' ? 'border-red-600 text-red-600 dark:text-red-400' : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}`}>
+                    <button type="button" onClick={() => setActiveTab('students')} className={`border-b-2 px-3 py-3 text-sm font-black transition ${activeTab === 'students' ? 'border-brand-600 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}`}>
                         Siswa
                     </button>
-                    <button type="button" onClick={() => setActiveTab('pending')} className={`border-b-2 px-3 py-3 text-sm font-black transition ${activeTab === 'pending' ? 'border-red-600 text-red-600 dark:text-red-400' : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}`}>
+                    <button type="button" onClick={() => setActiveTab('pending')} className={`border-b-2 px-3 py-3 text-sm font-black transition ${activeTab === 'pending' ? 'border-brand-600 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}`}>
                         Persetujuan {pendingEnrollments.length > 0 && <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">{pendingEnrollments.length}</span>}
                     </button>
-                    <button type="button" onClick={() => setActiveTab('kloter')} className={`border-b-2 px-3 py-3 text-sm font-black transition ${activeTab === 'kloter' ? 'border-red-600 text-red-600 dark:text-red-400' : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}`}>
+                    <button type="button" onClick={() => setActiveTab('kloter')} className={`border-b-2 px-3 py-3 text-sm font-black transition ${activeTab === 'kloter' ? 'border-brand-600 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}`}>
                         Kelola Kloter
                     </button>
                     <Link
@@ -188,7 +188,7 @@ export default function Users({
                             placeholder="Cari nama atau email siswa"
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
-                            className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-900 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                            className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-900 outline-none focus:border-focus focus:ring-2 focus:ring-focus/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                         />
                         <SearchableSelect
                             value={filters.kloter || ''}
@@ -227,7 +227,7 @@ export default function Users({
                                         <td className="px-5 py-4">
                                             <div className="flex justify-end gap-2">
                                                 <Link href={detailUrl(user.id)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 dark:border-gray-700 dark:text-gray-300">Detail</Link>
-                                                {selectedKloter && <button onClick={() => confirmRemoval(user)} className="rounded-lg border border-red-100 px-3 py-2 text-xs font-black text-red-600 dark:border-red-900/40 dark:text-red-400">Keluarkan</button>}
+                                                {selectedKloter && <button onClick={() => confirmRemoval(user)} className="rounded-lg border border-brand-100 px-3 py-2 text-xs font-black text-brand-600 dark:border-brand-900/40 dark:text-brand-400">Keluarkan</button>}
                                             </div>
                                         </td>
                                     </tr>
@@ -247,7 +247,7 @@ export default function Users({
                                 </div>
                                 <div className="flex gap-2">
                                     <Link href={detailUrl(user.id)} className="flex min-h-11 flex-1 items-center justify-center rounded-xl bg-gray-900 px-3 text-xs font-black text-white dark:bg-white dark:text-gray-900">Lihat Detail</Link>
-                                    {selectedKloter && <button onClick={() => confirmRemoval(user)} className="min-h-11 rounded-xl border border-red-200 px-3 text-xs font-black text-red-600 dark:border-red-900/50 dark:text-red-400">Keluarkan</button>}
+                                    {selectedKloter && <button onClick={() => confirmRemoval(user)} className="min-h-11 rounded-xl border border-brand-200 px-3 text-xs font-black text-brand-600 dark:border-brand-900/50 dark:text-brand-400">Keluarkan</button>}
                                 </div>
                             </article>
                         ))}
@@ -258,7 +258,7 @@ export default function Users({
                     {students?.links && students.links.length > 3 && (
                         <div className="flex flex-wrap justify-center gap-2 border-t border-gray-100 p-4 dark:border-gray-800">
                             {students.links.map((link, index) => (
-                                <Link key={`${link.label}-${index}`} href={link.url || '#'} dangerouslySetInnerHTML={{ __html: link.label }} className={`rounded-lg px-3 py-2 text-sm font-bold ${link.active ? 'bg-red-600 text-white' : 'border border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-300'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`} />
+                                <Link key={`${link.label}-${index}`} href={link.url || '#'} dangerouslySetInnerHTML={{ __html: link.label }} className={`rounded-lg px-3 py-2 text-sm font-bold ${link.active ? 'bg-brand-600 text-white' : 'border border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-300'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`} />
                             ))}
                         </div>
                     )}
@@ -340,7 +340,7 @@ export default function Users({
                         </div>
                         <div className="flex flex-col gap-1 border-b border-gray-100 pb-4 dark:border-gray-800 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="font-black text-gray-900 dark:text-white">{selectedKloter.name}</h2><p className="text-sm text-gray-500 dark:text-gray-400">{selectedKloter.program_name}</p></div><Badge color={selectedKloter.status === 'active' ? 'green' : 'gray'}>{selectedKloter.status}</Badge></div>
                         <div className="mt-4 grid gap-5 xl:grid-cols-2">
-                            <form onSubmit={submitSchedule} className="space-y-3"><div><h3 className="text-sm font-black text-gray-900 dark:text-white">Jadwal Kloter</h3><p className="text-xs text-gray-500 dark:text-gray-400">Tanggal mulai menentukan pembukaan roadmap mingguan.</p></div><div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold text-gray-600 dark:text-gray-300">Tanggal mulai<input type="date" value={scheduleForm.data.tanggal_mulai} onChange={(event) => scheduleForm.setData('tanggal_mulai', event.target.value)} disabled={selectedKloter.is_read_only} className="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" /></label><label className="text-xs font-bold text-gray-600 dark:text-gray-300">Tanggal selesai<input type="date" value={scheduleForm.data.tanggal_selesai} onChange={(event) => scheduleForm.setData('tanggal_selesai', event.target.value)} disabled={selectedKloter.is_read_only} className="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" /></label></div>{(scheduleForm.errors.tanggal_mulai || scheduleForm.errors.tanggal_selesai) && <p className="text-xs font-bold text-red-500">{scheduleForm.errors.tanggal_mulai || scheduleForm.errors.tanggal_selesai}</p>}<button disabled={scheduleForm.processing || selectedKloter.is_read_only} className="h-10 rounded-xl bg-red-600 px-4 text-xs font-black text-white disabled:opacity-50">{scheduleForm.processing ? 'Menyimpan...' : 'Simpan Jadwal'}</button></form>
+                            <form onSubmit={submitSchedule} className="space-y-3"><div><h3 className="text-sm font-black text-gray-900 dark:text-white">Jadwal Kloter</h3><p className="text-xs text-gray-500 dark:text-gray-400">Tanggal mulai menentukan pembukaan roadmap mingguan.</p></div><div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold text-gray-600 dark:text-gray-300">Tanggal mulai<input type="date" value={scheduleForm.data.tanggal_mulai} onChange={(event) => scheduleForm.setData('tanggal_mulai', event.target.value)} disabled={selectedKloter.is_read_only} className="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" /></label><label className="text-xs font-bold text-gray-600 dark:text-gray-300">Tanggal selesai<input type="date" value={scheduleForm.data.tanggal_selesai} onChange={(event) => scheduleForm.setData('tanggal_selesai', event.target.value)} disabled={selectedKloter.is_read_only} className="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" /></label></div>{(scheduleForm.errors.tanggal_mulai || scheduleForm.errors.tanggal_selesai) && <p className="text-xs font-bold text-red-500">{scheduleForm.errors.tanggal_mulai || scheduleForm.errors.tanggal_selesai}</p>}<button disabled={scheduleForm.processing || selectedKloter.is_read_only} className="h-10 rounded-xl bg-brand-600 px-4 text-xs font-black text-white disabled:opacity-50">{scheduleForm.processing ? 'Menyimpan...' : 'Simpan Jadwal'}</button></form>
                             <form onSubmit={submitAssignment} className="space-y-3">
                                 <div>
                                     <h3 className="text-sm font-black text-gray-900 dark:text-white">Tambahkan Siswa Secara Manual</h3>

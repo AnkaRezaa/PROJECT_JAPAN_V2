@@ -1,4 +1,4 @@
-﻿import React, { useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Card from '@/Components/UI/Card';
@@ -54,7 +54,7 @@ const typeBadge = {
     bunpo: 'bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300',
 };
 
-const inputClass = 'w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:focus:ring-orange-900/30';
+const inputClass = 'w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30';
 
 const parseTags = (value) => value.split(',').map((tag) => tag.trim()).filter(Boolean);
 
@@ -286,11 +286,11 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            <button type="button" onClick={openImport} className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold text-gray-600 transition-colors hover:border-red-200 hover:text-red-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                            <button type="button" onClick={openImport} className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold text-gray-600 transition-colors hover:border-brand-200 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
                                 <FileUploadIcon sx={{ fontSize: 18 }} />
                                 Import CSV/Excel
                             </button>
-                            <button onClick={openCreate} className="flex h-11 items-center gap-2 rounded-2xl bg-[#E64A19] px-5 text-sm font-black text-white shadow-sm">
+                            <button onClick={openCreate} className="flex h-11 items-center gap-2 rounded-2xl bg-brand-600 px-5 text-sm font-black text-white shadow-sm">
                                 <AddIcon sx={{ fontSize: 18 }} />
                                 Tambah
                             </button>
@@ -393,7 +393,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                                 <button type="button" onClick={closeImport} disabled={importForm.processing} className="h-10 flex-1 rounded-xl border border-gray-200 px-4 text-sm font-bold text-gray-600 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 sm:flex-none">
                                     Batal
                                 </button>
-                                <button type="button" onClick={importVocabulary} disabled={!importReady || importForm.processing} className="h-10 flex-1 rounded-xl bg-red-600 px-5 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none">
+                                <button type="button" onClick={importVocabulary} disabled={!importReady || importForm.processing} className="h-10 flex-1 rounded-xl bg-brand-600 px-5 text-sm font-black text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none">
                                     {importForm.processing ? 'Mengimpor...' : 'Import Konten'}
                                 </button>
                             </div>
@@ -464,7 +464,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                                     {importForm.data.program_id ? (
                                         <>
                                             <a href={route('admin.vocabulary.template', { format: 'xlsx', program_id: importForm.data.program_id })} className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/50 dark:bg-gray-900 dark:text-emerald-300">Excel</a>
-                                            <a href={route('admin.vocabulary.template', { format: 'csv', program_id: importForm.data.program_id })} className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-700 hover:bg-red-50 dark:border-red-900/50 dark:bg-gray-900 dark:text-red-300">CSV</a>
+                                            <a href={route('admin.vocabulary.template', { format: 'csv', program_id: importForm.data.program_id })} className="rounded-xl border border-brand-200 bg-white px-3 py-2 text-xs font-black text-brand-700 hover:bg-brand-50 dark:border-brand-900/50 dark:bg-gray-900 dark:text-brand-300">CSV</a>
                                         </>
                                     ) : (
                                         <span className="text-xs font-bold text-gray-400">Pilih kelas dahulu</span>
@@ -473,7 +473,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                             </div>
                         </div>
 
-                        <label className="block cursor-pointer rounded-2xl border-2 border-dashed border-gray-300 bg-white p-6 text-center transition hover:border-red-300 hover:bg-red-50/40 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-red-900/60 dark:hover:bg-red-950/20">
+                        <label className="block cursor-pointer rounded-2xl border-2 border-dashed border-gray-300 bg-white p-6 text-center transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-brand-900/60 dark:hover:bg-brand-950/20">
                             <input
                                 ref={importInputRef}
                                 type="file"
@@ -481,7 +481,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                                 className="hidden"
                                 onChange={(event) => importForm.setData('import_file', event.target.files?.[0] || null)}
                             />
-                            <FileUploadIcon className="text-red-600 dark:text-red-400" sx={{ fontSize: 30 }} />
+                            <FileUploadIcon className="text-brand-600 dark:text-brand-400" sx={{ fontSize: 30 }} />
                             <p className="mt-2 text-sm font-black text-gray-900 dark:text-white">
                                 {importForm.data.import_file?.name || 'Pilih file CSV atau Excel'}
                             </p>
@@ -491,9 +491,9 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                         </label>
 
                         {Object.keys(importForm.errors).length > 0 && (
-                            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
-                                <p className="text-xs font-black uppercase tracking-wider text-red-700 dark:text-red-300">Import belum dapat diproses</p>
-                                <ul className="mt-2 space-y-1 text-sm font-semibold text-red-700 dark:text-red-300">
+                            <div className="rounded-2xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-900/50 dark:bg-brand-950/20">
+                                <p className="text-xs font-black uppercase tracking-wider text-brand-700 dark:text-brand-300">Import belum dapat diproses</p>
+                                <ul className="mt-2 space-y-1 text-sm font-semibold text-brand-700 dark:text-brand-300">
                                     {Object.values(importForm.errors).map((message, index) => <li key={`${message}-${index}`}>{message}</li>)}
                                 </ul>
                             </div>
@@ -630,11 +630,11 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                                         </Field>
                                     </div>
 
-                                    {Object.values(form.errors).length > 0 && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600 dark:bg-red-950/30">{Object.values(form.errors)[0]}</p>}
+                                    {Object.values(form.errors).length > 0 && <p className="mt-4 rounded-2xl bg-brand-50 px-4 py-3 text-sm font-bold text-brand-600 dark:bg-brand-950/30">{Object.values(form.errors)[0]}</p>}
 
                                     <div className="sticky bottom-0 mt-6 flex justify-end gap-3 border-t border-gray-100 bg-white/95 pt-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
                                         <button type="button" onClick={closeForm} className="rounded-2xl border border-gray-200 px-5 py-3 text-sm font-black text-gray-600 dark:border-gray-700 dark:text-gray-300">Batal</button>
-                                        <button disabled={form.processing} className="rounded-2xl bg-[#E64A19] px-6 py-3 text-sm font-black text-white disabled:opacity-50">{form.processing ? 'Menyimpan...' : 'Simpan Konten'}</button>
+                                        <button disabled={form.processing} className="rounded-2xl bg-brand-600 px-6 py-3 text-sm font-black text-white disabled:opacity-50">{form.processing ? 'Menyimpan...' : 'Simpan Konten'}</button>
                                     </div>
                                 </div>
                             </form>

@@ -25,11 +25,17 @@ export const emptyQuestion = (type = 'multiple_choice') => {
         id: null,
         type: normalizedType,
         question_text: '',
+        question_reading: '',
         correct_answer: '',
+        correct_answer_reading: '',
         options: normalizedType === 'multiple_choice'
             ? ['', '', '', '']
             : [],
+        option_readings: normalizedType === 'multiple_choice'
+            ? ['', '', '', '']
+            : [],
         explanation: '',
+        explanation_reading: '',
         audio_url: '',
         order: 0,
         points: 1,
@@ -38,12 +44,23 @@ export const emptyQuestion = (type = 'multiple_choice') => {
 
 export const normalizeQuestions = (questions, quizType = 'multiple_choice') => (
     questions.length > 0
-        ? questions.map((question) => ({
-            ...question,
-            type: normalizeQuestionType(question.type || quizType),
-            options: Array.isArray(question.options) ? question.options : [],
-            points: Math.max(1, Number(question.points || 1)),
-        }))
+        ? questions.map((question) => {
+            const type = normalizeQuestionType(question.type || quizType);
+            const options = Array.isArray(question.options) ? question.options : [];
+
+            return {
+                ...question,
+                type,
+                question_reading: question.question_reading || '',
+                correct_answer_reading: question.correct_answer_reading || '',
+                options,
+                option_readings: type === 'multiple_choice'
+                    ? options.map((_, index) => question.option_readings?.[index] || '')
+                    : [],
+                explanation_reading: question.explanation_reading || '',
+                points: Math.max(1, Number(question.points || 1)),
+            };
+        })
         : [emptyQuestion(normalizeQuestionType(quizType))]
 );
 

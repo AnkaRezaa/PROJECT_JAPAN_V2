@@ -309,7 +309,7 @@ function RoomSetup({ setup, storeEndpoint, exitUrl }) {
                             </section>
 
                             {Object.keys(form.errors).some((key) => !['kloter_belajar_id', 'presentation_deck_id', 'scheduled_at'].includes(key)) && (
-                                <p className="rounded-lg bg-red-50 p-3 text-sm font-bold text-red-700 dark:bg-red-950/30 dark:text-red-300">{Object.values(form.errors)[0]}</p>
+                                <p className="rounded-lg bg-brand-50 p-3 text-sm font-bold text-brand-700 dark:bg-brand-950/30 dark:text-brand-300">{Object.values(form.errors)[0]}</p>
                             )}
                         </div>
 
@@ -408,7 +408,7 @@ function ScheduledRoom({ session, startEndpoint, cancelEndpoint, exitUrl }) {
                                 type="button"
                                 onClick={cancel}
                                 disabled={action.processing}
-                                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-red-200 px-4 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:hover:bg-red-950/30"
+                                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-brand-200 px-4 text-sm font-black text-brand-600 transition hover:bg-brand-50 disabled:opacity-50 dark:border-brand-900 dark:hover:bg-brand-950/30"
                             >
                                 <DeleteOutlineIcon sx={{ fontSize: 19 }} /> Batal
                             </button>

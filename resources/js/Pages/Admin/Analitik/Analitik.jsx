@@ -19,7 +19,7 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
             <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <p className="text-xs font-black uppercase tracking-[0.3em] text-red-600 dark:text-red-400">Sensei Analytics</p>
+                        <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-600 dark:text-brand-400">Sensei Analytics</p>
                         <h1 className="text-2xl font-black text-gray-900 dark:text-white">Analitik Pembelajaran</h1>
                         <p className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">Pantau quiz sulit, murid pasif, dan modul yang paling sering diselesaikan.</p>
                     </div>
@@ -47,7 +47,7 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
                     </Link>
                     <Link
                         href={route('admin.analytics', filters.kloter ? { kloter: filters.kloter } : {})}
-                        className="border-b-2 border-red-600 px-3 py-3 text-sm font-black text-red-600 dark:text-red-400"
+                        className="border-b-2 border-brand-600 px-3 py-3 text-sm font-black text-brand-600 dark:text-brand-400"
                     >
                         Monitoring
                     </Link>
@@ -67,7 +67,7 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
                         action={<ChartPeriodSelect routeName="admin.analytics" filters={filters} />}
                     >
                         {scoreDistribution.some((item) => item.value > 0) ? (
-                            <ChartContainer config={{ score: { label: 'Attempt', theme: { light: '#dc2626', dark: '#f87171' } } }}>
+                            <ChartContainer config={{ score: { label: 'Attempt', theme: { light: '#1d4ed8', dark: '#60a5fa' } } }}>
                                 <PieChart>
                                     <ChartTooltip content={<ChartTooltipContent />} />
                                     <Pie data={scoreDistribution} dataKey="value" nameKey="label" innerRadius={62} outerRadius={92} paddingAngle={3}>
@@ -80,7 +80,7 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
 
                     <ChartCard title="Modul Populer" subtitle="Berdasarkan jumlah penyelesaian siswa">
                         {popularModules.length > 0 ? (
-                            <ChartContainer config={{ completions: { label: 'Selesai', theme: { light: '#dc2626', dark: '#f87171' } } }}>
+                            <ChartContainer config={{ completions: { label: 'Selesai', theme: { light: '#15803d', dark: '#4ade80' } } }}>
                                 <BarChart data={popularModules} layout="vertical" margin={{ top: 8, right: 12, left: 12, bottom: 0 }}>
                                     <CartesianGrid horizontal={false} strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-800" />
                                     <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} className="fill-gray-400 text-xs" />
@@ -104,7 +104,7 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
                                             <p className="text-sm font-black text-gray-900 dark:text-white">{item.lesson || item.quiz_type}</p>
                                             <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{item.module || 'Tanpa modul'} - {item.attempts_count} attempt</p>
                                         </div>
-                                        <span className="text-sm font-black text-red-600 dark:text-red-400">{item.average_score}</span>
+                                        <span className="text-sm font-black text-brand-600 dark:text-brand-400">{item.average_score}</span>
                                     </div>
                                 </div>
                             ))}
@@ -120,7 +120,7 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
                     <div className="mt-4 grid gap-3 sm:grid-cols-3">
                         {learningFeedback.map((item) => (
                             <div key={item.label} className={`rounded-2xl border p-4 ${item.tone === 'red'
-                                ? 'border-red-100 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20'
+                                ? 'border-brand-100 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/20'
                                 : item.tone === 'emerald'
                                     ? 'border-emerald-100 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/20'
                                     : 'border-amber-100 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/20'}`}>
@@ -162,7 +162,7 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
                                         <td className="px-4 py-4 text-center font-black text-gray-700 dark:text-gray-300">{item.attempts_count}</td>
                                         <td className="px-4 py-4 text-center font-black text-green-600 dark:text-green-400">{item.correct_count}</td>
                                         <td className="py-4 pl-4 text-right">
-                                            <span className={`rounded-full px-3 py-1 text-xs font-black ${item.correct_rate < 50 ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-300' : 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-300'}`}>
+                                            <span className={`rounded-full px-3 py-1 text-xs font-black ${item.correct_rate < 50 ? 'bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-300' : 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-300'}`}>
                                                 {item.correct_rate}%
                                             </span>
                                         </td>
@@ -179,7 +179,7 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
                         <h2 className="text-lg font-black text-gray-900 dark:text-white">Murid Pasif</h2>
                         <div className="mt-4 space-y-3">
                             {inactiveStudents.map((student) => (
-                                <Link key={student.id} href={route('admin.users.show', student.id)} className="block rounded-2xl border border-gray-100 dark:border-gray-800 p-4 transition-colors hover:border-red-200 dark:hover:border-red-900/40">
+                                <Link key={student.id} href={route('admin.users.show', student.id)} className="block rounded-2xl border border-gray-100 dark:border-gray-800 p-4 transition-colors hover:border-brand-200 dark:hover:border-brand-900/40">
                                     <p className="text-sm font-black text-gray-900 dark:text-white">{student.username}</p>
                                     <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{student.email}</p>
                                     <p className="mt-2 text-xs font-bold text-gray-600 dark:text-gray-300">Aktivitas terakhir: {student.last_activity_label}</p>
@@ -198,7 +198,7 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
                                             <p className="text-sm font-black text-gray-900 dark:text-white">{attempt.student}</p>
                                             <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{attempt.lesson || attempt.quiz_type}</p>
                                         </div>
-                                        <span className="text-sm font-black text-red-600 dark:text-red-400">{attempt.score}</span>
+                                        <span className="text-sm font-black text-brand-600 dark:text-brand-400">{attempt.score}</span>
                                     </div>
                                     <p className="mt-2 text-xs font-medium text-gray-600 dark:text-gray-300">{attempt.attempted_at}</p>
                                 </div>
