@@ -31,11 +31,16 @@ class RepetisiPembelajaranService
         return $review;
     }
 
-    public function catatReviewFlashcard(Pengguna $user, Flashcard $flashcard, bool $isKnown): ReviewFlashcard
-    {
+    public function catatReviewFlashcard(
+        Pengguna $user,
+        Flashcard $flashcard,
+        bool $isKnown,
+        string $skill = 'recognition'
+    ): ReviewFlashcard {
         $review = ReviewFlashcard::firstOrNew([
             'user_id' => $user->id,
             'flashcard_id' => $flashcard->id,
+            'skill' => $skill,
         ]);
 
         $review->known_count = (int) $review->known_count + ($isKnown ? 1 : 0);
@@ -45,6 +50,37 @@ class RepetisiPembelajaranService
         $review->save();
 
         return $review;
+    }
+
+    public function snapshot(ReviewSoal|ReviewFlashcard $review): array
+    {
+        return ['_exists' => $review->exists] + collect([
+            'status',
+            'mastery_level',
+            'correct_streak',
+            'wrong_count',
+            'review_count',
+            'last_result',
+            'last_answered_at',
+            'last_reviewed_at',
+            'next_review_at',
+            'known_count',
+            'learning_count',
+        ])->filter(fn (string $attribute) => array_key_exists($attribute, $review->getAttributes()))
+            ->mapWithKeys(fn (string $attribute) => [$attribute => $review->getAttribute($attribute)])
+            ->all();
+    }
+
+    public function pulihkan(ReviewSoal|ReviewFlashcard $review, array $snapshot): void
+    {
+        if (($snapshot['_exists'] ?? true) === false) {
+            $review->delete();
+
+            return;
+        }
+
+        unset($snapshot['_exists']);
+        $review->forceFill($snapshot)->save();
     }
 
     private function applyResult(ReviewSoal|ReviewFlashcard $review, bool $isCorrect, string $timestampColumn): void

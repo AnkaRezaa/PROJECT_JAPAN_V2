@@ -820,6 +820,7 @@ class ModulController extends Controller
         return [
             'total' => $cardIds->count(),
             'reviewed' => ReviewFlashcard::where('user_id', $userId)
+                ->where('skill', 'recognition')
                 ->whereIn('flashcard_id', $cardIds)
                 ->count(),
         ];

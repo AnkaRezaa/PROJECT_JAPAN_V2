@@ -188,6 +188,7 @@ class PembelajaranPenggunaService
             ->values();
         $reviews = ReviewFlashcard::query()
             ->where('user_id', $user->id)
+            ->where('skill', 'recognition')
             ->whereIn('flashcard_id', $cards->pluck('id'))
             ->get()
             ->keyBy('flashcard_id');

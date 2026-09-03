@@ -191,6 +191,7 @@ class ProgresRoadmapService
             ->pluck('id');
         $reviewedCount = ReviewFlashcard::query()
             ->where('user_id', $user->id)
+            ->where('skill', 'recognition')
             ->whereIn('flashcard_id', $cardIds)
             ->distinct()
             ->count('flashcard_id');

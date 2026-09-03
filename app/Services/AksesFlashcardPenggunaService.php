@@ -16,15 +16,22 @@ class AksesFlashcardPenggunaService
 
     public function abortJikaTerkunci(Pengguna $user, SetFlashcard $flashcardSet): void
     {
-        $flashcardSet->loadMissing('module.programPembelajaran', 'day');
+        $status = $this->status($user, $flashcardSet);
 
-        abort_unless($flashcardSet->status === 'published', 404);
-        abort_unless($flashcardSet->module?->status === 'published', 404);
-        abort_unless(
-            $this->aksesPremium->bolehAksesModul($user, $flashcardSet->module),
-            403,
-            'Akses flashcard ini belum terbuka.'
-        );
+        abort_unless($status['allowed'], $status['http_status'], $status['message']);
+    }
+
+    public function status(Pengguna $user, SetFlashcard $flashcardSet): array
+    {
+        $flashcardSet->loadMissing('module.programPembelajaran', 'day.module');
+
+        if ($flashcardSet->status !== 'published' || $flashcardSet->module?->status !== 'published') {
+            return ['allowed' => false, 'http_status' => 404, 'message' => 'Flashcard tidak tersedia.'];
+        }
+
+        if (! $this->aksesPremium->bolehAksesModul($user, $flashcardSet->module)) {
+            return ['allowed' => false, 'http_status' => 403, 'message' => 'Akses flashcard ini belum terbuka.'];
+        }
 
         $module = $flashcardSet->module;
         $kloter = $module->program_pembelajaran_id
@@ -32,16 +39,18 @@ class AksesFlashcardPenggunaService
             : null;
         $mingguAktif = $this->kloterBelajar->mingguAktif($kloter);
 
-        abort_if(
-            $kloter && $mingguAktif !== null && (int) $module->week_number > $mingguAktif,
-            403,
-            'Minggu ini belum terbuka untuk kloter kamu.'
-        );
+        if ($kloter && $mingguAktif !== null && (int) $module->week_number > $mingguAktif) {
+            return ['allowed' => false, 'http_status' => 403, 'message' => 'Minggu ini belum terbuka untuk kloter kamu.'];
+        }
 
         if ($flashcardSet->day) {
-            $status = $this->roadmapProgress->statusAksesHari($user, $flashcardSet->day);
-            abort_unless($status['allowed'], 403, $status['message']);
+            $dayStatus = $this->roadmapProgress->statusAksesHari($user, $flashcardSet->day);
+            if (! $dayStatus['allowed']) {
+                return ['allowed' => false, 'http_status' => 403, 'message' => $dayStatus['message']];
+            }
         }
+
+        return ['allowed' => true, 'http_status' => 200, 'message' => null];
     }
 
     public function abortJikaKartuTerkunci(Pengguna $user, Flashcard $flashcard): void

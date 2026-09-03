@@ -14,6 +14,7 @@ class ReviewFlashcard extends Model
     protected $fillable = [
         'user_id',
         'flashcard_id',
+        'skill',
         'status',
         'known_count',
         'learning_count',

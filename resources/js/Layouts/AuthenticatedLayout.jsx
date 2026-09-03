@@ -19,6 +19,7 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import CheckIcon from '@mui/icons-material/Check';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import ReplayIcon from '@mui/icons-material/Replay';
 
 // Ikon Bawah
 import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined';
@@ -178,6 +179,7 @@ export default function AuthenticatedLayout({ children }) {
     const [openMenuGroups, setOpenMenuGroups] = useState({});
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [reviewDueCount, setReviewDueCount] = useState(0);
     const menuRef = useRef(null);
     const mobileAccountRef = useRef(null);
     const mobileMenuButtonRef = useRef(null);
@@ -259,6 +261,20 @@ export default function AuthenticatedLayout({ children }) {
             return () => clearInterval(interval);
         }
     }, [user]);
+
+    useEffect(() => {
+        if (user?.role !== 'user') return undefined;
+
+        let active = true;
+        fetch('/user/review/summary', { headers: { Accept: 'application/json' } })
+            .then((response) => response.ok ? response.json() : null)
+            .then((summary) => {
+                if (active && summary) setReviewDueCount(Number(summary.required_count || 0));
+            })
+            .catch(() => {});
+
+        return () => { active = false; };
+    }, [currentPath, user?.id, user?.role]);
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -377,6 +393,7 @@ export default function AuthenticatedLayout({ children }) {
     const userMenu = [
         { href: '/user/dashboard', activePaths: ['/user/dashboard'], icon: <DashboardIcon sx={{ fontSize: 24 }} />, label: 'Beranda' },
         { href: '/user/kelas', activePaths: ['/user/kelas', '/user/modul', '/user/quizzes', '/user/flashcards'], icon: <SchoolIcon sx={{ fontSize: 24 }} />, label: 'Kelas' },
+        { href: '/user/review', activePaths: ['/user/review'], icon: <ReplayIcon sx={{ fontSize: 24 }} />, label: 'Review', badge: reviewDueCount || null },
         { href: '/user/leaderboard', activePaths: ['/user/leaderboard'], icon: <EmojiEventsIcon sx={{ fontSize: 24 }} />, label: 'Peringkat' },
         { href: '/user/progress', activePaths: ['/user/progress'], icon: <MonitorHeartIcon sx={{ fontSize: 24 }} />, label: 'Progress' },
     ];
@@ -495,6 +512,7 @@ export default function AuthenticatedLayout({ children }) {
         ['/user/modul', 'Roadmap Belajar'],
         ['/user/quizzes', 'Latihan & Kuis'],
         ['/user/flashcards', 'Latihan & Kuis'],
+        ['/user/review', 'Review'],
         ['/user/kelas', 'Kelas'],
         ['/user/leaderboard', 'Peringkat'],
         ['/user/progress', 'Progress'],
@@ -786,6 +804,7 @@ export default function AuthenticatedLayout({ children }) {
                                 active={isActiveItem(item)}
                                 isExpanded={navigationExpanded}
                                 activeTone={isUser ? 'learning' : 'brand'}
+                                badge={item.badge}
                                 onNavigate={handleNavigation}
                             >
                                 {item.label}
