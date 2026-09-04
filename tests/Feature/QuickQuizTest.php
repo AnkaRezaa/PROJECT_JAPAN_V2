@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\EventReview;
 use App\Models\HariModul;
 use App\Models\Kuis;
 use App\Models\Langganan;
@@ -146,6 +147,7 @@ it('repeats one wrong answer once without xp attempts or roadmap progress', func
         ->and($first['session']['completed'])->toBeFalse()
         ->and($first['session']['current_question']['id'])->toBe($material['question']->id)
         ->and(ReviewSoal::where('user_id', $user->id)->value('wrong_count'))->toBe(1)
+        ->and(EventReview::where('user_id', $user->id)->value('result'))->toBe('wrong')
         ->and($user->refresh()->xp)->toBe(40)
         ->and($user->attempts()->count())->toBe(0)
         ->and($user->dayProgress()->count())->toBe(0)
@@ -159,7 +161,8 @@ it('repeats one wrong answer once without xp attempts or roadmap progress', func
     expect($second['is_correct'])->toBeTrue()
         ->and($second['session']['completed'])->toBeTrue()
         ->and($second['session']['mastered_count'])->toBe(1)
-        ->and(ReviewSoal::where('user_id', $user->id)->value('review_count'))->toBe(1);
+        ->and(ReviewSoal::where('user_id', $user->id)->value('review_count'))->toBe(1)
+        ->and(EventReview::where('user_id', $user->id)->count())->toBe(1);
 });
 
 it('resumes the same cached session and rejects another user', function () {

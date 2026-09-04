@@ -289,13 +289,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/quick-quiz/{session}/answer', [QuickQuizController::class, 'answer'])->middleware('throttle:quick-quiz')->name('quick-quiz.answer');
         Route::post('/quick-quiz/reset', [QuickQuizController::class, 'reset'])->middleware('throttle:quick-quiz')->name('quick-quiz.reset');
         Route::get('/review', [ReviewController::class, 'index'])->name('review.index');
-        Route::get('/review/summary', [ReviewController::class, 'summary'])->name('review.summary');
-        Route::post('/review/start', [ReviewController::class, 'start'])->middleware('throttle:quick-quiz')->name('review.start');
-        Route::get('/review/{session}', [ReviewController::class, 'show'])->name('review.show');
-        Route::post('/review/{session}/answer', [ReviewController::class, 'answer'])->middleware('throttle:quick-quiz')->name('review.answer');
-        Route::post('/review/{session}/skip', [ReviewController::class, 'skip'])->middleware('throttle:quick-quiz')->name('review.skip');
-        Route::post('/review/{session}/undo', [ReviewController::class, 'undo'])->middleware('throttle:quick-quiz')->name('review.undo');
-        Route::post('/review/reset', [ReviewController::class, 'reset'])->middleware('throttle:quick-quiz')->name('review.reset');
+        Route::delete('/review/history', [ReviewController::class, 'purge'])->middleware('throttle:learning-actions')->name('review.history.purge');
+        Route::delete('/review/state', [ReviewController::class, 'reset'])->middleware('throttle:learning-actions')->name('review.state.reset');
         Route::post('/quizzes/{quiz}/feedback', [UmpanBalikPembelajaranController::class, 'store'])->middleware('throttle:learning-actions')->name('quizzes.feedback.store');
         Route::get('/flashcards/{flashcardSet}', [FlashcardController::class, 'show'])->name('flashcards.show');
         Route::post('/flashcards/review/{flashcard}', [FlashcardController::class, 'review'])->middleware('throttle:learning-actions')->name('flashcards.review');

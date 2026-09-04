@@ -57,11 +57,17 @@ class FlashcardController extends Controller
     ) {
         $validated = $request->validate([
             'action' => ['required', 'in:known,learning'],
+            'skill' => ['nullable', 'in:recognition,writing'],
         ]);
 
         $user = Auth::user();
         $aksesFlashcard->abortJikaKartuTerkunci($user, $flashcard);
-        $repetisi->catatReviewFlashcard($user, $flashcard, $validated['action'] === 'known');
+        $repetisi->catatReviewFlashcard(
+            $user,
+            $flashcard,
+            $validated['action'] === 'known',
+            $validated['skill'] ?? 'recognition',
+        );
 
         return redirect()->back()->with('success', 'Progres repetisi disimpan.');
     }

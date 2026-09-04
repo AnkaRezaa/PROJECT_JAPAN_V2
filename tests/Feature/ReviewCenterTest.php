@@ -4,22 +4,19 @@ use App\Models\EventReview;
 use App\Models\Flashcard;
 use App\Models\HariModul;
 use App\Models\Kuis;
-use App\Models\Langganan;
 use App\Models\LevelPembelajaran;
 use App\Models\Modul;
-use App\Models\PaketPembayaran;
 use App\Models\Pengguna;
 use App\Models\ProgramPembelajaran;
+use App\Models\ReviewDailyStat;
 use App\Models\ReviewFlashcard;
 use App\Models\ReviewSoal;
-use App\Models\SesiReview;
 use App\Models\SetFlashcard;
 use App\Models\Soal;
 use App\Services\RepetisiPembelajaranService;
-use App\Services\SesiReviewService;
 use Illuminate\Support\Facades\Cache;
 
-function reviewCenterFixture(Pengguna $user): array
+function reviewHistoryFixture(): array
 {
     $suffix = str()->lower(str()->random(8));
     $level = LevelPembelajaran::create([
@@ -32,23 +29,6 @@ function reviewCenterFixture(Pengguna $user): array
         'title' => 'Kelas Review '.$suffix,
         'slug' => 'review-'.$suffix,
         'status' => 'published',
-    ]);
-    $plan = PaketPembayaran::create([
-        'program_pembelajaran_id' => $program->id,
-        'name' => 'Paket Review '.$suffix,
-        'slug' => 'review-plan-'.$suffix,
-        'price' => 10000,
-        'duration_days' => 30,
-        'is_active' => true,
-    ]);
-    Langganan::create([
-        'user_id' => $user->id,
-        'payment_plan_id' => $plan->id,
-        'scope_type' => 'program',
-        'program_pembelajaran_id' => $program->id,
-        'status' => 'active',
-        'start_date' => today(),
-        'end_date' => today()->addMonth(),
     ]);
     $module = Modul::create([
         'level_id' => $level->id,
@@ -72,12 +52,12 @@ function reviewCenterFixture(Pengguna $user): array
     $question = Soal::create([
         'quiz_id' => $quiz->id,
         'type' => 'typing',
-        'question_text' => 'Apa arti 学?',
+        'question_text' => 'Apa arti manabu?',
+        'question_reading' => 'manabu',
         'correct_answer' => 'belajar',
-        'explanation' => '学 berarti belajar.',
+        'explanation' => 'Manabu berarti belajar.',
         'order' => 1,
     ]);
-    $day->update(['checkpoint_quiz_id' => $quiz->id]);
     $set = SetFlashcard::create([
         'level_id' => $level->id,
         'module_id' => $module->id,
@@ -87,136 +67,126 @@ function reviewCenterFixture(Pengguna $user): array
     ]);
     $flashcard = Flashcard::create([
         'flashcard_set_id' => $set->id,
-        'front_text' => '学',
-        'reading' => 'がく',
+        'front_text' => 'manabu',
+        'reading' => 'manabu',
         'back_text' => 'belajar',
         'order' => 1,
     ]);
 
-    return compact('program', 'module', 'day', 'quiz', 'question', 'set', 'flashcard');
+    return compact('module', 'quiz', 'question', 'flashcard');
 }
 
-it('shows a review center and limits new material to three items', function () {
+it('records normal question and flashcard answers as lightweight review history', function () {
     Cache::flush();
     $user = Pengguna::factory()->create(['role' => 'user']);
-    reviewCenterFixture($user);
+    $fixture = reviewHistoryFixture();
+    $repetition = app(RepetisiPembelajaranService::class);
+
+    $repetition->catatJawabanSoal($user, $fixture['question'], false, $fixture['quiz']);
+    $repetition->catatJawabanSoal($user, $fixture['question'], true, $fixture['quiz']);
+    $repetition->catatReviewFlashcard($user, $fixture['flashcard'], true, 'recognition');
+    $repetition->catatReviewFlashcard($user, $fixture['flashcard'], false, 'writing');
+
+    expect(EventReview::where('user_id', $user->id)->orderBy('id')->pluck('result')->all())
+        ->toBe(['wrong', 'correct', 'correct', 'wrong'])
+        ->and(EventReview::where('user_id', $user->id)->orderBy('id')->pluck('learning_state')->all())
+        ->toBe(['new', 'learning', 'new', 'new'])
+        ->and(EventReview::where('user_id', $user->id)->orderBy('id')->pluck('activity_type')->all())
+        ->toBe(['typing', 'typing', 'flashcard', 'kanji_writing'])
+        ->and(ReviewDailyStat::where('user_id', $user->id)->value('total_count'))->toBe(4)
+        ->and(ReviewFlashcard::where('user_id', $user->id)->count())->toBe(2);
+});
+
+it('shows paginated review history statistics and filters only the current user', function () {
+    Cache::flush();
+    $user = Pengguna::factory()->create(['role' => 'user']);
+    $otherUser = Pengguna::factory()->create(['role' => 'user']);
+    $fixture = reviewHistoryFixture();
+    $repetition = app(RepetisiPembelajaranService::class);
+
+    $repetition->catatJawabanSoal($user, $fixture['question'], true, $fixture['quiz']);
+    $repetition->catatReviewFlashcard($user, $fixture['flashcard'], false, 'writing');
+    $repetition->catatJawabanSoal($otherUser, $fixture['question'], false, $fixture['quiz']);
 
     $this->actingAs($user)
-        ->get(route('user.review.index'))
+        ->get(route('user.review.index', ['range' => 7, 'activity' => 'typing']))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('User/Review/Index')
-            ->where('reviewSummary.new_count', 3)
-            ->where('reviewSummary.required_count', 0)
-            ->where('reviewSummary.session_count', 3));
+            ->where('reviewStats.total_count', 2)
+            ->where('reviewStats.correct_count', 1)
+            ->where('reviewStats.wrong_count', 1)
+            ->where('reviewStats.accuracy', 50)
+            ->where('filters.activity', 'typing')
+            ->has('reviewEvents.data', 1)
+            ->where('reviewEvents.data.0.label', 'Apa arti manabu?'));
 });
 
-it('records every review answer but changes mastery only on the first attempt', function () {
-    Cache::flush();
-    $user = Pengguna::factory()->create(['role' => 'user', 'xp' => 10]);
-    $fixture = reviewCenterFixture($user);
-    ReviewSoal::create([
-        'user_id' => $user->id,
-        'question_id' => $fixture['question']->id,
-        'quiz_id' => $fixture['quiz']->id,
-        'module_id' => $fixture['module']->id,
-        'status' => 'learning',
-        'last_result' => 'wrong',
-        'wrong_count' => 1,
-        'review_count' => 1,
-        'next_review_at' => now()->subMinute(),
-    ]);
-    $sessions = app(SesiReviewService::class);
-    $state = $sessions->start($user);
-    $payload = $sessions->payload($user, $state);
-
-    expect($payload['current_item']['id'])->toBe($fixture['question']->id);
-
-    $wrong = $this->actingAs($user)->postJson(route('user.review.answer', $state['id']), [
-        'item_token' => $payload['current_token'],
-        'answer' => 'salah',
-    ])->assertOk()->json();
-    $correct = $this->actingAs($user)->postJson(route('user.review.answer', $state['id']), [
-        'item_token' => $wrong['session']['current_token'],
-        'answer' => 'belajar',
-    ])->assertOk()->json();
-
-    $review = ReviewSoal::where('user_id', $user->id)->where('question_id', $fixture['question']->id)->firstOrFail();
-    expect(EventReview::where('session_id', $state['record_id'])->pluck('result')->all())
-        ->toBe(['wrong', 'correct'])
-        ->and($review->review_count)->toBe(2)
-        ->and($review->wrong_count)->toBe(2)
-        ->and($correct['session']['correct_count'])->toBe(1)
-        ->and($correct['session']['wrong_count'])->toBe(1)
-        ->and($user->refresh()->xp)->toBe(10);
-});
-
-it('keeps recognition and writing mastery separate', function () {
+it('purges event history without changing mastery state', function () {
     $user = Pengguna::factory()->create(['role' => 'user']);
-    $flashcard = reviewCenterFixture($user)['flashcard'];
+    $fixture = reviewHistoryFixture();
+    $review = app(RepetisiPembelajaranService::class)
+        ->catatJawabanSoal($user, $fixture['question'], true, $fixture['quiz']);
+
+    $this->actingAs($user)
+        ->delete(route('user.review.history.purge'))
+        ->assertRedirect();
+
+    expect(EventReview::where('user_id', $user->id)->count())->toBe(0)
+        ->and(ReviewDailyStat::where('user_id', $user->id)->count())->toBe(0)
+        ->and($review->fresh()->status)->toBe('learning')
+        ->and($review->fresh()->review_count)->toBe(1);
+});
+
+it('resets only review state while preserving user progress fields', function () {
+    $user = Pengguna::factory()->create(['role' => 'user', 'xp' => 125]);
+    $fixture = reviewHistoryFixture();
     $repetition = app(RepetisiPembelajaranService::class);
+    $questionReview = $repetition->catatJawabanSoal($user, $fixture['question'], false, $fixture['quiz']);
+    $flashcardReview = $repetition->catatReviewFlashcard($user, $fixture['flashcard'], true);
 
-    $repetition->catatReviewFlashcard($user, $flashcard, true, 'recognition');
-    $repetition->catatReviewFlashcard($user, $flashcard, false, 'writing');
+    $this->actingAs($user)
+        ->delete(route('user.review.state.reset'))
+        ->assertRedirect();
 
-    expect(ReviewFlashcard::where('user_id', $user->id)->where('flashcard_id', $flashcard->id)->count())->toBe(2)
-        ->and(ReviewFlashcard::where('user_id', $user->id)->where('skill', 'recognition')->value('last_result'))->toBe('correct')
-        ->and(ReviewFlashcard::where('user_id', $user->id)->where('skill', 'writing')->value('last_result'))->toBe('wrong');
+    expect(EventReview::where('user_id', $user->id)->count())->toBe(0)
+        ->and(ReviewDailyStat::where('user_id', $user->id)->count())->toBe(0)
+        ->and($questionReview->fresh()->status)->toBe('new')
+        ->and($questionReview->fresh()->review_count)->toBe(0)
+        ->and($questionReview->fresh()->wrong_count)->toBe(0)
+        ->and($flashcardReview->fresh()->status)->toBe('new')
+        ->and($flashcardReview->fresh()->known_count)->toBe(0)
+        ->and($user->fresh()->xp)->toBe(125);
 });
 
-it('records skip as neutral and can undo the latest answer', function () {
-    Cache::flush();
+it('prunes review events older than the configured retention period', function () {
     $user = Pengguna::factory()->create(['role' => 'user']);
-    $fixture = reviewCenterFixture($user);
-    $sessions = app(SesiReviewService::class);
-    $state = $sessions->start($user);
-    $payload = $sessions->payload($user, $state);
-
-    $skipped = $this->actingAs($user)->postJson(route('user.review.skip', $state['id']), [
-        'item_token' => $payload['current_token'],
-    ])->assertOk()->json();
-
-    expect($skipped['session']['skipped_count'])->toBe(1)
-        ->and(EventReview::where('session_id', $state['record_id'])->value('result'))->toBe('skipped')
-        ->and(ReviewSoal::where('user_id', $user->id)->count())->toBe(0)
-        ->and(ReviewFlashcard::where('user_id', $user->id)->count())->toBe(0);
-
-    $restored = $this->actingAs($user)
-        ->postJson(route('user.review.undo', $state['id']))
-        ->assertOk()
-        ->json('session');
-
-    expect($restored['resolved_count'])->toBe(0)
-        ->and($restored['skipped_count'])->toBe(0)
-        ->and(EventReview::where('session_id', $state['record_id'])->whereNotNull('undone_at')->count())->toBe(1);
-});
-
-it('prunes detailed history after thirty days without deleting mastery', function () {
-    $user = Pengguna::factory()->create(['role' => 'user']);
-    $fixture = reviewCenterFixture($user);
-    $review = app(RepetisiPembelajaranService::class)->catatJawabanSoal($user, $fixture['question'], false, $fixture['quiz']);
-    $session = SesiReview::create([
-        'uuid' => (string) str()->uuid(),
-        'user_id' => $user->id,
-        'mode' => 'review',
-        'target_count' => 1,
-        'started_at' => now()->subDays(31),
-        'completed_at' => now()->subDays(31),
-        'expires_at' => now()->subDays(31),
-    ]);
-    EventReview::create([
-        'session_id' => $session->id,
-        'user_id' => $user->id,
-        'source_type' => 'question',
-        'source_id' => $fixture['question']->id,
-        'skill' => 'quiz',
-        'result' => 'wrong',
-        'occurred_at' => now()->subDays(31),
-    ]);
+    $fixture = reviewHistoryFixture();
+    $review = app(RepetisiPembelajaranService::class)
+        ->catatJawabanSoal($user, $fixture['question'], false, $fixture['quiz']);
+    EventReview::query()->update(['occurred_at' => now()->subDays(31)]);
+    ReviewDailyStat::query()->update(['stat_date' => today()->subDays(31)]);
 
     $this->artisan('reviews:prune', ['--days' => 30, '--chunk' => 100])->assertSuccessful();
 
     expect(EventReview::count())->toBe(0)
-        ->and(SesiReview::count())->toBe(0)
+        ->and(ReviewDailyStat::count())->toBe(0)
         ->and(ReviewSoal::whereKey($review->id)->exists())->toBeTrue();
+});
+
+it('keeps only the newest bounded detail events without losing daily statistics', function () {
+    $user = Pengguna::factory()->create(['role' => 'user']);
+    $fixture = reviewHistoryFixture();
+    $repetition = app(RepetisiPembelajaranService::class);
+
+    foreach (range(1, 25) as $iteration) {
+        $repetition->catatJawabanSoal($user, $fixture['question'], $iteration % 2 === 0, $fixture['quiz']);
+    }
+
+    $this->artisan('reviews:prune', ['--days' => 30, '--limit' => 20, '--chunk' => 100])
+        ->assertSuccessful();
+
+    expect(EventReview::where('user_id', $user->id)->count())->toBe(20)
+        ->and(ReviewDailyStat::where('user_id', $user->id)->value('total_count'))->toBe(25)
+        ->and(app(RepetisiPembelajaranService::class)->historyStats($user, 30)['total_count'])->toBe(25);
 });

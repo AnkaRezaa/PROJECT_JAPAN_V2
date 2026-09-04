@@ -207,6 +207,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
     const answerEventsRef = useRef([]);
     const correctMapRef = useRef({});
     const practiceResumeRef = useRef('next');
+    const handwritingReviewRecordedRef = useRef(false);
 
     // Animasi state
     const [shakeKey, setShakeKey] = useState(0); // Trigger shake animation
@@ -531,6 +532,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
             const targets = kanjiCharacters.length > 0 ? kanjiCharacters : characters;
 
             if (targets.length > 0) {
+                handwritingReviewRecordedRef.current = false;
                 setShowFlashcard(false);
                 setHandwritingPractice({
                     characters: targets,
@@ -550,24 +552,64 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
         continueAfterFlashcard();
     };
 
-    const finishHandwritingRemediation = (result = {}) => {
+    const recordHandwritingReview = (isKnown, onSuccess) => {
+        if (handwritingReviewRecordedRef.current || !handwritingPractice?.flashcard_id) {
+            onSuccess?.();
+            return;
+        }
+
+        handwritingReviewRecordedRef.current = true;
+        setFlashcardReviewing(true);
+        router.post(route('user.flashcards.review', handwritingPractice.flashcard_id), {
+            action: isKnown ? 'known' : 'learning',
+            skill: 'writing',
+        }, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess,
+            onError: () => {
+                handwritingReviewRecordedRef.current = false;
+            },
+            onFinish: () => setFlashcardReviewing(false),
+        });
+    };
+
+    const trackHandwritingMistake = (result = {}) => {
+        if (Number(result.mistakes || 0) > 0 || result.revealed) {
+            recordHandwritingReview(false);
+        }
+    };
+
+    const finishHandwritingPractice = (result = {}) => {
+        if (flashcardReviewing) return;
+
         const nextIndex = (handwritingPractice?.character_index ?? 0) + 1;
         const currentOutcome = {
             character: result.character || handwritingPractice?.characters?.[handwritingPractice.character_index]?.character,
             outcome: result.outcome === 'skipped' ? 'skipped' : 'completed',
+            correct: result.outcome !== 'skipped' && Number(result.mistakes || 0) === 0 && !result.revealed,
         };
+        const outcomes = [...(handwritingPractice?.outcomes || []), currentOutcome];
 
         if (nextIndex < (handwritingPractice?.characters?.length ?? 0)) {
             playSoundEffect(currentOutcome.outcome === 'completed' ? 'correct' : 'select');
             setHandwritingPractice((current) => ({
                 ...current,
                 character_index: nextIndex,
-                outcomes: [...(current.outcomes || []), currentOutcome],
+                outcomes,
             }));
             return;
         }
 
-        continueAfterFlashcard();
+        if (!handwritingPractice?.flashcard_id) {
+            continueAfterFlashcard();
+            return;
+        }
+
+        recordHandwritingReview(
+            outcomes.every((outcome) => outcome.correct),
+            continueAfterFlashcard,
+        );
     };
 
     const handleFlashcardReview = (action) => {
@@ -833,7 +875,8 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                         character={activeWritingCharacter.character}
                         mode="quiz"
                         selfEvaluation
-                        onComplete={finishHandwritingRemediation}
+                        onChange={trackHandwritingMistake}
+                        onComplete={finishHandwritingPractice}
                     />
                 </main>
                 {exitConfirmation}

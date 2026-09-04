@@ -5,166 +5,192 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\EventReview;
 use App\Models\Flashcard;
-use App\Models\SesiReview;
+use App\Models\ProgramPembelajaran;
 use App\Models\Soal;
-use App\Services\AntreanReviewService;
-use App\Services\SesiReviewService;
-use Illuminate\Http\JsonResponse;
+use App\Services\RepetisiPembelajaranService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ReviewController extends Controller
 {
-    public function index(Request $request, AntreanReviewService $queue, SesiReviewService $sessions): Response
-    {
-        $user = $request->user();
-        $history = SesiReview::query()
-            ->where('user_id', $user->id)
-            ->where('mode', 'review')
-            ->where('started_at', '>=', now()->subDays(30))
-            ->latest('started_at')
-            ->paginate(8)
-            ->withQueryString()
-            ->through(fn (SesiReview $session) => [
-                'id' => $session->uuid,
-                'target_count' => $session->target_count,
-                'correct_count' => $session->correct_count,
-                'wrong_count' => $session->wrong_count,
-                'skipped_count' => $session->skipped_count,
-                'completed' => $session->completed_at !== null,
-                'started_at' => $session->started_at?->locale('id')->translatedFormat('d M Y, H:i'),
-            ]);
-        $active = $sessions->active($user);
-        $events = EventReview::query()
-            ->where('user_id', $user->id)
-            ->whereNull('undone_at')
-            ->where('occurred_at', '>=', now()->subDays(30))
-            ->latest('occurred_at')
-            ->limit(12)
-            ->get();
-        $questions = Soal::query()
-            ->whereIn('id', $events->where('source_type', 'question')->pluck('source_id'))
-            ->pluck('question_text', 'id');
-        $flashcards = Flashcard::query()
-            ->whereIn('id', $events->where('source_type', 'flashcard')->pluck('source_id'))
-            ->pluck('front_text', 'id');
+    private const ACTIVITY_LABELS = [
+        'multiple_choice' => 'Pilihan ganda',
+        'listening' => 'Audio',
+        'typing' => 'Menulis jawaban',
+        'fill_blank' => 'Isi jawaban',
+        'flashcard' => 'Flashcard',
+        'kanji_writing' => 'Kanji handwriting',
+        'transformation' => 'Transformation',
+        'sentence_builder' => 'Sentence builder',
+        'context_choice' => 'Context choice',
+    ];
 
-        return Inertia::render('User/Review/Index', [
-            'reviewSummary' => $queue->summary($user),
-            'reviewHistory' => $history,
-            'activeSession' => $active ? [
-                'id' => $active['id'],
-                'remaining_count' => max(0, $active['target_count'] - $active['resolved_count']),
-                'resume_url' => route('user.review.show', $active['id']),
-            ] : null,
-            'recentEvents' => $events->map(fn (EventReview $event) => [
-                'id' => $event->id,
-                'result' => $event->result,
-                'label' => $event->source_type === 'question'
-                    ? ($questions[$event->source_id] ?? 'Soal tidak lagi tersedia')
-                    : ($flashcards[$event->source_id] ?? 'Flashcard tidak lagi tersedia'),
-                'skill_label' => match ($event->skill) {
-                    'writing' => 'Menulis kanji',
-                    'recognition' => 'Mengenali kosakata',
-                    default => 'Kuis',
-                },
-                'occurred_at' => $event->occurred_at?->locale('id')->diffForHumans(),
-            ])->values(),
-            'startUrl' => route('user.review.start'),
-        ]);
-    }
+    private const STATE_LABELS = [
+        'new' => 'Baru',
+        'learning' => 'Dipelajari',
+        'review' => 'Review',
+        'mastered' => 'Dikuasai',
+    ];
 
-    public function summary(Request $request, AntreanReviewService $queue): JsonResponse
-    {
-        return response()->json(['required_count' => $queue->badgeCount($request->user())]);
-    }
-
-    public function start(Request $request, SesiReviewService $sessions): RedirectResponse
-    {
-        $state = $sessions->start($request->user());
-
-        if (! $state) {
-            return redirect()->route('user.review.index')
-                ->with('info', 'Belum ada materi yang dapat direview saat ini.');
-        }
-
-        return redirect()->route('user.review.show', $state['id']);
-    }
-
-    public function show(Request $request, string $session, SesiReviewService $sessions): Response|RedirectResponse
-    {
-        $state = $sessions->find($request->user(), $session);
-
-        if (! $state) {
-            return redirect()->route('user.review.index')
-                ->with('info', 'Sesi Review sudah berakhir. Mulai sesi baru dari halaman Review.');
-        }
-
-        $payload = $sessions->payload($request->user(), $state);
-
-        if (! $payload['completed'] && ! $payload['current_item']) {
-            $state = $sessions->start($request->user(), true);
-
-            if (! $state) {
-                return redirect()->route('user.review.index')
-                    ->with('info', 'Materi sesi ini tidak lagi tersedia.');
-            }
-
-            return redirect()->route('user.review.show', $state['id']);
-        }
-
-        return Inertia::render('User/Review/Session', [
-            'reviewSession' => $payload,
-            'backUrl' => route('user.review.index'),
-            'answerUrl' => route('user.review.answer', $state['id']),
-            'skipUrl' => route('user.review.skip', $state['id']),
-            'undoUrl' => route('user.review.undo', $state['id']),
-            'resetUrl' => route('user.review.reset'),
-            'feedbackUrl' => route('product-feedback.store'),
-        ]);
-    }
-
-    public function answer(Request $request, string $session, SesiReviewService $sessions): JsonResponse
+    public function index(Request $request, RepetisiPembelajaranService $repetition): Response
     {
         $validated = $request->validate([
-            'item_token' => ['required', 'uuid'],
-            'answer' => ['nullable', 'string', 'max:2000'],
-            'answer_payload' => ['nullable', 'array'],
-            'answer_payload.completed_strokes' => ['nullable', 'integer', 'min:0', 'max:100'],
-            'answer_payload.total_strokes' => ['nullable', 'integer', 'min:0', 'max:100'],
-            'answer_payload.attempts_by_stroke' => ['nullable', 'array', 'max:100'],
-            'answer_payload.mistakes' => ['nullable', 'integer', 'min:0', 'max:10000'],
-            'answer_payload.hints_used' => ['nullable', 'integer', 'min:0', 'max:10000'],
-            'answer_payload.duration_ms' => ['nullable', 'integer', 'min:0', 'max:86400000'],
-            'answer_payload.revealed' => ['nullable', 'boolean'],
+            'range' => ['nullable', Rule::in(['7', '30', 7, 30])],
+            'activity' => ['nullable', Rule::in(array_keys(self::ACTIVITY_LABELS))],
+            'state' => ['nullable', Rule::in(array_keys(self::STATE_LABELS))],
+            'result' => ['nullable', Rule::in(['correct', 'wrong', 'skipped'])],
+            'program' => ['nullable', 'integer', Rule::exists('program_pembelajaran', 'id')],
         ]);
 
-        return response()->json($sessions->answer($request->user(), $session, $validated));
+        $user = $request->user();
+        $days = (int) ($validated['range'] ?? 30);
+        $programId = isset($validated['program']) ? (int) $validated['program'] : null;
+        $historyScope = EventReview::query()
+            ->where('review_events.user_id', $user->id)
+            ->where('review_events.occurred_at', '>=', now()->subDays($days));
+        $questionProgramIds = (clone $historyScope)
+            ->where('review_events.source_type', 'question')
+            ->join('questions', 'questions.id', '=', 'review_events.source_id')
+            ->join('quizzes', 'quizzes.id', '=', 'questions.quiz_id')
+            ->join('modules', 'modules.id', '=', 'quizzes.module_id')
+            ->whereNotNull('modules.program_pembelajaran_id')
+            ->distinct()
+            ->pluck('modules.program_pembelajaran_id');
+        $flashcardProgramIds = (clone $historyScope)
+            ->where('review_events.source_type', 'flashcard')
+            ->join('flashcards', 'flashcards.id', '=', 'review_events.source_id')
+            ->join('flashcard_sets', 'flashcard_sets.id', '=', 'flashcards.flashcard_set_id')
+            ->join('modules', 'modules.id', '=', 'flashcard_sets.module_id')
+            ->whereNotNull('modules.program_pembelajaran_id')
+            ->distinct()
+            ->pluck('modules.program_pembelajaran_id');
+        $programOptions = ProgramPembelajaran::query()
+            ->whereIn('id', $questionProgramIds->merge($flashcardProgramIds)->unique())
+            ->orderBy('title')
+            ->get(['id', 'title'])
+            ->map(fn (ProgramPembelajaran $program) => [
+                'value' => (string) $program->id,
+                'label' => $program->title,
+            ]);
+
+        $events = EventReview::query()
+            ->where('user_id', $user->id)
+            ->where('occurred_at', '>=', now()->subDays($days))
+            ->when($programId, function ($query, int $selectedProgramId) {
+                $query->where(function ($sourceQuery) use ($selectedProgramId) {
+                    $sourceQuery
+                        ->where(function ($questionQuery) use ($selectedProgramId) {
+                            $questionQuery->where('source_type', 'question')
+                                ->whereExists(function ($exists) use ($selectedProgramId) {
+                                    $exists->selectRaw('1')
+                                        ->from('questions')
+                                        ->join('quizzes', 'quizzes.id', '=', 'questions.quiz_id')
+                                        ->join('modules', 'modules.id', '=', 'quizzes.module_id')
+                                        ->whereColumn('questions.id', 'review_events.source_id')
+                                        ->where('modules.program_pembelajaran_id', $selectedProgramId);
+                                });
+                        })
+                        ->orWhere(function ($flashcardQuery) use ($selectedProgramId) {
+                            $flashcardQuery->where('source_type', 'flashcard')
+                                ->whereExists(function ($exists) use ($selectedProgramId) {
+                                    $exists->selectRaw('1')
+                                        ->from('flashcards')
+                                        ->join('flashcard_sets', 'flashcard_sets.id', '=', 'flashcards.flashcard_set_id')
+                                        ->join('modules', 'modules.id', '=', 'flashcard_sets.module_id')
+                                        ->whereColumn('flashcards.id', 'review_events.source_id')
+                                        ->where('modules.program_pembelajaran_id', $selectedProgramId);
+                                });
+                        });
+                });
+            })
+            ->when($validated['activity'] ?? null, fn ($query, $activity) => $query->where('activity_type', $activity))
+            ->when($validated['state'] ?? null, fn ($query, $state) => $query->where('learning_state', $state))
+            ->when($validated['result'] ?? null, fn ($query, $result) => $query->where('result', $result))
+            ->latest('occurred_at')
+            ->latest('id')
+            ->paginate(20)
+            ->withQueryString();
+        $eventCollection = $events->getCollection();
+        $questions = Soal::query()
+            ->with('quiz.module.programPembelajaran')
+            ->whereIn('id', $eventCollection->where('source_type', 'question')->pluck('source_id'))
+            ->get(['id', 'quiz_id', 'question_text', 'question_reading'])
+            ->keyBy('id');
+        $flashcards = Flashcard::query()
+            ->with('set.module.programPembelajaran')
+            ->whereIn('id', $eventCollection->where('source_type', 'flashcard')->pluck('source_id'))
+            ->get(['id', 'flashcard_set_id', 'front_text', 'reading'])
+            ->keyBy('id');
+
+        $events->setCollection($eventCollection->map(function (EventReview $event) use ($questions, $flashcards) {
+            $source = $event->source_type === 'question'
+                ? $questions->get($event->source_id)
+                : $flashcards->get($event->source_id);
+            $program = $event->source_type === 'question'
+                ? $source?->quiz?->module?->programPembelajaran
+                : $source?->set?->module?->programPembelajaran;
+
+            return [
+                'id' => $event->id,
+                'label' => $event->source_type === 'question'
+                    ? ($source?->question_text ?? 'Soal tidak lagi tersedia')
+                    : ($source?->front_text ?? 'Flashcard tidak lagi tersedia'),
+                'reading' => $event->source_type === 'question'
+                    ? $source?->question_reading
+                    : $source?->reading,
+                'program_id' => $program?->id,
+                'program_title' => $program?->title,
+                'activity_type' => $event->activity_type,
+                'activity_label' => self::ACTIVITY_LABELS[$event->activity_type] ?? 'Latihan',
+                'learning_state' => $event->learning_state,
+                'state_label' => self::STATE_LABELS[$event->learning_state] ?? 'Baru',
+                'result' => $event->result,
+                'date_group' => $event->occurred_at?->locale('id')->translatedFormat('l, d F Y'),
+                'occurred_at' => $event->occurred_at?->locale('id')->translatedFormat('H:i'),
+            ];
+        }));
+
+        return Inertia::render('User/Review/Index', [
+            'reviewStats' => $repetition->historyStats($user, $days),
+            'reviewEvents' => $events,
+            'filters' => [
+                'range' => (string) $days,
+                'activity' => $validated['activity'] ?? '',
+                'state' => $validated['state'] ?? '',
+                'result' => $validated['result'] ?? '',
+                'program' => $programId ? (string) $programId : '',
+            ],
+            'filterOptions' => [
+                'programs' => $programOptions,
+                'activities' => collect(self::ACTIVITY_LABELS)->map(fn ($label, $value) => compact('value', 'label'))->values(),
+                'states' => collect(self::STATE_LABELS)->map(fn ($label, $value) => compact('value', 'label'))->values(),
+                'results' => [
+                    ['value' => 'correct', 'label' => 'Benar'],
+                    ['value' => 'wrong', 'label' => 'Salah'],
+                    ['value' => 'skipped', 'label' => 'Dilewati'],
+                ],
+            ],
+            'purgeUrl' => route('user.review.history.purge'),
+            'resetUrl' => route('user.review.state.reset'),
+        ]);
     }
 
-    public function skip(Request $request, string $session, SesiReviewService $sessions): JsonResponse
+    public function purge(Request $request, RepetisiPembelajaranService $repetition): RedirectResponse
     {
-        $validated = $request->validate(['item_token' => ['required', 'uuid']]);
+        $deleted = $repetition->purgeHistory($request->user());
 
-        return response()->json($sessions->skip($request->user(), $session, $validated['item_token']));
+        return back()->with('success', $deleted > 0
+            ? 'Riwayat Review berhasil dihapus.'
+            : 'Riwayat Review sudah kosong.');
     }
 
-    public function undo(Request $request, string $session, SesiReviewService $sessions): JsonResponse
+    public function reset(Request $request, RepetisiPembelajaranService $repetition): RedirectResponse
     {
-        return response()->json($sessions->undo($request->user(), $session));
-    }
+        $repetition->resetReview($request->user());
 
-    public function reset(Request $request, SesiReviewService $sessions): RedirectResponse
-    {
-        $state = $sessions->start($request->user(), true);
-
-        if (! $state) {
-            return redirect()->route('user.review.index')
-                ->with('info', 'Belum ada materi yang dapat direview saat ini.');
-        }
-
-        return redirect()->route('user.review.show', $state['id']);
+        return back()->with('success', 'Status Review berhasil direset. Progres kelas, nilai, dan XP tetap aman.');
     }
 }
