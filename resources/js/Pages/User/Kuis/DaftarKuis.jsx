@@ -16,7 +16,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 
 // Kategori visual per tipe kuis
 const QUIZ_TYPE_META = {
-    multiple_choice: { emoji: <ShurikenIcon className="w-6 h-6" />, label: 'Pilihan Ganda', color: 'from-brand-500 to-rose-600', glow: 'shadow-brand-400/30 dark:shadow-brand-900/30', badge: 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400' },
+    multiple_choice: { emoji: <ShurikenIcon className="w-6 h-6" />, label: 'Pilihan Ganda', color: 'from-brand-500 to-rose-600', glow: 'shadow-brand-400/30 dark:shadow-green-950/30', badge: 'bg-brand-50 text-brand-600 dark:bg-[#12351f] dark:text-green-200' },
     fill_blank:      { emoji: <ScrollIcon className="w-6 h-6" />, label: 'Isi Jawaban',   color: 'from-rose-500 to-violet-600', glow: 'shadow-indigo-400/30 dark:shadow-indigo-900/30', badge: 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400' },
     listening:       { emoji: <HitodamaIcon className="w-6 h-6" />, label: 'Menyimak',      color: 'from-violet-500 to-purple-600', glow: 'shadow-violet-400/30 dark:shadow-violet-900/30', badge: 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400' },
     default:         { emoji: <ScrollIcon className="w-6 h-6" />, label: 'Kuis',          color: 'from-amber-500 to-orange-600', glow: 'shadow-amber-400/30 dark:shadow-amber-900/30', badge: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' },

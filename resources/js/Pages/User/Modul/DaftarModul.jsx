@@ -6,6 +6,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import theme from '@/Components/theme/themes';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
+import GrammarQuizPreviewDialog from '@/Components/Features/GrammarQuiz/GrammarQuizPreviewDialog';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
@@ -27,11 +28,11 @@ import VideoCameraFrontIcon from '@mui/icons-material/VideoCameraFront';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 
 const RESOURCE_COLORS = {
-    day: { color: '#58cc02', shadow: '#46a302', foreground: '#2d3742' },
-    presentation: { color: '#2bc5b4', shadow: '#14998b', foreground: '#2d3742' },
-    live: { color: '#ff9600', shadow: '#d67800', foreground: '#2d3742' },
-    quiz: { color: '#ce82ff', shadow: '#a560d1', foreground: '#2d3742' },
-    exam: { color: '#ffc800', shadow: '#d7a900', foreground: '#2d3742' },
+    day: { color: '#58cc02', shadow: '#46a302', foreground: '#2d3742', labelClass: 'text-[#397d08] dark:text-[#8ee34c]' },
+    presentation: { color: '#2bc5b4', shadow: '#14998b', foreground: '#2d3742', labelClass: 'text-[#0f766e] dark:text-[#5eead4]' },
+    live: { color: '#ff9600', shadow: '#d67800', foreground: '#2d3742', labelClass: 'text-[#c2410c] dark:text-[#fdba74]' },
+    quiz: { color: '#ce82ff', shadow: '#a560d1', foreground: '#2d3742', labelClass: 'text-[#7c3aed] dark:text-[#d8b4fe]' },
+    exam: { color: '#ffc800', shadow: '#d7a900', foreground: '#2d3742', labelClass: 'text-[#a16207] dark:text-[#fde047]' },
 };
 
 const todayInputValue = () => {
@@ -140,7 +141,7 @@ function ExamDatePicker({ value, onChange }) {
                                 isSelected
                                     ? 'bg-brand-600 text-ink-900 shadow-[0_3px_0_#15803d]'
                                     : isToday
-                                        ? 'border border-brand-300 bg-white text-brand-700 dark:border-brand-700 dark:bg-gray-900 dark:text-brand-300'
+                                        ? 'border border-brand-300 bg-white text-brand-700 dark:border-green-700 dark:bg-gray-900 dark:text-green-200'
                                         : 'text-gray-700 hover:bg-white hover:text-brand-700 disabled:cursor-not-allowed disabled:text-gray-300 dark:text-gray-200 dark:hover:bg-gray-800 dark:hover:text-brand-300 dark:disabled:text-gray-700'
                             }`}
                         >
@@ -214,7 +215,7 @@ function ExamTargetCard({ program, completedWeekCount, totalWeeks }) {
             <section className="mt-3 rounded-xl border border-white/80 bg-white/70 p-2.5 shadow-sm backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/70">
                 {target ? (
                     <div className="flex min-w-0 items-center gap-2.5">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 dark:bg-brand-950/50 dark:text-brand-300">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 dark:bg-[#12351f] dark:text-green-200">
                             <CalendarMonthIcon sx={{ fontSize: 19 }} />
                         </span>
                         <div className="min-w-0 flex-1">
@@ -253,7 +254,7 @@ function ExamTargetCard({ program, completedWeekCount, totalWeeks }) {
                         onClick={openForm}
                         className="flex w-full items-center gap-2.5 text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-400/50"
                     >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 dark:bg-brand-950/50 dark:text-brand-300">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 dark:bg-[#12351f] dark:text-green-200">
                             <CalendarMonthIcon sx={{ fontSize: 19 }} />
                         </span>
                         <span className="min-w-0 flex-1">
@@ -453,6 +454,7 @@ function nodeColors(item) {
             color: item.status === 'unavailable' ? '#f3f4f6' : '#e5e7eb',
             shadow: '#cbd5e1',
             foreground: '#9ca3af',
+            labelClass: 'text-gray-500 dark:text-gray-400',
         };
     }
 
@@ -666,15 +668,18 @@ function dayChildItems(day) {
 function PathNodeCircle({ item, selected = false, size = 68 }) {
     const colors = nodeColors(item);
     const active = item.status === 'active';
+    const locked = ['locked', 'unavailable'].includes(item.status);
 
     return (
         <span
-            className="relative z-10 flex shrink-0 items-center justify-center rounded-full border-[3px] border-white transition-transform duration-200 group-hover:scale-105 group-active:translate-y-1 dark:border-gray-950"
+            className={`relative z-10 flex shrink-0 items-center justify-center rounded-full border-[3px] border-white transition-transform duration-200 group-hover:scale-105 group-active:translate-y-1 dark:border-gray-950 ${
+                locked ? 'bg-gray-200 shadow-[0_6px_0_#cbd5e1] dark:bg-gray-800 dark:shadow-[0_6px_0_#374151]' : ''
+            }`}
             style={{
                 width: `${size}px`,
                 height: `${size}px`,
-                backgroundColor: colors.color,
-                boxShadow: `0 6px 0 ${colors.shadow}`,
+                backgroundColor: locked ? undefined : colors.color,
+                boxShadow: locked ? undefined : `0 6px 0 ${colors.shadow}`,
                 outline: selected
                     ? `4px solid ${colors.color}88`
                     : active
@@ -702,7 +707,7 @@ function StatusBadge({ item, className = '' }) {
             item.status === 'done'
                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
                 : item.status === 'active'
-                    ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300'
+                    ? 'bg-brand-100 text-brand-700 dark:bg-[#12351f] dark:text-green-200'
                     : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
         }`}>
             {itemStatusLabel(item)}
@@ -755,6 +760,7 @@ function PathNode({ item, selected, onDayToggle }) {
 function PathNodeLabel({ item }) {
     const showStatus = item.status !== 'done';
     const hasExtraInfo = showStatus || (item.kind !== 'day' && item.detail);
+    const colors = nodeColors(item);
 
     if (item.kind === 'live') {
         const isLive = item.status === 'active';
@@ -767,7 +773,7 @@ function PathNodeLabel({ item }) {
             <>
                 <span className={`absolute inset-y-0 left-0 w-1 ${isLive ? 'bg-green-500' : 'bg-orange-500'}`} />
                 <div className="flex items-center justify-between gap-2 pl-1">
-                    <span className="text-[9px] font-black uppercase tracking-[0.14em] text-orange-700 dark:text-orange-300">
+                    <span className={`text-[9px] font-black uppercase tracking-[0.14em] ${colors.labelClass}`}>
                         {item.weekLabel} · Kelas Live
                     </span>
                     <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase ${
@@ -797,7 +803,7 @@ function PathNodeLabel({ item }) {
 
     return (
         <div className="relative mt-3 w-36 text-center sm:w-44">
-            <p className="text-xs font-black text-brand-700 dark:text-brand-300">
+            <p className={`text-xs font-black ${colors.labelClass}`}>
                 {item.eyebrow}
             </p>
             <h3 className="mt-0.5 line-clamp-2 text-[13px] font-black leading-4 text-gray-900 dark:text-white sm:text-sm sm:leading-5">
@@ -837,6 +843,17 @@ function PathNodeLabel({ item }) {
 function DayDetailContent({ day, onClose, mobile = false }) {
     const items = dayChildItems(day);
     const completed = day.status === 'done';
+    const [grammarQuiz, setGrammarQuiz] = useState(null);
+    const [loadingGrammarId, setLoadingGrammarId] = useState(null);
+    const openGrammar = async (quizId) => {
+        setLoadingGrammarId(quizId);
+        try {
+            const { data } = await window.axios.get(`/user/grammar-quizzes/${quizId}`);
+            setGrammarQuiz(data.lesson);
+        } finally {
+            setLoadingGrammarId(null);
+        }
+    };
 
     return (
         <div
@@ -952,7 +969,45 @@ function DayDetailContent({ day, onClose, mobile = false }) {
                         </motion.div>
                     );
                 })}
+
+                {(day.grammar_lessons || []).map((lesson, index) => <motion.button
+                    key={lesson.id}
+                    type="button"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: (items.length + index) * 0.06 }}
+                    disabled={loadingGrammarId === lesson.id}
+                    onClick={() => openGrammar(lesson.id)}
+                    className="group flex min-h-[88px] w-full items-center gap-3 rounded-xl border border-sky-200 bg-white px-3 py-3 text-left shadow-[0_3px_0_#bae6fd] transition hover:-translate-y-0.5 hover:border-sky-300 hover:bg-sky-50/40 hover:shadow-[0_4px_0_#7dd3fc] active:translate-y-0.5 active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/70 disabled:opacity-60 dark:border-sky-900/70 dark:bg-gray-800 dark:hover:bg-sky-950/20 sm:px-4"
+                >
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
+                        <AutoStoriesIcon sx={{ fontSize: 24 }} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                            <span className="block text-sm font-extrabold leading-5 text-[#2d3742] dark:text-white sm:text-[15px]">
+                                {lesson.pattern} / {lesson.title}
+                            </span>
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+                                {lesson.done ? 'Selesai' : 'Grammar'}
+                            </span>
+                        </span>
+                        <span className="mt-1 block text-xs font-medium leading-5 text-gray-600 dark:text-gray-300">
+                            {loadingGrammarId === lesson.id ? 'Memuat lesson...' : 'Intro, transformasi bentuk, susun kalimat, dan pilihan konteks.'}
+                        </span>
+                    </span>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 transition group-hover:bg-sky-200 dark:bg-sky-950/60 dark:text-sky-300">
+                        <ChevronRightIcon sx={{ fontSize: 21 }} />
+                    </span>
+                </motion.button>)}
             </div>
+
+            <GrammarQuizPreviewDialog
+                open={Boolean(grammarQuiz)}
+                quiz={grammarQuiz}
+                persist
+                onClose={() => setGrammarQuiz(null)}
+            />
         </div>
     );
 }
@@ -1204,7 +1259,7 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
                 aria-expanded={expanded}
                 className={`relative flex min-h-[76px] w-full items-center gap-3 overflow-hidden rounded-2xl border px-3 py-3 text-left shadow-lg shadow-brand-900/5 transition sm:px-5 ${
                     week.status === 'active'
-                        ? 'border-brand-300 bg-white hover:border-brand-500 hover:shadow-xl dark:border-brand-700/70 dark:bg-gray-900'
+                        ? 'border-brand-300 bg-white hover:border-brand-500 hover:shadow-xl dark:border-green-800 dark:bg-gray-900 dark:hover:border-green-700'
                         : week.status === 'done'
                             ? 'border-emerald-200 bg-white/90 hover:border-emerald-300 dark:border-emerald-900/60 dark:bg-gray-900'
                             : 'border-white/70 bg-white/75 hover:border-gray-200 dark:border-gray-800 dark:bg-gray-900/75'
@@ -1239,7 +1294,7 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
                             week.status === 'done'
                                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
                                 : week.status === 'active'
-                                    ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300'
+                                    ? 'bg-brand-100 text-brand-700 dark:bg-[#12351f] dark:text-green-200'
                                     : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
                         }`}>
                             {itemStatusLabel(week)}
@@ -1554,7 +1609,7 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
         <AuthenticatedLayout header={false}>
             <Head title={`${program?.title || 'Roadmap'} - TOKU-UP`} />
 
-            <div className="relative min-h-[100dvh] overflow-x-clip bg-[#e7efea] text-gray-900 transition-colors duration-300 dark:bg-gray-950">
+            <div className="relative min-h-[100dvh] overflow-x-clip bg-[#e7efea] text-gray-900 transition-colors duration-300 dark:bg-gray-950 dark:text-gray-100">
                 <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(88,204,2,0.07)_0%,transparent_32%),linear-gradient(240deg,rgba(255,200,0,0.055)_0%,transparent_34%),repeating-linear-gradient(90deg,rgba(45,55,66,0.045)_0_1px,transparent_1px_82px),repeating-linear-gradient(0deg,rgba(45,55,66,0.04)_0_1px,transparent_1px_82px)] dark:bg-[linear-gradient(120deg,rgba(88,204,2,0.07)_0%,transparent_28%),linear-gradient(240deg,rgba(255,200,0,0.045)_0%,transparent_30%)]" />
                 <div className="pointer-events-none absolute left-4 top-40 hidden text-[13rem] font-black leading-none text-brand-900/[0.045] dark:text-white/[0.035] lg:block">道</div>
                 <div className="pointer-events-none absolute right-8 top-[560px] hidden text-[12rem] font-black leading-none text-amber-900/[0.05] dark:text-white/[0.03] lg:block">週</div>
@@ -1598,7 +1653,7 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                                             {program?.instructor_name && <span className="inline-flex items-center gap-1.5"><GroupsIcon sx={{ fontSize: 16 }} />{program.instructor_name}</span>}
                                             <span className="inline-flex items-center gap-1.5"><MenuBookIcon sx={{ fontSize: 16 }} />{program?.lessons || displayWeeks.length} Minggu</span>
                                         </div>
-                                        {!program?.has_class_access && <a href="#roadmap" className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white/75 px-3.5 text-sm font-black text-brand-700 transition hover:bg-brand-50 dark:border-brand-900/60 dark:bg-gray-900/75 dark:text-brand-300 dark:hover:bg-brand-950/30"><PlayArrowIcon sx={{ fontSize: 18 }} />Coba Week 1</a>}
+                                        {!program?.has_class_access && <a href="#roadmap" className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white/75 px-3.5 text-sm font-black text-brand-700 transition hover:bg-brand-50 dark:border-green-900/70 dark:bg-gray-900/75 dark:text-green-200 dark:hover:bg-[#12351f]"><PlayArrowIcon sx={{ fontSize: 18 }} />Coba Week 1</a>}
                                     </div>
                                 </div>
 

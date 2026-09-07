@@ -20,6 +20,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ReplayIcon from '@mui/icons-material/Replay';
+import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 
 // Ikon Bawah
 import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined';
@@ -378,6 +379,7 @@ export default function AuthenticatedLayout({ children }) {
     const userMenu = [
         { href: '/user/dashboard', activePaths: ['/user/dashboard'], icon: <DashboardIcon sx={{ fontSize: 24 }} />, label: 'Beranda' },
         { href: '/user/kelas', activePaths: ['/user/kelas', '/user/modul', '/user/quizzes', '/user/flashcards'], icon: <SchoolIcon sx={{ fontSize: 24 }} />, label: 'Kelas' },
+        { href: '/user/exams', activePaths: ['/user/exams'], icon: <FactCheckOutlinedIcon sx={{ fontSize: 24 }} />, label: 'Ujian' },
         { href: '/user/review', activePaths: ['/user/review'], icon: <ReplayIcon sx={{ fontSize: 24 }} />, label: 'Review' },
         { href: '/user/leaderboard', activePaths: ['/user/leaderboard'], icon: <EmojiEventsIcon sx={{ fontSize: 24 }} />, label: 'Peringkat' },
         { href: '/user/progress', activePaths: ['/user/progress'], icon: <MonitorHeartIcon sx={{ fontSize: 24 }} />, label: 'Progress' },
@@ -386,6 +388,7 @@ export default function AuthenticatedLayout({ children }) {
     const adminMenu = [
         { href: '/admin/dashboard', activePaths: ['/admin/dashboard'], icon: <DashboardIcon sx={{ fontSize: 24 }} />, label: 'Beranda' },
         { href: '/admin/users', activePaths: ['/admin/users', '/admin/kloters', '/admin/analytics'], icon: <PeopleIcon sx={{ fontSize: 24 }} />, label: 'Kloter & Siswa' },
+        { href: '/admin/exams', activePaths: ['/admin/exams'], icon: <FactCheckOutlinedIcon sx={{ fontSize: 24 }} />, label: 'Ujian' },
         {
             href: '/admin/programs',
             activePaths: ['/admin/programs', '/admin/modules', '/admin/module-days', '/admin/quizzes', '/admin/questions', '/admin/flashcards', '/admin/presentations', '/admin/boards'],
@@ -479,6 +482,7 @@ export default function AuthenticatedLayout({ children }) {
     const isActiveItem = (item) => isActivePath(item.activePaths || item.href);
 
     const workspaceTitleRules = [
+        ['/admin/exams', 'Ujian'],
         ['/admin/presentations', 'Presentasi'],
         ['/admin/flashcards', 'Flashcard'],
         ['/admin/quizzes', 'Kuis & Repetisi'],
@@ -497,6 +501,7 @@ export default function AuthenticatedLayout({ children }) {
         ['/user/modul', 'Roadmap Belajar'],
         ['/user/quizzes', 'Latihan & Kuis'],
         ['/user/flashcards', 'Latihan & Kuis'],
+        ['/user/exams', 'Ujian'],
         ['/user/review', 'Review'],
         ['/user/kelas', 'Kelas'],
         ['/user/leaderboard', 'Peringkat'],
@@ -559,7 +564,7 @@ export default function AuthenticatedLayout({ children }) {
                         navigationExpanded ? 'flex-row justify-start px-3.5' : 'justify-center px-2'
                     } ${
                         groupActive
-                            ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300'
+                            ? 'bg-brand-50 text-brand-700 dark:bg-[#12351f] dark:text-green-200'
                             : 'text-gray-700 hover:bg-white hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
                     }`}
                 >
@@ -699,7 +704,7 @@ export default function AuthenticatedLayout({ children }) {
                         <MenuIcon sx={{ fontSize: 26 }} />
                     </button>
                     <div className="min-w-0">
-                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="block h-5 w-auto max-w-[9rem] object-contain object-left" />
+                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="block h-5 w-auto max-w-[9rem] object-contain object-left dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.16)]" />
                         <span className="block truncate text-[11px] font-semibold text-gray-700 dark:text-gray-300">{workspaceTitle}</span>
                     </div>
                 </div>
@@ -747,7 +752,7 @@ export default function AuthenticatedLayout({ children }) {
                 <div className="relative mb-4 border-b border-gray-100 dark:border-gray-800">
                     <div className="flex h-14 items-center justify-between px-3 lg:hidden">
                         <div className="flex min-w-0 items-center gap-2.5">
-                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-8 w-auto max-w-[10rem] shrink-0 object-contain object-left" />
+                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-8 w-auto max-w-[10rem] shrink-0 object-contain object-left dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.16)]" />
                         </div>
                         <button
                             type="button"
@@ -761,7 +766,7 @@ export default function AuthenticatedLayout({ children }) {
                     <div className={`hidden h-16 items-center p-3 lg:flex ${isExpanded ? 'gap-3' : 'justify-center'}`}>
                         <img src="/images/logos/toku-up-mark.png" alt="TOKU-UP" className={`${isExpanded ? 'h-10 w-10' : 'h-8 w-8'} shrink-0 object-contain transition-all duration-300`} />
                         {isExpanded && (
-                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-7 w-auto max-w-[8.75rem] object-contain object-left animate-in fade-in slide-in-from-left-2 duration-300" />
+                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-7 w-auto max-w-[8.75rem] object-contain object-left dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.16)] animate-in fade-in slide-in-from-left-2 duration-300" />
                         )}
                     </div>
                     <button
@@ -923,7 +928,7 @@ export default function AuthenticatedLayout({ children }) {
             <div className={`flex-1 w-full transition-all duration-300 ${isExpanded ? 'lg:ml-[240px]' : 'lg:ml-[88px]'}`}>
                 <header className="sticky top-0 z-20 hidden min-h-[64px] items-center justify-between border-b border-gray-200/80 bg-white/85 px-6 shadow-sm backdrop-blur-xl transition-colors duration-300 dark:border-gray-800 dark:bg-gray-950/80 lg:flex">
                     <div className="min-w-0">
-                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-4 w-auto max-w-[7.5rem] object-contain object-left" />
+                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-4 w-auto max-w-[7.5rem] object-contain object-left dark:drop-shadow-[0_0_7px_rgba(255,255,255,0.14)]" />
                         <p className="truncate text-sm font-semibold text-slate-600 dark:text-slate-300">
                             {workspaceTitle}
                         </p>
@@ -958,15 +963,15 @@ export default function AuthenticatedLayout({ children }) {
             {toastAchievements.length > 0 && (
                 <div className="fixed inset-x-3 top-3 z-[100] flex flex-col gap-3 animate-in sm:inset-x-auto sm:right-6 sm:top-6">
                     {toastAchievements.map((ach, i) => (
-                        <div key={i} className="flex w-full min-w-0 items-center gap-3 rounded-2xl border-2 border-[#E8C95B] bg-white p-4 shadow-[0_10px_40px_-10px_rgba(45,55,66,0.25)] sm:w-[320px] sm:gap-4 sm:p-5" style={{ animation: `fade-in-slide-up 0.4s ${i * 0.15}s both` }}>
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#FEF0B8] text-2xl text-[#8A6100] shadow-lg shadow-amber-400/20 sm:h-14 sm:w-14 sm:text-3xl">
+                        <div key={i} className="flex w-full min-w-0 items-center gap-3 rounded-2xl border-2 border-[#E8C95B] bg-white p-4 shadow-[0_10px_40px_-10px_rgba(45,55,66,0.25)] dark:border-amber-700/70 dark:bg-gray-900 dark:shadow-black/35 sm:w-[320px] sm:gap-4 sm:p-5" style={{ animation: `fade-in-slide-up 0.4s ${i * 0.15}s both` }}>
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#FEF0B8] text-2xl text-[#8A6100] shadow-lg shadow-amber-400/20 dark:bg-amber-950/60 dark:text-amber-300 sm:h-14 sm:w-14 sm:text-3xl">
                                 {ach.icon || '<KabutoIcon className="w-5 h-5 inline-block text-yellow-500" />'}
                             </div>
                             <div className="min-w-0 flex-1">
                                 <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Lencana Terbuka!</p>
-                                <p className="break-words text-sm font-black text-gray-900">{ach.name}</p>
-                                <p className="break-words text-xs font-medium text-gray-700">{ach.description}</p>
-                                {ach.xp_reward > 0 && <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-full mt-1 inline-block">+{ach.xp_reward} XP</span>}
+                                <p className="break-words text-sm font-black text-gray-900 dark:text-white">{ach.name}</p>
+                                <p className="break-words text-xs font-medium text-gray-700 dark:text-gray-300">{ach.description}</p>
+                                {ach.xp_reward > 0 && <span className="mt-1 inline-block rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-black text-green-600 dark:bg-green-950/50 dark:text-green-300">+{ach.xp_reward} XP</span>}
                             </div>
                         </div>
                     ))}

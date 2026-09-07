@@ -73,6 +73,13 @@ class ImportSpreadsheetService
 
     public function parseXlsxRows(string $path): array
     {
+        $sheets = $this->xlsxSheets($path);
+
+        return $sheets === [] ? [] : array_values($sheets)[0];
+    }
+
+    public function xlsxSheets(string $path): array
+    {
         if (! class_exists(ZipArchive::class)) {
             return [];
         }
@@ -90,13 +97,56 @@ class ImportSpreadsheetService
         }
 
         $sharedStrings = $this->readSharedStrings($zip);
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        $zip->close();
+        $workbookXml = $zip->getFromName('xl/workbook.xml');
+        $relsXml = $zip->getFromName('xl/_rels/workbook.xml.rels');
+        if (! $workbookXml || ! $relsXml) {
+            $zip->close();
 
-        if (! $sheetXml || strlen($sheetXml) > self::MAX_XML_BYTES) {
             return [];
         }
 
+        $workbook = $this->loadXml($workbookXml);
+        $rels = $this->loadXml($relsXml);
+        if ($workbook === false || $rels === false) {
+            $zip->close();
+
+            return [];
+        }
+
+        $targets = [];
+        foreach ($rels->Relationship as $relationship) {
+            $targets[(string) $relationship['Id']] = (string) $relationship['Target'];
+        }
+
+        $result = [];
+        foreach ($workbook->sheets->sheet as $sheetNode) {
+            $relationAttributes = $sheetNode->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships');
+            $relationId = (string) ($relationAttributes['id'] ?? '');
+            $target = $targets[$relationId] ?? '';
+            if ($target === '') {
+                continue;
+            }
+
+            $entry = str_starts_with($target, '/')
+                ? ltrim($target, '/')
+                : 'xl/'.ltrim(str_replace('../', '', $target), '/');
+            $sheetXml = $zip->getFromName($entry);
+            if (! $sheetXml || strlen($sheetXml) > self::MAX_XML_BYTES) {
+                $zip->close();
+
+                return [];
+            }
+
+            $result[strtolower(trim((string) $sheetNode['name']))] = $this->worksheetRows($sheetXml, $sharedStrings);
+        }
+
+        $zip->close();
+
+        return $result;
+    }
+
+    private function worksheetRows(string $sheetXml, array $sharedStrings): array
+    {
         $sheet = $this->loadXml($sheetXml);
 
         if ($sheet === false || ! isset($sheet->sheetData->row)) {

@@ -9,8 +9,8 @@ use App\Models\Kuis;
 use App\Models\LevelPembelajaran;
 use App\Models\Modul;
 use App\Models\ProgramPembelajaran;
-use App\Services\NotifikasiPenggunaService;
 use App\Services\KloterBelajarService;
+use App\Services\NotifikasiPenggunaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -19,9 +19,7 @@ use Inertia\Inertia;
 
 class AdminModulController extends Controller
 {
-    public function __construct(private readonly KloterBelajarService $kloterService)
-    {
-    }
+    public function __construct(private readonly KloterBelajarService $kloterService) {}
 
     public function programsIndex(Request $request)
     {
@@ -131,7 +129,12 @@ class AdminModulController extends Controller
                 ])
                 ->orderBy('day_number'),
         ])
-            ->withCount(['days', 'flashcardSets', 'quizzes', 'presentationDecks'])
+            ->withCount([
+                'days',
+                'flashcardSets',
+                'quizzes as standard_quizzes_count' => fn ($quizQuery) => $quizQuery->where('type', '!=', 'grammar'),
+                'presentationDecks',
+            ])
             ->orderBy('program_pembelajaran_id')
             ->orderBy('level_id')
             ->orderBy('week_number');
@@ -164,9 +167,9 @@ class AdminModulController extends Controller
             'day_count' => $module->days_count,
             'days_count' => $module->days_count,
             'flashcard_count' => $module->flashcard_sets_count,
-            'quiz_count' => $module->quizzes_count,
+            'quiz_count' => $module->standard_quizzes_count,
             'presentation_count' => $module->presentation_decks_count,
-            'is_ready' => $module->flashcard_sets_count > 0 && $module->quizzes_count > 0,
+            'is_ready' => $module->flashcard_sets_count > 0 && $module->standard_quizzes_count > 0,
             'weekly_presentations' => $module->presentationDecks
                 ->map(fn ($deck) => $this->presentationPayload($deck))
                 ->values(),
@@ -208,14 +211,15 @@ class AdminModulController extends Controller
                         'status' => $set->status,
                         'item_count' => $set->flashcards_count,
                     ]),
-                    'quizzes' => $day->quizzes->map(fn ($quiz) => [
+                    'quizzes' => $day->quizzes->where('type', '!=', 'grammar')->map(fn ($quiz) => [
                         'id' => $quiz->id,
                         'title' => 'Kuis #'.$quiz->id,
                         'type' => $quiz->type,
                         'status' => $quiz->status,
                         'passing_score' => $quiz->passing_score,
                         'item_count' => $quiz->questions_count,
-                    ]),
+                    ])->values(),
+                    'grammar_lesson_count' => $day->quizzes->where('type', 'grammar')->count(),
                     'presentation_decks' => $day->presentationDecks->map(fn ($deck) => [
                         'id' => $deck->id,
                         'title' => $deck->title,

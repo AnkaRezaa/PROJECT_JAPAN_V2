@@ -5,6 +5,7 @@ import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmAc
 import LearningResourceCreateDialog from '@/Components/Admin/LearningResourceCreateDialog';
 import ModuleDayDialog from '@/Components/Admin/ModuleDayDialog';
 import SearchableSelect from '@/Components/UI/SearchableSelect';
+import GrammarQuizBuilderDialog from '@/Components/Features/GrammarQuiz/GrammarQuizBuilderDialog';
 
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -14,6 +15,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
+import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 
 const focusLabels = {
     roadmap: 'Roadmap',
@@ -221,6 +223,30 @@ function DailyPracticeRow({ module, day, onCreate, focused = false }) {
     );
 }
 
+function GrammarPracticeRow({ module, day, onOpen }) {
+    return (
+        <div className="rounded-xl border border-sky-200 bg-sky-50/40 p-3 dark:border-sky-900/60 dark:bg-sky-950/15">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
+                    <AutoStoriesIcon sx={{ fontSize: 19 }} />
+                </span>
+                <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                        <span className="block text-sm font-black text-gray-900 dark:text-white">Kuis Grammar</span>
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">Frontend</span>
+                    </span>
+                    <span className="mt-0.5 block text-xs font-bold text-gray-500 dark:text-gray-400">
+                        Intro, Transformation, Sentence Builder, dan Context Choice.
+                    </span>
+                </span>
+                <button type="button" onClick={() => onOpen({ module, day })} className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-sky-600 px-3 text-xs font-black text-white transition hover:bg-sky-700">
+                    Buka Builder Grammar
+                </button>
+            </div>
+        </div>
+    );
+}
+
 function WeeklyPresentationRow({ module, focused = false }) {
     const presentations = Array.isArray(module.weekly_presentations)
         ? module.weekly_presentations
@@ -281,6 +307,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
     const [editingModule, setEditingModule] = useState(null);
     const [dayDialog, setDayDialog] = useState(null);
     const [resourceDialog, setResourceDialog] = useState(null);
+    const [grammarBuilder, setGrammarBuilder] = useState(null);
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
 
     const selectedProgram = programs.find((program) => String(program.id) === String(selectedProgramId));
@@ -416,6 +443,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
         const contentCount = Number(day.vocabulary_count || 0)
             + (day.flashcard_sets?.length || 0)
             + (day.quizzes?.length || 0)
+            + Number(day.grammar_lesson_count || 0)
             + (day.presentation_decks?.length || 0);
 
         if (contentCount > 0) {
@@ -643,6 +671,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                                             onCreate={openResourceCreate}
                                                                             focused={focus === 'flashcard'}
                                                                         />
+                                                                        <GrammarPracticeRow module={module} day={day} onOpen={setGrammarBuilder} />
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -692,6 +721,9 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                                      onCreate={openResourceCreate}
                                                                      focused
                                                                  />
+                                                                 <div className="mt-2">
+                                                                     <GrammarPracticeRow module={module} day={day} onOpen={setGrammarBuilder} />
+                                                                 </div>
                                                              </div>
                                                          ))}
 
@@ -819,6 +851,13 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                 weekSlot={resourceDialog?.weekSlot}
                 levels={levels}
                 lockContext
+            />
+
+            <GrammarQuizBuilderDialog
+                open={Boolean(grammarBuilder)}
+                module={grammarBuilder?.module}
+                day={grammarBuilder?.day}
+                onClose={() => setGrammarBuilder(null)}
             />
 
             <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />

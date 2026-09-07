@@ -8,11 +8,42 @@ class PenilaianJawabanKuisService
 {
     public function benar(Soal $question, ?string $answer = null, array $payload = []): bool
     {
-        if ($this->soalLatihan($question)) {
-            return $this->handwritingDikuasai($payload, $question);
+        return $this->benarUntukData(
+            (string) $question->type,
+            (string) $question->correct_answer,
+            (array) ($question->options ?? []),
+            $answer,
+            $payload,
+        );
+    }
+
+    public function benarUntukData(
+        string $type,
+        string $correctAnswer,
+        array $options,
+        ?string $answer = null,
+        array $payload = []
+    ): bool {
+        if ($type === 'handwriting' || (bool) data_get($options, 'practice_only', false)) {
+            $completed = (int) ($payload['completed_strokes'] ?? 0);
+            $total = (int) ($payload['total_strokes'] ?? 0);
+            $expected = (int) data_get($options, 'stroke_count', $total);
+
+            return $expected > 0
+                && $completed >= $expected
+                && ! (bool) ($payload['revealed'] ?? false);
         }
 
-        return $this->jawabanSama((string) $answer, (string) $question->correct_answer);
+        if ($type === 'sentence_builder') {
+            $expected = json_decode($correctAnswer, true);
+            $submitted = $payload['ordered_token_ids'] ?? [];
+
+            return is_array($expected)
+                && is_array($submitted)
+                && array_values($submitted) === array_values($expected);
+        }
+
+        return $this->jawabanSama((string) $answer, $correctAnswer);
     }
 
     public function soalLatihan(Soal $question): bool

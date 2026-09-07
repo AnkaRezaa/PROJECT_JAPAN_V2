@@ -6,6 +6,7 @@ use App\Models\Flashcard;
 use App\Models\HariModul;
 use App\Models\Kuis;
 use App\Models\Modul;
+use App\Models\PengerjaanKuis;
 use App\Models\Pengguna;
 use App\Models\Progres;
 use App\Models\ProgresHariModul;
@@ -91,7 +92,43 @@ class ProgresRoadmapService
         $quiz->loadMissing('day.module');
         $day = $quiz->day;
 
-        if (! $day || (int) $day->checkpoint_quiz_id !== (int) $quiz->id) {
+        if (! $day || ((int) $day->checkpoint_quiz_id !== (int) $quiz->id && ! $quiz->isGrammar())) {
+            return ['day_completed' => false, 'module_completed' => false, 'was_module_completed' => false];
+        }
+
+        $checkpoint = Kuis::query()
+            ->whereKey($day->checkpoint_quiz_id)
+            ->where('status', 'published')
+            ->whereHas('questions')
+            ->first(['id', 'passing_score']);
+
+        if (! $checkpoint) {
+            return ['day_completed' => false, 'module_completed' => false, 'was_module_completed' => false];
+        }
+
+        $required = Kuis::query()
+            ->where('module_day_id', $day->id)
+            ->where('type', 'grammar')
+            ->where('status', 'published')
+            ->whereHas('questions')
+            ->get(['id', 'passing_score'])
+            ->prepend($checkpoint)
+            ->unique('id');
+
+        $allPassed = $required->every(function (Kuis $requiredQuiz) use ($user, $quiz, $score) {
+            if ((int) $requiredQuiz->id === (int) $quiz->id) {
+                return $score >= (int) ($requiredQuiz->passing_score ?? 70);
+            }
+
+            return PengerjaanKuis::query()
+                ->where('user_id', $user->id)
+                ->where('quiz_id', $requiredQuiz->id)
+                ->where('status', 'completed')
+                ->where('score', '>=', (int) ($requiredQuiz->passing_score ?? 70))
+                ->exists();
+        });
+
+        if (! $allPassed) {
             return ['day_completed' => false, 'module_completed' => false, 'was_module_completed' => false];
         }
 

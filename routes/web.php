@@ -2,10 +2,12 @@
 
 use App\Http\Controllers\Admin\AdminAnalitikController;
 use App\Http\Controllers\Admin\AdminBerandaController;
+use App\Http\Controllers\Admin\AdminExamPortalController;
 use App\Http\Controllers\Admin\AdminFlashcardController;
 use App\Http\Controllers\Admin\AdminHariModulController;
 use App\Http\Controllers\Admin\AdminKosakataController;
 use App\Http\Controllers\Admin\AdminKuisController;
+use App\Http\Controllers\Admin\AdminGrammarQuizController;
 use App\Http\Controllers\Admin\AdminLevelController;
 use App\Http\Controllers\Admin\AdminModulController;
 use App\Http\Controllers\Admin\AdminPenggunaController;
@@ -29,6 +31,7 @@ use App\Http\Controllers\SuperAdmin\SuperAdminPenggunaController;
 use App\Http\Controllers\SuperAdmin\SuperAdminSistemController;
 use App\Http\Controllers\User\BerandaController as UserDashboardController;
 use App\Http\Controllers\User\BeritaController;
+use App\Http\Controllers\User\ExamPortalController;
 use App\Http\Controllers\User\FlashcardController;
 use App\Http\Controllers\User\ModulController;
 use App\Http\Controllers\User\RuangKelasLiveController as UserRuangKelasLiveController;
@@ -36,6 +39,7 @@ use App\Http\Controllers\User\PapanPeringkatController;
 use App\Http\Controllers\User\PembelajaranController;
 use App\Http\Controllers\User\ProgresController;
 use App\Http\Controllers\User\QuickQuizController;
+use App\Http\Controllers\User\GrammarQuizController;
 use App\Http\Controllers\User\ReviewController;
 use App\Http\Controllers\User\SertifikatController;
 use App\Http\Controllers\User\TargetUjianPenggunaController;
@@ -152,6 +156,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Admin Routes
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminBerandaController::class, 'index'])->name('dashboard');
+        Route::get('/exams', [AdminExamPortalController::class, 'index'])->name('exams.index');
+        Route::get('/exams/create', [AdminExamPortalController::class, 'create'])->name('exams.create');
+        Route::get('/exams/sessions', [AdminExamPortalController::class, 'sessions'])->name('exams.sessions');
+        Route::get('/exams/results', [AdminExamPortalController::class, 'results'])->name('exams.results');
+        Route::post('/exams', [AdminExamPortalController::class, 'store'])->name('exams.store');
+        Route::patch('/exams/{exam}', [AdminExamPortalController::class, 'update'])->name('exams.update');
+        Route::post('/exams/{exam}/versions', [AdminExamPortalController::class, 'createVersion'])->name('exams.versions.store');
+        Route::patch('/exam-versions/{version}', [AdminExamPortalController::class, 'updateVersion'])->name('exam-versions.update');
+        Route::put('/exam-versions/{version}/sections', [AdminExamPortalController::class, 'syncSections'])->name('exam-versions.sections.sync');
+        Route::put('/exam-sections/{section}/questions', [AdminExamPortalController::class, 'syncQuestions'])->name('exam-sections.questions.sync');
+        Route::post('/exam-versions/{version}/validate', [AdminExamPortalController::class, 'validateVersion'])->name('exam-versions.validate');
+        Route::post('/exam-versions/{version}/publish', [AdminExamPortalController::class, 'publish'])->middleware('throttle:exam-admin')->name('exam-versions.publish');
+        Route::get('/exam-versions/template/xlsx', [AdminExamPortalController::class, 'template'])->name('exam-versions.template');
+        Route::post('/exam-versions/{version}/import/preview', [AdminExamPortalController::class, 'importPreview'])->middleware('throttle:admin-imports')->name('exam-versions.import.preview');
+        Route::post('/exam-versions/{version}/import', [AdminExamPortalController::class, 'import'])->middleware('throttle:admin-imports')->name('exam-versions.import');
+        Route::post('/exam-versions/{version}/sessions', [AdminExamPortalController::class, 'storeSession'])->name('exam-versions.sessions.store');
+        Route::patch('/exam-sessions/{session}', [AdminExamPortalController::class, 'updateSession'])->name('exam-sessions.update');
+        Route::get('/exam-sessions/{session}/results', [AdminExamPortalController::class, 'sessionResults'])->name('exam-sessions.results');
+        Route::post('/exam-sessions/{session}/close', [AdminExamPortalController::class, 'closeSession'])->middleware('throttle:exam-admin')->name('exam-sessions.close');
+        Route::post('/exam-sessions/{session}/release-results', [AdminExamPortalController::class, 'releaseResults'])->middleware('throttle:exam-admin')->name('exam-sessions.release-results');
+        Route::post('/exam-attempts/{attempt}/invalidate', [AdminExamPortalController::class, 'invalidate'])->middleware('throttle:exam-admin')->name('exam-attempts.invalidate');
+        Route::get('/exams/{exam}/edit', [AdminExamPortalController::class, 'edit'])->name('exams.edit');
+        Route::get('/exams/{exam}/preview', [AdminExamPortalController::class, 'preview'])->name('exams.preview');
         Route::get('/users', [AdminPenggunaController::class, 'index'])->name('users');
         Route::get('/users/{user}', [AdminPenggunaController::class, 'show'])->name('users.show');
         Route::patch('/kloters/{kloter}/schedule', [AdminPenggunaController::class, 'updateKloterSchedule'])->name('kloters.schedule.update');
@@ -214,6 +241,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/quizzes/{quiz}/questions/import', [AdminKuisController::class, 'importQuestions'])->middleware('throttle:admin-imports')->name('quizzes.questions.import');
         Route::post('/quizzes/{quiz}/questions/generate-vocabulary', [AdminKuisController::class, 'generateVocabularyQuestions'])->name('quizzes.questions.generate-vocabulary');
         Route::post('/quizzes/{quiz}/questions/generate-vocabulary/preview', [AdminKuisController::class, 'previewVocabularyQuestions'])->name('quizzes.questions.generate-vocabulary.preview');
+        Route::get('/module-days/{moduleDay}/grammar-quizzes', [AdminGrammarQuizController::class, 'index'])->name('grammar-quizzes.index');
+        Route::post('/module-days/{moduleDay}/grammar-quizzes', [AdminGrammarQuizController::class, 'store'])->name('grammar-quizzes.store');
+        Route::get('/grammar-quizzes/{quiz}', [AdminGrammarQuizController::class, 'show'])->name('grammar-quizzes.show');
+        Route::put('/grammar-quizzes/{quiz}', [AdminGrammarQuizController::class, 'update'])->name('grammar-quizzes.update');
+        Route::patch('/grammar-quizzes/{quiz}/status', [AdminGrammarQuizController::class, 'updateStatus'])->name('grammar-quizzes.status');
+        Route::delete('/grammar-quizzes/{quiz}', [AdminGrammarQuizController::class, 'destroy'])->name('grammar-quizzes.destroy');
+        Route::get('/programs/{program}/grammar-quizzes/template', [AdminGrammarQuizController::class, 'template'])->name('grammar-quizzes.template');
+        Route::post('/programs/{program}/grammar-quizzes/import/preview', [AdminGrammarQuizController::class, 'previewImport'])->middleware('throttle:admin-imports')->name('grammar-quizzes.import.preview');
+        Route::post('/programs/{program}/grammar-quizzes/import', [AdminGrammarQuizController::class, 'import'])->middleware('throttle:admin-imports')->name('grammar-quizzes.import');
 
         // LevelPembelajaran CRUD
         Route::apiResource('/levels', AdminLevelController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -284,6 +320,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('/quizzes', [PembelajaranController::class, 'quizLobby'])->name('quizzes.index');
         Route::get('/quizzes/{quiz}', [PembelajaranController::class, 'showQuiz'])->name('quizzes.show');
+        Route::get('/module-days/{moduleDay}/grammar-quizzes', [GrammarQuizController::class, 'index'])->name('grammar-quizzes.index');
+        Route::get('/grammar-quizzes/{quiz}', [GrammarQuizController::class, 'show'])->name('grammar-quizzes.show');
+        Route::get('/exams', [ExamPortalController::class, 'index'])->name('exams.index');
+        Route::get('/exams/library', [ExamPortalController::class, 'library'])->name('exams.library');
+        Route::get('/exams/ranking', [ExamPortalController::class, 'ranking'])->middleware('throttle:exam-ranking')->name('exams.ranking');
+        Route::get('/exams/history', [ExamPortalController::class, 'history'])->name('exams.history');
+        Route::post('/exams/{exam}/attempts', [ExamPortalController::class, 'start'])->middleware('throttle:exam-start')->name('exams.attempts.start');
+        Route::get('/exam-attempts/{attempt}', [ExamPortalController::class, 'attempt'])->name('exam-attempts.show');
+        Route::put('/exam-attempts/{attempt}/answers', [ExamPortalController::class, 'autosave'])->middleware('throttle:exam-autosave')->name('exam-attempts.answers');
+        Route::post('/exam-attempts/{attempt}/submit', [ExamPortalController::class, 'submit'])->middleware('throttle:exam-submit')->name('exam-attempts.submit');
+        Route::get('/exam-attempts/{attempt}/result', [ExamPortalController::class, 'result'])->name('exam-attempts.result');
+        Route::get('/exams/{exam}', [ExamPortalController::class, 'show'])->name('exams.show');
         Route::post('/quick-quiz/start', [QuickQuizController::class, 'start'])->middleware('throttle:quick-quiz')->name('quick-quiz.start');
         Route::get('/quick-quiz/{session}', [QuickQuizController::class, 'show'])->name('quick-quiz.show');
         Route::post('/quick-quiz/{session}/answer', [QuickQuizController::class, 'answer'])->middleware('throttle:quick-quiz')->name('quick-quiz.answer');
@@ -302,6 +350,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::post('/attempts', [ProgresController::class, 'storeAttempt'])->middleware('throttle:learning-actions')->name('attempts.store');
         Route::post('/quizzes/{quiz}/attempts/start', [ProgresController::class, 'startAttempt'])->middleware('throttle:learning-actions')->name('attempts.start');
+        Route::post('/attempts/{attempt}/answers/first', [ProgresController::class, 'storeFirstAnswer'])->middleware('throttle:learning-actions')->name('attempts.answers.first');
         Route::post('/modules/complete', [ProgresController::class, 'completeModule'])->name('modules.complete');
     });
 });

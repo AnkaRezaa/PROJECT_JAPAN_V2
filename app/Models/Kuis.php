@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Kuis extends Model
 {
@@ -32,6 +33,16 @@ class Kuis extends Model
     public function isWeeklyExam(): bool
     {
         return $this->module_day_id === null && $this->exam_order !== null;
+    }
+
+    public function isGrammar(): bool
+    {
+        return $this->type === 'grammar';
+    }
+
+    public function grammarLesson(): HasOne
+    {
+        return $this->hasOne(PelajaranGrammar::class, 'quiz_id');
     }
 
     public function module(): BelongsTo

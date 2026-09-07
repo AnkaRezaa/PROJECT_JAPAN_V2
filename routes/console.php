@@ -17,3 +17,6 @@ Schedule::command('auth:clear-resets')->everyFifteenMinutes()->withoutOverlappin
 Schedule::command('live-classes:cleanup-snapshots --days=30')->dailyAt('01:00')->withoutOverlapping();
 Schedule::command('accounts:anonymize-suspended')->dailyAt('01:15')->withoutOverlapping();
 Schedule::command('reviews:prune --days=30 --limit=100 --chunk=1000')->dailyAt('01:30')->withoutOverlapping();
+Schedule::command('exams:finalize-expired --limit=500')->everyMinute()->withoutOverlapping();
+Schedule::command('exams:release-scheduled')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('exams:prune-answers --days=365 --limit=10000')->dailyAt('02:00')->withoutOverlapping();

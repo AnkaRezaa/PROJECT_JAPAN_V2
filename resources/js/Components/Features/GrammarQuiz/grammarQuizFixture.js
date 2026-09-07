@@ -1,0 +1,131 @@
+export const grammarQuizFixture = {
+    id: 'grammar-preview-n3-bahodo',
+    category: 'grammar',
+    title: 'Semakin..., semakin...',
+    pattern: '〜ば〜ほど',
+    level: 'JLPT N3',
+    passingScore: 70,
+    xpPerCorrectAnswer: 10,
+    intro: {
+        meaning: 'Semakin A, semakin B',
+        formula: 'Vば + V辞書形 + ほど',
+        explanation: 'Pola ini digunakan untuk menunjukkan bahwa perubahan pada kondisi pertama memperkuat hasil pada kondisi kedua.',
+        examples: [
+            {
+                japanese: '勉強すればするほど、日本語が上手になります。',
+                reading: 'べんきょうすればするほど、にほんごがじょうずになります。',
+                translation: 'Semakin banyak belajar, semakin mahir bahasa Jepang.',
+            },
+            {
+                japanese: '練習すればするほど、上手になります。',
+                reading: 'れんしゅうすればするほど、じょうずになります。',
+                translation: 'Semakin banyak berlatih, semakin mahir.',
+            },
+        ],
+    },
+    stages: [
+        {
+            id: 'transformation',
+            label: 'Transformation',
+            instruction: 'Ubah ke bentuk yang diperlukan',
+            questions: [
+                {
+                    id: 'transformation-1',
+                    type: 'transformation',
+                    prompt: 'Ubah kata kerja berikut ke bentuk ば.',
+                    japanese: '勉強する',
+                    reading: 'べんきょうする',
+                    translation: 'belajar',
+                    choices: ['勉強すれば', '勉強したら', '勉強して', '勉強すると'],
+                    correctAnswer: '勉強すれば',
+                    explanation: '「する」berubah menjadi「すれば」dalam bentuk kondisional ば.',
+                },
+                {
+                    id: 'transformation-2',
+                    type: 'transformation',
+                    prompt: 'Pilih perubahan bentuk ば yang benar.',
+                    japanese: '考える',
+                    reading: 'かんがえる',
+                    translation: 'berpikir',
+                    choices: ['考えれば', '考えたら', '考えて', '考えると'],
+                    correctAnswer: '考えれば',
+                    explanation: 'Kata kerja golongan II mengganti「る」dengan「れば」.',
+                },
+            ],
+        },
+        {
+            id: 'sentence_builder',
+            label: 'Sentence Builder',
+            instruction: 'Susun pola yang benar',
+            questions: [
+                {
+                    id: 'sentence-builder-1',
+                    type: 'sentence_builder',
+                    prompt: 'Susun potongan berikut menjadi kalimat yang tepat.',
+                    context: 'Semakin banyak belajar, semakin mahir.',
+                    tokens: [
+                        { id: 't1', text: '勉強すれば', reading: 'べんきょうすれば' },
+                        { id: 't2', text: 'する', reading: 'する' },
+                        { id: 't3', text: 'ほど', reading: 'ほど' },
+                        { id: 't4', text: '上手になります', reading: 'じょうずになります' },
+                        { id: 'd1', text: 'まで', reading: 'まで', distractor: true },
+                    ],
+                    correctOrder: ['t1', 't2', 't3', 't4'],
+                    explanation: 'Pola yang dipakai adalah bentuk ば, diikuti kata kerja bentuk kamus dan「ほど」.',
+                },
+                {
+                    id: 'sentence-builder-2',
+                    type: 'sentence_builder',
+                    prompt: 'Susun kalimat sesuai arti berikut.',
+                    context: 'Semakin murah, semakin baik.',
+                    tokens: [
+                        { id: 't1', text: '安ければ', reading: 'やすければ' },
+                        { id: 't2', text: '安い', reading: 'やすい' },
+                        { id: 't3', text: 'ほど', reading: 'ほど' },
+                        { id: 't4', text: 'いいです', reading: 'いいです' },
+                        { id: 'd1', text: 'しか', reading: 'しか', distractor: true },
+                    ],
+                    correctOrder: ['t1', 't2', 't3', 't4'],
+                    explanation: 'Untuk kata sifat い, gunakan「〜ければ〜いほど」.',
+                },
+            ],
+        },
+        {
+            id: 'context_choice',
+            label: 'Context Choice',
+            instruction: 'Pilih pola yang paling sesuai',
+            questions: [
+                {
+                    id: 'context-choice-1',
+                    type: 'context_choice',
+                    prompt: 'Pilih kalimat yang paling cocok dengan situasi.',
+                    context: 'Semakin sering latihan, kemampuan berbicara semakin baik.',
+                    choices: [
+                        '練習すればするほど、話すのが上手になります。',
+                        '練習したがりです。',
+                        '練習する前に、上手になります。',
+                        '練習してから、話しません。',
+                    ],
+                    correctAnswer: '練習すればするほど、話すのが上手になります。',
+                    explanation: '「〜ば〜ほど」menyatakan bahwa semakin sering latihan dilakukan, hasilnya semakin meningkat.',
+                },
+                {
+                    id: 'context-choice-2',
+                    type: 'context_choice',
+                    prompt: 'Pilih respons yang menyatakan hubungan "semakin..., semakin...".',
+                    context: 'Temanmu mengatakan bahwa buku ini terasa lebih menarik saat terus dibaca.',
+                    choices: [
+                        '読めば読むほど、面白くなります。',
+                        '読んだことがあります。',
+                        '読むつもりです。',
+                        '読まないでください。',
+                    ],
+                    correctAnswer: '読めば読むほど、面白くなります。',
+                    explanation: '「読めば読むほど」berarti semakin dibaca, semakin....',
+                },
+            ],
+        },
+    ],
+};
+
+export default grammarQuizFixture;

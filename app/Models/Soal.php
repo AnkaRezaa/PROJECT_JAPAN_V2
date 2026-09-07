@@ -16,6 +16,7 @@ class Soal extends Model
     protected $fillable = [
         'quiz_id',
         'type',
+        'stage',
         'question_text',
         'question_reading',
         'correct_answer',

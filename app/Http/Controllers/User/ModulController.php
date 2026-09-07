@@ -80,7 +80,16 @@ class ModulController extends Controller
                                         ->where('user_id', $user->id)
                                         ->select(['id', 'flashcard_id', 'user_id'])]),
                             ]),
-                        'quizzes' => fn ($query) => $query->where('status', 'published')->withCount('questions'),
+                        'quizzes' => fn ($query) => $query
+                            ->where('status', 'published')
+                            ->withCount('questions')
+                            ->with([
+                                'grammarLesson:id,quiz_id,lesson_key,pattern,title',
+                                'attempts' => fn ($attemptQuery) => $attemptQuery
+                                    ->where('user_id', $user->id)
+                                    ->where('status', 'completed')
+                                    ->select(['id', 'user_id', 'quiz_id', 'score', 'status']),
+                            ]),
                         'presentationDecks' => fn ($query) => $query
                             ->shared()
                             ->where('status', 'published')
@@ -212,6 +221,19 @@ class ModulController extends Controller
                     ->filter(fn ($card) => $card->reviews->isNotEmpty())
                     ->count();
                 $questionCount = $day->quizzes->sum('questions_count');
+                $grammarLessons = $day->quizzes
+                    ->where('type', 'grammar')
+                    ->filter(fn (Kuis $quiz) => $quiz->questions_count > 0 && $quiz->grammarLesson)
+                    ->map(fn (Kuis $quiz) => [
+                        'id' => $quiz->id,
+                        'pattern' => $quiz->grammarLesson->pattern,
+                        'title' => $quiz->grammarLesson->title,
+                        'passing_score' => (int) ($quiz->passing_score ?? 70),
+                        'best_score' => $quiz->attempts->max('score'),
+                        'done' => $quiz->attempts->max('score') !== null
+                            && (int) $quiz->attempts->max('score') >= (int) ($quiz->passing_score ?? 70),
+                    ])
+                    ->values();
                 $hasContent = $presentationCount > 0 || $flashcardCount > 0 || $questionCount > 0 || $day->vocabulary->isNotEmpty();
                 $completionMethod = $checkpointQuiz ? 'checkpoint' : null;
                 $isReady = $hasContent && $completionMethod;
@@ -268,6 +290,7 @@ class ModulController extends Controller
                     'flashcard_total' => $flashcardCount,
                     'flashcard_reviewed' => $flashcardReviewed,
                     'questions_count' => $questionCount,
+                    'grammar_lessons' => $grammarLessons,
                     'checkpoint_summary' => $checkpointQuiz ? [
                         'id' => $checkpointQuiz->id,
                         'questions_count' => $checkpointQuiz->questions->count(),

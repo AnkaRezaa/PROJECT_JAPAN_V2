@@ -64,6 +64,16 @@ class AppServiceProvider extends ServiceProvider
             ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
         RateLimiter::for('admin-uploads', fn (Request $request) => Limit::perMinutes(10, 20)
             ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
+        RateLimiter::for('exam-admin', fn (Request $request) => Limit::perMinute(20)
+            ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
+        RateLimiter::for('exam-start', fn (Request $request) => Limit::perMinute(10)
+            ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
+        RateLimiter::for('exam-autosave', fn (Request $request) => Limit::perMinute(30)
+            ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
+        RateLimiter::for('exam-submit', fn (Request $request) => Limit::perMinute(10)
+            ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
+        RateLimiter::for('exam-ranking', fn (Request $request) => Limit::perMinute(30)
+            ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
         RateLimiter::for('guest-sensitive', fn (Request $request) => Limit::perMinute(5)
             ->by(strtolower((string) $request->input('email')).':'.$request->ip()));
     }

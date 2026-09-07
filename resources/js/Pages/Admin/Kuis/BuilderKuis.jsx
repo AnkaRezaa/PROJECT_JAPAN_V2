@@ -969,7 +969,7 @@ export default function QuizBuilder({
                             className="flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 transition-colors hover:border-brand-300 hover:text-brand-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
                         >
                             <AddIcon sx={{ fontSize: 18 }} />
-                            Tambah / Import
+                            Tambah Soal
                         </button>
                         {showAddMenu && (
                             <div className="absolute right-0 top-11 z-50 w-72 overflow-hidden rounded-2xl border border-gray-200 bg-white p-2 shadow-xl dark:border-gray-700 dark:bg-gray-900">
@@ -989,18 +989,6 @@ export default function QuizBuilder({
                                     </button>
                                 ))}
                                 <div className="my-2 border-t border-gray-100 dark:border-gray-800" />
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowAddMenu(false);
-                                        importInputRef.current?.click();
-                                    }}
-                                    disabled={importProcessing}
-                                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:text-gray-200 dark:hover:bg-gray-800"
-                                >
-                                    <UploadFileIcon sx={{ fontSize: 16 }} />
-                                    {importProcessing ? 'Membaca file...' : 'Import CSV / Excel'}
-                                </button>
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -1030,6 +1018,17 @@ export default function QuizBuilder({
                             </div>
                         )}
                     </div>}
+                    {activeTab === 'questions' && (
+                        <button
+                            type="button"
+                            onClick={() => importInputRef.current?.click()}
+                            disabled={importProcessing}
+                            className="flex h-9 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-bold text-emerald-800 transition-colors hover:border-emerald-400 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
+                        >
+                            <UploadFileIcon sx={{ fontSize: 18 }} />
+                            {importProcessing ? 'Memeriksa File...' : 'Import Excel / CSV'}
+                        </button>
+                    )}
                     <input
                         ref={importInputRef}
                         type="file"

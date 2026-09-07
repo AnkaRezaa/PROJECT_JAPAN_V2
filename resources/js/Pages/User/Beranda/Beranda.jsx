@@ -319,13 +319,13 @@ export default function BerandaUser({
                                         key={item.label}
                                         href={item.href}
                                         className={`group inline-flex min-h-12 min-w-0 items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-xs font-black shadow-sm backdrop-blur transition sm:min-w-36 ${isPrimary
-                                            ? 'border-[var(--toku-brand-border)] bg-[var(--toku-primary-soft)] text-[#2D3742] hover:border-brand-500 hover:bg-brand-100'
+                                            ? 'border-[var(--toku-brand-border)] bg-[var(--toku-primary-soft)] text-[#2D3742] hover:border-brand-500 hover:bg-brand-100 dark:border-green-800 dark:bg-[#12351f] dark:text-green-100 dark:hover:border-green-700 dark:hover:bg-green-950/80'
                                             : isQuiz
                                                 ? 'border-[#A9C5F3] bg-[#DBEAFE] text-learning-800 hover:border-learning-400 hover:bg-learning-100 dark:border-learning-700 dark:bg-learning-950/40 dark:text-learning-200'
                                                 : 'border-white/80 bg-white/90 text-gray-700 hover:border-learning-200 hover:bg-white hover:text-learning-700 dark:border-gray-800 dark:bg-gray-900/90 dark:text-gray-200 dark:hover:border-learning-800 dark:hover:text-learning-200'}`}
                                     >
                                         <span className="flex min-w-0 items-center gap-2">
-                                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isPrimary ? 'bg-white/60 text-brand-800' : isQuiz ? 'bg-white/60 text-learning-700' : 'bg-learning-50 text-learning-700 dark:bg-learning-950/40 dark:text-learning-200'}`}>
+                                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isPrimary ? 'bg-white/60 text-brand-800 dark:bg-green-900/70 dark:text-green-100' : isQuiz ? 'bg-white/60 text-learning-700 dark:bg-learning-900/60 dark:text-learning-200' : 'bg-learning-50 text-learning-700 dark:bg-learning-950/40 dark:text-learning-200'}`}>
                                                 <Icon sx={{ fontSize: 18 }} />
                                             </span>
                                             <span className="truncate">{item.label}</span>
@@ -373,7 +373,7 @@ export default function BerandaUser({
                         <div className="grid gap-5 rounded-[1.4rem] bg-white p-4 sm:gap-6 sm:rounded-[1.8rem] sm:p-7 dark:bg-gray-950 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-center">
                             <div className="grid gap-5">
                                 <div className="flex items-start gap-4">
-                                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#A9C5F3] bg-[#DBEAFE] text-learning-700 shadow-sm">
+                                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#A9C5F3] bg-[#DBEAFE] text-learning-700 shadow-sm dark:border-learning-800 dark:bg-learning-950/60 dark:text-learning-200">
                                         <DashboardIcon sx={{ fontSize: 28 }} />
                                     </div>
                                     <div>
@@ -389,7 +389,7 @@ export default function BerandaUser({
                                             : 'Pilih kelas untuk memulai roadmap belajar dan membuka materi mingguan.'}
                                     </p>
                                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-black sm:mt-4">
-                                        <span className="rounded-full bg-brand-50 px-3 py-1.5 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+                                        <span className="rounded-full bg-brand-50 px-3 py-1.5 text-brand-700 dark:bg-[#12351f] dark:text-green-200">
                                             {totalModules} modul tersedia
                                         </span>
                                         <span className="rounded-full bg-amber-50 px-3 py-1.5 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
@@ -542,7 +542,7 @@ export default function BerandaUser({
                                             <span className="rounded-full bg-gray-100 px-3 py-1.5 text-gray-600 dark:bg-gray-900 dark:text-gray-300">
                                                 {quickQuiz.target_count} target
                                             </span>
-                                            <span className="rounded-full bg-brand-50 px-3 py-1.5 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+                                            <span className="rounded-full bg-brand-50 px-3 py-1.5 text-brand-700 dark:bg-[#12351f] dark:text-green-200">
                                                 {quickQuiz.program_count} kelas
                                             </span>
                                             {!quickQuiz.active && quickQuiz.programs?.length > 1 && (
@@ -572,13 +572,13 @@ export default function BerandaUser({
                                     type="button"
                                     onClick={openQuickQuiz}
                                     disabled={isStartingQuickQuiz}
-                                    className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-gray-900/15 transition-all disabled:cursor-wait disabled:opacity-70 sm:w-auto lg:hover:-translate-y-0.5 lg:hover:bg-brand-700 dark:bg-white dark:text-gray-950 lg:dark:hover:bg-brand-100"
+                                    className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-gray-900/15 transition-all disabled:cursor-wait disabled:opacity-70 sm:w-auto lg:hover:-translate-y-0.5 lg:hover:bg-brand-700 dark:bg-green-400 dark:text-gray-950 lg:dark:hover:bg-green-300"
                                 >
                                     {isStartingQuickQuiz ? 'Menyiapkan...' : (quickQuiz.active ? 'Lanjutkan' : 'Mulai latihan')}
                                     <ArrowRightAltIcon sx={{ fontSize: 22 }} />
                                 </button>
                             ) : (
-                                <Link href={activeLearning?.roadmap_url || route('user.kelas.index')} className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-gray-900/15 transition-all sm:w-auto lg:hover:-translate-y-0.5 lg:hover:bg-brand-700 dark:bg-white dark:text-gray-950 lg:dark:hover:bg-brand-100">
+                                <Link href={activeLearning?.roadmap_url || route('user.kelas.index')} className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-gray-900/15 transition-all sm:w-auto lg:hover:-translate-y-0.5 lg:hover:bg-brand-700 dark:bg-green-400 dark:text-gray-950 lg:dark:hover:bg-green-300">
                                     Buka roadmap <ArrowRightAltIcon sx={{ fontSize: 22 }} />
                                 </Link>
                             )}
@@ -596,7 +596,7 @@ export default function BerandaUser({
                         <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
                             <div className="rounded-2xl border border-brand-100/80 bg-white/85 p-4 sm:rounded-[1.5rem] sm:p-5 dark:border-gray-800 dark:bg-gray-950/80">
                                 <div className="mb-3 flex items-center gap-3 sm:mb-4">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#A9C5F3] bg-[#DBEAFE] text-learning-700">
+                                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#A9C5F3] bg-[#DBEAFE] text-learning-700 dark:border-learning-800 dark:bg-learning-950/60 dark:text-learning-200">
                                         <CheckCircleIcon />
                                     </div>
                                     <div>
@@ -685,13 +685,13 @@ export default function BerandaUser({
                                     <div className="flex flex-grow flex-col p-4 sm:p-6">
                                         {item.is_pinned && (
                                             <div className="mb-3">
-                                                <span className="rounded-md bg-brand-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">
+                                                <span className="rounded-md bg-brand-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:bg-[#12351f] dark:text-green-200">
                                                     PIN Disematkan
                                                 </span>
                                             </div>
                                         )}
                                         <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
-                                            <span className="rounded-full bg-brand-50 px-2 py-0.5 font-bold text-brand-700 dark:bg-brand-900/20 dark:text-brand-300">{item.category?.replaceAll('-', ' ') || 'platform'}</span>
+                                            <span className="rounded-full bg-brand-50 px-2 py-0.5 font-bold text-brand-700 dark:bg-[#12351f] dark:text-green-200">{item.category?.replaceAll('-', ' ') || 'platform'}</span>
                                             <AccessTimeIcon sx={{ fontSize: 14 }} />
                                             {item.published_at
                                                 ? new Date(item.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
