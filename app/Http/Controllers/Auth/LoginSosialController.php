@@ -32,7 +32,13 @@ class LoginSosialController extends Controller
     public function redirectToGoogle(Request $request): RedirectResponse
     {
         $request->session()->put(self::OAUTH_INTENT, self::OAUTH_INTENT_LOGIN);
-        $request->session()->forget(self::OAUTH_INTENT_USER_ID);
+        $request->session()->forget([
+            self::OAUTH_INTENT_USER_ID,
+            'reopen_delete_dialog',
+            self::ACCOUNT_DELETION_CONFIRMED_AT,
+            self::ACCOUNT_DELETION_CONFIRMED_USER_ID,
+            self::ACCOUNT_DELETION_GOOGLE_TOKEN,
+        ]);
 
         return Socialite::driver('google')
             ->with(['prompt' => 'select_account'])
@@ -160,6 +166,7 @@ class LoginSosialController extends Controller
             self::OAUTH_INTENT_USER_ID => $user->id,
         ]);
         $request->session()->forget([
+            'reopen_delete_dialog',
             self::ACCOUNT_DELETION_CONFIRMED_AT,
             self::ACCOUNT_DELETION_CONFIRMED_USER_ID,
             self::ACCOUNT_DELETION_GOOGLE_TOKEN,
@@ -219,7 +226,6 @@ class LoginSosialController extends Controller
     {
         if (Auth::check()) {
             return redirect()->route('profile.edit')
-                ->with('reopen_delete_dialog', true)
                 ->withErrors([
                     'google_confirmation' => 'Sesi verifikasi Google tidak ditemukan atau sudah kedaluwarsa. Mulai ulang dari tombol hapus akun.',
                 ]);
@@ -235,6 +241,7 @@ class LoginSosialController extends Controller
         $request->session()->forget([
             self::OAUTH_INTENT,
             self::OAUTH_INTENT_USER_ID,
+            'reopen_delete_dialog',
         ]);
     }
 

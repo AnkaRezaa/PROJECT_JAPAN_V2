@@ -46,7 +46,7 @@ export default function Register() {
                                 value={data.name}
                                 onChange={(e) => setData('name', e.target.value)}
                                 placeholder="Nama Anda"
-                                className="toku-input w-full rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none"
+                                className="toku-input w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-brand-600 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-all"
                             />
                         </div>
                         {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
@@ -61,7 +61,7 @@ export default function Register() {
                                 value={data.email}
                                 onChange={(e) => setData('email', e.target.value)}
                                 placeholder="name@example.com"
-                                className="toku-input w-full rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none"
+                                className="toku-input w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-brand-600 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-all"
                             />
                         </div>
                         {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
@@ -77,7 +77,7 @@ export default function Register() {
                                 value={data.password}
                                 onChange={(e) => setData('password', e.target.value)}
                                 placeholder="••••••••"
-                                className="toku-input w-full rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none"
+                                className="toku-input w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-brand-600 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-all"
                             />
                         </div>
                         {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
@@ -92,7 +92,7 @@ export default function Register() {
                                 value={data.password_confirmation}
                                 onChange={(e) => setData('password_confirmation', e.target.value)}
                                 placeholder="••••••••"
-                                className="toku-input w-full rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none"
+                                className="toku-input w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-brand-600 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-all"
                             />
                         </div>
                         {errors.password_confirmation && <p className="mt-1 text-xs text-red-600">{errors.password_confirmation}</p>}

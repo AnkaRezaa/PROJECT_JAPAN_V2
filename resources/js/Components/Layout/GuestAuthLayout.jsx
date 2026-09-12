@@ -16,7 +16,7 @@ export default function GuestAuthLayout({ children }) {
 
                 <div className="relative z-10 flex min-h-full w-full flex-col justify-between">
                     <Link href="/" aria-label="TOKU-UP - Beranda" className="flex items-center gap-2.5 no-underline">
-                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-10 w-auto object-contain" />
+                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-10 w-auto object-contain invert hue-rotate-180 brightness-110" />
                     </Link>
 
                     <div className="max-w-xl pb-8">
