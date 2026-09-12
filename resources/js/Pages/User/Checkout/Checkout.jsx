@@ -272,49 +272,63 @@ export default function Checkout({ transaction, midtrans }) {
     <>
       <Head title={`Checkout ${transaction.transaction_code} - TOKU-UP`} />
 
-      <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-900 sm:px-6 sm:py-8">
-        <div className="mx-auto max-w-5xl">
+      <main className="min-h-screen bg-slate-50 px-3 py-3 text-slate-900 sm:px-6 sm:py-5 lg:py-6">
+        <div className="mx-auto max-w-4xl">
           {/* Top Header */}
-          <header className="flex items-center justify-between gap-4 border-b border-slate-200 pb-4 sm:pb-5">
+          <header className="flex items-center justify-between gap-4 border-b border-slate-200 pb-3 sm:pb-3.5">
             <div className="flex min-w-0 items-center gap-3">
               <Link
                 href={route('user.kelas.index')}
                 aria-label="Kembali ke daftar kelas"
-                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 sm:px-3"
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 sm:h-10 sm:px-3 sm:text-sm"
               >
-                <ArrowBackIcon sx={{ fontSize: 19 }} />
+                <ArrowBackIcon sx={{ fontSize: 18 }} />
                 <span className="hidden sm:inline">Kembali</span>
               </Link>
-              <Link href={route('home')} className="truncate text-lg font-black text-slate-950">
+              <Link href={route('home')} className="truncate text-base font-black text-slate-950 sm:text-lg">
                 TOKU-UP
               </Link>
             </div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-              <VerifiedUserIcon sx={{ fontSize: 17 }} className="text-slate-600" />
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 sm:text-xs">
+              <VerifiedUserIcon sx={{ fontSize: 16 }} className="text-slate-600" />
               <span>Pembayaran Aman Midtrans Core API</span>
             </div>
           </header>
 
           {/* Main Grid: Split Layout */}
-          <section className="mt-5 grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:mt-8 lg:grid-cols-[1.15fr_0.85fr]">
+          <section className="mt-3.5 grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:mt-5 lg:mt-6 lg:grid-cols-[1.2fr_0.8fr]">
             
             {/* Left Column: Interactive Payment Area */}
-            <div className="order-1 p-5 sm:p-8 lg:p-10">
-              {/* Header Status Badge */}
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${presentation.badgeClass}`}>
-                    {presentation.label}
-                  </span>
-                  <h1 className="mt-4 text-2xl font-black text-slate-950 sm:text-3xl">
-                    {presentation.label}
-                  </h1>
-                  <p className="mt-2 text-xs leading-5 text-slate-600 sm:text-sm">
+            <div className="order-1 p-3.5 sm:p-5 lg:p-6">
+              {/* Header Status Badge & Compact Bar */}
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3 sm:pb-4">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-extrabold ${presentation.badgeClass}`}>
+                      {presentation.label}
+                    </span>
+                    <span className="font-mono text-[11px] text-slate-400">
+                      #{transaction.transaction_code}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500 line-clamp-1 sm:text-sm">
                     {presentation.description}
                   </p>
                 </div>
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${presentation.iconClass}`}>
-                  <StatusIcon sx={{ fontSize: 24 }} />
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${presentation.iconClass} sm:h-10 sm:w-10 sm:rounded-xl`}>
+                  <StatusIcon sx={{ fontSize: 20 }} />
+                </div>
+              </div>
+
+              {/* Mobile Quick Order Strip (Only shown on mobile) */}
+              <div className="mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs lg:hidden">
+                <div className="min-w-0 pr-3">
+                  <p className="truncate font-bold text-slate-800">{transaction.payment_plan?.name || 'Akses TOKU-UP'}</p>
+                  <p className="text-[11px] text-slate-500">{transaction.scope_label || 'Akses Belajar'}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <span className="block text-[10px] font-semibold text-slate-400">Total</span>
+                  <span className="text-sm font-black text-[#c33d4b]">{transaction.amount_formatted}</span>
                 </div>
               </div>
 
@@ -322,20 +336,20 @@ export default function Checkout({ transaction, midtrans }) {
               {(notice || error) && (
                 <div
                   role={error ? 'alert' : 'status'}
-                  className={`mt-6 flex items-start gap-3 rounded-xl border-l-4 px-4 py-3 text-xs leading-5 sm:text-sm ${
+                  className={`mt-3 flex items-start gap-2.5 rounded-xl border-l-4 px-3.5 py-2.5 text-xs leading-5 sm:text-sm ${
                     error
                       ? 'border-red-500 bg-red-50 text-red-800'
                       : 'border-slate-500 bg-slate-50 text-slate-700'
                   }`}
                 >
-                  {error ? <ErrorOutlineIcon sx={{ fontSize: 20 }} /> : <HourglassTopIcon sx={{ fontSize: 20 }} />}
+                  {error ? <ErrorOutlineIcon sx={{ fontSize: 18 }} /> : <HourglassTopIcon sx={{ fontSize: 18 }} />}
                   <span>{error || notice}</span>
                 </div>
               )}
 
               {/* State 1: Fresh Pending - Method Selection */}
               {isPending && !hasActivePaymentInstruction && (
-                <div className="mt-8">
+                <div className="mt-4 sm:mt-6">
                   <PaymentMethodSelector
                     selectedChannel={paymentChannel}
                     onSelectChannel={setPaymentChannel}
@@ -350,7 +364,7 @@ export default function Checkout({ transaction, midtrans }) {
 
               {/* State 2: Pending with Charge Payload (Instruction State) */}
               {isPending && hasActivePaymentInstruction && (
-                <div className="mt-8">
+                <div className="mt-4 sm:mt-6">
                   {paymentChannel === 'qris' ? (
                     <QrisView
                       payload={paymentPayload}
@@ -375,8 +389,8 @@ export default function Checkout({ transaction, midtrans }) {
                       isChanging={isCharging}
                     />
                   ) : paymentChannel === 'credit_card' ? (
-                    <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/70 p-5 text-center">
-                      <p className="text-sm font-bold text-slate-800">
+                    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4 text-center">
+                      <p className="text-xs font-bold text-slate-800 sm:text-sm">
                         Memproses verifikasi kartu kredit...
                       </p>
                       <p className="text-xs text-slate-500">
@@ -386,9 +400,9 @@ export default function Checkout({ transaction, midtrans }) {
                         <button
                           type="button"
                           onClick={() => window.open(threeDsUrl, '_blank', 'width=600,height=700')}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#c33d4b] px-4 py-2 text-xs font-bold text-white shadow-sm"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#c33d4b] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm"
                         >
-                          <OpenInNewIcon sx={{ fontSize: 16 }} />
+                          <OpenInNewIcon sx={{ fontSize: 15 }} />
                           Buka Halaman OTP Bank
                         </button>
                       )}
@@ -396,21 +410,21 @@ export default function Checkout({ transaction, midtrans }) {
                   ) : null}
 
                   {/* Actions under instruction */}
-                  <div className="mt-8 space-y-3 border-t border-slate-200 pt-6">
+                  <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 sm:mt-6 sm:pt-4">
                     <button
                       type="button"
                       onClick={() => syncStatus()}
                       disabled={isSyncing || isCanceling}
-                      className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:h-11 sm:text-sm"
                     >
-                      <RefreshIcon sx={{ fontSize: 18 }} className={isSyncing ? 'animate-spin' : ''} />
+                      <RefreshIcon sx={{ fontSize: 17 }} className={isSyncing ? 'animate-spin' : ''} />
                       {isSyncing ? 'Memeriksa status...' : 'Cek Status Pembayaran'}
                     </button>
                     <button
                       type="button"
                       onClick={confirmCancelPayment}
                       disabled={isSyncing || isCanceling}
-                      className="inline-flex min-h-11 w-full items-center justify-center px-5 py-2 text-xs font-semibold text-slate-500 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex w-full items-center justify-center py-1.5 text-xs font-medium text-slate-400 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isCanceling ? 'Membatalkan pesanan...' : 'Batalkan pesanan'}
                     </button>
@@ -480,40 +494,40 @@ export default function Checkout({ transaction, midtrans }) {
             </div>
 
             {/* Right Column: Order Summary (Sticky) */}
-            <aside className="order-2 border-t border-slate-200 bg-slate-50/70 p-5 lg:order-2 lg:border-l lg:border-t-0 lg:p-8">
+            <aside className="order-2 border-t border-slate-200 bg-slate-50/70 p-4 sm:p-6 lg:order-2 lg:border-l lg:border-t-0 lg:p-8">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-                <ReceiptLongIcon sx={{ fontSize: 18 }} />
+                <ReceiptLongIcon sx={{ fontSize: 17 }} />
                 Ringkasan Pesanan
               </div>
 
-              <h2 className="mt-4 break-words text-xl font-black text-slate-950 sm:text-2xl">
+              <h2 className="mt-2.5 break-words text-lg font-black text-slate-950 sm:text-xl">
                 {transaction.payment_plan?.name || 'Akses TOKU-UP'}
               </h2>
-              <p className="mt-1 text-xs leading-5 text-slate-600 sm:text-sm">
+              <p className="mt-0.5 text-xs leading-5 text-slate-600">
                 {transaction.payment_plan?.description || 'Akses untuk membuka konten belajar lanjutan.'}
               </p>
 
-              <dl className="mt-6 divide-y divide-slate-200 border-y border-slate-200 text-xs sm:text-sm">
-                <div className="flex items-center justify-between py-3">
+              <dl className="mt-4 divide-y divide-slate-200 border-y border-slate-200 text-xs sm:text-sm">
+                <div className="flex items-center justify-between py-2.5">
                   <dt className="font-medium text-slate-500">Cakupan Akses</dt>
                   <dd className="font-bold text-slate-900">{transaction.scope_label || 'Semua kelas'}</dd>
                 </div>
-                <div className="flex items-center justify-between py-3">
+                <div className="flex items-center justify-between py-2.5">
                   <dt className="font-medium text-slate-500">Nomor Pesanan</dt>
                   <dd className="font-mono font-bold text-slate-900">{transaction.transaction_code}</dd>
                 </div>
-                <div className="flex items-center justify-between py-3">
+                <div className="flex items-center justify-between py-2.5">
                   <dt className="font-medium text-slate-500">Tanggal Pesanan</dt>
                   <dd className="font-semibold text-slate-700">{formatDate(transaction.created_at)}</dd>
                 </div>
-                <div className="flex items-center justify-between py-3.5">
+                <div className="flex items-center justify-between py-3">
                   <dt className="font-bold text-slate-900">Total Tagihan</dt>
-                  <dd className="text-xl font-black text-[#c33d4b]">{transaction.amount_formatted}</dd>
+                  <dd className="text-lg font-black text-[#c33d4b] sm:text-xl">{transaction.amount_formatted}</dd>
                 </div>
               </dl>
 
               {status === 'success' && kloter && (
-                <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-xs leading-5 text-slate-600">
+                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-600">
                   <p className="font-bold text-slate-900">Kloter Belajar</p>
                   <p className="mt-1">
                     {kloter.nama} - Mulai {kloter.tanggal_mulai_label || '-'}
@@ -522,10 +536,10 @@ export default function Checkout({ transaction, midtrans }) {
                 </div>
               )}
 
-              <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-center">
-                <VerifiedUserIcon sx={{ fontSize: 24 }} className="mx-auto text-slate-400" />
-                <p className="mt-2 text-xs font-bold text-slate-700">Garansi Keamanan Pembayaran</p>
-                <p className="mt-1 text-[11px] leading-4 text-slate-500">
+              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3 text-center sm:p-4">
+                <VerifiedUserIcon sx={{ fontSize: 20 }} className="mx-auto text-slate-400" />
+                <p className="mt-1.5 text-xs font-bold text-slate-700">Garansi Keamanan Pembayaran</p>
+                <p className="mt-0.5 text-[10px] leading-4 text-slate-500 sm:text-[11px]">
                   Enkripsi SSL 256-bit standar PCI-DSS melalui payment gateway Midtrans.
                 </p>
               </div>

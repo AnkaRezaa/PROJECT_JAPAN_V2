@@ -150,7 +150,7 @@ export default function VirtualAccountView({
 }) {
   const [copiedVA, setCopiedVA] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
-  const [openGuide, setOpenGuide] = useState(0);
+  const [openGuide, setOpenGuide] = useState(-1);
 
   const guide = bankGuides[channel] || bankGuides.bca_va;
   const Logo = guide.Logo;
@@ -172,47 +172,47 @@ export default function VirtualAccountView({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-4">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Metode Pembayaran
           </span>
-          <h2 className="text-lg font-black text-slate-950 sm:text-xl">
+          <h2 className="text-base font-black text-slate-950 sm:text-lg">
             {guide.name}
           </h2>
         </div>
-        <Logo className="h-7 w-auto max-w-[90px]" />
+        <Logo className="h-6 w-auto max-w-[80px]" />
       </div>
 
       {/* VA Number Card */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         {isMandiri ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
-              <span className="text-xs font-bold text-slate-500">Kode Perusahaan (Biller Code)</span>
-              <div className="mt-1 flex items-center justify-between rounded-xl bg-slate-50 p-3">
-                <span className="font-mono text-lg font-black text-slate-950">{billerCode}</span>
+              <span className="text-[11px] font-bold text-slate-500">Kode Perusahaan (Biller Code)</span>
+              <div className="mt-1 flex items-center justify-between rounded-xl bg-slate-50 p-2.5">
+                <span className="font-mono text-base font-black text-slate-950 sm:text-lg">{billerCode}</span>
                 <button
                   type="button"
                   onClick={() => copyToClipboard(billerCode, 'biller')}
                   className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50"
                 >
-                  <ContentCopyIcon sx={{ fontSize: 15 }} />
+                  <ContentCopyIcon sx={{ fontSize: 14 }} />
                   Salin
                 </button>
               </div>
             </div>
             <div>
-              <span className="text-xs font-bold text-slate-500">Nomor Tagihan (Bill Key)</span>
-              <div className="mt-1 flex items-center justify-between rounded-xl bg-slate-50 p-3">
-                <span className="font-mono text-lg font-black text-slate-950">{billKey}</span>
+              <span className="text-[11px] font-bold text-slate-500">Nomor Tagihan (Bill Key)</span>
+              <div className="mt-1 flex items-center justify-between rounded-xl bg-slate-50 p-2.5">
+                <span className="font-mono text-base font-black text-slate-950 sm:text-lg">{billKey}</span>
                 <button
                   type="button"
                   onClick={() => copyToClipboard(billKey, 'va')}
                   className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50"
                 >
-                  {copiedVA ? <CheckIcon sx={{ fontSize: 15 }} className="text-emerald-600" /> : <ContentCopyIcon sx={{ fontSize: 15 }} />}
+                  {copiedVA ? <CheckIcon sx={{ fontSize: 14 }} className="text-emerald-600" /> : <ContentCopyIcon sx={{ fontSize: 14 }} />}
                   {copiedVA ? 'Disalin!' : 'Salin'}
                 </button>
               </div>
@@ -220,24 +220,24 @@ export default function VirtualAccountView({
           </div>
         ) : (
           <div>
-            <span className="text-xs font-bold text-slate-500">Nomor Virtual Account</span>
-            <div className="mt-1.5 flex items-center justify-between rounded-xl bg-slate-50 p-3.5">
-              <span className="break-all font-mono text-lg font-black tracking-wider text-slate-950 sm:text-2xl">
+            <span className="text-[11px] font-bold text-slate-500">Nomor Virtual Account</span>
+            <div className="mt-1 flex items-center justify-between rounded-xl bg-slate-50 p-3">
+              <span className="break-all font-mono text-base font-black tracking-wider text-slate-950 sm:text-xl">
                 {vaNumber}
               </span>
               <button
                 type="button"
                 onClick={() => copyToClipboard(vaNumber, 'va')}
-                className="ml-3 inline-flex shrink-0 items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-slate-800"
+                className="ml-2 inline-flex shrink-0 items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-bold text-white shadow-sm transition hover:bg-slate-800"
               >
                 {copiedVA ? (
                   <>
-                    <CheckIcon sx={{ fontSize: 16 }} className="text-emerald-400" />
+                    <CheckIcon sx={{ fontSize: 14 }} className="text-emerald-400" />
                     Tersalin
                   </>
                 ) : (
                   <>
-                    <ContentCopyIcon sx={{ fontSize: 15 }} />
+                    <ContentCopyIcon sx={{ fontSize: 14 }} />
                     Salin
                   </>
                 )}
@@ -246,16 +246,16 @@ export default function VirtualAccountView({
           </div>
         )}
 
-        <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
-          <span className="font-medium text-slate-500">Total Pembayaran</span>
-          <span className="text-sm font-black text-slate-950">{amountFormatted}</span>
+        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 text-xs">
+          <span className="font-medium text-slate-500">Total Nominal</span>
+          <span className="text-base font-black text-slate-950">{amountFormatted}</span>
         </div>
       </div>
 
       {/* Guide Accordions */}
-      <div className="space-y-2">
-        <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
-          Petunjuk Pembayaran
+      <div className="space-y-1.5">
+        <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+          Petunjuk Pembayaran (Klik untuk buka)
         </h3>
         <div className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
           {guide.instructions.map((inst, index) => {
@@ -265,17 +265,17 @@ export default function VirtualAccountView({
                 <button
                   type="button"
                   onClick={() => setOpenGuide(isOpen ? -1 : index)}
-                  className="flex w-full items-center justify-between p-3.5 text-left text-xs font-bold text-slate-800 hover:bg-slate-50"
+                  className="flex w-full items-center justify-between p-2.5 text-left text-xs font-bold text-slate-800 hover:bg-slate-50 sm:p-3"
                 >
                   <span>{inst.title}</span>
                   <ExpandMoreIcon
-                    sx={{ fontSize: 18 }}
+                    sx={{ fontSize: 16 }}
                     className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
                   />
                 </button>
                 {isOpen && (
-                  <div className="border-t border-slate-100 bg-slate-50/60 p-3.5 text-xs leading-5 text-slate-600">
-                    <ol className="list-decimal space-y-1.5 pl-4">
+                  <div className="border-t border-slate-100 bg-slate-50/60 p-3 text-xs leading-5 text-slate-600">
+                    <ol className="list-decimal space-y-1 pl-4">
                       {inst.steps.map((step, sIdx) => (
                         <li key={sIdx}>{step}</li>
                       ))}

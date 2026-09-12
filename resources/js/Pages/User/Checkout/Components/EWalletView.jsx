@@ -20,20 +20,20 @@ export default function EWalletView({
     || (deeplinkUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(deeplinkUrl)}` : null);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-4">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Metode Pembayaran
           </span>
-          <h2 className="text-lg font-black text-slate-950 sm:text-xl">
+          <h2 className="text-base font-black text-slate-950 sm:text-lg">
             {name} (Direct E-Wallet)
           </h2>
         </div>
-        <Logo className="h-7 w-auto max-w-[100px]" />
+        <Logo className="h-6 w-auto max-w-[80px]" />
       </div>
 
-      <div className="flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         {/* Deeplink / Web Payment Button */}
         {deeplinkUrl && (
           <div className="w-full max-w-sm text-center">
@@ -41,14 +41,14 @@ export default function EWalletView({
               href={deeplinkUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-black text-white shadow-sm transition ${
+              className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-black text-white shadow-sm transition sm:h-12 ${
                 isGopay ? 'bg-[#00AED6] hover:bg-[#0096B9]' : 'bg-[#EE4D2D] hover:bg-[#D63F20]'
               }`}
             >
-              <OpenInNewIcon sx={{ fontSize: 19 }} />
+              <OpenInNewIcon sx={{ fontSize: 18 }} />
               Buka {appName} / Bayar Sekarang
             </a>
-            <p className="mt-2 text-center text-xs text-slate-500">
+            <p className="mt-1.5 text-center text-[11px] text-slate-500">
               Di ponsel: membuka aplikasi {appName}. Di komputer: membuka tab pembayaran baru.
             </p>
           </div>
@@ -56,40 +56,46 @@ export default function EWalletView({
 
         {/* QR Code for Desktop & Scan Fallback */}
         {qrUrl && (
-          <div className={`flex flex-col items-center text-center ${deeplinkUrl ? 'mt-6 border-t border-slate-100 pt-5' : ''}`}>
-            <span className="text-xs font-bold text-slate-500">
-              Scan QR {name} melalui kamera atau aplikasi ponsel:
+          <div className={`flex flex-col items-center text-center ${deeplinkUrl ? 'mt-4 border-t border-slate-100 pt-4' : ''}`}>
+            <span className="text-[11px] font-bold text-slate-500">
+              Scan QR {name} melalui ponsel:
             </span>
-            <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 shadow-inner">
+            <div className="mt-2 rounded-xl border border-slate-200 bg-white p-2.5 shadow-inner">
               <img
                 src={qrUrl}
                 alt={`QR Code ${name}`}
-                className="h-48 w-48 object-contain sm:h-56 sm:w-56"
+                className="h-36 w-36 object-contain sm:h-44 sm:w-44"
               />
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">
-              Arahkan kamera HP atau pemindai {appName} ke kode QR di atas.
+            <p className="mt-1.5 text-[10px] text-slate-400">
+              Arahkan kamera HP atau pemindai {appName} ke kode di atas.
             </p>
           </div>
         )}
 
-        <div className="mt-5 text-center">
-          <p className="text-xs font-medium text-slate-500">Total Nominal Pembayaran</p>
-          <p className="mt-0.5 text-xl font-black text-slate-950">{amountFormatted}</p>
+        <div className="mt-3.5 flex w-full items-center justify-between border-t border-slate-100 pt-2.5 text-xs">
+          <span className="font-medium text-slate-500">Total Nominal</span>
+          <span className="text-base font-black text-slate-950">{amountFormatted}</span>
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 text-xs leading-5 text-slate-600">
-        <p className="font-bold text-slate-800">Petunjuk Pembayaran {name}:</p>
-        <ol className="mt-2 list-decimal space-y-1 pl-4">
-          <li>Jika di HP, klik tombol <strong>"Buka Aplikasi {appName}"</strong> untuk membuka halaman konfirmasi.</li>
-          <li>Jika di laptop/komputer, buka aplikasi {appName} di ponsel Anda lalu scan kode QR di atas.</li>
-          <li>Periksa rincian pembayaran, lalu masukkan PIN atau autentikasi biometrik Anda.</li>
-          <li>Halaman ini akan otomatis diperbarui begitu pembayaran berhasil.</li>
-        </ol>
-      </div>
+      {/* Collapsible Instructions */}
+      <details className="group rounded-xl border border-slate-200 bg-slate-50/70 text-xs text-slate-600">
+        <summary className="flex cursor-pointer items-center justify-between p-3 font-bold text-slate-700 select-none hover:text-slate-900">
+          <span>Petunjuk Pembayaran {name}</span>
+          <span className="text-xs text-slate-400 transition-transform group-open:rotate-180">▼</span>
+        </summary>
+        <div className="border-t border-slate-200/60 px-3.5 pb-3 pt-2 text-xs leading-5">
+          <ol className="list-decimal space-y-1 pl-4">
+            <li>Di HP: klik tombol <strong>"Buka {appName}"</strong> untuk langsung ke menu pembayaran.</li>
+            <li>Di laptop: buka aplikasi {appName} di HP lalu scan QR di atas.</li>
+            <li>Periksa rincian tagihan, masukkan PIN Anda.</li>
+            <li>Halaman akan otomatis terupdate setelah pembayaran selesai.</li>
+          </ol>
+        </div>
+      </details>
 
-      <div className="pt-2">
+      <div>
         <button
           type="button"
           onClick={onChangeMethod}

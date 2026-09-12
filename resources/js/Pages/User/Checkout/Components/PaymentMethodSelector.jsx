@@ -121,24 +121,24 @@ export default function PaymentMethodSelector({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-black text-slate-950 sm:text-xl">
+        <h2 className="text-base font-black text-slate-950 sm:text-lg">
           Pilih Metode Pembayaran
         </h2>
-        <p className="mt-1 text-xs text-slate-500 sm:text-sm">
-          Semua transaksi diproses aman dan terverifikasi otomatis oleh Midtrans.
+        <p className="mt-0.5 text-xs text-slate-500">
+          Semua transaksi aman dan terverifikasi otomatis oleh Midtrans.
         </p>
       </div>
 
-      <div className="space-y-5">
+      <div className="space-y-3.5">
         {PAYMENT_CHANNELS.map((group) => (
-          <div key={group.category} className="space-y-2.5">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">
+          <div key={group.category} className="space-y-1.5">
+            <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-400">
               {group.category}
             </h3>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {group.items.map((item) => {
                 const isSelected = activeChannel === item.id;
                 const LogoComponent = item.Logo;
@@ -147,39 +147,39 @@ export default function PaymentMethodSelector({
                   <div key={item.id} className="transition-all">
                     <label
                       onClick={() => handleChannelClick(item.id)}
-                      className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3.5 transition ${
+                      className={`flex cursor-pointer items-center justify-between gap-2.5 rounded-xl border p-2.5 transition sm:p-3 ${
                         isSelected
-                          ? 'border-[#c33d4b] bg-rose-50/40 ring-2 ring-[#c33d4b]/20'
+                          ? 'border-[#c33d4b] bg-rose-50/40 ring-1.5 ring-[#c33d4b]/20'
                           : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60'
                       }`}
                     >
-                      <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex min-w-0 items-center gap-2.5">
                         <div
-                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition sm:h-5 sm:w-5 ${
                             isSelected
                               ? 'border-[#c33d4b] bg-[#c33d4b] text-white'
                               : 'border-slate-300 bg-white'
                           }`}
                         >
                           {isSelected && (
-                            <span className="h-2 w-2 rounded-full bg-white" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-white sm:h-2 sm:w-2" />
                           )}
                         </div>
 
                         <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-bold text-slate-900">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs font-bold text-slate-900 sm:text-sm">
                               {item.name}
                             </span>
                             {item.badge && (
                               <span
-                                className={`rounded-full border px-2 py-0.5 text-[10px] font-extrabold ${item.badgeColor}`}
+                                className={`rounded-full border px-1.5 py-0.2 text-[9px] font-extrabold ${item.badgeColor}`}
                               >
                                 {item.badge}
                               </span>
                             )}
                           </div>
-                          <p className="mt-0.5 text-xs text-slate-500">
+                          <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-1 sm:line-clamp-none">
                             {item.desc}
                           </p>
                         </div>
@@ -187,19 +187,19 @@ export default function PaymentMethodSelector({
 
                       <div className="shrink-0">
                         {item.qrisLogos ? (
-                          <div className="flex items-center gap-1.5">
-                            <QrisLogo className="h-6" />
-                            <GopayLogo className="hidden h-4 sm:inline-block" />
-                            <DanaLogo className="hidden h-4 sm:inline-block" />
+                          <div className="flex items-center gap-1">
+                            <QrisLogo className="h-5" />
+                            <GopayLogo className="hidden h-3.5 sm:inline-block" />
+                            <DanaLogo className="hidden h-3.5 sm:inline-block" />
                           </div>
                         ) : item.customLogos ? (
-                          <div className="flex items-center gap-1.5">
-                            <JcbLogo className="h-4" />
-                            <VisaLogo className="h-4" />
-                            <MastercardLogo className="h-4" />
+                          <div className="flex items-center gap-1">
+                            <JcbLogo className="h-3.5" />
+                            <VisaLogo className="h-3.5" />
+                            <MastercardLogo className="h-3.5" />
                           </div>
                         ) : LogoComponent ? (
-                          <LogoComponent className="h-6 w-auto max-w-[80px]" />
+                          <LogoComponent className="h-5 w-auto max-w-[70px]" />
                         ) : null}
                       </div>
                     </label>
@@ -223,9 +223,9 @@ export default function PaymentMethodSelector({
       </div>
 
       {activeChannel !== 'credit_card' && (
-        <div className="pt-2">
+        <div className="pt-1">
           {error && (
-            <p className="mb-3 rounded-lg bg-red-50 p-2.5 text-xs font-semibold text-red-700">
+            <p className="mb-2 rounded-lg bg-red-50 p-2 text-xs font-semibold text-red-700">
               {error}
             </p>
           )}
@@ -234,14 +234,14 @@ export default function PaymentMethodSelector({
             type="button"
             onClick={handleProceed}
             disabled={processing}
-            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#c33d4b] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#a9323f] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#c33d4b] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#a9323f] disabled:cursor-not-allowed disabled:opacity-60 sm:h-12"
           >
             {processing ? (
               'Membuat Instruksi Pembayaran...'
             ) : (
               <>
                 Lanjutkan Pembayaran
-                <ArrowForwardIcon sx={{ fontSize: 18 }} />
+                <ArrowForwardIcon sx={{ fontSize: 17 }} />
               </>
             )}
           </button>
