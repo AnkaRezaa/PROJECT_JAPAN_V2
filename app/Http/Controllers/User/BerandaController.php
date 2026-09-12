@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Berita;
+use App\Models\BroadcastPopup;
 use App\Models\DeckPresentasi;
 use App\Models\KodeAkses;
 use App\Models\Kosakata;
@@ -72,8 +73,31 @@ class BerandaController extends Controller
                 ];
             });
 
+        $activePopup = BroadcastPopup::query()
+            ->active()
+            ->forPage('dashboard')
+            ->where(function ($query) use ($user) {
+                $query->where('target_audience', 'all')
+                    ->orWhere('target_audience', 'user')
+                    ->when($user->subscription_status !== 'premium', function ($subQuery) {
+                        $subQuery->orWhere('target_audience', 'free_user');
+                    });
+            })
+            ->latest()
+            ->first();
+
         return Inertia::render('User/Beranda/Beranda', [
             'user' => $user,
+            'activePopup' => $activePopup ? [
+                'id' => $activePopup->id,
+                'title' => $activePopup->title,
+                'description' => $activePopup->description,
+                'type' => $activePopup->type,
+                'badge' => $activePopup->badge,
+                'image' => $activePopup->imageUrl(),
+                'cta_label' => $activePopup->cta_label,
+                'cta_url' => $activePopup->cta_url,
+            ] : null,
             'recentProgress' => $user->progress()->with('module')->latest()->take(5)->get(),
             'learningDashboard' => $this->learningDashboardPayload($user, $aksesPremium, $aksesKuis, $kloterBelajar),
             'rewardHistory' => LogReward::where('user_id', $user->id)->latest()->take(10)->get(),

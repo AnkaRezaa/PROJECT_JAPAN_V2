@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PromoPopup from '@/Components/Marketing/PromoPopup';
 import { HitodamaIcon, KabutoIcon, ScrollIcon } from '@/Components/JapaneseIcons';
 import theme from '@/Components/theme/themes';
 import MountFujiBg from '../../../../Images/Mount-Fuji-New.jpg';
@@ -44,31 +45,41 @@ function DailyGoalCard({ goal = {} }) {
     const sessionsCompleted = Number(goal.sessions_completed || 0);
 
     return (
-        <aside className="rounded-2xl border border-amber-100 bg-amber-50/80 p-4 dark:border-amber-900/40 dark:bg-amber-950/20 sm:p-5">
+        <aside className="rounded-3xl border border-amber-200/70 bg-gradient-to-br from-amber-50/80 to-orange-50/40 p-6 shadow-sm dark:border-amber-900/40 dark:bg-gradient-to-br dark:from-gray-900 dark:to-amber-950/20">
             <div className="flex items-start justify-between gap-3">
-                <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">Target Hari Ini</p>
-                    <h3 className="mt-1 text-lg font-black text-gray-900 dark:text-white">Satu sesi, 30 XP</h3>
-                </div>
-                <CheckCircleIcon className={goal.completed ? 'text-emerald-500' : 'text-amber-500'} />
-            </div>
-            <div className="mt-4 space-y-3">
-                <div>
-                    <div className="mb-1.5 flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-200">
-                        <span>XP hari ini</span>
-                        <span>{xpEarned}/{xpTarget}</span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-amber-100 dark:bg-amber-950/60">
-                        <div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${xpProgress}%` }} />
+                <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                        <HitodamaIcon className="h-5 w-5" />
+                    </span>
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Target Hari Ini</p>
+                        <h3 className="text-base font-black text-gray-900 dark:text-white">Capai 30 XP</h3>
                     </div>
                 </div>
-                <div className="flex items-center justify-between rounded-xl border border-white/70 bg-white/80 px-3 py-2.5 text-xs font-black text-gray-700 dark:border-gray-800 dark:bg-gray-900/80 dark:text-gray-200">
-                    <span>Sesi selesai</span>
-                    <span className={goal.sessions_done ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-700 dark:text-gray-300'}>{sessionsCompleted >= 1 ? 'Selesai' : '0/1'}</span>
+                <CheckCircleIcon className={goal.completed ? 'text-emerald-500' : 'text-amber-400/80'} />
+            </div>
+            <div className="mt-5 space-y-3">
+                <div>
+                    <div className="mb-1.5 flex items-center justify-between text-xs font-bold text-gray-600 dark:text-gray-300">
+                        <span>XP Terkumpul</span>
+                        <span className="font-black text-gray-900 dark:text-white">{xpEarned} <span className="font-normal text-gray-400">/ {xpTarget} XP</span></span>
+                    </div>
+                    <div className="h-2.5 overflow-hidden rounded-full bg-amber-200/60 dark:bg-gray-800">
+                        <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-500" style={{ width: `${xpProgress}%` }} />
+                    </div>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl border border-amber-200/50 bg-white/90 px-4 py-3 text-xs font-bold text-gray-700 shadow-sm dark:border-gray-800 dark:bg-gray-900/90 dark:text-gray-200">
+                    <span className="flex items-center gap-2">
+                        <QuizIcon sx={{ fontSize: 17 }} className="text-amber-500" />
+                        Sesi Latihan
+                    </span>
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-black ${goal.sessions_done ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+                        {sessionsCompleted >= 1 ? 'Selesai' : '0/1 Sesi'}
+                    </span>
                 </div>
             </div>
-            <p className="mt-3 text-xs font-semibold leading-5 text-gray-700 dark:text-gray-300">
-                {goal.completed ? 'Target hari ini sudah tercapai. Jaga ritmenya besok.' : 'Selesaikan satu sesi kuis dan kumpulkan 30 XP untuk menutup target hari ini.'}
+            <p className="mt-4 text-xs font-medium leading-relaxed text-gray-600 dark:text-gray-400">
+                {goal.completed ? 'Target hari ini sudah tercapai! Pertahankan ritme belajarmu besok.' : 'Selesaikan satu sesi latihan kuis untuk menutup target harian.'}
             </p>
         </aside>
     );
@@ -76,6 +87,7 @@ function DailyGoalCard({ goal = {} }) {
 
 export default function BerandaUser({
     user = {},
+    activePopup = null,
     recentProgress = [],
     learningDashboard = { programs: [], resources: [] },
     rewardHistory = [],
@@ -220,95 +232,11 @@ export default function BerandaUser({
                         <p className="mb-3 text-xs font-black uppercase tracking-[0.28em] text-brand-600 dark:text-brand-300">
                             Learning Hub
                         </p>
-                        <h1 className="mb-7 text-3xl font-black tracking-tight text-gray-900 dark:text-white md:text-5xl">
+                        <h1 className="mb-6 text-3xl font-black tracking-tight text-gray-900 dark:text-white md:text-5xl">
                             Mau lanjut belajar apa hari ini?
                         </h1>
 
-                        <form onSubmit={handleSearch} className="relative mb-4 w-full max-w-2xl">
-                            <div className="relative rounded-full border border-white/70 bg-white/95 shadow-sm dark:border-gray-800 dark:bg-gray-900/95">
-                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-gray-600 dark:text-gray-300">
-                                    <SearchIcon sx={{ fontSize: 21 }} />
-                                </div>
-                                <input
-                                    type="search"
-                                    role="combobox"
-                                    aria-autocomplete="list"
-                                    aria-expanded={isSearchOpen && isSearchReady}
-                                    aria-controls="dashboard-search-results"
-                                    value={searchQuery}
-                                    onFocus={() => setIsSearchOpen(true)}
-                                    onChange={(event) => {
-                                        setSearchQuery(event.target.value);
-                                        setActiveSuggestionIndex(0);
-                                        setIsSearchOpen(true);
-                                    }}
-                                    onKeyDown={(event) => {
-                                        if (event.key === 'Escape') {
-                                            setIsSearchOpen(false);
-                                        }
-
-                                        if (event.key === 'ArrowDown' && searchResults.length > 0) {
-                                            event.preventDefault();
-                                            setActiveSuggestionIndex((index) => Math.min(index + 1, searchResults.length - 1));
-                                        }
-
-                                        if (event.key === 'ArrowUp' && searchResults.length > 0) {
-                                            event.preventDefault();
-                                            setActiveSuggestionIndex((index) => Math.max(index - 1, 0));
-                                        }
-                                    }}
-                                    className="h-12 w-full rounded-full border-0 bg-transparent py-3 pl-12 pr-20 text-sm font-medium text-gray-800 outline-none placeholder:text-gray-500 focus:ring-2 focus:ring-learning-200 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:ring-learning-900/50"
-                                    placeholder="Cari materi di kelas aktif..."
-                                />
-                                {searchQuery && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setSearchQuery('');
-                                            setActiveSuggestionIndex(0);
-                                        }}
-                                        className="absolute inset-y-0 right-11 my-auto h-8 px-2 text-xs font-black text-gray-600 transition hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                                    >
-                                        Hapus
-                                    </button>
-                                )}
-                                <button type="submit" aria-label="Buka hasil pencarian" className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-600 transition hover:text-learning-700 dark:text-gray-300 dark:hover:text-learning-200">
-                                    <ArrowRightAltIcon sx={{ fontSize: 22 }} />
-                                </button>
-                            </div>
-
-                            {isSearchOpen && isSearchReady && (
-                                <div id="dashboard-search-results" role="listbox" className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl border border-white/80 bg-white/95 p-1.5 text-left shadow-xl shadow-brand-950/10 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
-                                    {searchResults.length > 0 ? searchResults.map((item, index) => {
-                                        const Icon = item.icon;
-                                        const isActive = index === activeSuggestionIndex;
-
-                                        return (
-                                            <Link
-                                                key={item.id}
-                                                href={item.href}
-                                                role="option"
-                                                aria-selected={isActive}
-                                                onMouseEnter={() => setActiveSuggestionIndex(index)}
-                                                onClick={() => setIsSearchOpen(false)}
-                                                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition ${isActive ? 'bg-learning-50 dark:bg-learning-950/30' : 'hover:bg-gray-50 dark:hover:bg-gray-800/70'}`}
-                                            >
-                                                <Icon sx={{ fontSize: 20 }} className="shrink-0 text-learning-700 dark:text-learning-200" />
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="truncate text-sm font-black text-gray-900 dark:text-white">{item.title}</p>
-                                                    <p className="truncate text-xs font-medium text-gray-700 dark:text-gray-300">{item.subtitle}</p>
-                                                </div>
-                                                <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-gray-600 dark:text-gray-300">{item.type}</span>
-                                            </Link>
-                                        );
-                                    }) : (
-                                        <p className="px-3 py-4 text-sm font-medium text-gray-700 dark:text-gray-300">Tidak ada materi yang bisa dibuka dengan kata kunci ini.</p>
-                                    )}
-                                </div>
-                            )}
-                        </form>
-
-                        <nav aria-label="Akses cepat" className="mb-4 grid w-full max-w-3xl grid-cols-2 gap-2 sm:flex sm:justify-center">
+                        <nav aria-label="Akses cepat" className="mb-6 flex flex-wrap items-center justify-center gap-2.5">
                             {quickLinks.map((item) => {
                                 const Icon = item.icon;
                                 const isPrimary = item.label === 'Kelas Saya';
@@ -318,347 +246,365 @@ export default function BerandaUser({
                                     <Link
                                         key={item.label}
                                         href={item.href}
-                                        className={`group inline-flex min-h-12 min-w-0 items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-xs font-black shadow-sm backdrop-blur transition sm:min-w-36 ${isPrimary
-                                            ? 'border-[var(--toku-brand-border)] bg-[var(--toku-primary-soft)] text-[#2D3742] hover:border-brand-500 hover:bg-brand-100 dark:border-green-800 dark:bg-[#12351f] dark:text-green-100 dark:hover:border-green-700 dark:hover:bg-green-950/80'
+                                        className={`group inline-flex min-h-11 items-center gap-2 rounded-2xl border px-4 py-2 text-xs font-black shadow-sm backdrop-blur-md transition-all hover:-translate-y-0.5 ${isPrimary
+                                            ? 'border-brand-500 bg-brand-600 text-white hover:bg-brand-700 dark:border-brand-500'
                                             : isQuiz
-                                                ? 'border-[#A9C5F3] bg-[#DBEAFE] text-learning-800 hover:border-learning-400 hover:bg-learning-100 dark:border-learning-700 dark:bg-learning-950/40 dark:text-learning-200'
-                                                : 'border-white/80 bg-white/90 text-gray-700 hover:border-learning-200 hover:bg-white hover:text-learning-700 dark:border-gray-800 dark:bg-gray-900/90 dark:text-gray-200 dark:hover:border-learning-800 dark:hover:text-learning-200'}`}
+                                                ? 'border-learning-200 bg-white/95 text-learning-800 hover:border-learning-400 hover:bg-white dark:border-learning-700 dark:bg-gray-900 dark:text-learning-200'
+                                                : 'border-white/80 bg-white/90 text-gray-700 hover:border-brand-200 hover:bg-white dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200'}`}
                                     >
-                                        <span className="flex min-w-0 items-center gap-2">
-                                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isPrimary ? 'bg-white/60 text-brand-800 dark:bg-green-900/70 dark:text-green-100' : isQuiz ? 'bg-white/60 text-learning-700 dark:bg-learning-900/60 dark:text-learning-200' : 'bg-learning-50 text-learning-700 dark:bg-learning-950/40 dark:text-learning-200'}`}>
-                                                <Icon sx={{ fontSize: 18 }} />
-                                            </span>
-                                            <span className="truncate">{item.label}</span>
-                                        </span>
-                                        <ArrowRightAltIcon className="shrink-0 opacity-60 transition group-hover:translate-x-0.5 group-hover:opacity-100" sx={{ fontSize: 18 }} />
+                                        <Icon sx={{ fontSize: 18 }} />
+                                        <span>{item.label}</span>
                                     </Link>
                                 );
                             })}
                         </nav>
 
-                        <dl className="grid w-full max-w-2xl grid-cols-3 divide-x divide-gray-200/80 overflow-hidden rounded-xl border border-white/80 bg-white/90 text-left shadow-sm backdrop-blur dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900/90">
-                            <div className="min-w-0 px-3 py-3 sm:px-5">
-                                <dt className="flex items-center gap-1.5 text-[10px] font-black uppercase text-gray-500 dark:text-gray-400">
-                                    <span className="rounded-md bg-achievement-100 px-1.5 py-0.5 text-achievement-900 dark:bg-achievement-900/40 dark:text-achievement-100">Lv.{user.level || 1}</span>
-                                    <span className="truncate">Total XP</span>
-                                </dt>
-                                <dd className="mt-1 text-lg font-black tabular-nums text-gray-950 dark:text-white sm:text-xl">{user.xp || 0}</dd>
+                        {/* Stats Floating Pill Bar */}
+                        <div className="flex flex-wrap items-center justify-center gap-3">
+                            <div className="flex items-center gap-2.5 rounded-2xl border border-white/80 bg-white/90 px-4 py-2 shadow-sm backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/90">
+                                <span className="rounded-lg bg-amber-100 px-2 py-0.5 text-xs font-black text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+                                    Lv.{user.level || 1}
+                                </span>
+                                <span className="text-xs font-bold text-gray-500 dark:text-gray-400">XP:</span>
+                                <span className="text-xs font-black text-gray-900 dark:text-white">{user.xp || 0}</span>
                             </div>
-                            <div className="min-w-0 px-3 py-3 sm:px-5">
-                                <dt className="flex items-center gap-1.5 text-[10px] font-black uppercase text-gray-500 dark:text-gray-400">
-                                    <HitodamaIcon className="h-4 w-4 shrink-0 text-orange-500" />
-                                    <span className="truncate">Beruntun</span>
-                                </dt>
-                                <dd className="mt-1 truncate text-lg font-black tabular-nums text-gray-950 dark:text-white sm:text-xl">{user.streak_count || 0} hari</dd>
+                            <div className="flex items-center gap-2 rounded-2xl border border-white/80 bg-white/90 px-4 py-2 shadow-sm backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/90">
+                                <HitodamaIcon className="h-4 w-4 text-orange-500" />
+                                <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Streak:</span>
+                                <span className="text-xs font-black text-gray-900 dark:text-white">{user.streak_count || 0} Hari</span>
                             </div>
-                            <div className="min-w-0 px-3 py-3 sm:px-5">
-                                <dt className="flex items-center gap-1.5 text-[10px] font-black uppercase text-gray-500 dark:text-gray-400">
-                                    {isPremium ? <KabutoIcon className="h-4 w-4 shrink-0 text-amber-500" /> : <ScrollIcon className="h-4 w-4 shrink-0 text-gray-500" />}
-                                    <span className="truncate">Akses</span>
-                                </dt>
-                                <dd className={`mt-1 truncate text-lg font-black sm:text-xl ${isPremium ? 'text-amber-700 dark:text-amber-300' : 'text-gray-950 dark:text-white'}`}>{isPremium ? 'Premium' : 'Gratis'}</dd>
+                            <div className="flex items-center gap-2 rounded-2xl border border-white/80 bg-white/90 px-4 py-2 shadow-sm backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/90">
+                                {isPremium ? <KabutoIcon className="h-4 w-4 text-amber-500" /> : <ScrollIcon className="h-4 w-4 text-gray-500" />}
+                                <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Akses:</span>
+                                <span className={`text-xs font-black ${isPremium ? 'text-amber-600 dark:text-amber-300' : 'text-gray-900 dark:text-white'}`}>{isPremium ? 'Premium' : 'Gratis'}</span>
                             </div>
-                        </dl>
+                        </div>
 
                         {isPremium && activeSubscription && (
-                            <div className="mt-5 rounded-full border border-yellow-200 bg-yellow-50 px-5 py-2 text-xs font-black text-yellow-700 dark:border-yellow-900/40 dark:bg-yellow-900/20 dark:text-yellow-300">
+                            <div className="mt-4 rounded-full border border-yellow-200 bg-yellow-50/90 px-4 py-1.5 text-xs font-bold text-yellow-800 dark:border-yellow-900/40 dark:bg-yellow-950/40 dark:text-yellow-300">
                                 Premium aktif sampai {new Date(activeSubscription.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                             </div>
                         )}
                     </div>
                 </div>
 
-                <div className="relative z-10 mx-auto -mt-10 max-w-7xl space-y-10 px-4 sm:px-6 lg:px-8">
-                    <section className="overflow-hidden rounded-[1.5rem] border border-[var(--toku-border)] bg-white shadow-lg sm:rounded-[2rem] dark:border-gray-800 dark:bg-gray-950">
-                        <div className="grid gap-5 rounded-[1.4rem] bg-white p-4 sm:gap-6 sm:rounded-[1.8rem] sm:p-7 dark:bg-gray-950 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-center">
-                            <div className="grid gap-5">
-                                <div className="flex items-start gap-4">
-                                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#A9C5F3] bg-[#DBEAFE] text-learning-700 shadow-sm dark:border-learning-800 dark:bg-learning-950/60 dark:text-learning-200">
-                                        <DashboardIcon sx={{ fontSize: 28 }} />
-                                    </div>
-                                    <div>
-                                    <p className="mb-1 text-xs font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">
-                                        Belajar Hari Ini
-                                    </p>
-                                    <h2 className="text-xl font-black text-gray-900 sm:text-2xl dark:text-white">
-                                        {activeLearning ? activeLearning.title : 'Belum ada kelas aktif'}
-                                    </h2>
-                                    <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-gray-800 dark:text-gray-100">
-                                        {activeLearning
-                                            ? `${activeLearning.program_title} - Week ${activeLearning.week_number}${activeLearning.current_day ? `, Hari ${activeLearning.current_day.number} - ${activeLearning.current_day.title}` : ''}. Pilih satu resource lalu lanjutkan progres.`
-                                            : 'Pilih kelas untuk memulai roadmap belajar dan membuka materi mingguan.'}
-                                    </p>
-                                    <div className="mt-3 flex flex-wrap gap-2 text-xs font-black sm:mt-4">
-                                        <span className="rounded-full bg-brand-50 px-3 py-1.5 text-brand-700 dark:bg-[#12351f] dark:text-green-200">
-                                            {totalModules} modul tersedia
-                                        </span>
-                                        <span className="rounded-full bg-amber-50 px-3 py-1.5 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                                            {ownedPrograms.length} kelas aktif
-                                        </span>
-                                        <span className="rounded-full bg-sky-50 px-3 py-1.5 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200">
-                                            {isPremium ? 'Akses premium aktif' : 'Preview tersedia'}
-                                        </span>
-                                    </div>
-                                    </div>
-                                </div>
-
-                            <div className="grid gap-3">
-                                <Link
-                                    href={nextAction?.href || activeLearning?.roadmap_url || route('user.kelas.index')}
-                                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-action-primary px-6 py-3 text-sm font-black text-ink-900 shadow-sm transition lg:hover:-translate-y-0.5 lg:hover:bg-action-primary-hover"
-                                >
-                                    {nextAction?.label || (activeLearning ? 'Buka Roadmap' : 'Jelajahi Kelas')}
-                                    <ArrowRightAltIcon sx={{ fontSize: 22 }} />
-                                </Link>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {visibleResourceCards.filter((item) => item.available && item.href).slice(0, 4).map((item) => {
-                                        const Icon = item.icon;
-
-                                        return (
-                                            <Link key={item.category} href={item.href} className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 text-xs font-black text-gray-700 transition hover:border-learning-300 hover:text-learning-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:text-learning-200">
-                                                <Icon sx={{ fontSize: 16 }} />
-                                                {item.title}
-                                            </Link>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                            </div>
-                            <DailyGoalCard goal={dailyGoal} />
-                        </div>
-                    </section>
-
-                    <section className="rounded-[1.5rem] border border-white/70 bg-white/55 p-4 shadow-xl shadow-brand-900/5 backdrop-blur-md sm:rounded-[2rem] sm:p-7 dark:border-gray-800 dark:bg-gray-900/55">
-                        <SectionHeader
-                            eyebrow="Kelas Saya"
-                            title="Roadmap yang dapat kamu ikuti"
-                            actionHref={route('user.kelas.index')}
-                            actionLabel="Lihat semua kelas"
-                        />
-
-                        <div className="space-y-3">
-                            {ownedPrograms.slice(0, 2).map((program) => {
-                                const cardClass = 'relative grid grid-cols-[72px_minmax(0,1fr)] gap-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition sm:grid-cols-[96px_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:p-4 dark:border-gray-800 dark:bg-gray-950';
-                                const content = (
-                                    <>
-                                    <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(48,192,96,0.11),transparent_48%),repeating-linear-gradient(90deg,rgba(21,128,61,0.06)_0_1px,transparent_1px_42px),repeating-linear-gradient(0deg,rgba(21,128,61,0.05)_0_1px,transparent_1px_42px)] dark:bg-[linear-gradient(135deg,rgba(74,222,128,0.10),transparent_48%),repeating-linear-gradient(90deg,rgba(255,255,255,0.06)_0_1px,transparent_1px_42px),repeating-linear-gradient(0deg,rgba(255,255,255,0.045)_0_1px,transparent_1px_42px)]" />
-                                        <span aria-hidden="true" className="pointer-events-none absolute -bottom-5 right-2 text-5xl font-black leading-none text-brand-900/[0.14] sm:-bottom-7 sm:right-3 sm:text-7xl dark:text-white/[0.11]">学</span>
-                                        <span aria-hidden="true" className="pointer-events-none absolute -top-3 right-16 text-3xl font-black leading-none text-amber-700/[0.12] sm:right-28 sm:text-4xl dark:text-amber-200/[0.09]">語</span>
-                                        <div className="relative z-10 h-16 w-[72px] overflow-hidden rounded-lg bg-slate-100 sm:h-[72px] sm:w-24 dark:bg-gray-800">
-                                            <div className="flex h-full items-center justify-center bg-gradient-to-br from-brand-500 to-brand-700 text-white">
-                                                <SchoolIcon sx={{ fontSize: 26 }} />
-                                            </div>
-                                            {program.thumbnail_url && (
-                                                <img
-                                                    src={program.thumbnail_url}
-                                                    alt=""
-                                                    className="absolute inset-0 h-full w-full object-cover"
-                                                    loading="lazy"
-                                                    onError={(event) => event.currentTarget.classList.add('hidden')}
-                                                />
-                                            )}
+                <div className="relative z-10 mx-auto -mt-10 max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+                        {/* Kolom Kiri: Jalur Belajar (lg:col-span-8) */}
+                        <div className="space-y-8 lg:col-span-8">
+                            {/* 1. Quick Quiz - Energetic Action Card */}
+                            <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-700 to-emerald-800 p-6 text-white shadow-xl shadow-emerald-950/10 sm:p-7">
+                                <span aria-hidden="true" className="pointer-events-none absolute -bottom-6 right-3 select-none text-9xl font-black text-white/[0.08]">
+                                    問
+                                </span>
+                                <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                                    <div className="flex items-start gap-4 sm:gap-5">
+                                        <div className="hidden sm:flex h-24 w-24 sm:h-28 sm:w-28 shrink-0 items-center justify-center rounded-3xl bg-white/10 p-1 shadow-inner backdrop-blur-sm">
+                                            <img
+                                                src="/images/quick_quiz_anime.svg"
+                                                alt="Quick Quiz Mascot Anime"
+                                                className="h-full w-full object-contain filter drop-shadow"
+                                            />
                                         </div>
-                                        <div className="relative z-10 min-w-0">
-                                            <div className="mb-2 flex items-center gap-2">
-                                                <span className={`rounded-full px-2.5 py-1 text-[11px] font-black ${program.waiting_for_kloter
-                                                    ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
-                                                    : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'}`}>
-                                                    {program.waiting_for_kloter ? 'Menunggu kloter' : 'Kelas aktif'}
+                                        <div className="min-w-0">
+                                            <div className="mb-1 flex items-center gap-2">
+                                                <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-100">
+                                                    Latihan Cepat
                                                 </span>
-                                                {!program.waiting_for_kloter && <span className="text-xs font-bold text-slate-600 dark:text-gray-300">{program.total_modules || 0} modul</span>}
-                                            </div>
-                                            <h3 className="truncate text-base font-black text-slate-950 sm:text-lg dark:text-white">{program.title}</h3>
-                                            <p className="mt-1 truncate text-sm font-medium text-slate-700 dark:text-gray-300">
-                                                {program.waiting_for_kloter
-                                                    ? 'Roadmap tersedia setelah jadwal kloter dimulai.'
-                                                    : (program.next_module ? `Berikutnya: Week ${program.next_module.week_number} - ${program.next_module.title}` : 'Semua modul yang tersedia telah selesai.')}
-                                            </p>
-                                            {!program.waiting_for_kloter && (
-                                                <div className="mt-3 flex items-center gap-3">
-                                                    <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-gray-800">
-                                                        <div className="h-full rounded-full bg-brand-600" style={{ width: `${program.progress}%` }} />
-                                                    </div>
-                                                    <span className="shrink-0 text-xs font-black text-slate-700 dark:text-gray-300">{program.progress}%</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <span className={`relative z-10 col-span-2 inline-flex min-h-10 items-center justify-center gap-1 rounded-lg px-4 text-sm font-black sm:col-auto sm:min-h-11 ${program.waiting_for_kloter
-                                            ? 'bg-slate-100 text-slate-700 dark:bg-gray-800 dark:text-gray-300'
-                                            : 'bg-brand-600 text-white lg:group-hover:bg-brand-700'}`}>
-                                            {program.waiting_for_kloter ? 'Menunggu jadwal' : 'Lanjutkan'}
-                                            {!program.waiting_for_kloter && <ArrowRightAltIcon sx={{ fontSize: 20 }} />}
-                                        </span>
-                                    </>
-                                );
-
-                                return program.waiting_for_kloter ? (
-                                    <article key={program.id} className={cardClass}>{content}</article>
-                                ) : (
-                                    <Link key={program.id} href={program.roadmap_url} className={`group ${cardClass} hover:border-brand-200 hover:shadow-md lg:dark:hover:border-brand-900/60`}>
-                                        {content}
-                                    </Link>
-                                );
-                            })}
-                            {ownedPrograms.length === 0 && (
-                                <div className="rounded-2xl border border-dashed border-gray-300 bg-white/70 px-5 py-8 text-center dark:border-gray-700 dark:bg-gray-950/70">
-                                    <SchoolIcon sx={{ fontSize: 30 }} className="mb-2 text-brand-500" />
-                                    <p className="font-black text-gray-900 dark:text-white">Belum ada kelas aktif</p>
-                                    <p className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">Pilih kelas untuk memulai roadmap belajar.</p>
-                                    <Link href={route('user.kelas.index')} className="mt-4 inline-flex min-h-11 items-center gap-1 text-sm font-black text-brand-600 dark:text-brand-400">
-                                        Jelajahi kelas <ArrowRightAltIcon sx={{ fontSize: 20 }} />
-                                    </Link>
-                                </div>
-                            )}
-                        </div>
-                    </section>
-
-                    <section className="overflow-hidden rounded-[1.5rem] border border-brand-100/80 bg-white/72 p-4 shadow-xl shadow-brand-900/5 backdrop-blur-md sm:rounded-[2rem] sm:p-7 dark:border-gray-800 dark:bg-gray-900/72">
-                        <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-center lg:justify-between">
-                            <div className="flex items-start gap-4">
-                                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/25">
-                                    <QuizIcon sx={{ fontSize: 28 }} />
-                                </div>
-                                <div>
-                                    <p className="mb-1 text-xs font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">
-                                        Quick Quiz
-                                    </p>
-                                    <h2 className="text-xl font-black text-gray-900 dark:text-white">
-                                        {quickQuiz?.active
-                                            ? 'Lanjutkan latihanmu'
-                                            : (quickQuiz?.available ? 'Latihan campuran siap' : 'Belum ada materi terbuka')}
-                                    </h2>
-                                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-                                        {quickQuiz?.active
-                                            ? `${quickQuiz.remaining_count} target tersisa. Sesi ini dapat dilanjutkan selama 30 menit.`
-                                            : (quickQuiz?.available
-                                                ? 'Ulangi materi yang sudah terbuka dari seluruh kelasmu. Jawaban yang belum tepat akan muncul kembali.'
-                                                : 'Selesaikan materi pertama di roadmap agar Quick Kuis dapat menyusun latihan.')}
-                                    </p>
-                                    {quickQuiz?.available && (
-                                        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-black">
-                                            <span className="rounded-full bg-amber-50 px-3 py-1.5 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                                                Tanpa XP · fokus repetisi
-                                            </span>
-                                            <span className="rounded-full bg-gray-100 px-3 py-1.5 text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-                                                {quickQuiz.target_count} target
-                                            </span>
-                                            <span className="rounded-full bg-brand-50 px-3 py-1.5 text-brand-700 dark:bg-[#12351f] dark:text-green-200">
-                                                {quickQuiz.program_count} kelas
-                                            </span>
-                                            {!quickQuiz.active && quickQuiz.programs?.length > 1 && (
-                                                <label className="flex min-h-10 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-gray-700 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200">
-                                                    <span className="sr-only">Pilih kelas untuk Quick Quiz</span>
-                                                    <select
-                                                        value={quickQuizProgramId}
-                                                        onChange={(event) => setQuickQuizProgramId(event.target.value)}
-                                                        className="border-0 bg-transparent py-1 pr-8 text-xs font-black focus:ring-0"
-                                                    >
-                                                        <option value="">Semua kelas</option>
-                                                        {quickQuiz.programs.map((program) => (
-                                                            <option key={program.id} value={program.id}>
-                                                                {program.title} ({program.question_count})
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </label>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {quickQuiz?.available ? (
-                                <button
-                                    type="button"
-                                    onClick={openQuickQuiz}
-                                    disabled={isStartingQuickQuiz}
-                                    className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-gray-900/15 transition-all disabled:cursor-wait disabled:opacity-70 sm:w-auto lg:hover:-translate-y-0.5 lg:hover:bg-brand-700 dark:bg-green-400 dark:text-gray-950 lg:dark:hover:bg-green-300"
-                                >
-                                    {isStartingQuickQuiz ? 'Menyiapkan...' : (quickQuiz.active ? 'Lanjutkan' : 'Mulai latihan')}
-                                    <ArrowRightAltIcon sx={{ fontSize: 22 }} />
-                                </button>
-                            ) : (
-                                <Link href={activeLearning?.roadmap_url || route('user.kelas.index')} className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-gray-900/15 transition-all sm:w-auto lg:hover:-translate-y-0.5 lg:hover:bg-brand-700 dark:bg-green-400 dark:text-gray-950 lg:dark:hover:bg-green-300">
-                                    Buka roadmap <ArrowRightAltIcon sx={{ fontSize: 22 }} />
-                                </Link>
-                            )}
-                        </div>
-                    </section>
-
-                    <section className="rounded-[1.5rem] border border-white/70 bg-white/55 p-4 shadow-xl shadow-brand-900/5 backdrop-blur-md sm:rounded-[2rem] sm:p-7 dark:border-gray-800 dark:bg-gray-900/55">
-                        <SectionHeader
-                            eyebrow="Progress Mingguan"
-                            title="Aktivitas belajar terbaru"
-                            actionHref={route('user.progress')}
-                            actionLabel="Detail progress"
-                        />
-
-                        <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-                            <div className="rounded-2xl border border-brand-100/80 bg-white/85 p-4 sm:rounded-[1.5rem] sm:p-5 dark:border-gray-800 dark:bg-gray-950/80">
-                                <div className="mb-3 flex items-center gap-3 sm:mb-4">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#A9C5F3] bg-[#DBEAFE] text-learning-700 dark:border-learning-800 dark:bg-learning-950/60 dark:text-learning-200">
-                                        <CheckCircleIcon />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-black uppercase tracking-[0.18em] text-gray-600 dark:text-gray-300">Ringkasan</p>
-                                        <p className="font-black text-gray-900 dark:text-white">Belajar minggu ini</p>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2 text-center">
-                                    <div className="rounded-xl bg-achievement-50 px-2 py-2.5 sm:rounded-2xl sm:px-3 sm:py-3 dark:bg-achievement-900/30">
-                                        <p className="text-xl font-black text-achievement-700 dark:text-achievement-100">{user.xp || 0}</p>
-                                        <p className="text-[11px] font-bold uppercase text-gray-700 dark:text-gray-300">XP</p>
-                                    </div>
-                                    <div className="rounded-xl bg-amber-50 px-2 py-2.5 sm:rounded-2xl sm:px-3 sm:py-3 dark:bg-amber-950/30">
-                                        <p className="text-xl font-black text-amber-600 dark:text-amber-300">{user.streak_count || 0}</p>
-                                        <p className="text-[11px] font-bold uppercase text-gray-700 dark:text-gray-300">Streak</p>
-                                    </div>
-                                    <div className="rounded-xl bg-emerald-50 px-2 py-2.5 sm:rounded-2xl sm:px-3 sm:py-3 dark:bg-emerald-950/30">
-                                        <p className="text-xl font-black text-emerald-600 dark:text-emerald-300">{rewardHistory.length}</p>
-                                        <p className="text-[11px] font-bold uppercase text-gray-700 dark:text-gray-300">Log</p>
-                                    </div>
-                                </div>
-                                <Link href={route('user.leaderboard')} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-xl border border-gray-100 bg-white px-3 py-2 text-xs font-black text-gray-600 transition hover:border-learning-200 hover:text-learning-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:text-learning-200">
-                                    Lihat peringkat liga <ArrowRightAltIcon sx={{ fontSize: 17 }} />
-                                </Link>
-                            </div>
-
-                            <div className="overflow-hidden rounded-2xl border border-brand-100/70 bg-white/85 sm:rounded-[1.5rem] dark:border-gray-800 dark:bg-gray-950/80">
-                                {recentActivities.length > 0 ? (
-                                    <div className="divide-y divide-gray-50 dark:divide-gray-800">
-                                        {recentActivities.map((activity, index) => (
-                                            <div key={activity.id || index} className="flex items-center justify-between gap-3 px-4 py-3 transition sm:gap-4 sm:px-5 sm:py-4 lg:hover:bg-gray-50 lg:dark:hover:bg-gray-900">
-                                                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
-                                                        {activity.source_type === 'quiz' ? <QuizIcon sx={{ fontSize: 18 }} /> : <AutoStoriesIcon sx={{ fontSize: 18 }} />}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{activity.description || activity.title || activity.source_type || 'Aktivitas belajar'}</p>
-                                                        <p className="text-[11px] font-semibold text-gray-600 dark:text-gray-300">
-                                                            {activity.created_at
-                                                                ? new Date(activity.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                                                : 'Baru saja'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                {activity.xp_amount !== undefined && (
-                                                    <span className="shrink-0 rounded-lg bg-green-50 px-2 py-1 text-xs font-black text-green-600 sm:px-3 sm:text-sm dark:bg-green-900/30 dark:text-green-300">
-                                                        +{activity.xp_amount} XP
+                                                {quickQuiz?.active && (
+                                                    <span className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                                                        <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" /> Sesi Sedang Berjalan
                                                     </span>
                                                 )}
                                             </div>
-                                        ))}
+                                            <h2 className="text-xl font-black text-white sm:text-2xl">
+                                                {quickQuiz?.active ? 'Lanjutkan Sesi Latihan' : (quickQuiz?.available ? 'Asah Refleks Kosakata & Tata Bahasa' : 'Quick Quiz Siap')}
+                                            </h2>
+                                            <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-emerald-50/90">
+                                                {quickQuiz?.active
+                                                    ? `Tersisa ${quickQuiz.remaining_count} pertanyaan dalam sesi ini. Berlaku selama 30 menit.`
+                                                    : (quickQuiz?.available
+                                                        ? 'Ulangi materi yang sudah terbuka dari seluruh kelasmu. Jawaban yang belum tepat akan muncul kembali.'
+                                                        : 'Selesaikan materi pertama di roadmap agar Quick Quiz dapat menyusun latihan harianmu.')}
+                                            </p>
+                                            {quickQuiz?.available && (
+                                                <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold text-white/90">
+                                                    <span className="rounded-xl bg-white/15 px-3 py-1 backdrop-blur-sm">
+                                                        {quickQuiz.target_count} Target Soal
+                                                    </span>
+                                                    <span className="rounded-xl bg-white/15 px-3 py-1 backdrop-blur-sm">
+                                                        {quickQuiz.program_count} Kelas Aktif
+                                                    </span>
+                                                    {!quickQuiz.active && quickQuiz.programs?.length > 1 && (
+                                                        <label className="flex items-center gap-1.5 rounded-xl bg-white/20 px-3 py-1 text-xs font-bold text-white">
+                                                            <span className="text-emerald-200">Filter:</span>
+                                                            <select
+                                                                value={quickQuizProgramId}
+                                                                onChange={(event) => setQuickQuizProgramId(event.target.value)}
+                                                                className="cursor-pointer border-0 bg-transparent py-0.5 pr-6 text-xs font-bold text-white focus:ring-0"
+                                                            >
+                                                                <option value="" className="text-gray-900">Semua Kelas</option>
+                                                                {quickQuiz.programs.map((program) => (
+                                                                    <option key={program.id} value={program.id} className="text-gray-900">
+                                                                        {program.title}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </label>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                ) : (
-                                    <div className="p-6 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Belum ada aktivitas terbaru. Mulai dari kelas aktif untuk mengisi progress.
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </section>
 
-                    <section className="rounded-[1.5rem] border border-white/70 bg-white/45 p-4 shadow-xl shadow-amber-900/5 backdrop-blur-md sm:rounded-[2rem] sm:p-7 dark:border-gray-800 dark:bg-gray-900/45">
+                                    <div className="shrink-0">
+                                        {quickQuiz?.available ? (
+                                            <button
+                                                type="button"
+                                                onClick={openQuickQuiz}
+                                                disabled={isStartingQuickQuiz}
+                                                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-7 py-3 text-sm font-black text-emerald-900 shadow-md transition-all hover:bg-emerald-50 hover:shadow-lg hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                                            >
+                                                {isStartingQuickQuiz ? 'Menyiapkan...' : (quickQuiz.active ? 'Lanjutkan Kuis' : 'Mulai Latihan')}
+                                                <ArrowRightAltIcon sx={{ fontSize: 22 }} />
+                                            </button>
+                                        ) : (
+                                            <Link
+                                                href={activeLearning?.roadmap_url || route('user.kelas.index')}
+                                                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-7 py-3 text-sm font-black text-emerald-900 shadow-md transition-all hover:bg-emerald-50 hover:-translate-y-0.5 sm:w-auto"
+                                            >
+                                                Buka Roadmap <ArrowRightAltIcon sx={{ fontSize: 22 }} />
+                                            </Link>
+                                        )}
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* 2. Belajar Hari Ini - Clean Educational Card with Study Desk Visual */}
+                            <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-7 dark:border-gray-800 dark:bg-gray-900">
+                                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                                    <div className="flex items-start gap-4 sm:gap-5">
+                                        <div className="hidden sm:flex h-24 w-24 sm:h-28 sm:w-28 shrink-0 overflow-hidden rounded-[28px] border border-slate-200/80 shadow-sm dark:border-gray-800">
+                                            <img
+                                                src="/images/study_desk_anime.svg"
+                                                alt="Meja Belajar Anime"
+                                                className="h-full w-full rounded-[28px] object-cover"
+                                            />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="mb-1 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                                                Lanjutkan Belajar
+                                            </p>
+                                            <h2 className="text-xl font-black text-gray-900 sm:text-2xl dark:text-white">
+                                                {activeLearning ? activeLearning.title : 'Belum Ada Kelas Aktif'}
+                                            </h2>
+                                            <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+                                                {activeLearning
+                                                    ? `${activeLearning.program_title} • Week ${activeLearning.week_number}${activeLearning.current_day ? `, Hari ${activeLearning.current_day.number}: ${activeLearning.current_day.title}` : ''}`
+                                                    : 'Pilih kelas untuk memulai roadmap belajar dan membuka materi mingguan.'}
+                                            </p>
+                                            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold">
+                                                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700 dark:bg-gray-800 dark:text-gray-300">
+                                                    {totalModules} Modul
+                                                </span>
+                                                <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                                    {ownedPrograms.length} Kelas Aktif
+                                                </span>
+                                                <span className={`rounded-full px-3 py-1 ${isPremium ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>
+                                                    {isPremium ? 'Akses Premium' : 'Akses Gratis'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
+                                        <Link
+                                            href={nextAction?.href || activeLearning?.roadmap_url || route('user.kelas.index')}
+                                            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-7 py-3 text-sm font-black text-white shadow-sm transition-all hover:bg-brand-600 hover:-translate-y-0.5 dark:bg-white dark:text-gray-950 dark:hover:bg-brand-300"
+                                        >
+                                            {nextAction?.label || (activeLearning ? 'Buka Roadmap' : 'Jelajahi Kelas')}
+                                            <ArrowRightAltIcon sx={{ fontSize: 22 }} />
+                                        </Link>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {visibleResourceCards.filter((item) => item.available && item.href).slice(0, 4).map((item) => {
+                                                const Icon = item.icon;
+
+                                                return (
+                                                    <Link
+                                                        key={item.category}
+                                                        href={item.href}
+                                                        className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-gray-700 transition hover:border-brand-500 hover:text-brand-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                                                    >
+                                                        <Icon sx={{ fontSize: 16 }} />
+                                                        {item.title}
+                                                    </Link>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* 3. Kelas Saya - Modern Roadmap Cards */}
+                            <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-7 dark:border-gray-800 dark:bg-gray-900">
+                                <SectionHeader
+                                    eyebrow="Kelas Saya"
+                                    title="Roadmap yang dapat kamu ikuti"
+                                    actionHref={route('user.kelas.index')}
+                                    actionLabel="Lihat semua kelas"
+                                />
+
+                                <div className="space-y-3">
+                                    {ownedPrograms.slice(0, 3).map((program) => {
+                                        const cardClass = 'relative grid grid-cols-[72px_minmax(0,1fr)] gap-3 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm transition-all sm:grid-cols-[96px_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:p-4 dark:border-gray-800 dark:bg-gray-950';
+                                        const content = (
+                                            <>
+                                                <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(48,192,96,0.06),transparent_48%)]" />
+                                                <span aria-hidden="true" className="pointer-events-none absolute -bottom-5 right-2 text-5xl font-black leading-none text-brand-900/[0.08] sm:-bottom-7 sm:right-3 sm:text-7xl dark:text-white/[0.06]">学</span>
+                                                <span aria-hidden="true" className="pointer-events-none absolute -top-3 right-16 text-3xl font-black leading-none text-amber-700/[0.07] sm:right-28 sm:text-4xl dark:text-amber-200/[0.05]">語</span>
+                                                <div className="relative z-10 h-16 w-[72px] overflow-hidden rounded-xl bg-slate-100 sm:h-[72px] sm:w-24 dark:bg-gray-800">
+                                                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-brand-500 to-brand-700 text-white">
+                                                        <SchoolIcon sx={{ fontSize: 26 }} />
+                                                    </div>
+                                                    {program.thumbnail_url && (
+                                                        <img
+                                                            src={program.thumbnail_url}
+                                                            alt=""
+                                                            className="absolute inset-0 h-full w-full object-cover"
+                                                            loading="lazy"
+                                                            onError={(event) => event.currentTarget.classList.add('hidden')}
+                                                        />
+                                                    )}
+                                                </div>
+                                                <div className="relative z-10 min-w-0">
+                                                    <div className="mb-1.5 flex items-center gap-2">
+                                                        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-black ${program.waiting_for_kloter
+                                                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                                                            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'}`}>
+                                                            {program.waiting_for_kloter ? 'Menunggu kloter' : 'Kelas aktif'}
+                                                        </span>
+                                                        {!program.waiting_for_kloter && <span className="text-xs font-bold text-slate-500 dark:text-gray-400">{program.total_modules || 0} modul</span>}
+                                                    </div>
+                                                    <h3 className="truncate text-base font-black text-slate-900 sm:text-lg dark:text-white">{program.title}</h3>
+                                                    <p className="mt-0.5 truncate text-xs font-medium text-slate-500 dark:text-gray-400">
+                                                        {program.waiting_for_kloter
+                                                            ? 'Roadmap tersedia setelah jadwal kloter dimulai.'
+                                                            : (program.next_module ? `Berikutnya: Week ${program.next_module.week_number} - ${program.next_module.title}` : 'Semua modul yang tersedia telah selesai.')}
+                                                    </p>
+                                                    {!program.waiting_for_kloter && (
+                                                        <div className="mt-2.5 flex items-center gap-3">
+                                                            <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-gray-800">
+                                                                <div className="h-full rounded-full bg-brand-600 transition-all duration-500" style={{ width: `${program.progress}%` }} />
+                                                            </div>
+                                                            <span className="shrink-0 text-xs font-black text-slate-700 dark:text-gray-300">{program.progress}%</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <span className={`relative z-10 col-span-2 inline-flex min-h-10 items-center justify-center gap-1 rounded-xl px-4 text-xs font-black sm:col-auto sm:min-h-11 ${program.waiting_for_kloter
+                                                    ? 'bg-slate-100 text-slate-700 dark:bg-gray-800 dark:text-gray-300'
+                                                    : 'bg-brand-600 text-white lg:group-hover:bg-brand-700 shadow-sm'}`}>
+                                                    {program.waiting_for_kloter ? 'Menunggu jadwal' : 'Lanjutkan'}
+                                                    {!program.waiting_for_kloter && <ArrowRightAltIcon sx={{ fontSize: 18 }} />}
+                                                </span>
+                                            </>
+                                        );
+
+                                        return program.waiting_for_kloter ? (
+                                            <article key={program.id} className={cardClass}>{content}</article>
+                                        ) : (
+                                            <Link key={program.id} href={program.roadmap_url} className={`group ${cardClass} hover:border-brand-300 hover:shadow-md lg:dark:hover:border-brand-900/60`}>
+                                                {content}
+                                            </Link>
+                                        );
+                                    })}
+                                    {ownedPrograms.length === 0 && (
+                                        <div className="rounded-2xl border border-dashed border-gray-300 bg-white/70 px-5 py-8 text-center dark:border-gray-700 dark:bg-gray-950/70">
+                                            <SchoolIcon sx={{ fontSize: 30 }} className="mb-2 text-brand-500" />
+                                            <p className="font-black text-gray-900 dark:text-white">Belum ada kelas aktif</p>
+                                            <p className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">Pilih kelas untuk memulai roadmap belajar.</p>
+                                            <Link href={route('user.kelas.index')} className="mt-4 inline-flex min-h-11 items-center gap-1 text-sm font-black text-brand-600 dark:text-brand-400">
+                                                Jelajahi kelas <ArrowRightAltIcon sx={{ fontSize: 20 }} />
+                                            </Link>
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+                        </div>
+
+                        {/* Kolom Kanan: Tracker Habit & Progress (lg:col-span-4) */}
+                        <div className="space-y-6 lg:col-span-4">
+                            {/* Target Hari Ini */}
+                            <DailyGoalCard goal={dailyGoal} />
+
+                            {/* Progress & Aktivitas Kelas */}
+                            <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                                <SectionHeader
+                                    eyebrow="Progress"
+                                    title="Aktivitas Belajar"
+                                    actionHref={route('user.progress')}
+                                    actionLabel="Detail"
+                                />
+
+                                <div className="space-y-4">
+                                    <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-gray-800 dark:bg-gray-950/80">
+                                        <div className="grid grid-cols-3 gap-2 text-center">
+                                            <div className="rounded-xl bg-achievement-50 px-2 py-2.5 dark:bg-achievement-900/30">
+                                                <p className="text-xl font-black text-achievement-700 dark:text-achievement-100">{user.xp || 0}</p>
+                                                <p className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">XP</p>
+                                            </div>
+                                            <div className="rounded-xl bg-amber-50 px-2 py-2.5 dark:bg-amber-950/30">
+                                                <p className="text-xl font-black text-amber-600 dark:text-amber-300">{user.streak_count || 0}</p>
+                                                <p className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">Streak</p>
+                                            </div>
+                                            <div className="rounded-xl bg-emerald-50 px-2 py-2.5 dark:bg-emerald-950/30">
+                                                <p className="text-xl font-black text-emerald-600 dark:text-emerald-300">{rewardHistory.length}</p>
+                                                <p className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">Log</p>
+                                            </div>
+                                        </div>
+                                        <Link href={route('user.leaderboard')} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 transition hover:border-brand-500 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                            Lihat peringkat liga <ArrowRightAltIcon sx={{ fontSize: 17 }} />
+                                        </Link>
+                                    </div>
+
+                                    <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white dark:border-gray-800 dark:bg-gray-950/80">
+                                        {recentActivities.length > 0 ? (
+                                            <div className="divide-y divide-gray-50 dark:divide-gray-800">
+                                                {recentActivities.map((activity, index) => (
+                                                    <div key={activity.id || index} className="flex items-center justify-between gap-2 px-3 py-3 transition sm:px-4 lg:hover:bg-gray-50 lg:dark:hover:bg-gray-900">
+                                                        <div className="flex min-w-0 items-center gap-2.5">
+                                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
+                                                                {activity.source_type === 'quiz' ? <QuizIcon sx={{ fontSize: 16 }} /> : <AutoStoriesIcon sx={{ fontSize: 16 }} />}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <p className="truncate text-xs font-bold text-gray-900 dark:text-white">{activity.description || activity.title || activity.source_type || 'Aktivitas belajar'}</p>
+                                                                <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-400">
+                                                                    {activity.created_at
+                                                                        ? new Date(activity.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                                                                        : 'Baru saja'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        {activity.xp_amount !== undefined && (
+                                                            <span className="shrink-0 rounded-md bg-green-50 px-2 py-0.5 text-xs font-black text-green-600 dark:bg-green-900/30 dark:text-green-300">
+                                                                +{activity.xp_amount} XP
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="p-4 text-center text-xs font-medium text-gray-400 dark:text-gray-400">
+                                                Belum ada aktivitas terbaru. Mulai dari kelas aktif untuk mengisi progress.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+
+                    {/* Berita Terkini Jepang (Bawah Penuh & Simetris) */}
+                    <section className="mt-8 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8 dark:border-gray-800 dark:bg-gray-900">
                         <SectionHeader
                             eyebrow="Update"
                             title="Berita Terkini Jepang"
@@ -666,12 +612,12 @@ export default function BerandaUser({
                             actionLabel="Lihat semua berita"
                         />
 
-                        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 touch-pan-x md:mx-0 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3 lg:gap-8">
-                            {news && news.length > 0 ? news.map((item, index) => (
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                            {news && news.length > 0 ? news.slice(0, 4).map((item, index) => (
                                 <Link
                                     href={route('user.news.show', item.slug || item.id)}
                                     key={item.id || index}
-                                    className="group flex h-full w-[78vw] max-w-[19rem] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-amber-100/80 bg-white/90 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.08)] transition-all duration-300 sm:rounded-3xl md:w-auto md:max-w-none md:shrink lg:hover:shadow-[0_12px_36px_-16px_rgba(120,53,15,0.28)] dark:border-gray-800 dark:bg-gray-950/90 dark:shadow-none lg:dark:hover:border-gray-700"
+                                    className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-gray-800 dark:bg-gray-950"
                                 >
                                     <div className="aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-gray-800">
                                         {item.thumbnail_url || item.cover_url ? (
@@ -682,40 +628,41 @@ export default function BerandaUser({
                                             </div>
                                         )}
                                     </div>
-                                    <div className="flex flex-grow flex-col p-4 sm:p-6">
+                                    <div className="flex flex-grow flex-col p-4 sm:p-5">
                                         {item.is_pinned && (
-                                            <div className="mb-3">
-                                                <span className="rounded-md bg-brand-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:bg-[#12351f] dark:text-green-200">
+                                            <div className="mb-2.5">
+                                                <span className="rounded-md bg-brand-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:bg-[#12351f] dark:text-green-200">
                                                     PIN Disematkan
                                                 </span>
                                             </div>
                                         )}
-                                        <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                                        <div className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
                                             <span className="rounded-full bg-brand-50 px-2 py-0.5 font-bold text-brand-700 dark:bg-[#12351f] dark:text-green-200">{item.category?.replaceAll('-', ' ') || 'platform'}</span>
                                             <AccessTimeIcon sx={{ fontSize: 14 }} />
                                             {item.published_at
-                                                ? new Date(item.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-                                                : 'TOKU-UP News'}
+                                                ? new Date(item.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                                                : 'TOKU-UP'}
                                         </div>
-                                        <h3 className="mb-2 text-lg font-extrabold leading-snug text-gray-900 transition-colors sm:mb-3 lg:group-hover:text-brand-600 dark:text-white lg:dark:group-hover:text-brand-400">
+                                        <h3 className="mb-2 text-base font-extrabold leading-snug text-gray-900 transition-colors sm:mb-2.5 lg:group-hover:text-brand-600 dark:text-white lg:dark:group-hover:text-brand-400 line-clamp-2">
                                             {item.title}
                                         </h3>
-                                        <p className="mb-4 line-clamp-2 flex-grow text-sm font-medium leading-relaxed text-gray-700 sm:mb-6 sm:line-clamp-3 dark:text-gray-300">
+                                        <p className="mb-4 line-clamp-2 flex-grow text-xs font-medium leading-relaxed text-gray-600 dark:text-gray-300">
                                             {item.excerpt || (item.body ? `${item.body.replace(/<[^>]*>/g, '').substring(0, 100)}...` : 'Baca update terbaru dari TOKU-UP.')}
                                         </p>
-                                        <div className="mt-auto flex items-center gap-2 text-sm font-black text-brand-600 dark:text-brand-400">
+                                        <div className="mt-auto flex items-center gap-1.5 text-xs font-black text-brand-600 dark:text-brand-400">
                                             Baca selengkapnya
-                                            <ArrowRightAltIcon sx={{ fontSize: 20 }} />
+                                            <ArrowRightAltIcon sx={{ fontSize: 18 }} />
                                         </div>
                                     </div>
                                 </Link>
                             )) : (
-                                <p className="w-full text-sm font-medium text-gray-700 md:col-span-2 lg:col-span-3 dark:text-gray-300">Belum ada berita terbaru.</p>
+                                <p className="w-full text-sm font-medium text-gray-700 md:col-span-4 dark:text-gray-300">Belum ada berita terbaru.</p>
                             )}
                         </div>
                     </section>
                 </div>
             </div>
+            <PromoPopup popup={activePopup} />
         </AuthenticatedLayout>
     );
 }

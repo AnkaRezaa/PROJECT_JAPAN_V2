@@ -16,6 +16,7 @@ import Button from '@/Components/UI/Button';
 import GuestNavbar from '@/Components/Layout/GuestNavbar';
 import Footer from '@/Components/Layout/GuestFooter';
 import WhatsAppContact from '@/Components/Marketing/WhatsAppContact';
+import PromoPopup from '@/Components/Marketing/PromoPopup';
 import FallEffect from '@/Components/theme/FallEffect';
 import SeoHead from '@/Components/SEO/SeoHead';
 import heroStaticImage from '@/../Images/Mount-Fuji-New.jpg';
@@ -89,7 +90,7 @@ const weekTone = {
   ink: 'border-ink-700 bg-ink-900 text-white',
 };
 
-export default function LandingPage({ programs = [], seo = {} }) {
+export default function LandingPage({ programs = [], seo = {}, activePopup = null }) {
   const reduceMotion = useReducedMotion();
   const publicPlans = programs.flatMap((program) => (program.payment_plans || []).map((plan) => ({
     ...plan,
@@ -104,6 +105,16 @@ export default function LandingPage({ programs = [], seo = {} }) {
       viewport: { once: true, amount: 0.16 },
       transition: { duration: 0.55, ease: 'easeOut' },
     };
+
+  React.useEffect(() => {
+    const wasDark = document.documentElement.classList.contains('dark');
+    document.documentElement.classList.remove('dark');
+    return () => {
+      if (wasDark) {
+        document.documentElement.classList.add('dark');
+      }
+    };
+  }, []);
 
   const scrollToDemo = () => {
     document.getElementById('demo-belajar')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
@@ -347,6 +358,7 @@ export default function LandingPage({ programs = [], seo = {} }) {
         </motion.section>
       </main>
 
+      <PromoPopup popup={activePopup} />
       <WhatsAppContact />
       <Footer />
     </>

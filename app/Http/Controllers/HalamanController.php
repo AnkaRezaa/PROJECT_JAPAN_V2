@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Auth\LoginSosialController;
+use App\Models\BroadcastPopup;
 use App\Models\DeckPresentasi;
 use App\Models\HariModul;
 use App\Models\Kosakata;
@@ -23,8 +24,25 @@ class HalamanController extends Controller
 {
     public function home(KelasPenggunaPayloadService $kelasPayload)
     {
+        $activePopup = BroadcastPopup::query()
+            ->active()
+            ->forPage('landing_page')
+            ->whereIn('target_audience', ['all', 'guest'])
+            ->latest()
+            ->first();
+
         return Inertia::render('landingPage', [
             'programs' => $this->publicPricingPrograms($kelasPayload),
+            'activePopup' => $activePopup ? [
+                'id' => $activePopup->id,
+                'title' => $activePopup->title,
+                'description' => $activePopup->description,
+                'type' => $activePopup->type,
+                'badge' => $activePopup->badge,
+                'image' => $activePopup->imageUrl(),
+                'cta_label' => $activePopup->cta_label,
+                'cta_url' => $activePopup->cta_url,
+            ] : null,
             'seo' => $this->seo(
                 'Belajar Bahasa Jepang Online dengan Kelas dan Latihan Interaktif',
                 config('seo.default_description'),

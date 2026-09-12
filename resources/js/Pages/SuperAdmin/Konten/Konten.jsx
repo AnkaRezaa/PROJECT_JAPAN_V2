@@ -8,6 +8,7 @@ import ChartCard from '@/Components/Features/Dashboard/ChartCard';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import NewsEditor from '@/Components/Features/Editor/NewsEditor';
 import ArticleBody from '@/Components/Features/News/ArticleBody';
+import PopupManager from '@/Components/Features/Marketing/PopupManager';
 import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartEmpty, ChartTooltip, ChartTooltipContent } from '@/Components/UI/Chart';
 
@@ -42,11 +43,13 @@ function statusClass(status) {
 export default function Konten({
     stats = [],
     news = { data: [], links: [] },
+    popups = [],
     categories = [],
     updates = [],
     filters = {},
     contentStatusByType = [],
 }) {
+    const [activeTab, setActiveTab] = useState('news');
     const [editingNews, setEditingNews] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [showForm, setShowForm] = useState(false);
@@ -220,14 +223,48 @@ export default function Konten({
                             Portal berita, review status publish, dan attachment dasar untuk dashboard student.
                         </p>
                     </div>
+                    {activeTab === 'news' && (
+                        <button
+                            onClick={openCreate}
+                            className="rounded-xl bg-brand-600 px-5 py-3 text-sm font-black text-white shadow-md shadow-brand-500/20 transition-colors hover:bg-brand-700"
+                        >
+                            Buat News
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex border-b border-gray-200 dark:border-gray-800">
                     <button
-                        onClick={openCreate}
-                        className="rounded-xl bg-brand-600 px-5 py-3 text-sm font-black text-white shadow-md shadow-brand-500/20 transition-colors hover:bg-brand-700"
+                        type="button"
+                        onClick={() => setActiveTab('news')}
+                        className={`border-b-2 px-4 py-3 text-sm font-black transition ${
+                            activeTab === 'news'
+                                ? 'border-brand-600 text-brand-600 dark:text-brand-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                        }`}
                     >
-                        Buat News
+                        News & Artikel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('popups')}
+                        className={`border-b-2 px-4 py-3 text-sm font-black transition ${
+                            activeTab === 'popups'
+                                ? 'border-brand-600 text-brand-600 dark:text-brand-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                        }`}
+                    >
+                        Broadcast & Pop-up Iklan
+                        {popups?.length > 0 && (
+                            <span className="ml-2 rounded-full bg-brand-50 dark:bg-brand-900/30 px-2 py-0.5 text-xs text-brand-600 dark:text-brand-400">
+                                {popups.length}
+                            </span>
+                        )}
                     </button>
                 </div>
 
+                {activeTab === 'news' ? (
+                    <>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {stats.map((item) => (
                         <StatCard key={item.title} {...item} />
@@ -398,6 +435,10 @@ export default function Konten({
                         </Card>
                     </div>
                 </div>
+                    </>
+                ) : (
+                    <PopupManager popups={popups} />
+                )}
             </div>
 
             {showForm && typeof document !== 'undefined' && createPortal(

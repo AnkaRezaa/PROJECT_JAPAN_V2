@@ -121,6 +121,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/content/news/editor-images', [SuperAdminKontenController::class, 'storeEditorImage'])->name('content.news.editor-images.store');
         Route::post('/content/news/{news}/attachments', [SuperAdminKontenController::class, 'storeAttachment'])->name('content.news.attachments.store');
         Route::delete('/content/news/{news}/attachments/{attachment}', [SuperAdminKontenController::class, 'destroyAttachment'])->name('content.news.attachments.destroy');
+        Route::post('/content/popups', [SuperAdminKontenController::class, 'storePopup'])->name('content.popups.store');
+        Route::post('/content/popups/{popup}', [SuperAdminKontenController::class, 'updatePopup'])->name('content.popups.update');
+        Route::patch('/content/popups/{popup}/toggle', [SuperAdminKontenController::class, 'togglePopup'])->name('content.popups.toggle');
+        Route::delete('/content/popups/{popup}', [SuperAdminKontenController::class, 'destroyPopup'])->name('content.popups.destroy');
         Route::get('/gamification', SuperAdminGamifikasiController::class)->name('gamification');
         Route::put('/gamification/settings', [SuperAdminGamifikasiController::class, 'updateSettings'])->name('gamification.settings.update');
         Route::post('/gamification/recalculate-achievements', [SuperAdminGamifikasiController::class, 'recalculateAchievements'])->name('gamification.achievements.recalculate');

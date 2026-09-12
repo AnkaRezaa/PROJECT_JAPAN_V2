@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Models\LogAktivitas;
 use App\Models\Modul as LearningModule;
 use App\Models\Berita;
+use App\Models\BroadcastPopup;
 use App\Models\DeckPresentasi;
 use App\Models\LampiranBerita;
 use App\Models\Kuis;
@@ -35,12 +36,34 @@ class SuperAdminKontenController extends SuperAdminDasarController
             ->withQueryString()
             ->through(fn (Berita $item) => $this->mapNews($item));
 
+        $popups = BroadcastPopup::with('creator:id,username')
+            ->latest()
+            ->get()
+            ->map(fn (BroadcastPopup $popup) => [
+                'id' => $popup->id,
+                'title' => $popup->title,
+                'description' => $popup->description,
+                'type' => $popup->type,
+                'badge' => $popup->badge,
+                'image_url' => $popup->imageUrl(),
+                'cta_label' => $popup->cta_label,
+                'cta_url' => $popup->cta_url,
+                'target_page' => $popup->target_page,
+                'target_audience' => $popup->target_audience,
+                'is_active' => (bool) $popup->is_active,
+                'starts_at' => $popup->starts_at?->format('Y-m-d\TH:i'),
+                'ends_at' => $popup->ends_at?->format('Y-m-d\TH:i'),
+                'creator' => $popup->creator?->username,
+                'created_at' => optional($popup->created_at)->toIso8601String(),
+            ]);
+
         return Inertia::render('SuperAdmin/Konten/Konten', [
             'stats' => [
                 $this->stat('Modul Aktif', number_format(LearningModule::count()), 'M'),
                 $this->stat('PPT Publish', number_format(DeckPresentasi::where('status', 'published')->count()), 'P'),
                 $this->stat('Kuis Siap Pakai', number_format(Kuis::count()), 'Q'),
                 $this->stat('Berita Aktif', number_format(Berita::where('status', 'published')->count()), 'N'),
+                $this->stat('Pop-up Aktif', number_format(BroadcastPopup::where('is_active', true)->count()), 'B'),
             ],
             'contentStatusByType' => [
                 $this->contentStatus(LearningModule::class, 'Modul'),
@@ -49,10 +72,11 @@ class SuperAdminKontenController extends SuperAdminDasarController
                 $this->contentStatus(Berita::class, 'Berita'),
             ],
             'news' => $news,
+            'popups' => $popups,
             'categories' => $this->categories(),
             'filters' => $filters,
             'updates' => LogAktivitas::with('actor:id,username')
-                ->whereIn('target_type', ['module', 'lesson', 'quiz', 'news'])
+                ->whereIn('target_type', ['module', 'lesson', 'quiz', 'news', 'popup'])
                 ->latest()
                 ->take(4)
                 ->get()
@@ -341,5 +365,129 @@ class SuperAdminKontenController extends SuperAdminDasarController
                 'size' => $attachment->file_size,
             ])->values(),
         ];
+    }
+
+    public function storePopup(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'type' => ['required', 'in:promo,announcement,event,maintenance'],
+            'badge' => ['nullable', 'string', 'max:50'],
+            'cta_label' => ['nullable', 'string', 'max:100'],
+            'cta_url' => ['nullable', 'string', 'max:255'],
+            'target_page' => ['required', 'in:all,landing_page,dashboard'],
+            'target_audience' => ['required', 'in:all,guest,user,free_user'],
+            'is_active' => ['boolean'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        ]);
+
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('uploads/popups', 'public');
+        }
+
+        $popup = BroadcastPopup::create([
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'type' => $validated['type'],
+            'badge' => $validated['badge'] ?? null,
+            'cta_label' => $validated['cta_label'] ?? null,
+            'cta_url' => $validated['cta_url'] ?? null,
+            'target_page' => $validated['target_page'],
+            'target_audience' => $validated['target_audience'],
+            'is_active' => $request->boolean('is_active', true),
+            'starts_at' => $validated['starts_at'] ?? null,
+            'ends_at' => $validated['ends_at'] ?? null,
+            'image_path' => $imagePath,
+            'created_by' => $request->user()->id,
+        ]);
+
+        $this->logActivity($request, 'popup.created', 'popup', $popup->id, "Membuat popup {$popup->title}");
+
+        return redirect()->back()->with('success', 'Pop-up broadcast berhasil dibuat');
+    }
+
+    public function updatePopup(Request $request, BroadcastPopup $popup)
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'type' => ['required', 'in:promo,announcement,event,maintenance'],
+            'badge' => ['nullable', 'string', 'max:50'],
+            'cta_label' => ['nullable', 'string', 'max:100'],
+            'cta_url' => ['nullable', 'string', 'max:255'],
+            'target_page' => ['required', 'in:all,landing_page,dashboard'],
+            'target_audience' => ['required', 'in:all,guest,user,free_user'],
+            'is_active' => ['boolean'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'remove_image' => ['nullable', 'boolean'],
+        ]);
+
+        $imagePath = $popup->image_path;
+        if ($request->boolean('remove_image')) {
+            if ($popup->image_path) {
+                Storage::disk('public')->delete($popup->image_path);
+            }
+            $imagePath = null;
+        } elseif ($request->hasFile('image')) {
+            if ($popup->image_path) {
+                Storage::disk('public')->delete($popup->image_path);
+            }
+            $imagePath = $request->file('image')->store('uploads/popups', 'public');
+        }
+
+        $popup->update([
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'type' => $validated['type'],
+            'badge' => $validated['badge'] ?? null,
+            'cta_label' => $validated['cta_label'] ?? null,
+            'cta_url' => $validated['cta_url'] ?? null,
+            'target_page' => $validated['target_page'],
+            'target_audience' => $validated['target_audience'],
+            'is_active' => $request->boolean('is_active', true),
+            'starts_at' => $validated['starts_at'] ?? null,
+            'ends_at' => $validated['ends_at'] ?? null,
+            'image_path' => $imagePath,
+        ]);
+
+        $this->logActivity($request, 'popup.updated', 'popup', $popup->id, "Memperbarui popup {$popup->title}");
+
+        return redirect()->back()->with('success', 'Pop-up broadcast berhasil diperbarui');
+    }
+
+    public function togglePopup(Request $request, BroadcastPopup $popup)
+    {
+        $popup->update(['is_active' => ! $popup->is_active]);
+
+        $this->logActivity(
+            $request,
+            'popup.status_updated',
+            'popup',
+            $popup->id,
+            "Mengubah status popup {$popup->title} menjadi ".($popup->is_active ? 'aktif' : 'nonaktif')
+        );
+
+        return redirect()->back()->with('success', 'Status pop-up berhasil diubah');
+    }
+
+    public function destroyPopup(Request $request, BroadcastPopup $popup)
+    {
+        if ($popup->image_path) {
+            Storage::disk('public')->delete($popup->image_path);
+        }
+
+        $title = $popup->title;
+        $id = $popup->id;
+        $popup->delete();
+
+        $this->logActivity($request, 'popup.deleted', 'popup', $id, "Menghapus popup {$title}");
+
+        return redirect()->back()->with('success', 'Pop-up broadcast berhasil dihapus');
     }
 }
