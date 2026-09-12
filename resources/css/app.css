@@ -130,6 +130,8 @@
     }
 
     .toku-input {
+        border-width: 1px;
+        border-style: solid;
         border-color: var(--toku-control-border);
         color: var(--toku-ink);
         background-color: var(--toku-surface);

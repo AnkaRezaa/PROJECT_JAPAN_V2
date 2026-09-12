@@ -379,7 +379,7 @@ export default function AuthenticatedLayout({ children }) {
     const userMenu = [
         { href: '/user/dashboard', activePaths: ['/user/dashboard'], icon: <DashboardIcon sx={{ fontSize: 24 }} />, label: 'Beranda' },
         { href: '/user/kelas', activePaths: ['/user/kelas', '/user/modul', '/user/quizzes', '/user/flashcards'], icon: <SchoolIcon sx={{ fontSize: 24 }} />, label: 'Kelas' },
-        { href: '/user/exams', activePaths: ['/user/exams'], icon: <FactCheckOutlinedIcon sx={{ fontSize: 24 }} />, label: 'Ujian' },
+        { href: '/user/exams', activePaths: ['/user/exams'], icon: <FactCheckOutlinedIcon sx={{ fontSize: 24 }} />, label: 'Ujian', target: '_blank' },
         { href: '/user/review', activePaths: ['/user/review'], icon: <ReplayIcon sx={{ fontSize: 24 }} />, label: 'Review' },
         { href: '/user/leaderboard', activePaths: ['/user/leaderboard'], icon: <EmojiEventsIcon sx={{ fontSize: 24 }} />, label: 'Peringkat' },
         { href: '/user/progress', activePaths: ['/user/progress'], icon: <MonitorHeartIcon sx={{ fontSize: 24 }} />, label: 'Progress' },
@@ -592,6 +592,7 @@ export default function AuthenticatedLayout({ children }) {
                                 href={child.href}
                                 icon={child.icon}
                                 active={isActiveItem(child)}
+                                target={child.target}
                                 isExpanded={navigationExpanded}
                                 onNavigate={handleNavigation}
                                 className={navigationExpanded ? 'min-h-[44px] py-2' : 'min-h-[48px]'}
@@ -704,7 +705,7 @@ export default function AuthenticatedLayout({ children }) {
                         <MenuIcon sx={{ fontSize: 26 }} />
                     </button>
                     <div className="min-w-0">
-                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="block h-5 w-auto max-w-[9rem] object-contain object-left dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.16)]" />
+                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="block h-5 w-auto max-w-[9rem] object-contain object-left dark:invert dark:hue-rotate-180 dark:brightness-110" />
                         <span className="block truncate text-[11px] font-semibold text-gray-700 dark:text-gray-300">{workspaceTitle}</span>
                     </div>
                 </div>
@@ -752,7 +753,7 @@ export default function AuthenticatedLayout({ children }) {
                 <div className="relative mb-4 border-b border-gray-100 dark:border-gray-800">
                     <div className="flex h-14 items-center justify-between px-3 lg:hidden">
                         <div className="flex min-w-0 items-center gap-2.5">
-                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-8 w-auto max-w-[10rem] shrink-0 object-contain object-left dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.16)]" />
+                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-8 w-auto max-w-[10rem] shrink-0 object-contain object-left dark:invert dark:hue-rotate-180 dark:brightness-110" />
                         </div>
                         <button
                             type="button"
@@ -764,9 +765,9 @@ export default function AuthenticatedLayout({ children }) {
                         </button>
                     </div>
                     <div className={`hidden h-16 items-center p-3 lg:flex ${isExpanded ? 'gap-3' : 'justify-center'}`}>
-                        <img src="/images/logos/toku-up-mark.png" alt="TOKU-UP" className={`${isExpanded ? 'h-10 w-10' : 'h-8 w-8'} shrink-0 object-contain transition-all duration-300`} />
+                        <img src="/images/logos/toku-up-mark.png" alt="TOKU-UP" className={`${isExpanded ? 'h-10 w-10' : 'h-8 w-8'} shrink-0 object-contain rounded-full transition-all duration-300 dark:ring-1 dark:ring-white/20 dark:shadow-[0_0_12px_rgba(34,197,94,0.35)]`} />
                         {isExpanded && (
-                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-7 w-auto max-w-[8.75rem] object-contain object-left dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.16)] animate-in fade-in slide-in-from-left-2 duration-300" />
+                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-7 w-auto max-w-[8.75rem] object-contain object-left dark:invert dark:hue-rotate-180 dark:brightness-110 animate-in fade-in slide-in-from-left-2 duration-300" />
                         )}
                     </div>
                     <button
@@ -792,6 +793,7 @@ export default function AuthenticatedLayout({ children }) {
                                 href={item.href} 
                                 icon={item.icon} 
                                 active={isActiveItem(item)}
+                                target={item.target}
                                 isExpanded={navigationExpanded}
                                 activeTone={isUser ? 'learning' : 'brand'}
                                 badge={item.badge}
@@ -928,7 +930,7 @@ export default function AuthenticatedLayout({ children }) {
             <div className={`flex-1 w-full transition-all duration-300 ${isExpanded ? 'lg:ml-[240px]' : 'lg:ml-[88px]'}`}>
                 <header className="sticky top-0 z-20 hidden min-h-[64px] items-center justify-between border-b border-gray-200/80 bg-white/85 px-6 shadow-sm backdrop-blur-xl transition-colors duration-300 dark:border-gray-800 dark:bg-gray-950/80 lg:flex">
                     <div className="min-w-0">
-                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-4 w-auto max-w-[7.5rem] object-contain object-left dark:drop-shadow-[0_0_7px_rgba(255,255,255,0.14)]" />
+                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-4 w-auto max-w-[7.5rem] object-contain object-left dark:invert dark:hue-rotate-180 dark:brightness-110" />
                         <p className="truncate text-sm font-semibold text-slate-600 dark:text-slate-300">
                             {workspaceTitle}
                         </p>

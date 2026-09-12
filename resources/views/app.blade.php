@@ -44,9 +44,10 @@
         @endforeach
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Yuji+Syuku&display=swap" rel="stylesheet">
 
-        <!-- Kustom Favicon Nano Banana -->
-        <link rel="icon" type="image/png" href="{{ asset('logo.png') }}?v=1" />
-        <link rel="shortcut icon" href="{{ asset('logo.png') }}?v=1" />
+        <!-- Favicon TOKU-UP -->
+        <link rel="icon" type="image/png" href="{{ asset('images/logos/toku-up-mark.png') }}" />
+        <link rel="shortcut icon" href="{{ asset('images/logos/toku-up-mark.png') }}" />
+        <link rel="apple-touch-icon" href="{{ asset('images/logos/toku-up-mark.png') }}" />
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">

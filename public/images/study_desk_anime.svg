@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <!-- Crop Mask with Deep Smooth Curve -->
+    <clipPath id="curvedDeskCrop">
+      <rect x="0" y="0" width="200" height="200" rx="34" ry="34"/>
+    </clipPath>
+    <!-- Sky background -->
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#BAE6FD"/>
+      <stop offset="55%" stop-color="#FBCFE8"/>
+      <stop offset="100%" stop-color="#FEF08A"/>
+    </linearGradient>
+    <!-- Desk Wood -->
+    <linearGradient id="deskWood" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="25%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+    <!-- Lamp Glow -->
+    <radialGradient id="lampGlow" cx="25%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FEF08A" stop-opacity="0.55"/>
+      <stop offset="50%" stop-color="#FDE047" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#EAB308" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Matcha green -->
+    <linearGradient id="matchaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#86EFAC"/>
+      <stop offset="100%" stop-color="#16A34A"/>
+    </linearGradient>
+    <!-- Book 1 Blue -->
+    <linearGradient id="bookBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#38BDF8"/>
+    </linearGradient>
+    <!-- Book 2 Coral -->
+    <linearGradient id="bookCoral" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#E11D48"/>
+      <stop offset="100%" stop-color="#FB7185"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Cropped Group with Smooth Rounded Corners -->
+  <g clip-path="url(#curvedDeskCrop)">
+    <!-- Base Canvas -->
+    <rect x="0" y="0" width="200" height="200" fill="#FFFBEB"/>
+
+    <!-- Full Bleed Sky & Window Background -->
+    <rect x="0" y="0" width="200" height="114" fill="url(#skyGrad)"/>
+
+    <!-- Distant Soft Fuji silhouette -->
+    <polygon points="50,114 100,52 150,114" fill="#C4B5FD" opacity="0.75"/>
+    <polygon points="86,70 100,52 114,70" fill="#FFFFFF" opacity="0.95"/>
+    
+    <!-- Floating Sakura Petals in Window (Anime Wind) -->
+    <path d="M36 38 Q41 34 46 38 Q44 44 36 38 Z" fill="#F472B6" opacity="0.9"/>
+    <path d="M162 28 Q167 23 172 28 Q169 34 162 28 Z" fill="#F472B6" opacity="0.85"/>
+    <path d="M145 66 Q150 60 155 66 Q152 72 145 66 Z" fill="#FBCFE8" opacity="0.9"/>
+    <path d="M68 25 Q73 21 78 25 Q76 30 68 25 Z" fill="#FBCFE8" opacity="0.8"/>
+
+    <!-- Anime Window Frame (Grid) -->
+    <line x1="100" y1="0" x2="100" y2="114" stroke="#64748B" stroke-width="2.5"/>
+    <line x1="0" y1="56" x2="200" y2="56" stroke="#64748B" stroke-width="2"/>
+
+    <!-- Ambient Lamp Glow -->
+    <circle cx="35" cy="85" r="60" fill="url(#lampGlow)"/>
+
+    <!-- Desk Surface Full Bleed -->
+    <polygon points="0,112 200,112 200,200 0,200" fill="url(#deskWood)"/>
+    <line x1="0" y1="113" x2="200" y2="113" stroke="#FEF08A" stroke-width="2.5"/>
+    <rect x="0" y="115" width="200" height="5" fill="#78350F" opacity="0.25"/>
+
+    <!-- Desk Items -->
+    <g>
+      <!-- 1. Mini Japanese Torii Gate (Left side of desk) -->
+      <g transform="translate(14, 80)">
+        <!-- Top roof bar -->
+        <path d="M0 6 Q16 2 32 6 L32 10 Q16 6 0 10 Z" fill="#DC2626"/>
+        <rect x="2" y="2" width="28" height="3" fill="#1E293B" rx="1"/>
+        <rect x="4" y="12" width="24" height="2.5" fill="#DC2626"/>
+        <!-- Two pillars -->
+        <rect x="6" y="10" width="3.5" height="26" fill="#DC2626"/>
+        <rect x="6" y="32" width="3.5" height="4" fill="#1E293B"/>
+        <rect x="22" y="10" width="3.5" height="26" fill="#DC2626"/>
+        <rect x="22" y="32" width="3.5" height="4" fill="#1E293B"/>
+      </g>
+
+      <!-- 2. Stack of Japanese Textbooks (Middle-Left) -->
+      <g transform="translate(54, 96)">
+        <!-- Bottom Book: N3 Blue -->
+        <rect x="0" y="10" width="42" height="8.5" rx="2" fill="url(#bookBlue)" stroke="#0369A1" stroke-width="0.8"/>
+        <rect x="37" y="11.5" width="3.5" height="5.5" fill="#F8FAFC"/>
+        <text x="5" y="16.5" font-size="5" font-weight="900" fill="#FFFFFF" font-family="sans-serif">N3 日本語</text>
+
+        <!-- Middle Book: Kanji Coral -->
+        <rect x="2" y="3" width="40" height="8" rx="2" fill="url(#bookCoral)" stroke="#BE123C" stroke-width="0.8"/>
+        <rect x="37" y="4.5" width="3.5" height="5.5" fill="#F8FAFC"/>
+        <text x="6" y="9" font-size="5" font-weight="900" fill="#FFFFFF" font-family="sans-serif">漢字 KANJI</text>
+
+        <!-- Top Book: Green Bunpo -->
+        <rect x="4" y="-3.5" width="36" height="7" rx="1.8" fill="#10B981" stroke="#047857" stroke-width="0.8"/>
+        <text x="7" y="2" font-size="4.5" font-weight="bold" fill="#FFFFFF" font-family="sans-serif">文法 BUNPO</text>
+      </g>
+
+      <!-- 3. Open Study Notebook with Japanese Characters (Center Right) -->
+      <g transform="translate(104, 116)">
+        <!-- Book shadow -->
+        <rect x="-2" y="2" width="76" height="48" rx="4" fill="#000000" opacity="0.15"/>
+        <!-- Open Notebook Pages -->
+        <rect x="0" y="0" width="72" height="46" rx="3" fill="#FFFBEB" stroke="#D97706" stroke-width="1.2"/>
+        <!-- Center spine -->
+        <line x1="36" y1="0" x2="36" y2="46" stroke="#B45309" stroke-width="1.5"/>
+        
+        <!-- Left page text / grid lines -->
+        <line x1="6" y1="9" x2="30" y2="9" stroke="#F59E0B" stroke-width="1"/>
+        <text x="8" y="20" font-size="8" font-weight="900" fill="#1E293B" font-family="sans-serif">あ い う</text>
+        <text x="8" y="32" font-size="8" font-weight="900" fill="#1E293B" font-family="sans-serif">え お か</text>
+        <line x1="6" y1="38" x2="30" y2="38" stroke="#CBD5E1" stroke-width="0.8"/>
+
+        <!-- Right page text / kanji practice -->
+        <line x1="42" y1="9" x2="66" y2="9" stroke="#10B981" stroke-width="1"/>
+        <text x="44" y="21" font-size="9" font-weight="900" fill="#047857" font-family="sans-serif">学 語</text>
+        <text x="44" y="34" font-size="9" font-weight="900" fill="#DC2626" font-family="sans-serif">日 本</text>
+        <!-- Japanese red Hanko (stamp) -->
+        <rect x="58" y="31" width="8" height="8" rx="1.5" fill="none" stroke="#DC2626" stroke-width="1"/>
+        <text x="62" y="37" font-size="5.5" font-weight="bold" text-anchor="middle" fill="#DC2626" font-family="sans-serif">済</text>
+
+        <!-- Red Fountain Pen laying across notebook -->
+        <g transform="translate(24, 30) rotate(-35)">
+          <rect x="0" y="0" width="3.5" height="26" rx="1" fill="#DC2626" stroke="#991B1B" stroke-width="0.5"/>
+          <polygon points="0,26 3.5,26 1.75,30" fill="#FDE047" stroke="#D97706" stroke-width="0.5"/>
+          <rect x="0" y="4" width="3.5" height="3" fill="#FDE047"/>
+        </g>
+      </g>
+
+      <!-- 4. Steaming Cup of Matcha with Kawaii Steam (Far Right Desk) -->
+      <g transform="translate(152, 84)">
+        <!-- Ceramic Cup shadow -->
+        <ellipse cx="14" cy="23" rx="12" ry="3.5" fill="#78350F" opacity="0.3"/>
+        <!-- Wooden Saucer -->
+        <ellipse cx="14" cy="22" rx="13" ry="4.5" fill="#D97706" stroke="#92400E" stroke-width="1"/>
+        <!-- Teacup Body -->
+        <path d="M3 11 Q4 21 14 21 Q24 21 25 11 Z" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+        <!-- Matcha Tea Surface -->
+        <ellipse cx="14" cy="11" rx="10" ry="3.2" fill="url(#matchaGrad)"/>
+        <ellipse cx="14" cy="11" rx="7" ry="2" fill="#4ADE80" opacity="0.8"/>
+        <!-- Kawaii Smiling Face on Cup -->
+        <path d="M10 15 Q11 14 12 15" stroke="#64748B" stroke-width="0.8" fill="none"/>
+        <path d="M16 15 Q17 14 18 15" stroke="#64748B" stroke-width="0.8" fill="none"/>
+        <path d="M13 17 Q14 18 15 17" stroke="#EA580C" stroke-width="0.7" fill="none"/>
+        <circle cx="9" cy="16" r="0.9" fill="#FB7185"/>
+        <circle cx="19" cy="16" r="0.9" fill="#FB7185"/>
+
+        <!-- Kawaii Steam Rising -->
+        <path d="M11 6 Q9 3 11 0 Q13 -3 11 -6" fill="none" stroke="#A7F3D0" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/>
+        <path d="M17 7 Q19 4 17 1 Q15 -2 17 -5" fill="none" stroke="#A7F3D0" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/>
+      </g>
+
+      <!-- Floating Sakura Petal on Desk -->
+      <path d="M56 155 Q61 150 66 155 Q63 161 56 155 Z" fill="#F472B6" opacity="0.9"/>
+    </g>
+  </g>
+
+  <!-- Subtle Inner Border Following Curve -->
+  <rect x="0.5" y="0.5" width="199" height="199" rx="34" ry="34" fill="none" stroke="#CBD5E1" stroke-width="1.5" opacity="0.7"/>
+</svg>

@@ -28,7 +28,7 @@ const typeLabels = {
 
 const typeTones = {
     kosakata: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
-    kanji: 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300',
+    kanji: 'bg-brand-100 text-brand-700 dark:bg-[#12351f] dark:text-green-200',
     bunpo: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
 };
 
@@ -64,7 +64,7 @@ function MaterialDetail({ item, onClose }) {
 
     return createPortal(
         <motion.div
-            className="fixed inset-0 z-[130] bg-black/45 backdrop-blur-[2px]"
+            className="fixed inset-0 z-[130] bg-black/45 backdrop-blur-[2px] dark:bg-black/70"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -74,14 +74,14 @@ function MaterialDetail({ item, onClose }) {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="material-detail-title"
-                className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-2xl bg-white shadow-2xl dark:bg-gray-900 sm:inset-y-0 sm:left-auto sm:max-h-none sm:w-[420px] sm:rounded-none"
+                className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-2xl bg-white text-gray-900 shadow-2xl dark:bg-[#111827] dark:text-gray-100 dark:shadow-black/50 sm:inset-y-0 sm:left-auto sm:max-h-none sm:w-[420px] sm:rounded-none"
                 initial={desktopPanel ? { x: '100%' } : { y: '100%' }}
                 animate={desktopPanel ? { x: 0 } : { y: 0 }}
                 exit={desktopPanel ? { x: '100%' } : { y: '100%' }}
                 transition={{ type: 'spring', stiffness: 320, damping: 32 }}
                 onClick={(event) => event.stopPropagation()}
             >
-                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white/95 px-5 py-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
+                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white/95 px-5 py-4 backdrop-blur dark:border-gray-700 dark:bg-[#111827]/95">
                     <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-600 dark:text-brand-400">
                             {typeLabels[item.content_type] || 'Materi'}
@@ -94,7 +94,7 @@ function MaterialDetail({ item, onClose }) {
                         type="button"
                         onClick={onClose}
                         aria-label="Tutup detail"
-                        className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white"
+                        className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
                     >
                         <CloseIcon sx={{ fontSize: 21 }} />
                     </button>
@@ -136,7 +136,7 @@ function MaterialDetail({ item, onClose }) {
                         </div>
                     </div>
 
-                    <section className="border-t border-gray-200 pt-5 dark:border-gray-800">
+                    <section className="border-t border-gray-200 pt-5 dark:border-gray-700">
                         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-400">Arti</p>
                         <p className="mt-2 text-lg font-black leading-relaxed text-gray-900 dark:text-white">
                             {item.meaning_id || item.meaning_en || 'Arti belum tersedia'}
@@ -147,7 +147,7 @@ function MaterialDetail({ item, onClose }) {
                     </section>
 
                     {(item.example_sentence || item.example_meaning || item.example_reading) && (
-                        <section className="border-t border-gray-200 pt-5 dark:border-gray-800">
+                        <section className="border-t border-gray-200 pt-5 dark:border-gray-700">
                             <div className="flex items-center justify-between gap-3">
                                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-400">Contoh penggunaan</p>
                                 <JapaneseSpeechButton
@@ -172,7 +172,7 @@ function MaterialDetail({ item, onClose }) {
                     )}
 
                     {tags.length > 0 && (
-                        <section className="flex flex-wrap gap-2 border-t border-gray-200 pt-5 dark:border-gray-800">
+                        <section className="flex flex-wrap gap-2 border-t border-gray-200 pt-5 dark:border-gray-700">
                             {tags.map((tag) => (
                                 <span key={tag} className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                                     {tag}

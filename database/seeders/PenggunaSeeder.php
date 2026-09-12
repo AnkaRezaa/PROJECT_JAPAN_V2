@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 
 class PenggunaSeeder extends Seeder
 {
-    public const DEMO_PASSWORD = 'TOKU-UP#2026';
+    public const DEMO_PASSWORD = 'password';
 
     public function run(): void
     {

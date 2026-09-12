@@ -9,7 +9,6 @@ import theme from '@/Components/theme/themes';
 import PersonIcon from '@mui/icons-material/Person';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import EditIcon from '@mui/icons-material/Edit';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import BoltIcon from '@mui/icons-material/Bolt';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
@@ -63,18 +62,22 @@ const getLeague = (xp, tiers) => {
     return [...tiers].reverse().find(t => xpNum >= t.min) || tiers[0];
 };
 
-const InputField = ({ label, type = 'text', defaultValue, placeholder, disabled }) => (
+const InputField = ({ label, type = 'text', value, defaultValue, onChange, placeholder, disabled, error, autoComplete }) => (
     <div>
         <label className="block text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">{label}</label>
         <input
             type={type}
+            value={value}
             defaultValue={defaultValue}
+            onChange={onChange}
             placeholder={placeholder}
             disabled={disabled}
-            className="w-full bg-gray-50/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500
+            autoComplete={autoComplete}
+            className={`w-full bg-gray-50/50 dark:bg-gray-800/50 border rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500
                        focus:outline-none focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 focus:border-rose-400 dark:focus:border-rose-500 transition-all
-                       disabled:opacity-60 disabled:cursor-not-allowed font-medium"
+                       disabled:opacity-60 disabled:cursor-not-allowed font-medium ${error ? 'border-rose-500 dark:border-rose-500 ring-1 ring-rose-500' : 'border-gray-200 dark:border-gray-700'}`}
         />
+        {error && <p className="mt-1.5 text-xs font-semibold text-rose-500">{error}</p>}
     </div>
 );
 
@@ -89,35 +92,6 @@ const JapanesePattern = () => (
         <rect x="0" y="0" width="100%" height="100%" fill="url(#jppattern)" />
     </svg>
 );
-
-const FloatingSakura = () => {
-    return (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-            {[...Array(6)].map((_, i) => (
-                <motion.div
-                    key={i}
-                    animate={{
-                        y: ['-10vh', '110vh'],
-                        x: [
-                            `${Math.random() * 100}vw`, 
-                            `${Math.random() * 100}vw`
-                        ],
-                        rotate: [0, 360]
-                    }}
-                    transition={{
-                        duration: 15 + Math.random() * 10,
-                        repeat: Infinity,
-                        ease: "linear",
-                        delay: i * 2,
-                    }}
-                    className="absolute text-xl opacity-30 dark:opacity-20 drop-shadow-sm"
-                >
-                    <LocalFireDepartmentIcon className="w-5 h-5 text-pink-500 inline-block" />
-                </motion.div>
-            ))}
-        </div>
-    );
-};
 
 const transactionTone = (status) => {
     if (status === 'success') {
@@ -163,7 +137,6 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
     const passwordLoginEnabled = deletionAuth.password_login_enabled !== false;
     const googleReauthenticated = Boolean(deletionAuth.google_reauthenticated);
     const [activeTab, setActiveTab] = useState(deletionAuth.open_dialog ? 'settings' : 'stats');
-    const [saved, setSaved] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState(Boolean(deletionAuth.open_dialog));
     const [themeLabel, setThemeLabel] = useState(resolveThemeLabel);
     const [soundEffectsEnabled, setSoundEffectsEnabledState] = useState(areSoundEffectsEnabled);
@@ -172,6 +145,12 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
         show_indonesian_translation: Boolean(user.show_indonesian_translation),
     });
     const accessKeyForm = useForm({ code: '' });
+    const passwordForm = useForm({
+        current_password: '',
+        password: '',
+        password_confirmation: '',
+    });
+    const [passwordSaved, setPasswordSaved] = useState(false);
     const deleteAccountForm = useForm({
         confirmation_username: '',
         password: '',
@@ -231,9 +210,16 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
         });
     };
 
-    const handleSave = () => {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2500);
+    const submitPassword = (event) => {
+        event.preventDefault();
+        passwordForm.put(route('password.update'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                passwordForm.reset();
+                setPasswordSaved(true);
+                setTimeout(() => setPasswordSaved(false), 2500);
+            },
+        });
     };
 
     const submitAccessKey = (event) => {
@@ -289,21 +275,12 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
 
             <div className="min-h-screen bg-surface-muted py-10 px-4 sm:px-6 relative overflow-hidden transition-colors duration-300">
                 <JapanesePattern />
-                <FloatingSakura />
-                
-                {/* Kanji Watermark */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[25vw] font-black text-gray-900/[0.03] dark:text-white/[0.02] pointer-events-none select-none z-0 tracking-tighter">
-                    学
-                </div>
 
                 <div className="max-w-6xl mx-auto relative z-10">
-                    
                     {/* Bento Grid Container */}
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        
                         {/* ── SIDEBAR KIRI ── */}
                         <div className="lg:col-span-4 space-y-6">
-                            
                             {/* Card 1: Profil */}
                             <div className="bg-white dark:bg-gray-900 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-800 p-8 text-center relative overflow-hidden transition-colors">
                                 {isPrem && (
@@ -311,22 +288,16 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
                                         <WorkspacePremiumIcon sx={{ fontSize: 14 }} /> Premium
                                     </div>
                                 )}
-                                
+
                                 <div className="relative inline-block mt-4 mb-5">
-                                    <div className="w-32 h-32 bg-gradient-to-br from-rose-400 to-pink-500 rounded-[2rem] flex items-center justify-center text-5xl font-black text-white shadow-xl shadow-rose-200 dark:shadow-rose-900/20 group overflow-hidden cursor-pointer"
+                                    <div className="w-32 h-32 bg-gradient-to-br from-rose-400 to-pink-500 rounded-[2rem] flex items-center justify-center text-5xl font-black text-white shadow-xl shadow-rose-200 dark:shadow-rose-900/20 overflow-hidden"
                                          style={{ border: `2px solid ${theme.activeColor || 'transparent'}` }}>
                                         {user?.avatar ? (
                                             <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                         ) : (
                                             user?.username?.charAt(0).toUpperCase()
                                         )}
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <EditIcon sx={{ color: 'white', fontSize: 32 }} />
-                                        </div>
                                     </div>
-                                    <button className="absolute -bottom-2 -right-2 w-10 h-10 bg-white dark:bg-gray-800 rounded-full shadow-md border border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-rose-500 dark:hover:text-rose-400 transition-colors">
-                                        <EditIcon sx={{ fontSize: 18 }} />
-                                    </button>
                                 </div>
 
                                 <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{user.username}</h1>
@@ -376,10 +347,7 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
                                         className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 sm:gap-6"
                                     >
                                         {/* Streak Card */}
-                                        <div className="col-span-1 bg-orange-50 dark:bg-orange-900/10 rounded-[2rem] border border-orange-100 dark:border-orange-500/20 p-5 sm:p-8 flex flex-col justify-center relative overflow-hidden group transition-colors">
-                                            <div className="absolute -right-4 -top-4 opacity-10 dark:opacity-[0.05] group-hover:scale-110 transition-transform duration-500">
-                                                <LocalFireDepartmentIcon sx={{ fontSize: 120, color: '#f97316' }} />
-                                            </div>
+                                        <div className="col-span-1 bg-orange-50 dark:bg-orange-900/10 rounded-[2rem] border border-orange-100 dark:border-orange-500/20 p-5 sm:p-8 flex flex-col justify-center relative overflow-hidden transition-colors">
                                             <div className="relative z-10">
                                                 <div className="w-12 h-12 bg-white dark:bg-orange-500/20 rounded-2xl shadow-sm flex items-center justify-center text-orange-500 dark:text-orange-400 mb-4">
                                                     <LocalFireDepartmentIcon sx={{ fontSize: 24 }} />
@@ -390,10 +358,7 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
                                         </div>
 
                                         {/* XP Card */}
-                                        <div className="col-span-1 bg-brand-50 dark:bg-brand-900/10 rounded-[2rem] border border-brand-100 dark:border-brand-500/20 p-5 sm:p-8 flex flex-col justify-center relative overflow-hidden group transition-colors">
-                                            <div className="absolute -right-4 -top-4 opacity-10 dark:opacity-[0.05] group-hover:scale-110 transition-transform duration-500">
-                                                <BoltIcon sx={{ fontSize: 120, color: '#3b82f6' }} />
-                                            </div>
+                                        <div className="relative col-span-1 flex flex-col justify-center overflow-hidden rounded-[2rem] border border-brand-100 bg-brand-50 p-5 transition-colors dark:border-green-900/60 dark:bg-[#12351f]/70 sm:p-8">
                                             <div className="relative z-10">
                                                 <div className="w-12 h-12 bg-white dark:bg-brand-500/20 rounded-2xl shadow-sm flex items-center justify-center text-brand-500 dark:text-brand-400 mb-4">
                                                     <BoltIcon sx={{ fontSize: 24 }} />
@@ -638,20 +603,62 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
                                                 {/* Password */}
                                                 <div>
                                                     <h4 className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">Ubah Kata Sandi</h4>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                        <div className="sm:col-span-2">
-                                                            <InputField label="Sandi Lama" type="password" placeholder="••••••••" />
+                                                    {!passwordLoginEnabled ? (
+                                                        <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 text-sm font-medium text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-300">
+                                                            <p className="font-bold text-blue-900 dark:text-blue-200 mb-1">Login Menggunakan Akun Google</p>
+                                                            Akun Anda terhubung langsung dengan autentikasi Google dan tidak menggunakan kata sandi lokal terpisah.
                                                         </div>
-                                                        <InputField label="Sandi Baru" type="password" placeholder="Minimal 8 karakter" />
-                                                        <InputField label="Ulangi Sandi" type="password" placeholder="Konfirmasi sandi baru" />
-                                                    </div>
-                                                    <div className="mt-6 flex justify-end">
-                                                        <button onClick={handleSave}
-                                                            className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-black text-sm transition-all shadow-sm
-                                                                ${saved ? 'bg-emerald-500 text-white shadow-emerald-200 dark:shadow-emerald-900/20' : 'bg-rose-600 text-white hover:bg-rose-700 shadow-rose-200 dark:shadow-rose-900/20'}`}>
-                                                            {saved ? <><CheckCircleIcon sx={{ fontSize: 18 }} /> Tersimpan!</> : 'Simpan Perubahan'}
-                                                        </button>
-                                                    </div>
+                                                    ) : (
+                                                        <form onSubmit={submitPassword}>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                <div className="sm:col-span-2">
+                                                                    <InputField
+                                                                        label="Sandi Lama"
+                                                                        type="password"
+                                                                        placeholder="••••••••"
+                                                                        value={passwordForm.data.current_password}
+                                                                        onChange={(e) => passwordForm.setData('current_password', e.target.value)}
+                                                                        error={passwordForm.errors.current_password}
+                                                                        autoComplete="current-password"
+                                                                    />
+                                                                </div>
+                                                                <InputField
+                                                                    label="Sandi Baru"
+                                                                    type="password"
+                                                                    placeholder="Minimal 8 karakter"
+                                                                    value={passwordForm.data.password}
+                                                                    onChange={(e) => passwordForm.setData('password', e.target.value)}
+                                                                    error={passwordForm.errors.password}
+                                                                    autoComplete="new-password"
+                                                                />
+                                                                <InputField
+                                                                    label="Ulangi Sandi"
+                                                                    type="password"
+                                                                    placeholder="Konfirmasi sandi baru"
+                                                                    value={passwordForm.data.password_confirmation}
+                                                                    onChange={(e) => passwordForm.setData('password_confirmation', e.target.value)}
+                                                                    error={passwordForm.errors.password_confirmation}
+                                                                    autoComplete="new-password"
+                                                                />
+                                                            </div>
+                                                            <div className="mt-6 flex justify-end">
+                                                                <button
+                                                                    type="submit"
+                                                                    disabled={passwordForm.processing}
+                                                                    className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-black text-sm transition-all shadow-sm disabled:opacity-60
+                                                                        ${passwordSaved ? 'bg-emerald-500 text-white shadow-emerald-200 dark:shadow-emerald-900/20' : 'bg-rose-600 text-white hover:bg-rose-700 shadow-rose-200 dark:shadow-rose-900/20'}`}
+                                                                >
+                                                                    {passwordSaved ? (
+                                                                        <><CheckCircleIcon sx={{ fontSize: 18 }} /> Tersimpan!</>
+                                                                    ) : passwordForm.processing ? (
+                                                                        'Menyimpan...'
+                                                                    ) : (
+                                                                        'Simpan Perubahan'
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                        </form>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

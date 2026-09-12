@@ -28,7 +28,7 @@ export default function NewsShow({ newsItem, relatedNews = [] }) {
                                 Kembali ke Portal Berita
                             </Link>
                             <div className="mt-8 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-                                <span className="rounded-full bg-brand-50 px-3 py-1 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300">{newsItem.category?.replaceAll('-', ' ') || 'platform'}</span>
+                <span className="rounded-full bg-brand-50 px-3 py-1 text-brand-700 dark:bg-[#12351f] dark:text-green-200">{newsItem.category?.replaceAll('-', ' ') || 'platform'}</span>
                                 <AccessTimeIcon sx={{ fontSize: 15 }} />
                                 {newsItem.published_label || 'TOKU-UP News'}
                                 <span aria-hidden="true">·</span>

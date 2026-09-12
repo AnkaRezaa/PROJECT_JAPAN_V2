@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Background subtle aura -->
+    <radialGradient id="animeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#A7F3D0" stop-opacity="0.3"/>
+      <stop offset="70%" stop-color="#34D399" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#059669" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Skin gradient -->
+    <linearGradient id="animeSkin" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF5EE"/>
+      <stop offset="100%" stop-color="#FED7AA"/>
+    </linearGradient>
+    <!-- Kitsune/Hair gradient -->
+    <linearGradient id="animeHair" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FB923C"/>
+      <stop offset="60%" stop-color="#EA580C"/>
+      <stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+    <!-- Eye gradient -->
+    <linearGradient id="animeEye" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#047857"/>
+      <stop offset="50%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#6EE7B7"/>
+    </linearGradient>
+    <!-- Gold accent -->
+    <linearGradient id="animeGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#EAB308"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Soft transparent aura glow -->
+  <circle cx="100" cy="100" r="95" fill="url(#animeGlow)"/>
+  
+  <!-- Anime Sparkles (Kira-kira) -->
+  <path d="M30 35 L33 45 L43 48 L33 51 L30 61 L27 51 L17 48 L27 45 Z" fill="#FDE047" opacity="0.95"/>
+  <circle cx="30" cy="48" r="2" fill="#FFF"/>
+  <path d="M175 45 L177 52 L184 54 L177 56 L175 63 L173 56 L166 54 L173 52 Z" fill="#6EE7B7" opacity="0.9"/>
+  <circle cx="175" cy="54" r="1.5" fill="#FFF"/>
+  <path d="M165 155 L166.5 160 L171.5 161.5 L166.5 163 L165 168 L163.5 163 L158.5 161.5 L163.5 160 Z" fill="#FDE047" opacity="0.8"/>
+  <path d="M25 140 L26.5 144 L30.5 145 L26.5 146 L25 150 L23.5 146 L19.5 145 L23.5 144 Z" fill="#A7F3D0" opacity="0.85"/>
+
+  <!-- Character Group (Scaled to fill viewbox) -->
+  <g transform="translate(100, 106) scale(1.15) translate(-100, -100)">
+    <!-- Kitsune Ears (Fox Anime Ears) -->
+    <!-- Left Ear -->
+    <path d="M52 75 Q40 25 72 40 Z" fill="url(#animeHair)" stroke="#9A3412" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M56 70 Q48 36 68 46 Z" fill="#FED7AA"/>
+    <!-- Right Ear -->
+    <path d="M148 75 Q160 25 128 40 Z" fill="url(#animeHair)" stroke="#9A3412" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M144 70 Q152 36 132 46 Z" fill="#FED7AA"/>
+
+    <!-- Head / Face -->
+    <ellipse cx="100" cy="102" rx="46" ry="42" fill="url(#animeSkin)" stroke="#EA580C" stroke-width="1.8"/>
+
+    <!-- Hairstyle / Fox Fur Locks (Top Bangs) -->
+    <path d="M58 85 Q75 52 100 52 Q125 52 142 85 Q125 68 100 68 Q75 68 58 85 Z" fill="url(#animeHair)"/>
+    <path d="M80 65 Q92 78 95 86 Q96 74 105 84 Q108 72 120 82" fill="none" stroke="url(#animeHair)" stroke-width="6" stroke-linecap="round"/>
+
+    <!-- Anime Headband (Hachimaki with Red Sun / Kanji) -->
+    <path d="M55 76 Q100 70 145 76" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round"/>
+    <path d="M55 76 Q100 70 145 76" stroke="#DC2626" stroke-width="2" fill="none"/>
+    <!-- Headband Knot Tails -->
+    <path d="M142 74 Q162 76 170 88" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <path d="M142 77 Q158 84 165 98" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <!-- Headband Center Kanji: 必勝 (Victory) / Star -->
+    <circle cx="100" cy="73" r="4.5" fill="#EF4444"/>
+
+    <!-- Big Anime Eyes -->
+    <!-- Left Eye -->
+    <ellipse cx="80" cy="104" rx="10" ry="14" fill="#0F172A"/>
+    <ellipse cx="80" cy="106" rx="8" ry="11" fill="url(#animeEye)"/>
+    <ellipse cx="80" cy="108" rx="5" ry="6" fill="#064E3B"/>
+    <!-- Left Eye Highlights (Catchlights) -->
+    <circle cx="77" cy="98" r="4" fill="#FFFFFF"/>
+    <circle cx="83" cy="112" r="2" fill="#FFFFFF"/>
+    <circle cx="76" cy="110" r="1" fill="#A7F3D0"/>
+    <!-- Left Upper Eyelash -->
+    <path d="M68 96 Q80 88 92 95" fill="none" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/>
+    <path d="M89 93 L94 91" stroke="#0F172A" stroke-width="2.2" stroke-linecap="round"/>
+
+    <!-- Right Eye -->
+    <ellipse cx="120" cy="104" rx="10" ry="14" fill="#0F172A"/>
+    <ellipse cx="120" cy="106" rx="8" ry="11" fill="url(#animeEye)"/>
+    <ellipse cx="120" cy="108" rx="5" ry="6" fill="#064E3B"/>
+    <!-- Right Eye Highlights (Catchlights) -->
+    <circle cx="117" cy="98" r="4" fill="#FFFFFF"/>
+    <circle cx="123" cy="112" r="2" fill="#FFFFFF"/>
+    <circle cx="116" cy="110" r="1" fill="#A7F3D0"/>
+    <!-- Right Upper Eyelash -->
+    <path d="M108 95 Q120 88 132 96" fill="none" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/>
+    <path d="M128 92 L133 94" stroke="#0F172A" stroke-width="2.2" stroke-linecap="round"/>
+
+    <!-- Anime Blush (Kawaii Cheeks) -->
+    <ellipse cx="68" cy="115" rx="7" ry="4" fill="#FB7185" fill-opacity="0.6"/>
+    <path d="M65 113 L67 117 M69 113 L71 117" stroke="#E11D48" stroke-width="1.2" stroke-linecap="round"/>
+    <ellipse cx="132" cy="115" rx="7" ry="4" fill="#FB7185" fill-opacity="0.6"/>
+    <path d="M129 113 L131 117 M133 113 L135 117" stroke="#E11D48" stroke-width="1.2" stroke-linecap="round"/>
+
+    <!-- Cute Anime Nose & Mouth (Open Cheerful Smile) -->
+    <circle cx="100" cy="111" r="1.2" fill="#EA580C"/>
+    <path d="M93 118 Q100 128 107 118 Z" fill="#DC2626" stroke="#991B1B" stroke-width="1.2"/>
+    <path d="M96 120 Q100 123 104 120" fill="#FDA4AF"/>
+
+    <!-- Body / Outfit (Japanese School Uniform / Gi) -->
+    <path d="M72 138 Q100 134 128 138 L136 172 Q100 178 64 172 Z" fill="#0F766E" stroke="#115E59" stroke-width="2"/>
+    <!-- White Collar -->
+    <path d="M85 136 L100 152 L115 136 Z" fill="#FFFFFF"/>
+    <path d="M97 146 L100 152 L103 146" fill="#DC2626"/>
+
+    <!-- Left Hand Holding Quiz Board / Scroll -->
+    <g transform="translate(30, 118)">
+      <!-- Quiz Scroll Board -->
+      <rect x="0" y="0" width="34" height="46" rx="6" fill="#F0FDF4" stroke="#059669" stroke-width="2"/>
+      <rect x="5" y="6" width="24" height="6" rx="2" fill="url(#animeGold)"/>
+      <text x="17" y="11" font-size="5" font-weight="900" text-anchor="middle" fill="#78350F" font-family="sans-serif">QUIZ</text>
+      <!-- Check items -->
+      <circle cx="9" cy="19" r="2.5" fill="#10B981"/>
+      <path d="M8 19 L9 20 L11 18" stroke="#FFF" stroke-width="1" fill="none"/>
+      <line x1="14" y1="19" x2="27" y2="19" stroke="#94A3B8" stroke-width="1.8" stroke-linecap="round"/>
+      
+      <circle cx="9" cy="27" r="2.5" fill="#10B981"/>
+      <path d="M8 27 L9 28 L11 26" stroke="#FFF" stroke-width="1" fill="none"/>
+      <line x1="14" y1="27" x2="27" y2="27" stroke="#94A3B8" stroke-width="1.8" stroke-linecap="round"/>
+
+      <circle cx="9" cy="35" r="2.5" fill="#F59E0B"/>
+      <text x="9" y="37" font-size="4" font-weight="bold" text-anchor="middle" fill="#FFF" font-family="sans-serif">?</text>
+      <line x1="14" y1="35" x2="25" y2="35" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round"/>
+
+      <!-- Chibi Paw / Hand holding board -->
+      <circle cx="32" cy="25" r="7" fill="url(#animeSkin)" stroke="#EA580C" stroke-width="1.5"/>
+    </g>
+
+    <!-- Right Hand Holding Glowing Magic Pencil -->
+    <g transform="translate(138, 112) rotate(-25)">
+      <!-- Pencil Body -->
+      <polygon points="6,0 12,0 12,32 6,32" fill="#FBBF24" stroke="#D97706" stroke-width="1"/>
+      <polygon points="6,32 12,32 9,40" fill="#FED7AA" stroke="#D97706" stroke-width="1"/>
+      <polygon points="8,37 10,37 9,40" fill="#1E293B"/>
+      <rect x="6" y="0" width="6" height="5" rx="1" fill="#F43F5E"/>
+      <!-- Chibi Hand -->
+      <circle cx="9" cy="18" r="7" fill="url(#animeSkin)" stroke="#EA580C" stroke-width="1.5"/>
+      <!-- Sparkle at pencil tip -->
+      <circle cx="9" cy="42" r="3" fill="#6EE7B7" opacity="0.8"/>
+      <circle cx="9" cy="42" r="1.5" fill="#FFFFFF"/>
+    </g>
+  </g>
+</svg>

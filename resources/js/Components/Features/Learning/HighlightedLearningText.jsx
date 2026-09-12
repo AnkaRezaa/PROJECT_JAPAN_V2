@@ -22,7 +22,7 @@ export default function HighlightedLearningText({ text, term, className = '' }) 
         index % 2 === 1 ? (
             <mark
                 key={`${part}-${index}`}
-                className={`bg-transparent font-black underline decoration-2 decoration-orange-500 underline-offset-4 dark:decoration-orange-300 ${className}`}
+                className={`bg-transparent font-black text-inherit underline decoration-2 decoration-orange-500 underline-offset-4 dark:decoration-orange-300 ${className}`}
             >
                 {part}
             </mark>

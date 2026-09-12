@@ -42,7 +42,7 @@ export default function Footer() {
                     {/* Brand */}
                     <div className="col-span-1 md:col-span-1">
                         <div className="flex items-center gap-3 text-white mb-6">
-                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-10 w-auto object-contain" />
+                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-10 w-auto object-contain invert hue-rotate-180 brightness-110" />
                         </div>
                         <p className="text-sm leading-relaxed mb-6">
                             Platform belajar Bahasa Jepang berbasis gamifikasi dengan kurikulum standar JLPT internasional.

@@ -26,7 +26,7 @@ function NewsCard({ item, featured = false }) {
             </div>
             <div className={`flex flex-col ${featured ? 'p-8 lg:p-10' : 'p-5'}`}>
                 <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-                    <span className="rounded-full bg-brand-50 px-2.5 py-1 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300">{item.category?.replaceAll('-', ' ') || 'platform'}</span>
+                    <span className="rounded-full bg-brand-50 px-2.5 py-1 text-brand-700 dark:bg-[#12351f] dark:text-green-200">{item.category?.replaceAll('-', ' ') || 'platform'}</span>
                     <AccessTimeIcon sx={{ fontSize: 15 }} />
                     {item.published_label || 'TOKU-UP News'}
                     <span aria-hidden="true">·</span>
@@ -109,7 +109,7 @@ export default function NewsIndex({ featured = null, news = { data: [], links: [
                                     ))}
                                 </div>
                             </div>
-                            <div className="rounded-3xl border border-brand-100 bg-brand-50 p-6 dark:border-brand-900/30 dark:bg-brand-900/20">
+                    <div className="rounded-3xl border border-brand-100 bg-brand-50 p-6 dark:border-green-900/70 dark:bg-[#12351f]">
                                 <h3 className="text-sm font-black text-brand-700 dark:text-brand-400">Update Belajar</h3>
                                 <p className="mt-2 text-sm leading-relaxed text-brand-700/80 dark:text-brand-300/80">Kembali ke dashboard untuk melanjutkan lesson, quiz, dan streak harian.</p>
                                 <Link href={route('user.dashboard')} className="mt-4 inline-flex text-sm font-black text-brand-700 dark:text-brand-300">Ke Dashboard</Link>
