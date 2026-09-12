@@ -83,6 +83,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/payments/midtrans/checkout', [PembayaranMidtransController::class, 'checkout'])->middleware('throttle:payments-checkout')->name('payments.midtrans.checkout');
     Route::post('/payments/midtrans/{transactionCode}/snap', [PembayaranMidtransController::class, 'snap'])->middleware('throttle:payments-sync')->name('payments.midtrans.snap');
+    Route::post('/payments/midtrans/{transactionCode}/charge', [PembayaranMidtransController::class, 'charge'])->middleware('throttle:payments-checkout')->name('payments.midtrans.charge');
     Route::post('/payments/midtrans/{transactionCode}/sync', [PembayaranMidtransController::class, 'sync'])->middleware('throttle:payments-sync')->name('payments.midtrans.sync');
     Route::post('/payments/midtrans/{transactionCode}/cancel', [PembayaranMidtransController::class, 'cancel'])->middleware('throttle:payments-cancel')->name('payments.midtrans.cancel');
     Route::get('/presentations/{presentationDeck}/content-stream', [AdminPresentasiController::class, 'pdfContent'])

@@ -518,6 +518,8 @@ class HalamanController extends Controller
                 ] : null,
                 'created_at' => $transaction->created_at,
                 'processed_at' => $transaction->processed_at,
+                'payment_channel' => $transaction->payment_channel,
+                'payment_payload' => $transaction->payment_payload,
                 'payment_plan' => $transaction->paymentPlan ? [
                     'id' => $transaction->paymentPlan->id,
                     'name' => $transaction->paymentPlan->name,

@@ -24,6 +24,8 @@ class Transaksi extends Model
         'kloter_belajar_id',
         'amount',
         'payment_method',
+        'payment_channel',
+        'payment_payload',
         'status',
         'proof_of_payment_path',
         'notes',
@@ -32,6 +34,7 @@ class Transaksi extends Model
 
     protected $casts = [
         'processed_at' => 'datetime',
+        'payment_payload' => 'array',
     ];
 
     public function user()
