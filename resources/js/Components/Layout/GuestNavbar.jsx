@@ -60,14 +60,14 @@ export default function GuestNavbar() {
                     backgroundSize: '240px 120px',
                 }}
             />
-            <div className="relative flex items-center justify-between px-5 py-3 sm:px-6 sm:py-4 lg:px-20">
+            <div className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-2 sm:px-6 sm:py-2.5 lg:px-8">
                 <ApplicationLogo wordmarkClassName="dark:!invert-0 dark:!hue-rotate-0 dark:!brightness-100" />
-                <ul className="hidden list-none items-center gap-7 md:flex lg:gap-8">
+                <ul className="hidden list-none items-center gap-6 md:flex lg:gap-7">
                     {navigationItems.map((item) => (
                         <li key={item.href}>
                             <Link
                                 href={item.href}
-                                className={`relative py-2 text-[15px] font-extrabold tracking-wide no-underline transition-colors [text-shadow:0_1px_4px_rgba(255,255,255,0.9),0_0_8px_#ffffff] after:absolute after:-bottom-1 after:left-0 after:h-[3px] after:rounded-full after:bg-[#15803D] after:transition-all after:duration-300 ${
+                                className={`relative py-1.5 text-sm font-bold tracking-wide no-underline transition-colors [text-shadow:0_1px_4px_rgba(255,255,255,0.9),0_0_8px_#ffffff] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:rounded-full after:bg-[#15803D] after:transition-all after:duration-300 ${
                                     isActive(item.href)
                                         ? 'text-[#15803D] after:w-full'
                                         : 'text-[#0f172a] after:w-0 hover:text-[#15803D] hover:after:w-full'
@@ -78,11 +78,11 @@ export default function GuestNavbar() {
                         </li>
                     ))}
                 </ul>
-                <div className="hidden items-center gap-3 md:flex">
+                <div className="hidden items-center gap-2.5 md:flex">
                     {isAuthenticated ? (
                         <Button
                             href="/dashboard"
-                            className="!rounded-full !px-6 !font-bold hover:!translate-y-0 !bg-[#30C060] !text-[#122818] hover:!bg-[#22a44f] hover:!text-white shadow-sm"
+                            className="!min-h-[34px] !h-[34px] !rounded-full !px-4 !py-1 !text-xs !font-bold hover:!translate-y-0 !bg-[#30C060] !text-[#122818] hover:!bg-[#22a44f] hover:!text-white shadow-sm"
                         >
                             Buka Dashboard
                         </Button>
@@ -91,13 +91,13 @@ export default function GuestNavbar() {
                             <Button
                                 variant="ghost"
                                 href="/login"
-                                className="!text-[#2D3742] hover:!translate-y-0 hover:!bg-brand-50 hover:!text-brand-700 !font-bold"
+                                className="!min-h-[34px] !h-[34px] !text-[#2D3742] hover:!translate-y-0 hover:!bg-brand-50 hover:!text-brand-700 !font-bold !text-xs !px-3"
                             >
                                 Masuk
                             </Button>
                             <Button
                                 href="/register"
-                                className="!rounded-full !bg-[#30C060] !px-5 !font-bold !text-[#122818] !shadow-[0_8px_18px_rgba(48,192,96,0.22)] hover:!translate-y-0 hover:!bg-[#22a44f] hover:!text-white"
+                                className="!min-h-[34px] !h-[34px] !rounded-full !bg-[#30C060] !px-4 !py-1 !font-bold !text-xs !text-[#122818] !shadow-[0_8px_18px_rgba(48,192,96,0.22)] hover:!translate-y-0 hover:!bg-[#22a44f] hover:!text-white"
                             >
                                 Daftar Gratis
                             </Button>
