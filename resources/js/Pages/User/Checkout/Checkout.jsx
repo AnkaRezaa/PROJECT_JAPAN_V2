@@ -16,6 +16,8 @@ import PaymentMethodSelector from './Components/PaymentMethodSelector';
 import VirtualAccountView from './Components/VirtualAccountView';
 import QrisView from './Components/QrisView';
 import EWalletView from './Components/EWalletView';
+import ConvenienceStoreView from './Components/ConvenienceStoreView';
+import PayLaterView from './Components/PayLaterView';
 import PaymentCountdownTimer from './Components/PaymentCountdownTimer';
 
 const statusPresentation = {
@@ -114,7 +116,8 @@ export default function Checkout({ transaction, midtrans }) {
       paymentPayload.bill_key ||
       paymentPayload.qr_url ||
       paymentPayload.deeplink_url ||
-      paymentPayload.redirect_url)
+      paymentPayload.redirect_url ||
+      paymentPayload.payment_code)
   );
   const shouldRestartCheckout = ['failed', 'expired', 'refunded', 'canceled'].includes(status);
   const presentationKey = status === 'success' && ['pending_approval', 'refund_required'].includes(accessState)
@@ -297,7 +300,7 @@ export default function Checkout({ transaction, midtrans }) {
           </header>
 
           {/* Main Grid: Split Layout */}
-          <section className="mt-3.5 grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:mt-5 lg:mt-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <section className="mt-3.5 grid items-start overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:mt-5 lg:mt-6 lg:grid-cols-[1.25fr_0.75fr]">
             
             {/* Left Column: Interactive Payment Area */}
             <div className="order-1 p-3.5 sm:p-5 lg:p-6">
@@ -378,7 +381,7 @@ export default function Checkout({ transaction, midtrans }) {
                       onChangeMethod={handleChangeMethod}
                       isChanging={isCharging}
                     />
-                  ) : ['bca_va', 'mandiri_bill', 'bni_va', 'bri_va', 'permata_va'].includes(paymentChannel) ? (
+                  ) : ['bca_va', 'mandiri_bill', 'bni_va', 'bri_va', 'cimb_va', 'permata_va'].includes(paymentChannel) ? (
                     <VirtualAccountView
                       payload={paymentPayload}
                       channel={paymentChannel}
@@ -388,6 +391,22 @@ export default function Checkout({ transaction, midtrans }) {
                     />
                   ) : ['gopay', 'shopeepay'].includes(paymentChannel) ? (
                     <EWalletView
+                      payload={paymentPayload}
+                      channel={paymentChannel}
+                      amountFormatted={transaction.amount_formatted}
+                      onChangeMethod={handleChangeMethod}
+                      isChanging={isCharging}
+                    />
+                  ) : ['indomaret', 'alfamart'].includes(paymentChannel) ? (
+                    <ConvenienceStoreView
+                      payload={paymentPayload}
+                      channel={paymentChannel}
+                      amountFormatted={transaction.amount_formatted}
+                      onChangeMethod={handleChangeMethod}
+                      isChanging={isCharging}
+                    />
+                  ) : ['akulaku', 'kredivo'].includes(paymentChannel) ? (
+                    <PayLaterView
                       payload={paymentPayload}
                       channel={paymentChannel}
                       amountFormatted={transaction.amount_formatted}
@@ -500,7 +519,7 @@ export default function Checkout({ transaction, midtrans }) {
             </div>
 
             {/* Right Column: Order Summary (Sticky) */}
-            <aside className="order-2 border-t border-slate-200 bg-slate-50/70 p-4 sm:p-6 lg:order-2 lg:border-l lg:border-t-0 lg:p-8">
+            <aside className="order-2 border-t border-slate-200 bg-slate-50/70 p-4 sm:p-5 lg:order-2 lg:sticky lg:top-6 lg:border-l lg:border-t-0 lg:p-6">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
                 <ReceiptLongIcon sx={{ fontSize: 17 }} />
                 Ringkasan Pesanan

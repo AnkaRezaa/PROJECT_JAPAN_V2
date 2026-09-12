@@ -71,6 +71,17 @@ export function PermataLogo({ className = 'h-6' }) {
   );
 }
 
+export function CimbLogo({ className = 'h-6' }) {
+  return (
+    <img
+      src="/images/payments/cimb.svg"
+      alt="CIMB Niaga"
+      className={`${className} object-contain`}
+      loading="lazy"
+    />
+  );
+}
+
 export function GopayLogo({ className = 'h-6' }) {
   return (
     <img
@@ -158,3 +169,48 @@ export function AmexLogo({ className = 'h-6' }) {
     />
   );
 }
+
+export function IndomaretLogo({ className = 'h-6' }) {
+  return (
+    <img
+      src="/images/payments/indomaret.svg"
+      alt="Indomaret"
+      className={`${className} object-contain`}
+      loading="lazy"
+    />
+  );
+}
+
+export function AlfamartLogo({ className = 'h-6' }) {
+  return (
+    <img
+      src="/images/payments/alfamart.svg"
+      alt="Alfamart"
+      className={`${className} object-contain`}
+      loading="lazy"
+    />
+  );
+}
+
+export function AkulakuLogo({ className = 'h-6' }) {
+  return (
+    <img
+      src="/images/payments/akulaku.svg"
+      alt="Akulaku PayLater"
+      className={`${className} object-contain`}
+      loading="lazy"
+    />
+  );
+}
+
+export function KredivoLogo({ className = 'h-6' }) {
+  return (
+    <img
+      src="/images/payments/kredivo.svg"
+      alt="Kredivo PayLater"
+      className={`${className} object-contain`}
+      loading="lazy"
+    />
+  );
+}
+

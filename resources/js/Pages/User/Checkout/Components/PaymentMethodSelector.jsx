@@ -10,6 +10,7 @@ import {
   BniLogo,
   BriLogo,
   PermataLogo,
+  CimbLogo,
   JcbLogo,
   VisaLogo,
   MastercardLogo,
@@ -17,6 +18,10 @@ import {
   DanaLogo,
   ShopeePayLogo,
   OvoLogo,
+  IndomaretLogo,
+  AlfamartLogo,
+  AkulakuLogo,
+  KredivoLogo,
 } from './PaymentLogos';
 
 export const PAYMENT_CHANNELS = [
@@ -73,10 +78,50 @@ export const PAYMENT_CHANNELS = [
         Logo: BriLogo,
       },
       {
+        id: 'cimb_va',
+        name: 'CIMB Niaga Virtual Account',
+        desc: 'Bayar via OCTO Mobile, OCTO Clicks, atau ATM CIMB',
+        Logo: CimbLogo,
+      },
+      {
         id: 'permata_va',
         name: 'Permata Virtual Account',
         desc: 'Bayar via PermataMobile X atau ATM Permata',
         Logo: PermataLogo,
+      },
+    ],
+  },
+  {
+    category: 'Gerai Retail & Minimarket (Bayar Tunai di Kasir)',
+    items: [
+      {
+        id: 'indomaret',
+        name: 'Indomaret',
+        desc: 'Bayar tunai di kasir gerai Indomaret atau Ceriamart.',
+        Logo: IndomaretLogo,
+      },
+      {
+        id: 'alfamart',
+        name: 'Alfamart',
+        desc: 'Bayar tunai di kasir Alfamart, Alfamidi, Dan+Dan, atau Lawson.',
+        Logo: AlfamartLogo,
+      },
+    ],
+  },
+  {
+    category: 'PayLater (Cicilan & Bayar Nanti)',
+    items: [
+      {
+        id: 'akulaku',
+        name: 'Akulaku PayLater',
+        desc: 'Bayar dalam 30 hari atau cicilan via akun Akulaku.',
+        Logo: AkulakuLogo,
+      },
+      {
+        id: 'kredivo',
+        name: 'Kredivo PayLater',
+        desc: 'Bayar dalam 30 hari atau cicilan via akun Kredivo.',
+        Logo: KredivoLogo,
       },
     ],
   },
@@ -138,37 +183,38 @@ export default function PaymentMethodSelector({
               {group.category}
             </h3>
 
-            <div className="space-y-1.5">
+            <div className={group.items.length > 1 ? 'grid grid-cols-1 gap-1.5 sm:grid-cols-2' : 'space-y-1.5'}>
               {group.items.map((item) => {
                 const isSelected = activeChannel === item.id;
                 const LogoComponent = item.Logo;
+                const isFullSpan = item.id === 'qris' || item.id === 'credit_card';
 
                 return (
-                  <div key={item.id} className="transition-all">
+                  <div key={item.id} className={`transition-all ${isFullSpan ? 'sm:col-span-2' : ''}`}>
                     <label
                       onClick={() => handleChannelClick(item.id)}
-                      className={`flex cursor-pointer items-center justify-between gap-2.5 rounded-xl border p-2.5 transition sm:p-3 ${
+                      className={`flex h-full cursor-pointer items-center justify-between gap-2 rounded-xl border p-2.5 transition ${
                         isSelected
                           ? 'border-[#c33d4b] bg-rose-50/40 ring-1.5 ring-[#c33d4b]/20'
                           : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60'
                       }`}
                     >
-                      <div className="flex min-w-0 items-center gap-2.5">
+                      <div className="flex min-w-0 items-center gap-2">
                         <div
-                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition sm:h-5 sm:w-5 ${
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition sm:h-4.5 sm:w-4.5 ${
                             isSelected
                               ? 'border-[#c33d4b] bg-[#c33d4b] text-white'
                               : 'border-slate-300 bg-white'
                           }`}
                         >
                           {isSelected && (
-                            <span className="h-1.5 w-1.5 rounded-full bg-white sm:h-2 sm:w-2" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-white" />
                           )}
                         </div>
 
                         <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-xs font-bold text-slate-900 sm:text-sm">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="truncate text-xs font-bold text-slate-900">
                               {item.name}
                             </span>
                             {item.badge && (
@@ -179,27 +225,28 @@ export default function PaymentMethodSelector({
                               </span>
                             )}
                           </div>
-                          <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-1 sm:line-clamp-none">
+                          <p className="mt-0.5 text-[10px] text-slate-500 line-clamp-1">
                             {item.desc}
                           </p>
                         </div>
                       </div>
 
-                      <div className="shrink-0">
+                      <div className="shrink-0 pl-1">
                         {item.qrisLogos ? (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
                             <QrisLogo className="h-5" />
-                            <GopayLogo className="hidden h-3.5 sm:inline-block" />
-                            <DanaLogo className="hidden h-3.5 sm:inline-block" />
+                            <GopayLogo className="h-3.5" />
+                            <DanaLogo className="h-3.5" />
+                            <ShopeePayLogo className="h-3.5" />
                           </div>
                         ) : item.customLogos ? (
-                          <div className="flex items-center gap-1">
-                            <JcbLogo className="h-3.5" />
-                            <VisaLogo className="h-3.5" />
-                            <MastercardLogo className="h-3.5" />
+                          <div className="flex items-center gap-1.5">
+                            <JcbLogo className="h-4" />
+                            <VisaLogo className="h-4" />
+                            <MastercardLogo className="h-4" />
                           </div>
                         ) : LogoComponent ? (
-                          <LogoComponent className="h-5 w-auto max-w-[70px]" />
+                          <LogoComponent className="h-5 sm:h-6 w-auto max-w-[80px]" />
                         ) : null}
                       </div>
                     </label>

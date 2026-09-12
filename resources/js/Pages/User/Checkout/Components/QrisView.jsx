@@ -57,10 +57,10 @@ export default function QrisView({
             <img
               src={qrImageSrc}
               alt="QRIS Code"
-              className="h-40 w-40 object-contain sm:h-52 sm:w-52"
+              className="h-40 w-40 object-contain sm:h-44 sm:w-44"
             />
           ) : (
-            <div className="flex h-40 w-40 flex-col items-center justify-center text-slate-400 sm:h-52 sm:w-52">
+            <div className="flex h-40 w-40 flex-col items-center justify-center text-slate-400 sm:h-44 sm:w-44">
               <QrCode2Icon sx={{ fontSize: 44 }} />
               <p className="mt-1 text-[11px] font-semibold">Memuat Kode QRIS...</p>
             </div>

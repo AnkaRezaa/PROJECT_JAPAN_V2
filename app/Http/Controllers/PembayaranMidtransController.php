@@ -109,7 +109,7 @@ class PembayaranMidtransController extends Controller
             'payment_channel' => [
                 'required',
                 'string',
-                'in:bca_va,mandiri_bill,bni_va,bri_va,permata_va,qris,gopay,shopeepay,credit_card',
+                'in:bca_va,mandiri_bill,bni_va,bri_va,cimb_va,permata_va,qris,gopay,shopeepay,credit_card,indomaret,alfamart,akulaku,kredivo',
             ],
             'card_token' => ['nullable', 'string', 'required_if:payment_channel,credit_card'],
         ]);
@@ -135,6 +135,7 @@ class PembayaranMidtransController extends Controller
                 || filled($existingPayload['qr_url'] ?? null)
                 || filled($existingPayload['deeplink_url'] ?? null)
                 || filled($existingPayload['redirect_url'] ?? null)
+                || filled($existingPayload['payment_code'] ?? null)
             );
 
         if ($transaction->payment_channel === $channel && $hasActiveInstruction) {
@@ -1015,6 +1016,7 @@ class PembayaranMidtransController extends Controller
     private function buildChargePayload(Transaksi $transaction, Request $request, string $channel, ?string $cardToken, string $midtransOrderId): array
     {
         $isInstantPayment = in_array($channel, ['qris', 'gopay', 'shopeepay'], true);
+        $isConvenienceStore = in_array($channel, ['indomaret', 'alfamart'], true);
 
         $base = [
             'transaction_details' => [
@@ -1033,7 +1035,7 @@ class PembayaranMidtransController extends Controller
             ]],
             'custom_expiry' => [
                 'order_time' => now()->format('Y-m-d H:i:s O'),
-                'expiry_duration' => $isInstantPayment ? 30 : 1,
+                'expiry_duration' => $isInstantPayment ? 30 : ($isConvenienceStore ? 24 : 1),
                 'unit' => $isInstantPayment ? 'minute' : 'hour',
             ],
         ];
@@ -1058,6 +1060,13 @@ class PembayaranMidtransController extends Controller
                 'payment_type' => 'bank_transfer',
                 'bank_transfer' => [
                     'bank' => 'bri',
+                ],
+            ],
+            'cimb_va' => [
+                ...$base,
+                'payment_type' => 'bank_transfer',
+                'bank_transfer' => [
+                    'bank' => 'cimb',
                 ],
             ],
             'permata_va' => [
@@ -1094,6 +1103,32 @@ class PembayaranMidtransController extends Controller
                     'callback_url' => route('user.checkout', $transaction->transaction_code),
                 ],
             ],
+            'indomaret' => [
+                ...$base,
+                'payment_type' => 'cstore',
+                'cstore' => [
+                    'store' => 'indomaret',
+                    'message' => 'Layanan Belajar TOKU-UP',
+                ],
+            ],
+            'alfamart' => [
+                ...$base,
+                'payment_type' => 'cstore',
+                'cstore' => [
+                    'store' => 'alfamart',
+                    'alfamart_free_text_1' => '1. Beritahu kasir pembayaran TOKU-UP.',
+                    'alfamart_free_text_2' => '2. Tunjukkan kode pembayaran.',
+                    'alfamart_free_text_3' => '3. Simpan struk bukti pembayaran.',
+                ],
+            ],
+            'akulaku' => [
+                ...$base,
+                'payment_type' => 'akulaku',
+            ],
+            'kredivo' => [
+                ...$base,
+                'payment_type' => 'kredivo',
+            ],
             'credit_card' => [
                 ...$base,
                 'payment_type' => 'credit_card',
@@ -1128,14 +1163,19 @@ class PembayaranMidtransController extends Controller
         if (isset($response['va_numbers'][0])) {
             $vaNumber = (string) $response['va_numbers'][0]['va_number'];
             $bank = (string) $response['va_numbers'][0]['bank'];
+        } elseif (isset($response['cimb_va_number'])) {
+            $vaNumber = (string) $response['cimb_va_number'];
+            $bank = 'cimb';
         } elseif (isset($response['permata_va_number'])) {
             $vaNumber = (string) $response['permata_va_number'];
             $bank = 'permata';
         }
 
-        $fallbackMinutes = in_array($channel, ['qris', 'gopay', 'shopeepay'], true)
-            ? 30
-            : 60;
+        $fallbackMinutes = match (true) {
+            in_array($channel, ['qris', 'gopay', 'shopeepay'], true) => 30,
+            in_array($channel, ['indomaret', 'alfamart'], true) => 1440,
+            default => 60,
+        };
 
         $expiryTime = $response['expiry_time']
             ?? now()->addMinutes($fallbackMinutes)->format('Y-m-d H:i:s');
@@ -1145,6 +1185,9 @@ class PembayaranMidtransController extends Controller
             'midtrans_order_id' => $midtransOrderId,
             'va_number' => $vaNumber,
             'bank' => $bank,
+            'payment_code' => $response['payment_code'] ?? null,
+            'store' => $response['store'] ?? ($channel === 'indomaret' ? 'indomaret' : ($channel === 'alfamart' ? 'alfamart' : null)),
+            'pdf_url' => $response['pdf_url'] ?? null,
             'biller_code' => $response['biller_code'] ?? null,
             'bill_key' => $response['bill_key'] ?? null,
             'qr_string' => $qrString,

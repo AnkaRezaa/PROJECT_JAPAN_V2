@@ -9,6 +9,7 @@ import {
   BniLogo,
   BriLogo,
   PermataLogo,
+  CimbLogo,
 } from './PaymentLogos';
 
 const bankGuides = {
@@ -135,6 +136,37 @@ const bankGuides = {
           'Pilih menu Bayar Tagihan > Virtual Account.',
           'Masukkan nomor Permata Virtual Account di atas.',
           'Pastikan detail pembayaran sesuai, lalu konfirmasi dengan PIN Anda.',
+        ],
+      },
+    ],
+  },
+  cimb_va: {
+    name: 'CIMB Niaga Virtual Account',
+    Logo: CimbLogo,
+    instructions: [
+      {
+        title: 'OCTO Mobile by CIMB Niaga',
+        steps: [
+          'Login ke aplikasi OCTO Mobile.',
+          'Pilih menu Pembayaran Tagihan / Transfer > Virtual Account.',
+          'Masukkan nomor CIMB Virtual Account di atas.',
+          'Periksa detail tagihan dan masukkan PIN OCTO Mobile Anda.',
+        ],
+      },
+      {
+        title: 'OCTO Clicks (Internet Banking)',
+        steps: [
+          'Login ke OCTO Clicks.',
+          'Pilih menu Bayar Tagihan > Virtual Account.',
+          'Masukkan nomor CIMB Virtual Account di atas dan konfirmasi pembayaran.',
+        ],
+      },
+      {
+        title: 'ATM CIMB Niaga',
+        steps: [
+          'Masukkan kartu ATM dan PIN CIMB Niaga Anda.',
+          'Pilih menu Pembayaran > Lanjut > Virtual Account.',
+          'Masukkan nomor CIMB Virtual Account di atas lalu pilih Proses.',
         ],
       },
     ],
