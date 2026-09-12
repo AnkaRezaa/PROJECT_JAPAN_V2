@@ -1,6 +1,7 @@
 import React from 'react';
 import BoardCanvas from '@/Components/Features/Board/BoardCanvas';
 import EmbedFrame from '@/Components/Features/Presentation/EmbedFrame';
+import PdfCarousel from '@/Components/Features/Presentation/PdfCarousel';
 
 const backgrounds = {
     light: 'bg-white text-gray-950',
@@ -138,10 +139,19 @@ export default function PresentationStage({ slide, contained = false, className 
                 )}
 
                 {slide.layout === 'pdf' && (
-                    <div className="my-auto text-center">
-                        <p className="text-[10px] font-black uppercase tracking-[0.35em] sm:text-sm" style={{ color: accent }}>PDF</p>
-                        <h1 className={`${titleSize} mt-5 font-black`}>{slide.title || 'PDF Presentasi'}</h1>
-                        <p className={`mx-auto mt-6 max-w-4xl font-bold leading-relaxed opacity-70 ${contained ? 'text-lg sm:text-2xl' : 'text-3xl'}`}>Buka halaman user untuk viewer PDF carousel penuh.</p>
+                    <div className="my-auto flex min-h-0 w-full flex-1 flex-col">
+                        <div className="mb-2 flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-[0.35em] sm:text-sm" style={{ color: accent }}>PDF Presentasi</span>
+                            <h2 className="max-w-md truncate text-sm font-bold opacity-70">{slide.title || 'Dokumen PDF'}</h2>
+                        </div>
+                        {slide.media_url ? (
+                            <div className={`${contained ? 'h-[60vh] max-h-[75vh]' : 'h-[75vh]'} w-full overflow-hidden rounded-2xl bg-gray-950 shadow-2xl`}>
+                                <PdfCarousel url={slide.media_url} title={slide.title || 'PDF Presentasi'} />
+                            </div>
+                        ) : (
+                            <div className={`${contained ? 'h-[45vh]' : 'h-[55vh]'} grid place-items-center rounded-2xl border-4 border-dashed border-gray-300 text-2xl font-black opacity-40`}>File PDF belum tersedia</div>
+                        )}
+                        {slide.content && <p className={`mt-3 font-bold opacity-70 ${bodySize}`}>{slide.content}</p>}
                     </div>
                 )}
             </div>

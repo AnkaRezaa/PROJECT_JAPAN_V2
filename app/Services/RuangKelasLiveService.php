@@ -216,6 +216,20 @@ class RuangKelasLiveService
     {
         $this->assertMentor($session, $mentor);
 
+        if (array_key_exists('presentation_deck_id', $state)) {
+            $deckId = $state['presentation_deck_id'];
+            if ($deckId !== null) {
+                $deck = DeckPresentasi::query()->with('slides')->findOrFail($deckId);
+                $deck->loadMissing('module:id,program_pembelajaran_id');
+                abort_unless($deck->module?->program_pembelajaran_id === $session->program_pembelajaran_id, 422, 'Presentasi tidak berasal dari kelas ini.');
+                $session->presentation_deck_id = $deck->id;
+                $session->current_slide_index = 0;
+            } else {
+                $session->presentation_deck_id = null;
+                $session->current_slide_index = 0;
+            }
+        }
+
         $session->fill(array_filter([
             'stage_mode' => $state['stage_mode'] ?? null,
             'current_slide_index' => $state['current_slide_index'] ?? null,
@@ -223,10 +237,13 @@ class RuangKelasLiveService
         ], fn ($value) => $value !== null));
         $session->save();
 
+        $session->loadMissing(['deck.slides', 'deck.module']);
+
         $payload = [
             'stage_mode' => $session->stage_mode,
             'current_slide_index' => $session->current_slide_index,
             'board_snapshot' => $session->board_snapshot,
+            'deck' => $this->deckPayload($session->deck),
         ];
         broadcast(new StatusKelasLiveDiperbarui($session, $payload))->toOthers();
 
@@ -412,24 +429,35 @@ class RuangKelasLiveService
             'program' => $session->program,
             'kloter' => $session->kloter,
             'mentor' => $session->mentor,
-            'deck' => $session->deck ? [
-                'id' => $session->deck->id,
-                'title' => $session->deck->title,
-                'module' => $session->deck->module,
-                'slides' => $session->deck->slides->map(fn ($slide) => [
-                    'id' => $slide->id,
-                    'title' => $slide->title,
-                    'layout' => $slide->layout,
-                    'content' => $slide->content,
-                    'media_url' => $slide->media_url,
-                    'background' => $slide->background,
-                    'accent_color' => $slide->accent_color,
-                    'board_data' => $slide->board_data,
-                    'jamboard_data' => $slide->jamboard_data,
-                    'snapshot_url' => $slide->snapshot_url,
-                    'snapshot_data' => $slide->snapshot_data,
-                ])->values(),
-            ] : null,
+            'deck' => $this->deckPayload($session->deck),
+        ];
+    }
+
+    public function deckPayload(?DeckPresentasi $deck): ?array
+    {
+        if (! $deck) {
+            return null;
+        }
+
+        $deck->loadMissing(['module:id,title', 'slides']);
+
+        return [
+            'id' => $deck->id,
+            'title' => $deck->title,
+            'module' => $deck->module,
+            'slides' => $deck->slides->map(fn ($slide) => [
+                'id' => $slide->id,
+                'title' => $slide->title,
+                'layout' => $slide->layout,
+                'content' => $slide->content,
+                'media_url' => $slide->media_url,
+                'background' => $slide->background,
+                'accent_color' => $slide->accent_color,
+                'board_data' => $slide->board_data,
+                'jamboard_data' => $slide->jamboard_data,
+                'snapshot_url' => $slide->snapshot_url,
+                'snapshot_data' => $slide->snapshot_data,
+            ])->values(),
         ];
     }
 

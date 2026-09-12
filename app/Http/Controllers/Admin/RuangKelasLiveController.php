@@ -104,8 +104,27 @@ class RuangKelasLiveController extends Controller
     {
         abort_unless($service->roleFor($liveClassSession, $request->user()) === 'mentor', 403);
 
+        $user = $request->user();
+        $availableDecks = DeckPresentasi::query()
+            ->with(['module:id,title,week_number', 'creator:id,username'])
+            ->withCount('slides')
+            ->whereHas('module', fn ($query) => $query->where('program_pembelajaran_id', $liveClassSession->program_pembelajaran_id))
+            ->where(function ($query) use ($user) {
+                $query->where(function ($sharedQuery) {
+                    $sharedQuery->shared()->where('status', 'published');
+                })
+                    ->orWhere(function ($mentorQuery) use ($user) {
+                        $mentorQuery->where('audience_scope', DeckPresentasi::AUDIENCE_MENTOR_SESSION)
+                            ->when(! $user->isAdminGlobal(), fn ($ownerQuery) => $ownerQuery->where('created_by', $user->id));
+                    });
+            })
+            ->orderBy('module_id')
+            ->orderByDesc('updated_at')
+            ->get(['id', 'created_by', 'module_id', 'title', 'status', 'audience_scope', 'updated_at']);
+
         return Inertia::render('Admin/RuangKelas/Show', [
             'session' => $service->sessionPayload($liveClassSession),
+            'availableDecks' => $availableDecks,
             'participants' => $liveClassSession->participants()->where('role', 'student')->with('user:id,username,avatar')->get()->map($service->participantPayload(...))->values(),
             'tokenEndpoint' => route('admin.live-classes.token', $liveClassSession, absolute: false),
             'startEndpoint' => route('admin.live-classes.start', $liveClassSession, absolute: false),
@@ -150,6 +169,7 @@ class RuangKelasLiveController extends Controller
             'stage_mode' => ['sometimes', Rule::in(['slides', 'board', 'screen'])],
             'current_slide_index' => ['sometimes', 'integer', 'min:0', 'max:10000'],
             'board_snapshot' => ['sometimes', 'array'],
+            'presentation_deck_id' => ['sometimes', 'nullable', 'integer', 'exists:presentation_decks,id'],
         ]);
 
         if (strlen(json_encode($validated['board_snapshot'] ?? [], JSON_THROW_ON_ERROR)) > 500_000) {
@@ -165,6 +185,7 @@ class RuangKelasLiveController extends Controller
             'stage_mode' => $session->stage_mode,
             'current_slide_index' => $session->current_slide_index,
             'board_snapshot_version' => (int) data_get($session->board_snapshot, 'version', 0),
+            'deck' => $service->deckPayload($session->deck),
         ]]);
     }
 

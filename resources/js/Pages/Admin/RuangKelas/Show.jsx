@@ -49,10 +49,10 @@ function RoomSetup({ setup, storeEndpoint, exitUrl }) {
     const [deckSearch, setDeckSearch] = useState('');
     const initialKloterId = setup.kloters.some((item) => Number(item.id) === Number(setup.initial?.kloter_id))
         ? String(setup.initial.kloter_id)
-        : (setup.kloters.length === 1 ? String(setup.kloters[0].id) : '');
+        : (setup.kloters.length > 0 ? String(setup.kloters[0].id) : '');
     const initialWeekId = setup.weeks.some((item) => Number(item.id) === Number(setup.initial?.week_id))
         ? String(setup.initial.week_id)
-        : (setup.weeks.length === 1 ? String(setup.weeks[0].id) : '');
+        : (setup.weeks.length > 0 ? String(setup.weeks[0].id) : '');
     const initialDeck = setup.decks.find((item) => Number(item.id) === Number(setup.initial?.deck_id));
     const [selectedWeekId, setSelectedWeekId] = useState(initialWeekId || (initialDeck ? String(initialDeck.module_id) : ''));
     const form = useForm({
@@ -344,11 +344,11 @@ function RoomSetup({ setup, storeEndpoint, exitUrl }) {
                                     <button
                                         type="button"
                                         onClick={() => submit('start')}
-                                        disabled={form.processing || !form.data.kloter_belajar_id || !selectedWeekId}
+                                        disabled={form.processing || !form.data.kloter_belajar_id}
                                         className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 text-sm font-black text-white transition hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:ring-offset-gray-900"
                                     >
                                         <PlayArrowIcon sx={{ fontSize: 20 }} />
-                                        {form.processing ? 'Menyiapkan...' : 'Lanjut ke lobby'}
+                                        {form.processing ? 'Menyiapkan...' : 'Mulai Kelas Sekarang'}
                                     </button>
                                     <p className="mt-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Kamera dan mikrofon belum aktif pada tahap ini.</p>
                                 </div>
@@ -435,7 +435,7 @@ export default function Show(props) {
     return (
         <>
             <Head title={`Ruang Kelas - ${props.session.program.title}`} />
-            <LiveClassRoom {...props} role="mentor" deck={props.session.deck} />
+            <LiveClassRoom {...props} role="mentor" deck={props.session.deck} availableDecks={props.availableDecks || []} />
         </>
     );
 }

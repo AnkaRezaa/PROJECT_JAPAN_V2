@@ -8,9 +8,11 @@ import { getEcho, leaveLiveClassChannel } from '@/lib/echo';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import BrushIcon from '@mui/icons-material/Brush';
 import CallEndIcon from '@mui/icons-material/CallEnd';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
@@ -31,7 +33,9 @@ import PeopleIcon from '@mui/icons-material/People';
 import PersonRemoveIcon from '@mui/icons-material/PersonRemove';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PresentToAllIcon from '@mui/icons-material/PresentToAll';
+import PushPinIcon from '@mui/icons-material/PushPin';
 import ScreenShareIcon from '@mui/icons-material/ScreenShare';
+import SendIcon from '@mui/icons-material/Send';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 import StopScreenShareIcon from '@mui/icons-material/StopScreenShare';
 import UndoIcon from '@mui/icons-material/Undo';
@@ -344,17 +348,50 @@ function Lobby({ deck, session, role, joining = false, lowDataMode = false, onTo
     );
 }
 
-function ParticipantDrawer({ open, role, participants, speakingIds = [], onClose, onUpdate, onKick, onClearStrokes, onMuteAll }) {
+function ParticipantDrawer({
+    open,
+    activeTab = 'participants',
+    onTabChange,
+    role,
+    participants,
+    speakingIds = [],
+    messages = [],
+    onSendMessage,
+    unreadChatCount = 0,
+    currentUserId,
+    onClose,
+    onUpdate,
+    onKick,
+    onClearStrokes,
+    onMuteAll,
+}) {
     const [activeMenu, setActiveMenu] = useState(null);
+    const [inputText, setInputText] = useState('');
+    const chatEndRef = useRef(null);
+
     const orderedParticipants = useMemo(() => [...participants].sort((a, b) => {
         if (a.handRaised !== b.handRaised) return a.handRaised ? -1 : 1;
         if (a.handRaised && b.handRaised) return Number(a.handRaisedAt || 0) - Number(b.handRaisedAt || 0);
         return String(a.name).localeCompare(String(b.name));
     }), [participants]);
 
+    useEffect(() => {
+        if (activeTab === 'chat' && open) {
+            chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [messages.length, activeTab, open]);
+
     const runAction = (action) => {
         action();
         setActiveMenu(null);
+    };
+
+    const handleSend = (event) => {
+        event.preventDefault();
+        const trimmed = inputText.trim();
+        if (!trimmed) return;
+        onSendMessage?.(trimmed);
+        setInputText('');
     };
 
     return (
@@ -380,62 +417,159 @@ function ParticipantDrawer({ open, role, participants, speakingIds = [], onClose
                         leaveTo="translate-x-full"
                     >
         <DialogPanel className="flex h-full w-[min(100vw,24rem)] flex-col border-l border-white/10 bg-[#0d1422] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-white shadow-2xl sm:p-5">
-            <div className="flex items-center justify-between">
-                <div><p className="text-xs font-black uppercase tracking-[0.2em] text-orange-400">Peserta</p><DialogTitle className="mt-1 text-xl font-black">{participants.length + 1} hadir</DialogTitle></div>
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-1.5">
+                    <button
+                        type="button"
+                        onClick={() => onTabChange?.('participants')}
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-black transition ${
+                            activeTab === 'participants'
+                                ? 'bg-orange-500 text-white shadow-md'
+                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                        }`}
+                    >
+                        <PeopleIcon sx={{ fontSize: 16 }} className="mr-1 align-middle" />
+                        Peserta ({participants.length + 1})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onTabChange?.('chat')}
+                        className={`relative rounded-lg px-2.5 py-1.5 text-xs font-black transition ${
+                            activeTab === 'chat'
+                                ? 'bg-orange-500 text-white shadow-md'
+                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                        }`}
+                    >
+                        <ChatBubbleOutlineIcon sx={{ fontSize: 16 }} className="mr-1 align-middle" />
+                        Obrolan
+                        {unreadChatCount > 0 && activeTab !== 'chat' && (
+                            <span className="ml-1.5 rounded-full bg-red-500 px-1.5 py-0.2 text-[10px] font-black text-white">
+                                {unreadChatCount}
+                            </span>
+                        )}
+                    </button>
+                </div>
                 <IconButton label="Tutup panel" onClick={onClose}><CloseIcon sx={{ fontSize: 19 }} /></IconButton>
             </div>
-            {role === 'mentor' && participants.length > 0 && <button type="button" onClick={onMuteAll} className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-400/20 bg-red-500/10 text-xs font-black text-red-200 hover:bg-red-500/20"><MicOffIcon sx={{ fontSize: 17 }} /> Matikan semua mic</button>}
-            <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-3">
-                <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-full bg-orange-500 font-black">MK</span><div><p className="text-sm font-black">Mentor Kelas</p><p className="text-xs font-bold text-orange-300">Mentor</p></div></div>
-            </div>
-            <div className="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-                {orderedParticipants.map((participant) => (
-                    <article
-                        key={participant.id}
-                        onContextMenu={(event) => {
-                            if (role !== 'mentor') return;
-                            event.preventDefault();
-                            setActiveMenu(participant.id);
-                        }}
-                        className="relative rounded-xl border border-white/10 bg-white/[0.04] p-3"
-                    >
-                        <div className="flex items-center gap-3">
-                            <span className={`grid h-10 w-10 place-items-center rounded-full bg-blue-500/20 text-sm font-black text-blue-200 ${speakingIds.includes(Number(participant.id)) ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-[#0d1422]' : ''}`}>{participant.initials}</span>
-                            <div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{participant.name}</p><p className={`text-xs font-bold ${speakingIds.includes(Number(participant.id)) ? 'text-emerald-400' : 'text-gray-500'}`}>{speakingIds.includes(Number(participant.id)) ? 'Sedang berbicara' : participant.handRaised ? 'Mengangkat tangan' : participant.canWrite ? 'Boleh menulis' : 'Menyimak'}</p></div>
-                            {participant.handRaised && <PanToolIcon className="text-amber-400" sx={{ fontSize: 18 }} />}
-                            {role === 'mentor' && (
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveMenu((value) => value === participant.id ? null : participant.id)}
-                                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-gray-400 transition hover:bg-white/10 hover:text-white"
-                                    aria-label={`Opsi ${participant.name}`}
-                                    title="Opsi peserta"
-                                >
-                                    <MoreVertIcon sx={{ fontSize: 19 }} />
-                                </button>
-                            )}
-                        </div>
 
-                        {role === 'mentor' && activeMenu === participant.id && (
-                            <div className="absolute right-3 top-14 z-20 w-52 overflow-hidden rounded-xl border border-white/10 bg-[#172033] p-1.5 shadow-2xl">
-                                <button type="button" onClick={() => runAction(() => onUpdate(participant.id, { micBlocked: !participant.micBlocked, canSpeak: false }))} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black text-gray-200 hover:bg-white/10">
-                                    <MicOffIcon sx={{ fontSize: 17 }} /> {participant.micBlocked ? 'Buka blokir mic' : 'Blokir mikrofon'}
-                                </button>
-                                <button type="button" onClick={() => runAction(() => onUpdate(participant.id, { canWrite: !participant.canWrite }))} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black text-gray-200 hover:bg-white/10">
-                                    <DrawIcon sx={{ fontSize: 17 }} /> {participant.canWrite ? 'Cabut izin menulis' : 'Izinkan menulis'}
-                                </button>
-                                <button type="button" onClick={() => runAction(() => onClearStrokes(participant.id))} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black text-gray-200 hover:bg-white/10">
-                                    <DeleteSweepIcon sx={{ fontSize: 17 }} /> Hapus coretan
-                                </button>
-                                <div className="my-1 h-px bg-white/10" />
-                                <button type="button" onClick={() => runAction(() => onKick(participant.id))} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black text-red-300 hover:bg-red-500/10">
-                                    <PersonRemoveIcon sx={{ fontSize: 17 }} /> Keluarkan peserta
-                                </button>
+            {activeTab === 'participants' && (
+                <>
+                    {role === 'mentor' && participants.length > 0 && (
+                        <button type="button" onClick={onMuteAll} className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-400/20 bg-red-500/10 text-xs font-black text-red-200 hover:bg-red-500/20">
+                            <MicOffIcon sx={{ fontSize: 17 }} /> Matikan semua mic
+                        </button>
+                    )}
+                    <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
+                        <div className="flex items-center gap-3">
+                            <span className="grid h-10 w-10 place-items-center rounded-full bg-orange-500 font-black">MK</span>
+                            <div><p className="text-sm font-black">Mentor Kelas</p><p className="text-xs font-bold text-orange-300">Mentor</p></div>
+                        </div>
+                    </div>
+                    <div className="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+                        {orderedParticipants.map((participant) => (
+                            <article
+                                key={participant.id}
+                                onContextMenu={(event) => {
+                                    if (role !== 'mentor') return;
+                                    event.preventDefault();
+                                    setActiveMenu(participant.id);
+                                }}
+                                className="relative rounded-xl border border-white/10 bg-white/[0.04] p-3"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className={`grid h-10 w-10 place-items-center rounded-full bg-blue-500/20 text-sm font-black text-blue-200 ${speakingIds.includes(Number(participant.id)) ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-[#0d1422]' : ''}`}>{participant.initials}</span>
+                                    <div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{participant.name}</p><p className={`text-xs font-bold ${speakingIds.includes(Number(participant.id)) ? 'text-emerald-400' : 'text-gray-500'}`}>{speakingIds.includes(Number(participant.id)) ? 'Sedang berbicara' : participant.handRaised ? 'Mengangkat tangan' : participant.canWrite ? 'Boleh menulis' : 'Menyimak'}</p></div>
+                                    {participant.handRaised && <PanToolIcon className="text-amber-400" sx={{ fontSize: 18 }} />}
+                                    {role === 'mentor' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveMenu((value) => value === participant.id ? null : participant.id)}
+                                            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-gray-400 transition hover:bg-white/10 hover:text-white"
+                                            aria-label={`Opsi ${participant.name}`}
+                                            title="Opsi peserta"
+                                        >
+                                            <MoreVertIcon sx={{ fontSize: 19 }} />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {role === 'mentor' && activeMenu === participant.id && (
+                                    <div className="absolute right-3 top-14 z-20 w-52 overflow-hidden rounded-xl border border-white/10 bg-[#172033] p-1.5 shadow-2xl">
+                                        <button type="button" onClick={() => runAction(() => onUpdate(participant.id, { micBlocked: !participant.micBlocked, canSpeak: false }))} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black text-gray-200 hover:bg-white/10">
+                                            <MicOffIcon sx={{ fontSize: 17 }} /> {participant.micBlocked ? 'Buka blokir mic' : 'Blokir mikrofon'}
+                                        </button>
+                                        <button type="button" onClick={() => runAction(() => onUpdate(participant.id, { canWrite: !participant.canWrite }))} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black text-gray-200 hover:bg-white/10">
+                                            <DrawIcon sx={{ fontSize: 17 }} /> {participant.canWrite ? 'Cabut izin menulis' : 'Izinkan menulis'}
+                                        </button>
+                                        <button type="button" onClick={() => runAction(() => onClearStrokes(participant.id))} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black text-gray-200 hover:bg-white/10">
+                                            <DeleteSweepIcon sx={{ fontSize: 17 }} /> Hapus coretan
+                                        </button>
+                                        <div className="my-1 h-px bg-white/10" />
+                                        <button type="button" onClick={() => runAction(() => onKick(participant.id))} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black text-red-300 hover:bg-red-500/10">
+                                            <PersonRemoveIcon sx={{ fontSize: 17 }} /> Keluarkan peserta
+                                        </button>
+                                    </div>
+                                )}
+                            </article>
+                        ))}
+                    </div>
+                </>
+            )}
+
+            {activeTab === 'chat' && (
+                <div className="mt-3 flex min-h-0 flex-1 flex-col justify-between">
+                    <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+                        {messages.length === 0 ? (
+                            <div className="grid h-full place-items-center p-6 text-center text-xs text-gray-500">
+                                <div>
+                                    <ChatBubbleOutlineIcon sx={{ fontSize: 32 }} className="mx-auto text-gray-600 mb-2" />
+                                    <p className="font-bold text-gray-300">Belum ada obrolan.</p>
+                                    <p className="mt-1 text-[11px] text-gray-500">Ketik pesan untuk bertanya atau berdiskusi dengan mentor dan teman kelas.</p>
+                                </div>
                             </div>
+                        ) : (
+                            messages.map((msg) => {
+                                const isMe = String(msg.senderId) === String(currentUserId);
+                                return (
+                                    <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                                        <div className="mb-1 flex items-center gap-1.5 text-[11px] text-gray-400">
+                                            <span className={`font-black ${msg.role === 'mentor' ? 'text-orange-400' : 'text-gray-300'}`}>
+                                                {msg.senderName} {msg.role === 'mentor' ? '★' : ''}
+                                            </span>
+                                            <span className="text-[10px] opacity-60">{msg.time}</span>
+                                        </div>
+                                        <div className={`max-w-[88%] rounded-2xl px-3.5 py-2 text-xs font-semibold leading-relaxed shadow ${
+                                            isMe ? 'bg-orange-600 text-white rounded-tr-none' : 'bg-white/10 text-gray-100 rounded-tl-none border border-white/5'
+                                        }`}>
+                                            <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                                        </div>
+                                    </div>
+                                );
+                            })
                         )}
-                    </article>
-                ))}
-            </div>
+                        <div ref={chatEndRef} />
+                    </div>
+
+                    <form onSubmit={handleSend} className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
+                        <input
+                            type="text"
+                            value={inputText}
+                            onChange={(event) => setInputText(event.target.value)}
+                            placeholder="Ketik pesan kelas..."
+                            className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold text-white placeholder-gray-500 outline-none focus:border-orange-500 focus:bg-white/10"
+                            maxLength={500}
+                        />
+                        <button
+                            type="submit"
+                            disabled={!inputText.trim()}
+                            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-orange-600 text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
+                            title="Kirim pesan"
+                        >
+                            <SendIcon sx={{ fontSize: 17 }} />
+                        </button>
+                    </form>
+                </div>
+            )}
         </DialogPanel>
                     </TransitionChild>
                 </div>
@@ -446,6 +580,7 @@ function ParticipantDrawer({ open, role, participants, speakingIds = [], onClose
 
 export default function LiveClassRoom({
     deck,
+    availableDecks = [],
     session = null,
     role: initialRole = 'mentor',
     participants: initialParticipantRows = [],
@@ -459,7 +594,17 @@ export default function LiveClassRoom({
     initialStageMode = 'slides',
     exitUrl: customExitUrl = null,
 }) {
-    const resolvedDeck = deck || {
+    const [currentDeck, setCurrentDeck] = useState(deck);
+    const [deckPickerOpen, setDeckPickerOpen] = useState(false);
+    const [switchingDeck, setSwitchingDeck] = useState(false);
+
+    useEffect(() => {
+        if (deck) {
+            setCurrentDeck(deck);
+        }
+    }, [deck]);
+
+    const resolvedDeck = currentDeck || {
         title: session?.program?.title || 'Papan Tulis',
         module: null,
         slides: [],
@@ -468,6 +613,7 @@ export default function LiveClassRoom({
     const hasSlides = slides.length > 0;
     const stageRef = useRef(null);
     const cameraContainerRef = useRef(null);
+    const dockedCameraContainerRef = useRef(null);
     const screenContainerRef = useRef(null);
     const remoteAudioContainerRef = useRef(null);
     const roomRef = useRef(null);
@@ -502,6 +648,10 @@ export default function LiveClassRoom({
     const [participants, setParticipants] = useState(session ? initialParticipantRows : initialParticipants);
     const [selfParticipant, setSelfParticipant] = useState(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [drawerTab, setDrawerTab] = useState('participants');
+    const [messages, setMessages] = useState([]);
+    const [unreadChatCount, setUnreadChatCount] = useState(0);
+    const [cameraDocked, setCameraDocked] = useState(() => typeof window !== 'undefined' && window.localStorage.getItem('toku-up:live-camera-docked') === '1');
     const [thumbnailsOpen, setThumbnailsOpen] = useState(false);
     const [micEnabled, setMicEnabled] = useState(true);
     const [cameraEnabled, setCameraEnabled] = useState(true);
@@ -554,6 +704,59 @@ export default function LiveClassRoom({
 
     const visibleStrokes = useMemo(() => strokes.filter((stroke) => !stroke.hidden), [strokes]);
 
+    const activeSpeakerName = useMemo(() => {
+        if (!speakingIds || speakingIds.length === 0) return null;
+        const firstSpeakerId = speakingIds[0];
+        if (Number(session?.mentor?.id) === Number(firstSpeakerId) || (role === 'mentor' && !selfParticipant)) {
+            return session?.mentor?.username || 'Mentor';
+        }
+        const found = participants.find((p) => Number(p.id) === Number(firstSpeakerId));
+        return found?.name || null;
+    }, [participants, session?.mentor, speakingIds, role, selfParticipant]);
+
+    const currentUserId = useMemo(() => {
+        if (role === 'mentor') return session?.mentor?.id || 'mentor';
+        return selfParticipant?.id || currentStudent?.id || 'student';
+    }, [currentStudent?.id, role, selfParticipant?.id, session?.mentor?.id]);
+
+    const sendChatMessage = useCallback(async (text) => {
+        const trimmed = String(text || '').trim();
+        if (!trimmed) return;
+        const senderName = role === 'mentor'
+            ? (session?.mentor?.username || 'Mentor')
+            : (selfParticipant?.name || currentStudent?.name || 'Siswa');
+        const newMsg = {
+            id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            text: trimmed,
+            senderId: currentUserId,
+            senderName,
+            role,
+            time: new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(new Date()),
+        };
+
+        setMessages((prev) => [...prev, newMsg]);
+
+        const room = roomRef.current;
+        if (room?.localParticipant) {
+            try {
+                const payload = new TextEncoder().encode(JSON.stringify(newMsg));
+                await room.localParticipant.publishData(payload, { reliable: true, topic: 'chat' });
+            } catch (err) {
+                console.error('[LiveClass] Gagal kirim pesan WebRTC:', err);
+            }
+        }
+    }, [currentStudent?.name, currentUserId, role, selfParticipant?.name, session?.mentor?.username]);
+
+    useEffect(() => {
+        if (drawerOpen && drawerTab === 'chat') {
+            setUnreadChatCount(0);
+        }
+    }, [drawerOpen, drawerTab]);
+
+    useEffect(() => {
+        window.localStorage.setItem('toku-up:live-camera-docked', cameraDocked ? '1' : '0');
+    }, [cameraDocked]);
+
     const normalizeParticipant = useCallback((participant) => ({
         ...participant,
         id: Number(participant.id),
@@ -590,6 +793,28 @@ export default function LiveClassRoom({
         if (!stateEndpoint || role !== 'mentor') return Promise.resolve();
         return axios.patch(stateEndpoint, changes).catch(() => setConnection('slow'));
     }, [role, stateEndpoint]);
+
+    const handleSelectDeck = useCallback(async (newDeckId) => {
+        if (role !== 'mentor' || !stateEndpoint || switchingDeck) return;
+        setSwitchingDeck(true);
+        try {
+            const res = await axios.patch(stateEndpoint, {
+                presentation_deck_id: newDeckId,
+                current_slide_index: 0,
+                stage_mode: newDeckId ? 'slides' : 'board',
+            });
+            if (res.data?.state?.deck !== undefined) {
+                setCurrentDeck(res.data.state.deck);
+            }
+            setIndex(0);
+            setStageMode(newDeckId ? 'slides' : 'board');
+            setDeckPickerOpen(false);
+        } catch (err) {
+            console.error('Gagal mengganti presentasi:', err);
+        } finally {
+            setSwitchingDeck(false);
+        }
+    }, [role, stateEndpoint, switchingDeck]);
 
     const replaceBoardStrokes = useCallback((updater) => {
         const nextStrokes = typeof updater === 'function' ? updater(strokesRef.current) : updater;
@@ -690,7 +915,7 @@ export default function LiveClassRoom({
     }, [canDraw, role]);
 
     useEffect(() => {
-        const container = cameraContainerRef.current;
+        const container = cameraDocked ? dockedCameraContainerRef.current : cameraContainerRef.current;
         if (!container || !cameraTrack) return undefined;
         const element = cameraTrack.attach();
         element.autoplay = true;
@@ -702,7 +927,7 @@ export default function LiveClassRoom({
             cameraTrack.detach(element);
             element.remove();
         };
-    }, [cameraTrack]);
+    }, [cameraDocked, cameraTrack, phase]);
 
     useEffect(() => {
         const container = screenContainerRef.current;
@@ -753,6 +978,9 @@ export default function LiveClassRoom({
             if (payload.status === 'ended') setPhase('ended');
             if (payload.stage_mode) setStageMode(payload.stage_mode);
             if (Number.isInteger(payload.current_slide_index)) setIndex(payload.current_slide_index);
+            if (payload.deck !== undefined) {
+                setCurrentDeck(payload.deck);
+            }
             if (payload.board_snapshot?.strokes && Number(payload.board_snapshot.version || 0) >= boardVersionRef.current) {
                 boardVersionRef.current = Number(payload.board_snapshot.version || 0);
                 replaceBoardStrokes(payload.board_snapshot.strokes);
@@ -892,6 +1120,17 @@ export default function LiveClassRoom({
             });
             room.on(RoomEvent.ActiveSpeakersChanged, (activeSpeakers) => {
                 setSpeakingIds(activeSpeakers.map((participant) => Number(String(participant.identity || '').replace('user:', ''))).filter(Number.isFinite));
+            });
+            room.on(RoomEvent.DataReceived, (payload, participant, kind, topic) => {
+                if (topic === 'chat') {
+                    try {
+                        const parsed = JSON.parse(new TextDecoder().decode(payload));
+                        setMessages((prev) => [...prev, parsed]);
+                        setUnreadChatCount((count) => count + 1);
+                    } catch (e) {
+                        console.error('[LiveKit] Data chat parse error:', e);
+                    }
+                }
             });
             room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
                 if (track.kind === Track.Kind.Audio) {
@@ -1483,7 +1722,39 @@ export default function LiveClassRoom({
                     <span className={`h-2 w-2 rounded-full ${connection === 'connected' ? 'bg-emerald-400' : connection === 'slow' ? 'bg-amber-400' : 'animate-pulse bg-blue-400'}`} />
                     {connectionLabels[connection]}
                 </span>
-                <button type="button" onClick={() => setDrawerOpen(true)} className="relative grid h-9 w-9 place-items-center rounded-lg bg-white/5" title="Peserta"><PeopleIcon sx={{ fontSize: 19 }} /><span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-1.5 text-[9px] font-black">{participants.length + 1}</span></button>
+                <button
+                    type="button"
+                    onClick={() => { setDrawerOpen(true); setDrawerTab('chat'); setUnreadChatCount(0); }}
+                    className="relative grid h-9 w-9 place-items-center rounded-lg bg-white/5 text-gray-300 transition hover:bg-white/10 hover:text-white"
+                    title="Obrolan Kelas"
+                >
+                    <ChatBubbleOutlineIcon sx={{ fontSize: 18 }} />
+                    {unreadChatCount > 0 && (
+                        <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-orange-500 px-1 text-[9px] font-black text-white">
+                            {unreadChatCount}
+                        </span>
+                    )}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => { setDrawerOpen(true); setDrawerTab('participants'); }}
+                    className="relative grid h-9 w-9 place-items-center rounded-lg bg-white/5 text-gray-300 transition hover:bg-white/10 hover:text-white"
+                    title="Peserta"
+                >
+                    <PeopleIcon sx={{ fontSize: 19 }} />
+                    <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-1.5 text-[9px] font-black text-white">{participants.length + 1}</span>
+                </button>
+                {role === 'mentor' && (
+                    <button
+                        type="button"
+                        onClick={() => setDeckPickerOpen(true)}
+                        className="flex h-9 items-center gap-2 rounded-lg bg-orange-500/20 px-2.5 text-xs font-black text-orange-300 transition hover:bg-orange-500/30 sm:px-3"
+                        title="Pilih atau ganti presentasi kelas"
+                    >
+                        <AutoStoriesIcon sx={{ fontSize: 16 }} />
+                        <span className="hidden sm:inline">Pilih PPT</span>
+                    </button>
+                )}
                 {role === 'mentor' && resolvedJoinUrl && (
                     <button
                         type="button"
@@ -1538,14 +1809,44 @@ export default function LiveClassRoom({
             <div className="relative flex min-h-0 flex-1">
                 {thumbnailsOpen && (
                     <aside className="absolute inset-y-0 left-0 z-40 w-[min(82vw,14rem)] overflow-y-auto border-r border-white/10 bg-[#0b111d]/95 p-3 backdrop-blur sm:static sm:w-56 sm:shrink-0">
-                        <div className="mb-3 flex items-center justify-between"><p className="text-xs font-black uppercase tracking-wider text-gray-500">Slide</p><button type="button" onClick={() => setThumbnailsOpen(false)} className="sm:hidden"><CloseIcon sx={{ fontSize: 18 }} /></button></div>
-                        <div className="space-y-2">
-                            {slides.map((slide, slideIndex) => (
-                                <button type="button" key={slide.id || slideIndex} onClick={() => { changeSlide(slideIndex); if (window.innerWidth < 640) setThumbnailsOpen(false); }} className={`w-full rounded-lg border p-2 text-left ${slideIndex === index ? 'border-orange-500 bg-orange-500/10' : 'border-white/10 bg-white/[0.03]'}`}>
-                                    <span className="text-[10px] font-black text-gray-500">{slideIndex + 1}</span><p className="mt-1 line-clamp-2 text-xs font-bold">{slide.title || `Slide ${slideIndex + 1}`}</p>
-                                </button>
-                            ))}
+                        <div className="mb-3 flex items-center justify-between">
+                            <p className="text-xs font-black uppercase tracking-wider text-gray-500">Slide ({slides.length})</p>
+                            <div className="flex items-center gap-1.5">
+                                {role === 'mentor' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeckPickerOpen(true)}
+                                        className="rounded bg-orange-500/20 px-2 py-0.5 text-[10px] font-black text-orange-400 hover:bg-orange-500/30"
+                                        title="Ganti PPT"
+                                    >
+                                        Ganti
+                                    </button>
+                                )}
+                                <button type="button" onClick={() => setThumbnailsOpen(false)} className="text-gray-400 hover:text-white sm:hidden"><CloseIcon sx={{ fontSize: 18 }} /></button>
+                            </div>
                         </div>
+                        {slides.length === 0 ? (
+                            <div className="rounded-xl border border-dashed border-white/10 p-4 text-center">
+                                <p className="text-xs text-gray-400">Belum ada slide aktif.</p>
+                                {role === 'mentor' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeckPickerOpen(true)}
+                                        className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-black text-white hover:bg-orange-400"
+                                    >
+                                        <AutoStoriesIcon sx={{ fontSize: 14 }} /> Pilih PPT
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {slides.map((slide, slideIndex) => (
+                                    <button type="button" key={slide.id || slideIndex} onClick={() => { changeSlide(slideIndex); if (window.innerWidth < 640) setThumbnailsOpen(false); }} className={`w-full rounded-lg border p-2 text-left ${slideIndex === index ? 'border-orange-500 bg-orange-500/10' : 'border-white/10 bg-white/[0.03]'}`}>
+                                        <span className="text-[10px] font-black text-gray-500">{slideIndex + 1}</span><p className="mt-1 line-clamp-2 text-xs font-bold">{slide.title || `Slide ${slideIndex + 1}`}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </aside>
                 )}
 
@@ -1559,6 +1860,17 @@ export default function LiveClassRoom({
                         onPointerLeave={() => { if (!activeStroke) setPointer(null); }}
                         className={`relative mx-auto aspect-video max-h-full w-full max-w-[calc((100dvh-7.5rem)*16/9)] flex-1 touch-none overflow-hidden rounded-lg border border-white/10 bg-gray-900 shadow-2xl sm:max-w-[calc((100dvh-9.5rem)*16/9)] sm:rounded-xl ${tool === 'pen' && canDraw ? 'cursor-crosshair' : ''}`}
                     >
+                        {activeSpeakerName && (
+                            <div className="pointer-events-none absolute left-3 top-3 z-30 flex items-center gap-2 rounded-full border border-emerald-500/40 bg-gray-950/85 px-3 py-1.5 shadow-xl backdrop-blur-md">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                                </span>
+                                <MicIcon sx={{ fontSize: 15 }} className="text-emerald-400" />
+                                <span className="text-xs font-black text-white">{activeSpeakerName}</span>
+                            </div>
+                        )}
+
                         {stageMode === 'slides' && <PresentationStage slide={activeSlide} contained className="absolute inset-0" />}
                         {stageMode === 'board' && <div className="absolute inset-0 bg-white bg-[linear-gradient(rgba(15,23,42,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.08)_1px,transparent_1px)] bg-[size:28px_28px]" />}
                         {stageMode === 'screen' && <div className="absolute inset-0 grid place-items-center bg-[#111827] p-6 text-center"><div ref={screenContainerRef} className="absolute inset-0" />{!screenTrack && <div><ScreenShareIcon sx={{ fontSize: 52 }} className="text-blue-400" /><h2 className="mt-3 text-xl font-black">Berbagi layar</h2><p className="mt-2 text-sm font-semibold text-gray-400">Pilih layar, jendela, atau tab browser yang ingin dibagikan.</p></div>}</div>}
@@ -1568,7 +1880,7 @@ export default function LiveClassRoom({
                         </svg>
                         {pointer && tool === 'pointer' && <span className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-brand-500 shadow-lg" style={{ left: `${pointer.x}%`, top: `${pointer.y}%` }} />}
 
-                        {showMentorCamera && (
+                        {showMentorCamera && !cameraDocked && (
                             <div
                                 onPointerDown={startCameraDrag}
                                 onPointerMove={moveCamera}
@@ -1579,6 +1891,14 @@ export default function LiveClassRoom({
                                 style={{ left: `${cameraPosition.x}%`, top: `${cameraPosition.y}%`, transform: 'translate(-50%, -50%)' }}
                                 title="Geser kamera mentor. Klik dua kali untuk mengembalikan posisi."
                             >
+                                <button
+                                    type="button"
+                                    onClick={(event) => { event.stopPropagation(); setCameraDocked(true); }}
+                                    className="absolute right-1 top-1 z-30 grid h-5 w-5 place-items-center rounded bg-black/60 text-gray-300 transition hover:text-white"
+                                    title="Sematkan kamera ke samping panggung (Docking)"
+                                >
+                                    <PushPinIcon sx={{ fontSize: 13 }} />
+                                </button>
                                 <div ref={cameraContainerRef} className="pointer-events-none absolute inset-0" />
                                 {!cameraTrack && <div className="pointer-events-none relative text-center"><span className="mx-auto grid h-8 w-8 place-items-center rounded-full bg-orange-500 text-[10px] font-black sm:h-9 sm:w-9 sm:text-xs">MK</span><p className="mt-1 hidden text-[10px] font-black sm:block">Kamera dimuat</p></div>}
                             </div>
@@ -1592,13 +1912,39 @@ export default function LiveClassRoom({
                         <span className="hidden sm:inline">{role === 'mentor' ? 'Anda mengajar sebagai mentor' : `Pratinjau sebagai ${currentStudent?.name}`}</span>
                     </div>
                 </section>
+
+                {showMentorCamera && cameraDocked && (
+                    <aside className="hidden w-56 shrink-0 flex-col border-l border-white/10 bg-[#0b111d] p-3 sm:flex">
+                        <div className="mb-2 flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-orange-400">Kamera Mentor</span>
+                            <button
+                                type="button"
+                                onClick={() => setCameraDocked(false)}
+                                className="rounded p-1 text-gray-400 transition hover:bg-white/10 hover:text-white"
+                                title="Lepas ke mode melayang (Floating)"
+                            >
+                                <PushPinIcon sx={{ fontSize: 14 }} className="rotate-45 text-orange-400" />
+                            </button>
+                        </div>
+                        <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white/20 bg-gray-950 shadow">
+                            <div ref={dockedCameraContainerRef} className="absolute inset-0" />
+                            {!cameraTrack && (
+                                <div className="grid h-full place-items-center text-center">
+                                    <span className="grid h-8 w-8 place-items-center rounded-full bg-orange-500 text-xs font-black">MK</span>
+                                    <p className="mt-1 text-[10px] font-bold text-gray-400">Kamera Mentor</p>
+                                </div>
+                            )}
+                        </div>
+                    </aside>
+                )}
             </div>
 
             <footer className={`relative z-30 flex min-h-14 shrink-0 items-center justify-start gap-2 border-t border-white/10 bg-[#0b111d] px-2 py-2 [scrollbar-width:none] sm:min-h-16 sm:px-3 md:justify-center [&::-webkit-scrollbar]:hidden ${toolsOpen || stageMenuOpen || raiseHandPromptOpen || raiseHandNotice ? 'overflow-visible' : 'overflow-x-auto overflow-y-hidden'}`}>
                 {role === 'mentor' && stageMenuOpen && (
                     <div className="absolute bottom-full left-2 mb-2 w-56 overflow-hidden rounded-xl border border-white/10 bg-[#111a2b] p-2 shadow-2xl lg:hidden">
                         <p className="px-2 pb-2 pt-1 text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">Tampilan kelas</p>
-                        <button type="button" disabled={!hasSlides} onClick={() => selectStageMode('slides')} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black disabled:cursor-not-allowed disabled:opacity-35 ${stageMode === 'slides' ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-white/5'}`}><PresentToAllIcon sx={{ fontSize: 18 }} /> Presentasi</button>
+                        <button type="button" onClick={() => { setDeckPickerOpen(true); setStageMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black text-orange-400 hover:bg-white/5"><AutoStoriesIcon sx={{ fontSize: 18 }} /> Pilih PPT Kelas</button>
+                        <button type="button" disabled={!hasSlides} onClick={() => selectStageMode('slides')} className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black disabled:cursor-not-allowed disabled:opacity-35 ${stageMode === 'slides' ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-white/5'}`}><PresentToAllIcon sx={{ fontSize: 18 }} /> Presentasi</button>
                         <button type="button" onClick={() => selectStageMode('board')} className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black ${stageMode === 'board' ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-white/5'}`}><DrawIcon sx={{ fontSize: 18 }} /> Papan tulis</button>
                         <button type="button" disabled={screenShareBusy || connection !== 'connected'} onClick={() => selectStageMode(stageMode === 'screen' ? (hasSlides ? 'slides' : 'board') : 'screen')} className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black disabled:cursor-not-allowed disabled:opacity-40 ${stageMode === 'screen' ? 'bg-orange-500 text-white' : 'text-gray-200 hover:bg-white/5'}`}>{screenSharing ? <StopScreenShareIcon sx={{ fontSize: 18 }} /> : <ScreenShareIcon sx={{ fontSize: 18 }} />} {screenShareBusy ? 'Menyiapkan...' : screenSharing ? 'Hentikan berbagi' : 'Bagikan layar'}</button>
                         <button type="button" onClick={() => { setThumbnailsOpen(true); setStageMenuOpen(false); }} className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-black text-gray-200 hover:bg-white/5 sm:hidden"><SlideshowIcon sx={{ fontSize: 18 }} /> Daftar slide</button>
@@ -1631,6 +1977,7 @@ export default function LiveClassRoom({
                         <IconButton label="Slide berikutnya" disabled={index >= slides.length - 1 || stageMode !== 'slides'} onClick={() => changeSlide(index + 1)}><ChevronRightIcon /></IconButton>
                         <span className="hidden h-7 w-px shrink-0 bg-white/10 sm:block" />
                         <div className="hidden items-center gap-2 lg:flex">
+                            <IconButton label="Pilih / Ganti PPT Kelas" active={deckPickerOpen} onClick={() => setDeckPickerOpen(true)}><AutoStoriesIcon sx={{ fontSize: 19 }} /></IconButton>
                             <IconButton label="Mode presentasi" disabled={!hasSlides} active={stageMode === 'slides'} onClick={() => selectStageMode('slides')}><PresentToAllIcon sx={{ fontSize: 19 }} /></IconButton>
                             <IconButton label="Papan tulis" active={stageMode === 'board'} onClick={() => selectStageMode('board')}><DrawIcon sx={{ fontSize: 19 }} /></IconButton>
                             <IconButton label={screenShareBusy ? 'Menyiapkan berbagi layar' : screenSharing ? 'Hentikan berbagi layar' : 'Bagikan layar'} disabled={screenShareBusy || connection !== 'connected'} active={stageMode === 'screen'} onClick={() => selectStageMode(stageMode === 'screen' ? (hasSlides ? 'slides' : 'board') : 'screen')}>{screenSharing ? <StopScreenShareIcon sx={{ fontSize: 19 }} /> : <ScreenShareIcon sx={{ fontSize: 19 }} />}</IconButton>
@@ -1697,6 +2044,34 @@ export default function LiveClassRoom({
                 <IconButton label={lowDataMode ? 'Nonaktifkan mode hemat data' : 'Aktifkan mode hemat data'} active={lowDataMode} onClick={() => setLowDataMode((value) => !value)}><WifiIcon sx={{ fontSize: 19 }} /></IconButton>
                 <div className="hidden md:block"><IconButton label="Layar penuh" onClick={() => document.documentElement.requestFullscreen?.()}><FullscreenIcon sx={{ fontSize: 19 }} /></IconButton></div>
                 <span className="ml-auto" />
+                <div className="relative">
+                    <IconButton
+                        label="Obrolan kelas"
+                        active={drawerOpen && drawerTab === 'chat'}
+                        onClick={() => {
+                            setDrawerOpen(true);
+                            setDrawerTab('chat');
+                            setUnreadChatCount(0);
+                        }}
+                    >
+                        <ChatBubbleOutlineIcon sx={{ fontSize: 19 }} />
+                    </IconButton>
+                    {unreadChatCount > 0 && (
+                        <span className="pointer-events-none absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-orange-500 px-1 text-[9px] font-black text-white">
+                            {unreadChatCount}
+                        </span>
+                    )}
+                </div>
+                <IconButton
+                    label="Daftar peserta"
+                    active={drawerOpen && drawerTab === 'participants'}
+                    onClick={() => {
+                        setDrawerOpen(true);
+                        setDrawerTab('participants');
+                    }}
+                >
+                    <PeopleIcon sx={{ fontSize: 19 }} />
+                </IconButton>
                 <IconButton label={role === 'mentor' ? 'Akhiri ruang kelas' : 'Keluar dari ruang kelas'} danger onClick={leaveOrEnd}>{role === 'mentor' ? <CallEndIcon sx={{ fontSize: 19 }} /> : <LogoutIcon sx={{ fontSize: 19 }} />}</IconButton>
             </footer>
 
@@ -1705,12 +2080,127 @@ export default function LiveClassRoom({
                 role={role}
                 participants={participants}
                 speakingIds={speakingIds}
+                activeTab={drawerTab}
+                onTabChange={(tab) => {
+                    setDrawerTab(tab);
+                    if (tab === 'chat') setUnreadChatCount(0);
+                }}
+                messages={messages}
+                onSendMessage={sendChatMessage}
+                unreadChatCount={unreadChatCount}
+                currentUserId={currentUserId}
                 onClose={() => setDrawerOpen(false)}
                 onUpdate={updateRemoteParticipant}
                 onClearStrokes={(id) => publishBoardEvent({ type: 'clear', ownerId: id })}
                 onKick={kickRemoteParticipant}
                 onMuteAll={muteAllParticipants}
             />
+            <Transition show={deckPickerOpen} as={React.Fragment}>
+                <Dialog as="div" className="relative z-50" onClose={() => setDeckPickerOpen(false)}>
+                    <TransitionChild
+                        as={React.Fragment}
+                        enter="ease-out duration-200"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="ease-in duration-150"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                    >
+                        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm" />
+                    </TransitionChild>
+
+                    <div className="fixed inset-0 overflow-y-auto p-4 flex items-center justify-center">
+                        <TransitionChild
+                            as={React.Fragment}
+                            enter="ease-out duration-200"
+                            enterFrom="opacity-0 scale-95"
+                            enterTo="opacity-100 scale-100"
+                            leave="ease-in duration-150"
+                            leaveFrom="opacity-100 scale-100"
+                            leaveTo="opacity-0 scale-95"
+                        >
+                            <DialogPanel className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0d1422] p-5 shadow-2xl text-white">
+                                <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                                    <div className="flex items-center gap-2">
+                                        <AutoStoriesIcon className="text-orange-400" sx={{ fontSize: 22 }} />
+                                        <div>
+                                            <DialogTitle className="text-base font-black text-white">
+                                                Pilih PPT / Materi Kelas
+                                            </DialogTitle>
+                                            <p className="text-xs text-gray-400">
+                                                Ganti presentasi yang sedang ditampilkan kepada peserta secara langsung.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeckPickerOpen(false)}
+                                        className="grid h-8 w-8 place-items-center rounded-lg text-gray-400 hover:bg-white/10 hover:text-white"
+                                    >
+                                        <CloseIcon sx={{ fontSize: 18 }} />
+                                    </button>
+                                </div>
+
+                                <div className="mt-4 max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+                                    <div className={`flex items-center justify-between rounded-xl border p-3.5 transition ${!currentDeck ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>
+                                        <div>
+                                            <p className="text-sm font-black text-white">Papan Tulis Kosong (Tanpa PPT)</p>
+                                            <p className="text-xs text-gray-400">Gunakan layar papan tulis kosong untuk coretan bebas</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            disabled={!currentDeck || switchingDeck}
+                                            onClick={() => handleSelectDeck(null)}
+                                            className={`rounded-lg px-3 py-1.5 text-xs font-black transition ${!currentDeck ? 'bg-orange-500/20 text-orange-300' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                                        >
+                                            {!currentDeck ? 'Sedang Aktif' : switchingDeck ? 'Memuat...' : 'Gunakan'}
+                                        </button>
+                                    </div>
+
+                                    {availableDecks.length === 0 ? (
+                                        <div className="rounded-xl border border-dashed border-white/10 p-6 text-center text-sm text-gray-400">
+                                            Belum ada deck presentasi lain yang tersedia untuk program ini.
+                                        </div>
+                                    ) : (
+                                        availableDecks.map((item) => {
+                                            const isSelected = currentDeck?.id === item.id;
+                                            return (
+                                                <div
+                                                    key={item.id}
+                                                    className={`flex items-center justify-between rounded-xl border p-3.5 transition ${isSelected ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}
+                                                >
+                                                    <div className="min-w-0 pr-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="truncate text-sm font-black text-white">{item.title}</p>
+                                                            {isSelected && (
+                                                                <span className="shrink-0 rounded bg-orange-500/20 px-2 py-0.5 text-[10px] font-black text-orange-400">
+                                                                    Aktif
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="mt-0.5 text-xs text-gray-400">
+                                                            {item.module ? `Modul: ${item.module.title}` : 'Umum'} · {item.slides_count ?? item.slides?.length ?? 0} slide
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        disabled={isSelected || switchingDeck}
+                                                        onClick={() => handleSelectDeck(item.id)}
+                                                        className={`shrink-0 rounded-lg px-3.5 py-1.5 text-xs font-black transition ${isSelected ? 'bg-orange-500/20 text-orange-300 cursor-default' : 'bg-orange-500 text-white hover:bg-orange-400'}`}
+                                                    >
+                                                        {isSelected ? 'Sedang Tayang' : switchingDeck ? 'Memuat...' : 'Tampilkan'}
+                                                    </button>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </DialogPanel>
+                        </TransitionChild>
+                    </div>
+                </Dialog>
+            </Transition>
+
             <div ref={remoteAudioContainerRef} className="pointer-events-none fixed h-px w-px overflow-hidden opacity-0" aria-hidden="true" />
         </main>
     );
