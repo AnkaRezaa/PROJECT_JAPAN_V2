@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             DemoDataSeeder::class,
             NewsPortalSeeder::class,
             AchievementSeeder::class,
+            StandaloneExamDemoSeeder::class,
         ]);
     }
 }
