@@ -10,13 +10,13 @@ const variants = {
 };
 
 const sizes = {
-    sm: 'px-3 py-1.5 text-xs rounded-md',
-    md: 'px-5 py-2.5 text-sm rounded-lg',
-    lg: 'px-7 py-3.5 text-base rounded-xl',
+    sm: 'min-h-[32px] px-3 py-1 text-xs rounded-lg',
+    md: 'min-h-[38px] px-4 py-2 text-xs sm:text-sm rounded-xl',
+    lg: 'min-h-11 px-6 py-2.5 text-sm sm:text-base rounded-xl',
 };
 
 export default function Button({ children, variant = 'primary', size = 'md', href, className = '', disabled, ...props }) {
-    const classes = `inline-flex min-h-11 items-center justify-center gap-2 font-semibold transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--toku-focus)] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none dark:focus-visible:ring-offset-gray-950 ${variants[variant]} ${sizes[size]} ${className}`;
+    const classes = `inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--toku-focus)] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none dark:focus-visible:ring-offset-gray-950 ${variants[variant]} ${sizes[size]} ${className}`;
 
     if (href) {
         return <Link href={href} className={classes} {...props}>{children}</Link>;

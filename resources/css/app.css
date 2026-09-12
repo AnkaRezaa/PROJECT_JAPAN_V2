@@ -109,6 +109,12 @@
         scrollbar-width: none;
     }
 
+    @media (min-width: 1024px) {
+        html {
+            font-size: 15.2px;
+        }
+    }
+
     body {
         background: var(--toku-surface-muted);
         color: var(--toku-ink);

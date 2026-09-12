@@ -542,7 +542,7 @@ export default function AuthenticatedLayout({ children }) {
         setProfileMenuOpen(false);
         setNotificationOpen(false);
     };
-    const desktopPopoverPosition = isExpanded ? 'lg:left-[248px]' : 'lg:left-[96px]';
+    const desktopPopoverPosition = isExpanded ? 'lg:left-[232px]' : 'lg:left-[88px]';
     const renderAdminGroup = (item) => {
         const groupActive = item.items.some((child) => isActiveItem(child));
         const isOpen = openMenuGroups[item.key] || groupActive;
@@ -560,8 +560,8 @@ export default function AuthenticatedLayout({ children }) {
                         event.stopPropagation();
                         toggleMenuGroup(item.key);
                     }}
-                    className={`flex min-h-[52px] w-full items-center rounded-xl py-2.5 transition-all ${
-                        navigationExpanded ? 'flex-row justify-start px-3.5' : 'justify-center px-2'
+                    className={`flex min-h-[42px] w-full items-center rounded-xl py-2 transition-all ${
+                        navigationExpanded ? 'flex-row justify-start px-3' : 'justify-center px-2'
                     } ${
                         groupActive
                             ? 'bg-brand-50 text-brand-700 dark:bg-[#12351f] dark:text-green-200'
@@ -748,7 +748,7 @@ export default function AuthenticatedLayout({ children }) {
             )}
 
             {/* ====== SIDEBAR VERTIKAL ====== */}
-            <aside id="main-sidebar" aria-label="Navigasi utama" className={`fixed inset-y-0 left-0 z-[80] flex w-[calc(100vw-3rem)] max-w-[20rem] flex-col border-r border-gray-200 bg-gray-100 transition-[transform,width] duration-300 ease-in-out dark:border-gray-800 dark:bg-gray-900 ${isExpanded ? 'lg:w-[240px]' : 'lg:w-[88px]'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+            <aside id="main-sidebar" aria-label="Navigasi utama" className={`fixed inset-y-0 left-0 z-[80] flex w-[calc(100vw-3rem)] max-w-[20rem] flex-col border-r border-gray-200 bg-gray-100 transition-[transform,width] duration-300 ease-in-out dark:border-gray-800 dark:bg-gray-900 ${isExpanded ? 'lg:w-[224px]' : 'lg:w-[80px]'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
                 
                 <div className="relative mb-4 border-b border-gray-100 dark:border-gray-800">
                     <div className="flex h-14 items-center justify-between px-3 lg:hidden">
@@ -764,10 +764,10 @@ export default function AuthenticatedLayout({ children }) {
                             <CloseIcon sx={{ fontSize: 22 }} />
                         </button>
                     </div>
-                    <div className={`hidden h-16 items-center p-3 lg:flex ${isExpanded ? 'gap-3' : 'justify-center'}`}>
-                        <img src="/images/logos/toku-up-mark.png" alt="TOKU-UP" className={`${isExpanded ? 'h-10 w-10' : 'h-8 w-8'} shrink-0 object-contain rounded-full transition-all duration-300 dark:ring-1 dark:ring-white/20 dark:shadow-[0_0_12px_rgba(34,197,94,0.35)]`} />
+                    <div className={`hidden h-14 items-center px-3 lg:flex ${isExpanded ? 'gap-3' : 'justify-center'}`}>
+                        <img src="/images/logos/toku-up-mark.png" alt="TOKU-UP" className={`${isExpanded ? 'h-8 w-8' : 'h-7 w-7'} shrink-0 object-contain rounded-full transition-all duration-300 dark:ring-1 dark:ring-white/20 dark:shadow-[0_0_12px_rgba(34,197,94,0.35)]`} />
                         {isExpanded && (
-                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-7 w-auto max-w-[8.75rem] object-contain object-left dark:invert dark:hue-rotate-180 dark:brightness-110 animate-in fade-in slide-in-from-left-2 duration-300" />
+                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-6 w-auto max-w-[7.5rem] object-contain object-left dark:invert dark:hue-rotate-180 dark:brightness-110 animate-in fade-in slide-in-from-left-2 duration-300" />
                         )}
                     </div>
                     <button
@@ -894,13 +894,13 @@ export default function AuthenticatedLayout({ children }) {
                         aria-controls="sidebar-profile-menu"
                         aria-expanded={profileMenuOpen}
                         title={!navigationExpanded ? 'Akun' : undefined}
-                        className={`relative flex min-h-11 w-full items-center overflow-hidden rounded-2xl ring-2 transition-all focus:outline-none focus-visible:ring-focus ${
+                        className={`relative flex min-h-[42px] w-full items-center overflow-hidden rounded-2xl ring-2 transition-all focus:outline-none focus-visible:ring-focus ${
                             navigationExpanded
-                                ? 'gap-3 border border-gray-200 bg-white px-2 py-1.5 shadow-sm dark:border-gray-700 dark:bg-gray-800'
+                                ? 'gap-2.5 border border-gray-200 bg-white px-2 py-1 shadow-sm dark:border-gray-700 dark:bg-gray-800'
                                 : 'justify-center'
                         } ${profileMenuOpen ? 'ring-gray-300 ring-offset-2 dark:ring-gray-600 dark:ring-offset-gray-900' : 'ring-transparent'}`}
                     >
-                        <div className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 font-black text-white shadow-sm transition-all ${navigationExpanded ? 'h-8 w-8 text-sm' : 'h-[42px] w-[42px] text-xl'}`}>
+                        <div className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 font-black text-white shadow-sm transition-all ${navigationExpanded ? 'h-7 w-7 text-xs' : 'h-[36px] w-[36px] text-lg'}`}>
                             {user?.avatar ? (
                                 <img src={user.avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                             ) : (
@@ -927,8 +927,8 @@ export default function AuthenticatedLayout({ children }) {
                 </div>
             </aside>
 
-            <div className={`flex-1 w-full transition-all duration-300 ${isExpanded ? 'lg:ml-[240px]' : 'lg:ml-[88px]'}`}>
-                <header className="sticky top-0 z-20 hidden min-h-[64px] items-center justify-between border-b border-gray-200/80 bg-white/85 px-6 shadow-sm backdrop-blur-xl transition-colors duration-300 dark:border-gray-800 dark:bg-gray-950/80 lg:flex">
+            <div className={`flex-1 w-full transition-all duration-300 ${isExpanded ? 'lg:ml-[224px]' : 'lg:ml-[80px]'}`}>
+                <header className="sticky top-0 z-20 hidden min-h-[56px] items-center justify-between border-b border-gray-200/80 bg-white/85 px-5 shadow-sm backdrop-blur-xl transition-colors duration-300 dark:border-gray-800 dark:bg-gray-950/80 lg:flex">
                     <div className="min-w-0">
                         <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-4 w-auto max-w-[7.5rem] object-contain object-left dark:invert dark:hue-rotate-180 dark:brightness-110" />
                         <p className="truncate text-sm font-semibold text-slate-600 dark:text-slate-300">

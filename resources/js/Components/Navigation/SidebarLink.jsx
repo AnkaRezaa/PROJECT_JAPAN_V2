@@ -24,8 +24,8 @@ export default function SidebarLink({
         'aria-label': !isExpanded ? label : undefined,
         title: !isExpanded ? label : undefined,
         onClick: onNavigate,
-        className: `group relative mb-1.5 flex min-h-[52px] w-full items-center rounded-xl border border-transparent py-2.5 transition-all duration-200 ${
-            isExpanded ? 'flex-row justify-start px-3.5' : 'justify-center px-2'
+        className: `group relative mb-1 flex min-h-[42px] w-full items-center rounded-xl border border-transparent py-2 transition-all duration-200 ${
+            isExpanded ? 'flex-row justify-start px-3' : 'justify-center px-2'
         } ${
             active
                 ? activeClasses
