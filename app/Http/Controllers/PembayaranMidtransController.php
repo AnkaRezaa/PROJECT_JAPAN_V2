@@ -1002,6 +1002,8 @@ class PembayaranMidtransController extends Controller
 
     private function buildChargePayload(Transaksi $transaction, Request $request, string $channel, ?string $cardToken, string $midtransOrderId): array
     {
+        $isInstantPayment = in_array($channel, ['qris', 'gopay', 'shopeepay'], true);
+
         $base = [
             'transaction_details' => [
                 'order_id' => $midtransOrderId,
@@ -1019,8 +1021,8 @@ class PembayaranMidtransController extends Controller
             ]],
             'custom_expiry' => [
                 'order_time' => now()->format('Y-m-d H:i:s O'),
-                'expiry_duration' => max(1, (int) config('services.midtrans.snap_expiry_hours', 24)),
-                'unit' => 'hour',
+                'expiry_duration' => $isInstantPayment ? 30 : 1,
+                'unit' => $isInstantPayment ? 'minute' : 'hour',
             ],
         ];
 
@@ -1119,6 +1121,13 @@ class PembayaranMidtransController extends Controller
             $bank = 'permata';
         }
 
+        $fallbackMinutes = in_array($channel, ['qris', 'gopay', 'shopeepay'], true)
+            ? 30
+            : 60;
+
+        $expiryTime = $response['expiry_time']
+            ?? now()->addMinutes($fallbackMinutes)->format('Y-m-d H:i:s');
+
         return [
             'channel' => $channel,
             'midtrans_order_id' => $midtransOrderId,
@@ -1130,7 +1139,7 @@ class PembayaranMidtransController extends Controller
             'qr_url' => $qrUrl,
             'deeplink_url' => $deeplinkUrl,
             'redirect_url' => $response['redirect_url'] ?? null,
-            'expiry_time' => $response['expiry_time'] ?? null,
+            'expiry_time' => $expiryTime,
             'gross_amount' => $response['gross_amount'] ?? null,
             'status_message' => $response['status_message'] ?? null,
             'transaction_status' => $response['transaction_status'] ?? null,

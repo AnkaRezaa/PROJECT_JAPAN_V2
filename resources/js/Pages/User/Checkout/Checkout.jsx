@@ -16,6 +16,7 @@ import PaymentMethodSelector from './Components/PaymentMethodSelector';
 import VirtualAccountView from './Components/VirtualAccountView';
 import QrisView from './Components/QrisView';
 import EWalletView from './Components/EWalletView';
+import PaymentCountdownTimer from './Components/PaymentCountdownTimer';
 
 const statusPresentation = {
   pending: {
@@ -365,6 +366,11 @@ export default function Checkout({ transaction, midtrans }) {
               {/* State 2: Pending with Charge Payload (Instruction State) */}
               {isPending && hasActivePaymentInstruction && (
                 <div className="mt-4 sm:mt-6">
+                  <PaymentCountdownTimer
+                    expiryTime={paymentPayload?.expiry_time}
+                    onExpire={() => syncStatus(true)}
+                  />
+
                   {paymentChannel === 'qris' ? (
                     <QrisView
                       payload={paymentPayload}
