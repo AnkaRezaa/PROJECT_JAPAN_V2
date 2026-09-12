@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import EmojiEventsRoundedIcon from '@mui/icons-material/EmojiEventsRounded';
 import ExamPortalLayout from '@/Layouts/ExamPortalLayout';
-import { EmptyState, FieldLabel, PageHeading, PrototypeBadge, inputClassName } from '@/Components/Features/ExamPortal/ExamPortalUI';
+import { EmptyState, FieldLabel, PageHeading, inputClassName } from '@/Components/Features/ExamPortal/ExamPortalUI';
 
 const initials = (name) => name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
 
@@ -20,7 +20,7 @@ export default function Ranking({ ranking = [], sessions = [], levels = [], acti
             <Head title="Ranking Ujian" />
             <section className="border-b border-[#dbe5df] bg-white dark:border-white/10 dark:bg-[#111b16]">
                 <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-10">
-                    <PageHeading eyebrow="Hasil simulasi" title="Ranking Ujian" description="Bandingkan hasil pada sesi, level, dan naskah simulasi yang sama." action={<PrototypeBadge />} />
+                    <PageHeading eyebrow="Hasil simulasi" title="Ranking Ujian" description="Bandingkan hasil pada sesi, level, dan naskah simulasi yang sama." />
                 </div>
             </section>
 

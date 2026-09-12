@@ -7,6 +7,9 @@ use App\Models\ExamSession;
 use App\Models\ExamVersion;
 use App\Models\LevelPembelajaran;
 use App\Models\Pengguna;
+use Database\Seeders\PenggunaSeeder;
+use Database\Seeders\StandaloneExamDemoSeeder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -21,6 +24,22 @@ function createPublishedStandaloneExam(Pengguna $admin, string $access = 'all'):
 
     return compact('exam', 'version', 'section', 'question', 'session');
 }
+
+it('seeds the standalone exam demo idempotently', function () {
+    $this->seed(PenggunaSeeder::class);
+    $this->seed(StandaloneExamDemoSeeder::class);
+    $this->seed(StandaloneExamDemoSeeder::class);
+
+    $exam = Exam::query()->where('slug', StandaloneExamDemoSeeder::EXAM_SLUG)->firstOrFail();
+    $version = $exam->publishedVersion()->with('sections.questions', 'sessions')->firstOrFail();
+
+    expect(Exam::query()->where('slug', StandaloneExamDemoSeeder::EXAM_SLUG)->count())->toBe(1)
+        ->and($exam->type)->toBe('simulation')
+        ->and($exam->access_type)->toBe('all')
+        ->and($version->sections)->toHaveCount(2)
+        ->and($version->sections->sum(fn ($section) => $section->questions->count()))->toBe(10)
+        ->and($version->sessions)->toHaveCount(1);
+});
 
 it('persists admin authoring and publishes an immutable exam version', function () {
     $admin = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'kloter']);
@@ -37,14 +56,35 @@ it('persists admin authoring and publishes an immutable exam version', function 
     $this->actingAs($admin)->putJson(route('admin.exam-sections.questions.sync', $section), ['questions' => []])->assertStatus(409);
 });
 
+it('persists the selected ranking policy when an admin creates a simulation', function () {
+    $admin = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'kloter']);
+    $level = LevelPembelajaran::firstOrCreate(['level_name' => 'N3'], ['stage' => 3]);
+
+    $this->actingAs($admin)->post(route('admin.exams.store'), [
+        'title' => 'Simulasi Tanpa Ranking',
+        'level_id' => $level->id,
+        'type' => 'simulation',
+        'access_type' => 'all',
+        'ranking_policy' => 'disabled',
+    ])->assertRedirect();
+
+    expect(Exam::where('title', 'Simulasi Tanpa Ranking')->firstOrFail()
+        ->versions()->firstOrFail()->ranking_policy)->toBe('disabled');
+});
+
 it('runs a server-authoritative standalone exam without changing xp', function () {
     $admin = Pengguna::factory()->create(['role' => 'admin']);
     $user = Pengguna::factory()->create(['role' => 'user', 'xp' => 25]);
     ['exam' => $exam, 'question' => $question, 'session' => $session] = createPublishedStandaloneExam($admin);
     $token = (string) Str::uuid();
 
-    $start = $this->actingAs($user)->postJson(route('user.exams.attempts.start', $exam), ['session_id' => $session->id, 'submission_token' => $token, 'mode' => 'full'])
+    $this->actingAs($user)->postJson(route('user.exams.attempts.start', $exam), ['session_id' => $session->id, 'submission_token' => $token, 'mode' => 'full'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('agreement_accepted');
+
+    $start = $this->actingAs($user)->postJson(route('user.exams.attempts.start', $exam), ['session_id' => $session->id, 'submission_token' => $token, 'mode' => 'full', 'agreement_accepted' => true])
         ->assertCreated()->assertJsonMissing(['correct_answer' => 'うけつけ']);
+    expect($start->json('attempt.remaining_seconds'))->toBeInt();
     $attemptId = $start->json('attempt.id');
     $attempt = ExamAttempt::findOrFail($attemptId);
 
@@ -59,6 +99,12 @@ it('runs a server-authoritative standalone exam without changing xp', function (
     expect($attempt->refresh()->ranking_eligible)->toBeTrue();
     $this->actingAs($user)->postJson(route('user.exam-attempts.submit', $attempt))->assertOk()->assertJsonPath('result.score', 60);
     $this->actingAs($admin)->getJson(route('admin.exam-sessions.results', $session))->assertOk()->assertJsonPath('pagination.total', 1);
+
+    Cache::put('exam:ranking:'.$session->id, (object) ['legacy' => true], now()->addMinutes(2));
+    $this->actingAs($user)->get(route('user.exams.ranking', ['session_id' => $session->id]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('ranking', 1));
+    expect(Cache::get('exam:ranking:'.$session->id))->toBeArray();
 });
 
 it('uses database data in the portal and prevents attempt idor', function () {
@@ -68,7 +114,7 @@ it('uses database data in the portal and prevents attempt idor', function () {
     ['exam' => $exam, 'session' => $session] = createPublishedStandaloneExam($admin);
 
     $this->actingAs($owner)->get(route('user.exams.library'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('User/Ujian/Portal/Library')->where('is_prototype', false)->has('exam_packages', 1));
-    $response = $this->actingAs($owner)->postJson(route('user.exams.attempts.start', $exam), ['session_id' => $session->id, 'submission_token' => (string) Str::uuid(), 'mode' => 'full'])->assertCreated();
+    $response = $this->actingAs($owner)->postJson(route('user.exams.attempts.start', $exam), ['session_id' => $session->id, 'submission_token' => (string) Str::uuid(), 'mode' => 'full', 'agreement_accepted' => true])->assertCreated();
     $attempt = ExamAttempt::findOrFail($response->json('attempt.id'));
     $this->actingAs($other)->getJson(route('user.exam-attempts.show', $attempt))->assertNotFound();
 });

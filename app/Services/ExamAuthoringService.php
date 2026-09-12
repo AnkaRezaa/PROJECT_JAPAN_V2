@@ -34,7 +34,7 @@ class ExamAuthoringService
                 'attempt_limit' => $data['attempt_limit'] ?? null,
                 'result_release_policy' => $data['result_release_policy'] ?? ($data['type'] === 'practice' ? 'immediate' : 'manual'),
                 'review_policy' => $data['review_policy'] ?? 'wrong_only',
-                'ranking_policy' => $data['type'] === 'simulation' ? 'first_attempt' : 'disabled',
+                'ranking_policy' => $data['type'] === 'simulation' ? ($data['ranking_policy'] ?? 'first_attempt') : 'disabled',
                 'estimated_total_pass_score' => $data['estimated_total_pass_score'] ?? null,
             ]);
             $this->audit->record($exam, 'created', $actor);

@@ -60,8 +60,9 @@ export default function ExamPortalLayout({ children }) {
         <div className="min-h-screen bg-[#f5f8f6] text-[#17231d] dark:bg-[#0d1511] dark:text-gray-100">
             <header className="sticky top-0 z-50 border-b border-[#dce7e0] bg-white/95 backdrop-blur dark:border-white/10 dark:bg-[#111b16]/95">
                 <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:h-[72px]">
-                    <Link href={route('user.exams.index')} className="flex shrink-0 items-center" aria-label="Beranda Ujian TOKU-UP">
-                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-8 w-auto dark:brightness-0 dark:invert sm:h-9" />
+                    <Link href={route('user.exams.index')} className="flex shrink-0 items-center gap-2.5" aria-label="Beranda Ujian TOKU-UP">
+                        <img src="/images/logos/toku-up-mark.png" alt="" className="h-8 w-8 object-contain rounded-full transition-all dark:ring-1 dark:ring-white/20 dark:shadow-[0_0_12px_rgba(34,197,94,0.35)] sm:h-9 sm:w-9" />
+                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-6 w-auto dark:invert dark:hue-rotate-180 dark:brightness-110 sm:h-7" />
                     </Link>
 
                     <nav className="ml-auto hidden h-full items-center gap-1 lg:flex" aria-label="Navigasi portal ujian">

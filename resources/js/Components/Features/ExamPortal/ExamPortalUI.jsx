@@ -63,12 +63,14 @@ export function ExamCard({ exam }) {
                             <LockOutlinedIcon sx={{ fontSize: 17 }} /> Terkunci
                         </span>
                     ) : (
-                        <Link
+                        <a
                             href={route('user.exams.show', exam.slug)}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-600 px-4 text-xs font-black text-white transition hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
                         >
                             Lihat detail <ArrowForwardRoundedIcon sx={{ fontSize: 17 }} />
-                        </Link>
+                        </a>
                     )}
                 </div>
             </div>

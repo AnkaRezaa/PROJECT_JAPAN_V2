@@ -3,7 +3,7 @@ import { Head } from '@inertiajs/react';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import FilterAltOffRoundedIcon from '@mui/icons-material/FilterAltOffRounded';
 import ExamPortalLayout from '@/Layouts/ExamPortalLayout';
-import { EmptyState, ExamCard, FieldLabel, PageHeading, PrototypeBadge, inputClassName } from '@/Components/Features/ExamPortal/ExamPortalUI';
+import { EmptyState, ExamCard, FieldLabel, PageHeading, inputClassName } from '@/Components/Features/ExamPortal/ExamPortalUI';
 
 const PAGE_SIZE = 6;
 
@@ -52,7 +52,6 @@ export default function Library({ exam_packages = [], levels = [], sessions = []
                         eyebrow="Pustaka ujian"
                         title="Kumpulan Ujian"
                         description="Temukan latihan singkat atau simulasi lengkap berdasarkan level dan bagian yang ingin kamu ukur."
-                        action={<PrototypeBadge />}
                     />
                 </div>
             </section>

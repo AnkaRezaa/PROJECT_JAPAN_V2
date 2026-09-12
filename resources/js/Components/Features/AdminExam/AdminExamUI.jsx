@@ -13,19 +13,25 @@ const statusStyles = {
     passed: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-800',
     failed: 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-800',
     completed: 'bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-800',
+    invalidated: 'bg-gray-100 text-gray-600 ring-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600',
+    cancelled: 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-800',
 };
 
 const statusLabels = {
     published: 'Terbit', draft: 'Draft', archived: 'Arsip', active: 'Berjalan',
     scheduled: 'Terjadwal', closed: 'Selesai', passed: 'Lulus', failed: 'Belum lulus', completed: 'Selesai',
+    invalidated: 'Dibatalkan', cancelled: 'Dibatalkan',
 };
+
+export function apiErrorMessage(error, fallback = 'Permintaan gagal diproses.') {
+    const errors = error?.response?.data?.errors;
+    const firstError = errors && Object.values(errors).flat().find(Boolean);
+
+    return firstError || error?.response?.data?.message || error?.message || fallback;
+}
 
 export function StatusBadge({ status }) {
     return <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ring-inset ${statusStyles[status] || statusStyles.archived}`}>{statusLabels[status] || status}</span>;
-}
-
-export function PrototypeNotice() {
-    return <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-[11px] font-black text-amber-800 ring-1 ring-inset ring-amber-200 dark:bg-amber-950/30 dark:text-amber-200 dark:ring-amber-800">Prototipe frontend</span>;
 }
 
 export function AdminExamHeader({ eyebrow, title, description, action }) {
@@ -67,5 +73,21 @@ export function Metric({ label, value, detail }) {
             <p className="mt-2 text-2xl font-black tabular-nums text-gray-950 dark:text-white">{value}</p>
             {detail && <p className="mt-1 text-xs font-semibold text-gray-400 dark:text-gray-500">{detail}</p>}
         </div>
+    );
+}
+
+export function AdminPagination({ links = [] }) {
+    if (links.length <= 3) return null;
+
+    return (
+        <nav className="flex flex-wrap justify-end gap-1 border-t border-gray-200 p-4 dark:border-gray-800" aria-label="Navigasi halaman">
+            {links.map((item, index) => {
+                const label = String(item.label).replace('&laquo;', '').replace('&raquo;', '').trim() || (index === 0 ? 'Sebelumnya' : 'Berikutnya');
+
+                return item.url
+                    ? <Link key={`${item.label}-${index}`} href={item.url} preserveScroll className={`grid min-h-9 min-w-9 place-items-center rounded-md px-3 text-xs font-black ${item.active ? 'bg-brand-600 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800'}`}>{label}</Link>
+                    : <span key={`${item.label}-${index}`} className="grid min-h-9 min-w-9 place-items-center px-3 text-xs font-bold text-gray-300">{label}</span>;
+            })}
+        </nav>
     );
 }

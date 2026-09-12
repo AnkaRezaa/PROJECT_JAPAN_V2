@@ -136,13 +136,25 @@ export default function Index({ active_exam, sessions = [], levels = [], latest_
                         )}
 
                         <div className="mt-7 flex flex-wrap items-center gap-3">
-                            <Link
-                                href={primaryHref}
-                                className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#f5bd32] px-6 text-sm font-black text-[#3d2b00] shadow-[0_12px_30px_-16px_rgba(245,189,50,0.85)] transition hover:bg-[#ffd05b] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#173d2b]"
-                            >
-                                {primaryLabel}
-                                <ArrowForwardRoundedIcon sx={{ fontSize: 20 }} />
-                            </Link>
+                            {active_exam ? (
+                                <a
+                                    href={primaryHref}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#f5bd32] px-6 text-sm font-black text-[#3d2b00] shadow-[0_12px_30px_-16px_rgba(245,189,50,0.85)] transition hover:bg-[#ffd05b] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#173d2b]"
+                                >
+                                    {primaryLabel}
+                                    <ArrowForwardRoundedIcon sx={{ fontSize: 20 }} />
+                                </a>
+                            ) : (
+                                <Link
+                                    href={primaryHref}
+                                    className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#f5bd32] px-6 text-sm font-black text-[#3d2b00] shadow-[0_12px_30px_-16px_rgba(245,189,50,0.85)] transition hover:bg-[#ffd05b] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#173d2b]"
+                                >
+                                    {primaryLabel}
+                                    <ArrowForwardRoundedIcon sx={{ fontSize: 20 }} />
+                                </Link>
+                            )}
                             <Link
                                 href={route('user.exams.history')}
                                 className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-white/35 bg-black/15 px-5 text-sm font-black text-white backdrop-blur-sm transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
@@ -171,13 +183,25 @@ export default function Index({ active_exam, sessions = [], levels = [], latest_
                                 {levels.map((item) => <option key={item}>{item}</option>)}
                             </select>
                         </label>
-                        <Link
-                            href={canOpenActiveExam ? route('user.exams.show', active_exam.slug) : route('user.exams.library')}
-                            className={`inline-flex h-11 items-center justify-center gap-2 rounded-lg px-5 text-sm font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-focus ${canOpenActiveExam ? 'bg-brand-600 text-white hover:bg-brand-700' : 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/10'}`}
-                        >
-                            {canOpenActiveExam ? 'Buka ujian pilihan' : 'Cari ujian yang sesuai'}
-                            <ArrowForwardRoundedIcon sx={{ fontSize: 19 }} />
-                        </Link>
+                        {canOpenActiveExam ? (
+                            <a
+                                href={route('user.exams.show', active_exam.slug)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg px-5 text-sm font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-focus bg-brand-600 text-white hover:bg-brand-700"
+                            >
+                                Buka ujian pilihan
+                                <ArrowForwardRoundedIcon sx={{ fontSize: 19 }} />
+                            </a>
+                        ) : (
+                            <Link
+                                href={route('user.exams.library')}
+                                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg px-5 text-sm font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-focus border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/10"
+                            >
+                                Cari ujian yang sesuai
+                                <ArrowForwardRoundedIcon sx={{ fontSize: 19 }} />
+                            </Link>
+                        )}
                     </div>
                 </section>
 

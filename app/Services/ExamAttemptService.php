@@ -91,7 +91,7 @@ class ExamAttemptService
             'server_revision' => $attempt->server_revision,
             'server_now' => now()->toIso8601String(),
             'deadline_at' => $attempt->deadline_at->toIso8601String(),
-            'remaining_seconds' => max(0, now()->diffInSeconds($attempt->deadline_at, false)),
+            'remaining_seconds' => max(0, (int) floor(now()->diffInSeconds($attempt->deadline_at, false))),
             'exam' => ['title' => $attempt->version->exam->title, 'level' => $attempt->version->exam->level->level_name, 'type' => $attempt->version->exam->type],
             'sections' => $attempt->sections->map(fn ($attemptSection) => [
                 'id' => $attemptSection->section->id,
@@ -238,6 +238,7 @@ class ExamAttemptService
         abort_unless($this->access->resultReleased($attempt), 403, 'Hasil ujian belum dirilis.');
         $attempt->load(['version.exam.level', 'sections.section', 'answers.question']);
         $showReview = $attempt->version->review_policy !== 'none';
+        $questionCount = $attempt->version->sections()->withCount('questions')->get()->sum('questions_count');
 
         return [
             'id' => $attempt->id,
@@ -245,6 +246,7 @@ class ExamAttemptService
             'level' => $attempt->version->exam->level->level_name,
             'score' => $attempt->estimated_score,
             'max_score' => $attempt->sections->sum(fn ($item) => $item->section->estimated_max_score),
+            'question_count' => $questionCount,
             'status' => $attempt->estimated_passed === null ? 'completed' : ($attempt->estimated_passed ? 'passed' : 'failed'),
             'label' => $attempt->version->exam->type === 'simulation' ? 'Estimasi Simulasi TOKU-UP' : 'Hasil Latihan Ujian',
             'submitted_at' => $attempt->submitted_at?->toIso8601String(),
@@ -280,7 +282,7 @@ class ExamAttemptService
         return [
             'server_revision' => $attempt->server_revision,
             'saved_at' => ($savedAt ?? $attempt->updated_at)->toIso8601String(),
-            'remaining_seconds' => max(0, now()->diffInSeconds($attempt->deadline_at, false)),
+            'remaining_seconds' => max(0, (int) floor(now()->diffInSeconds($attempt->deadline_at, false))),
         ];
     }
 }

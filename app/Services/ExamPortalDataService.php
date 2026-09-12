@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\ExamSession;
+use App\Models\KloterBelajar;
 use App\Models\LevelPembelajaran;
 use App\Models\Pengguna;
 use Illuminate\Http\Request;
@@ -66,11 +67,15 @@ class ExamPortalDataService
     public function adminPortal(Request $request, ?Exam $selectedExam = null, bool $includeSessions = false, bool $includeResults = false): array
     {
         $exams = Exam::query()
-            ->with(['level:id,level_name', 'latestVersion.sections' => fn ($query) => $query->withCount('questions')])
+            ->with([
+                'level:id,level_name',
+                'latestVersion.sections' => fn ($query) => $query->withCount('questions'),
+                'publishedVersion',
+            ])
             ->withCount(['attempts' => fn ($query) => $query->whereIn('exam_attempts.status', ['submitted', 'timed_out'])])
             ->latest('updated_at')->limit(100)->get();
         $sessions = $includeSessions
-            ? ExamSession::query()->with(['version.exam.level'])->withCount('attempts')->latest('starts_at')->paginate(30)
+            ? ExamSession::query()->with(['version.exam.level', 'cohorts:id,nama'])->withCount('attempts')->latest('starts_at')->paginate(30)
             : null;
         $results = $includeResults
             ? ExamAttempt::query()->whereIn('status', ['submitted', 'timed_out', 'invalidated'])->with(['user:id,username', 'version.exam.level', 'sections.section'])->latest('submitted_at')->paginate(30)
@@ -83,14 +88,26 @@ class ExamPortalDataService
             'levels' => LevelPembelajaran::query()->orderBy('stage')->pluck('level_name'),
             'level_options' => LevelPembelajaran::query()->orderBy('stage')->get(['id', 'level_name']),
             'section_templates' => $this->sectionTemplates(true),
+            'cohort_options' => $includeSessions
+                ? KloterBelajar::query()->where('status', 'active')->orderBy('nama')->get(['id', 'nama', 'kode'])
+                : collect(),
             'sessions' => $sessions?->getCollection()->map(fn ($session) => [
                 'id' => $session->id,
                 'name' => $session->name,
+                'exam_slug' => $session->version->exam->slug,
                 'exam_title' => $session->version->exam->title,
+                'exam_version_id' => $session->exam_version_id,
+                'access' => $session->version->exam->access_type,
                 'level' => $session->version->exam->level->level_name,
+                'starts_at_value' => $session->starts_at?->format('Y-m-d\TH:i'),
+                'ends_at_value' => $session->ends_at?->format('Y-m-d\TH:i'),
                 'starts_at' => $session->starts_at?->format('d M Y, H.i'),
                 'ends_at' => $session->ends_at?->format('d M Y, H.i'),
                 'status' => $session->status,
+                'attempt_limit_override' => $session->attempt_limit_override,
+                'ranking_enabled' => $session->ranking_enabled,
+                'result_released_at' => $session->result_released_at?->toIso8601String(),
+                'cohort_ids' => $session->cohorts->pluck('id')->values(),
                 'participants' => $session->attempts_count,
             ])->values() ?? collect(),
             'results' => $results?->getCollection()->map(fn ($attempt) => $this->adminResultPayload($attempt))->values() ?? collect(),
@@ -142,7 +159,14 @@ class ExamPortalDataService
             return collect();
         }
 
-        return Cache::remember('exam:ranking:'.$sessionId, now()->addMinutes(2), fn () => ExamAttempt::query()
+        $cacheKey = 'exam:ranking:'.$sessionId;
+        $cachedRanking = Cache::get($cacheKey);
+
+        if ($cachedRanking !== null && ! is_array($cachedRanking)) {
+            Cache::forget($cacheKey);
+        }
+
+        $ranking = Cache::remember($cacheKey, now()->addMinutes(2), fn () => ExamAttempt::query()
             ->where('exam_session_id', $sessionId)
             ->where('ranking_eligible', true)
             ->whereIn('status', ['submitted', 'timed_out'])
@@ -157,7 +181,10 @@ class ExamPortalDataService
                 $sectionScores = $attempt->sections->mapWithKeys(fn ($section) => [$section->section->key => $section->estimated_score]);
 
                 return ['rank' => $index + 1, 'name' => $attempt->user->username, 'level' => $attempt->version->exam->level->level_name, 'vocabulary' => $sectionScores['vocabulary'] ?? null, 'grammar_reading' => $sectionScores['grammar_reading'] ?? null, 'listening' => $sectionScores['listening'] ?? null, 'total' => $attempt->estimated_score, 'duration' => $this->duration($attempt)];
-            }));
+            })
+            ->all());
+
+        return collect($ranking);
     }
 
     public function examPayload(Exam $exam, Collection $attempts): array
@@ -198,6 +225,7 @@ class ExamPortalDataService
             'slug' => $exam->slug,
             'title' => $exam->title,
             'description' => $exam->description,
+            'level_id' => $exam->level_id,
             'type' => $exam->type,
             'level' => $exam->level->level_name,
             'duration_minutes' => (int) ceil($sections->sum('time_limit_seconds') / 60),
@@ -208,6 +236,11 @@ class ExamPortalDataService
             'updated_at' => $exam->updated_at->format('d F Y, H.i'),
             'version_id' => $version?->id,
             'version_status' => $version?->status,
+            'published_version_id' => $exam->publishedVersion?->id,
+            'attempt_limit' => $version?->attempt_limit,
+            'result_release_policy' => $version?->result_release_policy,
+            'review_policy' => $version?->review_policy,
+            'ranking_policy' => $version?->ranking_policy,
             'estimated_total_pass_score' => $version?->estimated_total_pass_score,
             'sections' => $sections->map(fn ($section) => [
                 'id' => $section->id,
@@ -270,10 +303,21 @@ class ExamPortalDataService
         return $exam?->latestVersion?->sections->flatMap(fn ($section) => $section->questions->map(fn ($question) => [
             'id' => $question->id,
             'code' => $question->code,
+            'section_id' => $section->id,
+            'section_key' => $section->key,
             'section' => $section->short_title ?: $section->title,
             'type' => $question->type,
+            'sort_order' => $question->sort_order,
+            'points' => $question->points,
             'prompt' => $question->question_text,
+            'question_reading' => $question->question_reading,
+            'options' => $question->options,
+            'option_readings' => $question->option_readings,
             'answer' => $question->correct_answer,
+            'correct_answer_reading' => $question->correct_answer_reading,
+            'explanation' => $question->explanation,
+            'explanation_reading' => $question->explanation_reading,
+            'audio_path' => $question->audio_path,
             'status' => $question->type === 'listening' && ! $question->audio_path ? 'needs_audio' : 'valid',
         ]))->values() ?? collect();
     }
