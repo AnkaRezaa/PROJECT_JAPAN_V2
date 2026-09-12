@@ -317,7 +317,19 @@ class PembayaranMidtransController extends Controller
                 ]);
             }
 
-            abort(422, 'Midtrans belum dapat membatalkan pesanan ini. Coba lagi beberapa saat lagi.');
+            // Jika Midtrans API gagal membatalkan secara remote (misal server sandbox 500 atau channel e-wallet tidak mendukung cancel API),
+            // batalkan transaksi secara aman di sistem lokal karena pesanan terbukti masih pending dan belum dibayar.
+            $this->applyMidtransStatus($transaction, [
+                'order_id' => $midtransOrderId,
+                'gross_amount' => (string) $transaction->amount,
+                'transaction_status' => 'cancel',
+            ], $request->user()->id, 'Pesanan pending dibatalkan oleh pengguna (Midtrans remote cancel fallback).');
+
+            return response()->json([
+                'status' => 'canceled',
+                'canceled' => true,
+                'message' => 'Pesanan berhasil dibatalkan.',
+            ]);
         }
 
         abort_unless(
