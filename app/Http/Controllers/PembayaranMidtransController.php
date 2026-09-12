@@ -101,6 +101,99 @@ class PembayaranMidtransController extends Controller
         return response()->json($this->prepareSnapPayment($transaction, $request));
     }
 
+    public function charge(Request $request, string $transactionCode): JsonResponse
+    {
+        abort_unless($request->user()?->role === 'user', 403);
+
+        $validated = $request->validate([
+            'payment_channel' => [
+                'required',
+                'string',
+                'in:bca_va,mandiri_bill,bni_va,bri_va,permata_va,qris,gopay,shopeepay,credit_card',
+            ],
+            'card_token' => ['nullable', 'string', 'required_if:payment_channel,credit_card'],
+        ]);
+
+        $transaction = Transaksi::query()
+            ->with('paymentPlan', 'user')
+            ->where('transaction_code', $transactionCode)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $this->refreshPendingCheckoutStatus($transaction, $request->user()->id);
+        $transaction->refresh();
+
+        abort_unless($transaction->status === 'pending', 410, 'Pesanan ini sudah berakhir. Buat pesanan baru untuk melanjutkan.');
+
+        $channel = $validated['payment_channel'];
+
+        $existingPayload = $transaction->payment_payload;
+        $hasActiveInstruction = filled($existingPayload)
+            && (
+                filled($existingPayload['va_number'] ?? null)
+                || filled($existingPayload['bill_key'] ?? null)
+                || filled($existingPayload['qr_url'] ?? null)
+                || filled($existingPayload['deeplink_url'] ?? null)
+                || filled($existingPayload['redirect_url'] ?? null)
+            );
+
+        if ($transaction->payment_channel === $channel && $hasActiveInstruction) {
+            return response()->json([
+                'payment_channel' => $transaction->payment_channel,
+                'payment_payload' => $transaction->payment_payload,
+                'status' => $transaction->status,
+            ]);
+        }
+
+        $serverKey = config('services.midtrans.server_key');
+        abort_if(blank($serverKey), 422, 'Midtrans server key belum dikonfigurasi.');
+
+        $midtransOrderId = $transaction->transaction_code.'-'.time();
+        $chargePayload = $this->buildChargePayload($transaction, $request, $channel, $validated['card_token'] ?? null, $midtransOrderId);
+
+        $response = Http::withBasicAuth($serverKey, '')
+            ->acceptJson()
+            ->timeout(15)
+            ->withHeaders([
+                'Idempotency-Key' => 'charge-'.$midtransOrderId,
+            ])
+            ->post($this->apiBaseUrl().'/v2/charge', $chargePayload);
+
+        $responseData = $response->json() ?? [];
+        $midtransStatusCode = (int) ($responseData['status_code'] ?? $response->status());
+
+        if ($response->failed() || $midtransStatusCode >= 400) {
+            Log::error('Midtrans Core API charge gagal', [
+                'transaction_code' => $transaction->transaction_code,
+                'midtrans_order_id' => $midtransOrderId,
+                'channel' => $channel,
+                'http_status' => $response->status(),
+                'midtrans_status' => $midtransStatusCode,
+                'response' => $responseData,
+            ]);
+
+            $message = $responseData['status_message'] ?? 'Gagal memproses pembayaran dengan metode yang dipilih.';
+            abort(422, $message);
+        }
+
+        $formattedPayload = $this->formatChargeResponse($channel, $responseData, $midtransOrderId);
+
+        $transaction->update([
+            'payment_channel' => $channel,
+            'payment_payload' => $formattedPayload,
+        ]);
+
+        if (isset($responseData['transaction_status'])) {
+            $this->applyMidtransStatus($transaction, $responseData, $request->user()->id, 'Midtrans charge diproses via Custom UI.');
+        }
+
+        return response()->json([
+            'payment_channel' => $channel,
+            'payment_payload' => $formattedPayload,
+            'status' => $transaction->fresh()->status,
+        ]);
+    }
+
     public function sync(Request $request, string $transactionCode): JsonResponse
     {
         abort_unless($request->user()?->role === 'user', 403);
@@ -112,11 +205,20 @@ class PembayaranMidtransController extends Controller
         $serverKey = config('services.midtrans.server_key');
         abort_if(blank($serverKey), 422, 'Midtrans server key belum dikonfigurasi.');
 
+        $midtransOrderId = $transaction->payment_payload['midtrans_order_id'] ?? $transaction->transaction_code;
+
         $response = Http::withBasicAuth($serverKey, '')
             ->acceptJson()
-            ->get($this->apiBaseUrl().'/v2/'.$transaction->transaction_code.'/status');
+            ->get($this->apiBaseUrl().'/v2/'.$midtransOrderId.'/status');
 
         $transactionNotFound = $this->midtransTransactionNotFound($response);
+
+        if ($transactionNotFound && $midtransOrderId !== $transaction->transaction_code) {
+            $response = Http::withBasicAuth($serverKey, '')
+                ->acceptJson()
+                ->get($this->apiBaseUrl().'/v2/'.$transaction->transaction_code.'/status');
+            $transactionNotFound = $this->midtransTransactionNotFound($response);
+        }
 
         if ($response->failed() && ! $transactionNotFound) {
             abort(422, 'Gagal mengambil status transaksi dari Midtrans.');
@@ -134,6 +236,8 @@ class PembayaranMidtransController extends Controller
 
         return response()->json([
             'status' => $transaction->fresh()->status,
+            'payment_channel' => $freshTransaction->payment_channel,
+            'payment_payload' => $freshTransaction->payment_payload,
             'message' => $transactionNotFound
                 ? 'Pembayaran belum dimulai di Midtrans. Kamu masih dapat melanjutkan atau membatalkan pesanan ini.'
                 : null,
@@ -166,10 +270,12 @@ class PembayaranMidtransController extends Controller
         $serverKey = config('services.midtrans.server_key');
         abort_if(blank($serverKey), 422, 'Midtrans server key belum dikonfigurasi.');
 
+        $midtransOrderId = $transaction->payment_payload['midtrans_order_id'] ?? $transaction->transaction_code;
+
         $statusResponse = Http::withBasicAuth($serverKey, '')
             ->acceptJson()
             ->timeout(10)
-            ->get($this->apiBaseUrl().'/v2/'.$transaction->transaction_code.'/status');
+            ->get($this->apiBaseUrl().'/v2/'.$midtransOrderId.'/status');
 
         if ($this->midtransTransactionNotFound($statusResponse)) {
             return $this->cancelSnapCheckout($transaction, $serverKey, $request->user()->id);
@@ -197,7 +303,7 @@ class PembayaranMidtransController extends Controller
         $cancelResponse = Http::withBasicAuth($serverKey, '')
             ->acceptJson()
             ->timeout(10)
-            ->post($this->apiBaseUrl().'/v2/'.$transaction->transaction_code.'/cancel');
+            ->post($this->apiBaseUrl().'/v2/'.$midtransOrderId.'/cancel');
 
         if ($cancelResponse->failed()) {
             $this->refreshStatusAfterCancelFailure($transaction, $request->user()->id);
@@ -282,7 +388,11 @@ class PembayaranMidtransController extends Controller
         $expectedSignature = hash('sha512', $orderId.$statusCode.$grossAmount.$serverKey);
         abort_unless(hash_equals($expectedSignature, $signature), 403, 'Invalid Midtrans signature.');
 
-        $transaction = Transaksi::where('transaction_code', $orderId)->firstOrFail();
+        $baseCode = preg_match('/^(MID-[A-Z0-9]+)-\d+$/', $orderId, $matches)
+            ? $matches[1]
+            : $orderId;
+
+        $transaction = Transaksi::where('transaction_code', $baseCode)->firstOrFail();
         abort_unless($this->payloadMatchesTransaction($transaction, $payload), 422, 'Respons Midtrans tidak sesuai transaksi.');
         $this->applyMidtransStatus($transaction, $payload, null, 'Callback Midtrans diterima.');
 
@@ -299,11 +409,13 @@ class PembayaranMidtransController extends Controller
             return false;
         }
 
+        $midtransOrderId = $transaction->payment_payload['midtrans_order_id'] ?? $transaction->transaction_code;
+
         $response = Http::withBasicAuth($serverKey, '')
             ->acceptJson()
             ->timeout(10)
             ->retry(2, 500)
-            ->get($this->apiBaseUrl().'/v2/'.$transaction->transaction_code.'/status');
+            ->get($this->apiBaseUrl().'/v2/'.$midtransOrderId.'/status');
 
         if ($response->failed()) {
             Log::warning('Rekonsiliasi Midtrans gagal mengambil status.', [
@@ -744,7 +856,11 @@ class PembayaranMidtransController extends Controller
 
     private function payloadMatchesTransaction(Transaksi $transaction, array $payload): bool
     {
-        return (string) ($payload['order_id'] ?? '') === $transaction->transaction_code
+        $payloadOrderId = (string) ($payload['order_id'] ?? '');
+        $matchesOrder = $payloadOrderId === $transaction->transaction_code
+            || Str::startsWith($payloadOrderId, $transaction->transaction_code.'-');
+
+        return $matchesOrder
             && (int) ($payload['gross_amount'] ?? -1) === (int) $transaction->amount;
     }
 
@@ -754,9 +870,14 @@ class PembayaranMidtransController extends Controller
             return false;
         }
 
-        if (filled($payload['order_id'] ?? null)
-            && (string) $payload['order_id'] !== $transaction->transaction_code) {
-            return false;
+        if (filled($payload['order_id'] ?? null)) {
+            $payloadOrderId = (string) $payload['order_id'];
+            $matchesOrder = $payloadOrderId === $transaction->transaction_code
+                || Str::startsWith($payloadOrderId, $transaction->transaction_code.'-');
+
+            if (! $matchesOrder) {
+                return false;
+            }
         }
 
         return ! filled($payload['gross_amount'] ?? null)
@@ -877,5 +998,142 @@ class PembayaranMidtransController extends Controller
             'rejected' => 'refund_required',
             default => $transaction->status === 'success' ? 'pending_approval' : 'payment_pending',
         };
+    }
+
+    private function buildChargePayload(Transaksi $transaction, Request $request, string $channel, ?string $cardToken, string $midtransOrderId): array
+    {
+        $base = [
+            'transaction_details' => [
+                'order_id' => $midtransOrderId,
+                'gross_amount' => (int) $transaction->amount,
+            ],
+            'customer_details' => [
+                'first_name' => $request->user()->username ?: $request->user()->name,
+                'email' => $request->user()->email,
+            ],
+            'item_details' => [[
+                'id' => (string) $transaction->paymentPlan?->id,
+                'price' => (int) $transaction->amount,
+                'quantity' => 1,
+                'name' => Str::limit($transaction->paymentPlan?->name ?? 'Akses Belajar', 50, ''),
+            ]],
+            'custom_expiry' => [
+                'order_time' => now()->format('Y-m-d H:i:s O'),
+                'expiry_duration' => max(1, (int) config('services.midtrans.snap_expiry_hours', 24)),
+                'unit' => 'hour',
+            ],
+        ];
+
+        return match ($channel) {
+            'bca_va' => [
+                ...$base,
+                'payment_type' => 'bank_transfer',
+                'bank_transfer' => [
+                    'bank' => 'bca',
+                ],
+            ],
+            'bni_va' => [
+                ...$base,
+                'payment_type' => 'bank_transfer',
+                'bank_transfer' => [
+                    'bank' => 'bni',
+                ],
+            ],
+            'bri_va' => [
+                ...$base,
+                'payment_type' => 'bank_transfer',
+                'bank_transfer' => [
+                    'bank' => 'bri',
+                ],
+            ],
+            'permata_va' => [
+                ...$base,
+                'payment_type' => 'permata',
+            ],
+            'mandiri_bill' => [
+                ...$base,
+                'payment_type' => 'echannel',
+                'echannel' => [
+                    'bill_info1' => 'Pembayaran:',
+                    'bill_info2' => Str::limit($transaction->paymentPlan?->name ?? 'Akses Kelas', 30, ''),
+                ],
+            ],
+            'qris' => [
+                ...$base,
+                'payment_type' => 'qris',
+                'qris' => [
+                    'acquirer' => 'gopay',
+                ],
+            ],
+            'gopay' => [
+                ...$base,
+                'payment_type' => 'gopay',
+                'gopay' => [
+                    'enable_callback' => true,
+                    'callback_url' => route('user.checkout', $transaction->transaction_code),
+                ],
+            ],
+            'shopeepay' => [
+                ...$base,
+                'payment_type' => 'shopeepay',
+                'shopeepay' => [
+                    'callback_url' => route('user.checkout', $transaction->transaction_code),
+                ],
+            ],
+            'credit_card' => [
+                ...$base,
+                'payment_type' => 'credit_card',
+                'credit_card' => [
+                    'token_id' => $cardToken,
+                    'authentication' => (bool) config('services.midtrans.is_3ds', true),
+                ],
+            ],
+            default => $base,
+        };
+    }
+
+    private function formatChargeResponse(string $channel, array $response, string $midtransOrderId): array
+    {
+        $actions = collect($response['actions'] ?? []);
+
+        $qrString = $response['qr_string'] ?? null;
+        $qrUrl = $actions->firstWhere('name', 'generate-qr-code')['url'] ?? null;
+        $deeplinkUrl = $actions->firstWhere('name', 'deeplink-redirect')['url'] ?? null;
+
+        if (! $qrUrl && filled($qrString)) {
+            $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='.urlencode($qrString);
+        }
+
+        if (! $qrUrl && filled($deeplinkUrl)) {
+            $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='.urlencode($deeplinkUrl);
+        }
+
+        $vaNumber = null;
+        $bank = null;
+
+        if (isset($response['va_numbers'][0])) {
+            $vaNumber = (string) $response['va_numbers'][0]['va_number'];
+            $bank = (string) $response['va_numbers'][0]['bank'];
+        } elseif (isset($response['permata_va_number'])) {
+            $vaNumber = (string) $response['permata_va_number'];
+            $bank = 'permata';
+        }
+
+        return [
+            'channel' => $channel,
+            'midtrans_order_id' => $midtransOrderId,
+            'va_number' => $vaNumber,
+            'bank' => $bank,
+            'biller_code' => $response['biller_code'] ?? null,
+            'bill_key' => $response['bill_key'] ?? null,
+            'qr_string' => $qrString,
+            'qr_url' => $qrUrl,
+            'deeplink_url' => $deeplinkUrl,
+            'redirect_url' => $response['redirect_url'] ?? null,
+            'expiry_time' => $response['expiry_time'] ?? null,
+            'gross_amount' => $response['gross_amount'] ?? null,
+            'status_message' => $response['status_message'] ?? null,
+            'transaction_status' => $response['transaction_status'] ?? null,
+        ];
     }
 }

@@ -7,37 +7,15 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import HourglassTopIcon from '@mui/icons-material/HourglassTop';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+import CloseIcon from '@mui/icons-material/Close';
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
 
-const loadSnapScript = (midtrans) => new Promise((resolve, reject) => {
-  if (window.snap) {
-    resolve();
-    return;
-  }
-
-  if (!midtrans?.clientKey) {
-    reject(new Error('Midtrans client key belum dikonfigurasi.'));
-    return;
-  }
-
-  const existing = document.getElementById('midtrans-snap-script');
-  if (existing) {
-    existing.addEventListener('load', resolve, { once: true });
-    existing.addEventListener('error', reject, { once: true });
-    return;
-  }
-
-  const script = document.createElement('script');
-  script.id = 'midtrans-snap-script';
-  script.src = midtrans.isProduction
-    ? 'https://app.midtrans.com/snap/snap.js'
-    : 'https://app.sandbox.midtrans.com/snap/snap.js';
-  script.setAttribute('data-client-key', midtrans.clientKey);
-  script.onload = resolve;
-  script.onerror = reject;
-  document.body.appendChild(script);
-});
+import PaymentMethodSelector from './Components/PaymentMethodSelector';
+import VirtualAccountView from './Components/VirtualAccountView';
+import QrisView from './Components/QrisView';
+import EWalletView from './Components/EWalletView';
 
 const statusPresentation = {
   pending: {
@@ -113,10 +91,12 @@ const formatDate = (value) => {
 export default function Checkout({ transaction, midtrans }) {
   const [status, setStatus] = useState(transaction.status);
   const [accessState, setAccessState] = useState(transaction.access_state || 'payment_pending');
-  const [snapToken, setSnapToken] = useState('');
-  const [isOpening, setIsOpening] = useState(false);
+  const [paymentChannel, setPaymentChannel] = useState(transaction.payment_channel || '');
+  const [paymentPayload, setPaymentPayload] = useState(transaction.payment_payload || null);
+  const [isCharging, setIsCharging] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [threeDsUrl, setThreeDsUrl] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [kloter, setKloter] = useState(transaction.kloter || null);
@@ -127,14 +107,22 @@ export default function Checkout({ transaction, midtrans }) {
   const isPendingApproval = status === 'success' && accessState === 'pending_approval';
   const isRefundRequired = status === 'success' && accessState === 'refund_required';
   const isPending = status === 'pending';
+  const hasActivePaymentInstruction = Boolean(
+    paymentPayload &&
+    (paymentPayload.va_number ||
+      paymentPayload.bill_key ||
+      paymentPayload.qr_url ||
+      paymentPayload.deeplink_url ||
+      paymentPayload.redirect_url)
+  );
   const shouldRestartCheckout = ['failed', 'expired', 'refunded', 'canceled'].includes(status);
-  const storageKey = `midtrans:${transaction.transaction_code}`;
   const presentationKey = status === 'success' && ['pending_approval', 'refund_required'].includes(accessState)
     ? accessState
     : status;
   const presentation = statusPresentation[presentationKey] || statusPresentation.pending;
   const StatusIcon = presentation.Icon;
 
+  // Sound effect on payment success
   useEffect(() => {
     if (status !== 'success' || playedPaymentSuccessRef.current) return;
 
@@ -142,9 +130,12 @@ export default function Checkout({ transaction, midtrans }) {
     playSoundEffect('complete');
   }, [status]);
 
-  const syncStatus = async (successMessage = '') => {
-    setError('');
-    setIsSyncing(true);
+  // Status Synchronization Handler
+  const syncStatus = async (silent = false) => {
+    if (!silent) {
+      setError('');
+      setIsSyncing(true);
+    }
 
     try {
       const response = await window.axios.post(route('payments.midtrans.sync', transaction.transaction_code));
@@ -153,70 +144,97 @@ export default function Checkout({ transaction, midtrans }) {
       const nextAccessState = response.data?.access_state || accessState;
       setAccessState(nextAccessState);
 
+      if (response.data?.payment_channel) {
+        setPaymentChannel(response.data.payment_channel);
+      }
+      if (response.data?.payment_payload) {
+        setPaymentPayload(response.data.payment_payload);
+      }
+
       if (nextStatus === 'success') {
         setKloter(response.data?.kloter || null);
-        window.sessionStorage?.removeItem(storageKey);
+        setThreeDsUrl('');
         setNotice(nextAccessState === 'pending_approval'
           ? 'Pembayaran berhasil divalidasi. Pendaftaran sedang menunggu persetujuan mentor.'
-          : successMessage || 'Pembayaran berhasil divalidasi. Akses belajar sudah aktif.');
+          : 'Pembayaran berhasil divalidasi. Akses belajar sudah aktif.');
         router.reload({ only: ['auth'] });
         return;
       }
 
-      if (nextStatus === 'pending') {
-        setNotice(response.data?.message || 'Pembayaran masih menunggu konfirmasi. Coba periksa lagi beberapa saat setelah pembayaran selesai.');
-        return;
+      if (!silent) {
+        if (nextStatus === 'pending') {
+          setNotice(response.data?.message || 'Pembayaran masih menunggu konfirmasi. Lakukan transfer sesuai petunjuk di atas.');
+        } else {
+          setNotice('Status pesanan telah diperbarui.');
+        }
       }
-
-      setNotice('Status pesanan telah diperbarui.');
     } catch (syncError) {
-      setError(syncError.response?.data?.message || 'Gagal memeriksa status pembayaran.');
+      if (!silent) {
+        setError(syncError.response?.data?.message || 'Gagal memeriksa status pembayaran.');
+      }
     } finally {
-      setIsSyncing(false);
+      if (!silent) {
+        setIsSyncing(false);
+      }
     }
   };
 
-  const prepareSnapToken = async () => {
-    if (snapToken) return snapToken;
+  // Background Auto-Polling (Runs every 4s while payment instruction is active)
+  useEffect(() => {
+    if (!isPending || !hasActivePaymentInstruction) return;
 
-    const response = await window.axios.post(route('payments.midtrans.snap', transaction.transaction_code));
-    setSnapToken(response.data.snap_token);
-    window.sessionStorage?.setItem(storageKey, JSON.stringify({
-      snapToken: response.data.snap_token,
-      redirectUrl: response.data.redirect_url,
-    }));
+    const interval = setInterval(() => {
+      syncStatus(true);
+    }, 4500);
 
-    return response.data.snap_token;
-  };
+    return () => clearInterval(interval);
+  }, [isPending, hasActivePaymentInstruction]);
 
-  const openMidtrans = async () => {
+  // Submit Core API Charge
+  const handleCharge = async (channel, cardToken = null) => {
     setError('');
     setNotice('');
-    setIsOpening(true);
+    setIsCharging(true);
 
     try {
-      await loadSnapScript(midtrans);
-      const token = await prepareSnapToken();
+      const response = await window.axios.post(
+        route('payments.midtrans.charge', transaction.transaction_code),
+        {
+          payment_channel: channel,
+          card_token: cardToken,
+        }
+      );
 
-      window.snap.pay(token, {
-        onSuccess: async () => syncStatus('Pembayaran berhasil. Status akses kelas sudah diperbarui.'),
-        onPending: async () => syncStatus(),
-        onError: () => setError('Pembayaran gagal diproses. Kamu dapat mencoba lagi dari Midtrans.'),
-        onClose: () => setNotice('Pembayaran belum diselesaikan. Kamu dapat melanjutkannya kapan saja dari halaman ini.'),
-      });
-    } catch (openError) {
-      if (openError.response?.status === 410) {
-        window.sessionStorage?.removeItem(storageKey);
-        await syncStatus('');
-        return;
+      const chargedPayload = response.data?.payment_payload || null;
+      setPaymentChannel(channel);
+      setPaymentPayload(chargedPayload);
+
+      // Handle 3DS verification for Credit Card
+      if (channel === 'credit_card' && chargedPayload?.redirect_url) {
+        setThreeDsUrl(chargedPayload.redirect_url);
       }
 
-      setError(openError.response?.data?.message || openError.message || 'Gagal membuka Midtrans.');
+      // Check if immediately settled or captured
+      if (response.data?.status === 'success') {
+        setStatus('success');
+        await syncStatus();
+      }
+    } catch (chargeError) {
+      setError(chargeError.response?.data?.message || 'Gagal memproses metode pembayaran. Silakan coba metode lain.');
     } finally {
-      setIsOpening(false);
+      setIsCharging(false);
     }
   };
 
+  // Switch/Reset payment method
+  const handleChangeMethod = () => {
+    setPaymentPayload(null);
+    setPaymentChannel('');
+    setError('');
+    setNotice('');
+  };
+
+  // Cancel order handler
   const cancelPayment = async () => {
     setError('');
     setNotice('');
@@ -227,11 +245,6 @@ export default function Checkout({ transaction, midtrans }) {
       const response = await window.axios.post(route('payments.midtrans.cancel', transaction.transaction_code));
       const nextStatus = response.data?.status || status;
       setStatus(nextStatus);
-
-      if (['failed', 'expired', 'refunded', 'canceled'].includes(nextStatus)) {
-        window.sessionStorage?.removeItem(storageKey);
-      }
-
       setNotice(response.data?.message || 'Status pesanan telah diperbarui.');
       closeConfirm();
     } catch (cancelError) {
@@ -261,6 +274,7 @@ export default function Checkout({ transaction, midtrans }) {
 
       <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-900 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-5xl">
+          {/* Top Header */}
           <header className="flex items-center justify-between gap-4 border-b border-slate-200 pb-4 sm:pb-5">
             <div className="flex min-w-0 items-center gap-3">
               <Link
@@ -277,187 +291,284 @@ export default function Checkout({ transaction, midtrans }) {
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
               <VerifiedUserIcon sx={{ fontSize: 17 }} className="text-slate-600" />
-              <span>Pembayaran aman melalui Midtrans</span>
+              <span>Pembayaran Aman Midtrans Core API</span>
             </div>
           </header>
 
-          <section className="mt-5 grid overflow-hidden border border-slate-200 bg-white lg:mt-8 lg:grid-cols-[0.82fr_1.18fr]">
-            <aside className="order-2 border-t border-slate-200 bg-slate-50 p-5 lg:order-1 lg:border-r lg:border-t-0 lg:p-8">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase text-slate-500">
-                <ReceiptLongIcon sx={{ fontSize: 18 }} />
-                Ringkasan pesanan
-              </div>
-
-              <h1 className="mt-5 break-words text-xl font-black text-slate-950 sm:text-2xl">
-                {transaction.payment_plan?.name || 'Akses TOKU-UP'}
-              </h1>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                {transaction.payment_plan?.description || 'Akses untuk membuka konten belajar lanjutan.'}
-              </p>
-
-              <dl className="mt-7 divide-y divide-slate-200 border-y border-slate-200 text-sm">
-                <div className="grid gap-1 py-4 sm:grid-cols-[120px_1fr] lg:grid-cols-1">
-                  <dt className="font-medium text-slate-500">Akses</dt>
-                  <dd className="font-bold text-slate-900">{transaction.scope_label || 'Semua kelas'}</dd>
-                </div>
-                <div className="grid gap-1 py-4 sm:grid-cols-[120px_1fr] lg:grid-cols-1">
-                  <dt className="font-medium text-slate-500">Nomor pesanan</dt>
-                  <dd className="break-all font-bold text-slate-900">{transaction.transaction_code}</dd>
-                </div>
-                <div className="grid gap-1 py-4 sm:grid-cols-[120px_1fr] lg:grid-cols-1">
-                  <dt className="font-medium text-slate-500">Tanggal dibuat</dt>
-                  <dd className="font-semibold text-slate-800">{formatDate(transaction.created_at)}</dd>
-                </div>
-                <div className="grid gap-1 py-4 sm:grid-cols-[120px_1fr] lg:grid-cols-1">
-                  <dt className="font-medium text-slate-500">Total</dt>
-                  <dd className="text-xl font-black text-slate-950">{transaction.amount_formatted}</dd>
-                </div>
-              </dl>
-
-              {status === 'success' && kloter && (
-                <div className="mt-6 border-l-2 border-slate-300 pl-4 text-sm leading-6 text-slate-600">
-                  <p className="font-bold text-slate-800">Kelas kamu</p>
-                  <p className="mt-1">
-                    Kloter {kloter.nama}. Mulai {kloter.tanggal_mulai_label || '-'}
-                    {kloter.admin_name ? ` bersama ${kloter.admin_name}` : ''}.
-                  </p>
-                </div>
-              )}
-            </aside>
-
-            <section className="order-1 p-5 sm:p-8 lg:order-2 lg:p-10">
+          {/* Main Grid: Split Layout */}
+          <section className="mt-5 grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:mt-8 lg:grid-cols-[1.15fr_0.85fr]">
+            
+            {/* Left Column: Interactive Payment Area */}
+            <div className="order-1 p-5 sm:p-8 lg:p-10">
+              {/* Header Status Badge */}
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <span className={`inline-flex items-center rounded border px-2.5 py-1 text-xs font-bold ${presentation.badgeClass}`}>
+                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${presentation.badgeClass}`}>
                     {presentation.label}
                   </span>
-                  <h2 className="mt-5 text-2xl font-black text-slate-950 sm:text-3xl">{presentation.label}</h2>
-                  <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600 sm:text-base">
+                  <h1 className="mt-4 text-2xl font-black text-slate-950 sm:text-3xl">
+                    {presentation.label}
+                  </h1>
+                  <p className="mt-2 text-xs leading-5 text-slate-600 sm:text-sm">
                     {presentation.description}
                   </p>
                 </div>
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${presentation.iconClass}`}>
-                  <StatusIcon sx={{ fontSize: 25 }} />
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${presentation.iconClass}`}>
+                  <StatusIcon sx={{ fontSize: 24 }} />
                 </div>
               </div>
 
-              <div className="mt-8 border-y border-slate-200 py-5">
-                <p className="text-sm font-medium text-slate-500">Total pembayaran</p>
-                <p className="mt-1 break-words text-3xl font-black text-slate-950 sm:text-4xl">
-                  {transaction.amount_formatted}
-                </p>
-              </div>
-
+              {/* Alert / Notice Banner */}
               {(notice || error) && (
                 <div
                   role={error ? 'alert' : 'status'}
-                  className={`mt-6 flex items-start gap-3 border-l-2 px-4 py-3 text-sm leading-6 ${error
-                    ? 'border-red-500 bg-red-50 text-red-800'
-                    : 'border-slate-400 bg-slate-50 text-slate-700'
-                    }`}
+                  className={`mt-6 flex items-start gap-3 rounded-xl border-l-4 px-4 py-3 text-xs leading-5 sm:text-sm ${
+                    error
+                      ? 'border-red-500 bg-red-50 text-red-800'
+                      : 'border-slate-500 bg-slate-50 text-slate-700'
+                  }`}
                 >
                   {error ? <ErrorOutlineIcon sx={{ fontSize: 20 }} /> : <HourglassTopIcon sx={{ fontSize: 20 }} />}
                   <span>{error || notice}</span>
                 </div>
               )}
 
-              <div className="mt-8 space-y-3">
-                {isPending && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={openMidtrans}
-                      disabled={isOpening || isSyncing || isCanceling}
-                      className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#c33d4b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#a9323f] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <OpenInNewIcon sx={{ fontSize: 19 }} />
-                      {isOpening ? 'Membuka Midtrans...' : 'Lanjutkan ke Midtrans'}
-                    </button>
+              {/* State 1: Fresh Pending - Method Selection */}
+              {isPending && !hasActivePaymentInstruction && (
+                <div className="mt-8">
+                  <PaymentMethodSelector
+                    selectedChannel={paymentChannel}
+                    onSelectChannel={setPaymentChannel}
+                    onSubmitCharge={handleCharge}
+                    processing={isCharging}
+                    error={error}
+                    midtrans={midtrans}
+                    amount={transaction.amount}
+                  />
+                </div>
+              )}
+
+              {/* State 2: Pending with Charge Payload (Instruction State) */}
+              {isPending && hasActivePaymentInstruction && (
+                <div className="mt-8">
+                  {paymentChannel === 'qris' ? (
+                    <QrisView
+                      payload={paymentPayload}
+                      amountFormatted={transaction.amount_formatted}
+                      onChangeMethod={handleChangeMethod}
+                      isChanging={isCharging}
+                    />
+                  ) : ['bca_va', 'mandiri_bill', 'bni_va', 'bri_va', 'permata_va'].includes(paymentChannel) ? (
+                    <VirtualAccountView
+                      payload={paymentPayload}
+                      channel={paymentChannel}
+                      amountFormatted={transaction.amount_formatted}
+                      onChangeMethod={handleChangeMethod}
+                      isChanging={isCharging}
+                    />
+                  ) : ['gopay', 'shopeepay'].includes(paymentChannel) ? (
+                    <EWalletView
+                      payload={paymentPayload}
+                      channel={paymentChannel}
+                      amountFormatted={transaction.amount_formatted}
+                      onChangeMethod={handleChangeMethod}
+                      isChanging={isCharging}
+                    />
+                  ) : paymentChannel === 'credit_card' ? (
+                    <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/70 p-5 text-center">
+                      <p className="text-sm font-bold text-slate-800">
+                        Memproses verifikasi kartu kredit...
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Jika jendela 3D Secure tidak terbuka otomatis, klik tombol di bawah untuk menyelesaikan OTP bank.
+                      </p>
+                      {threeDsUrl && (
+                        <button
+                          type="button"
+                          onClick={() => window.open(threeDsUrl, '_blank', 'width=600,height=700')}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#c33d4b] px-4 py-2 text-xs font-bold text-white shadow-sm"
+                        >
+                          <OpenInNewIcon sx={{ fontSize: 16 }} />
+                          Buka Halaman OTP Bank
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {/* Actions under instruction */}
+                  <div className="mt-8 space-y-3 border-t border-slate-200 pt-6">
                     <button
                       type="button"
                       onClick={() => syncStatus()}
-                      disabled={isOpening || isSyncing || isCanceling}
-                      className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={isSyncing || isCanceling}
+                      className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <HourglassTopIcon sx={{ fontSize: 19 }} />
-                      {isSyncing ? 'Memeriksa status...' : 'Periksa status pembayaran'}
+                      <RefreshIcon sx={{ fontSize: 18 }} className={isSyncing ? 'animate-spin' : ''} />
+                      {isSyncing ? 'Memeriksa status...' : 'Cek Status Pembayaran'}
                     </button>
                     <button
                       type="button"
                       onClick={confirmCancelPayment}
-                      disabled={isOpening || isSyncing || isCanceling}
-                      className="inline-flex min-h-11 w-full items-center justify-center px-5 py-2 text-sm font-semibold text-slate-500 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={isSyncing || isCanceling}
+                      className="inline-flex min-h-11 w-full items-center justify-center px-5 py-2 text-xs font-semibold text-slate-500 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isCanceling ? 'Membatalkan pesanan...' : 'Batalkan pesanan'}
                     </button>
-                  </>
-                )}
+                  </div>
+                </div>
+              )}
 
-                {isDone && (
+              {/* State 3: Payment Finished (Success / Active) */}
+              {isDone && (
+                <div className="mt-8 space-y-4">
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-6 text-center">
+                    <CheckCircleIcon sx={{ fontSize: 48 }} className="text-emerald-600" />
+                    <h2 className="mt-3 text-lg font-black text-emerald-950">Akses Kamu Sudah Aktif!</h2>
+                    <p className="mt-1 text-xs text-emerald-800">
+                      Selamat belajar di TOKU-UP. Materi kelas sudah bisa kamu akses sekarang.
+                    </p>
+                  </div>
+
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Link
                       href={route('user.kelas.index')}
-                      className="inline-flex min-h-12 items-center justify-center rounded-lg bg-[#c33d4b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#a9323f]"
+                      className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#c33d4b] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#a9323f]"
                     >
-                      Mulai belajar
+                      Mulai Belajar
                     </Link>
                     <Link
                       href={route('user.dashboard')}
-                      className="inline-flex min-h-12 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50"
+                      className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 shadow-sm transition hover:bg-slate-50"
                     >
-                      Ke dashboard
+                      Ke Dashboard
                     </Link>
                   </div>
-                )}
+                </div>
+              )}
 
-                {isPendingApproval && (
-                  <div className="space-y-3">
-                    <Link
-                      href={route('user.kelas.index')}
-                      className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-[#c33d4b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#a9323f]"
-                    >
-                      Lihat status kelas
-                    </Link>
-                    <p className="text-center text-xs leading-5 text-slate-500">
-                      Kamu akan menerima notifikasi dan email setelah mentor mengambil keputusan.
+              {/* State 4: Pending Approval for Mentor Class */}
+              {isPendingApproval && (
+                <div className="mt-8 space-y-4">
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-6 text-center">
+                    <HourglassTopIcon sx={{ fontSize: 48 }} className="text-amber-600" />
+                    <h2 className="mt-3 text-lg font-black text-amber-950">Menunggu Verifikasi Mentor</h2>
+                    <p className="mt-1 text-xs text-amber-800">
+                      Pembayaran kamu telah kami terima. Mentor akan meninjau dan mengonfirmasi pendaftaran kloter.
                     </p>
                   </div>
-                )}
 
-                {isRefundRequired && (
-                  <div className="space-y-3">
-                    <Link
-                      href={route('user.kelas.index')}
-                      className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50"
-                    >
-                      Kembali ke daftar kelas
-                    </Link>
-                    <p className="text-center text-xs leading-5 text-slate-500">
-                      Status transaksi tetap tersimpan sebagai pembayaran berhasil sampai refund selesai diproses melalui Midtrans.
-                    </p>
-                  </div>
-                )}
+                  <Link
+                    href={route('user.kelas.index')}
+                    className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#c33d4b] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#a9323f]"
+                  >
+                    Lihat Status Kelas
+                  </Link>
+                </div>
+              )}
 
-                {shouldRestartCheckout && (
+              {/* State 5: Restart Checkout for Failed / Expired / Canceled */}
+              {shouldRestartCheckout && (
+                <div className="mt-8 pt-4">
                   <Link
                     href={route('pricing')}
-                    className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-[#c33d4b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#a9323f]"
+                    className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#c33d4b] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#a9323f]"
                   >
-                    Pilih paket lagi
+                    Pilih Paket Pembayaran Baru
                   </Link>
-                )}
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Order Summary (Sticky) */}
+            <aside className="order-2 border-t border-slate-200 bg-slate-50/70 p-5 lg:order-2 lg:border-l lg:border-t-0 lg:p-8">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                <ReceiptLongIcon sx={{ fontSize: 18 }} />
+                Ringkasan Pesanan
               </div>
 
-              {isPending && (
-                <p className="mt-6 flex items-start gap-2 text-xs leading-5 text-slate-500">
-                  <VerifiedUserIcon sx={{ fontSize: 16 }} className="mt-0.5 shrink-0" />
-                  Pembayaran diproses oleh Midtrans. Akses hanya aktif setelah status pembayaran dikonfirmasi.
-                </p>
+              <h2 className="mt-4 break-words text-xl font-black text-slate-950 sm:text-2xl">
+                {transaction.payment_plan?.name || 'Akses TOKU-UP'}
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-slate-600 sm:text-sm">
+                {transaction.payment_plan?.description || 'Akses untuk membuka konten belajar lanjutan.'}
+              </p>
+
+              <dl className="mt-6 divide-y divide-slate-200 border-y border-slate-200 text-xs sm:text-sm">
+                <div className="flex items-center justify-between py-3">
+                  <dt className="font-medium text-slate-500">Cakupan Akses</dt>
+                  <dd className="font-bold text-slate-900">{transaction.scope_label || 'Semua kelas'}</dd>
+                </div>
+                <div className="flex items-center justify-between py-3">
+                  <dt className="font-medium text-slate-500">Nomor Pesanan</dt>
+                  <dd className="font-mono font-bold text-slate-900">{transaction.transaction_code}</dd>
+                </div>
+                <div className="flex items-center justify-between py-3">
+                  <dt className="font-medium text-slate-500">Tanggal Pesanan</dt>
+                  <dd className="font-semibold text-slate-700">{formatDate(transaction.created_at)}</dd>
+                </div>
+                <div className="flex items-center justify-between py-3.5">
+                  <dt className="font-bold text-slate-900">Total Tagihan</dt>
+                  <dd className="text-xl font-black text-[#c33d4b]">{transaction.amount_formatted}</dd>
+                </div>
+              </dl>
+
+              {status === 'success' && kloter && (
+                <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-xs leading-5 text-slate-600">
+                  <p className="font-bold text-slate-900">Kloter Belajar</p>
+                  <p className="mt-1">
+                    {kloter.nama} - Mulai {kloter.tanggal_mulai_label || '-'}
+                    {kloter.admin_name ? ` bersama ${kloter.admin_name}` : ''}.
+                  </p>
+                </div>
               )}
-            </section>
+
+              <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-center">
+                <VerifiedUserIcon sx={{ fontSize: 24 }} className="mx-auto text-slate-400" />
+                <p className="mt-2 text-xs font-bold text-slate-700">Garansi Keamanan Pembayaran</p>
+                <p className="mt-1 text-[11px] leading-4 text-slate-500">
+                  Enkripsi SSL 256-bit standar PCI-DSS melalui payment gateway Midtrans.
+                </p>
+              </div>
+            </aside>
           </section>
         </div>
       </main>
+
+      {/* 3DS Secure Modal Dialog (For Credit Card OTP) */}
+      {threeDsUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="relative flex h-[620px] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <span className="text-xs font-bold text-slate-700">Verifikasi 3D Secure (OTP Bank)</span>
+              <button
+                type="button"
+                onClick={() => setThreeDsUrl('')}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <CloseIcon sx={{ fontSize: 20 }} />
+              </button>
+            </div>
+            <iframe
+              src={threeDsUrl}
+              title="3D Secure Verification"
+              className="h-full w-full border-0"
+            />
+            <div className="border-t border-slate-200 bg-slate-50 p-3 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setThreeDsUrl('');
+                  syncStatus();
+                }}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800"
+              >
+                Saya Sudah Memasukkan OTP
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConfirmActionDialog
         {...confirmState}
         onCancel={closeConfirm}
