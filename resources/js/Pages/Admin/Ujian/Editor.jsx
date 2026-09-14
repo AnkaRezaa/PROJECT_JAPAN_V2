@@ -11,6 +11,7 @@ import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import AdminDialog from '@/Components/UI/AdminDialog';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
@@ -90,9 +91,9 @@ function StructureStep({ sections, setSections, templates, readOnly }) {
     </div>;
 }
 
-function QuestionsStep({ questions, setQuestions, sections, readOnly, onImport, importInput, onOpenQuestion }) {
+function QuestionsStep({ questions, setQuestions, sections, readOnly, onImport, importInput, onOpenQuestion, onOpenPicker }) {
     return <div>
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"><div><h2 className="font-black text-gray-950 dark:text-white">Naskah soal</h2><p className="mt-1 text-sm text-gray-500">Tambah soal manual atau gunakan template XLSX untuk input massal.</p></div>{!readOnly && <div className="flex flex-wrap gap-2"><a href={route('admin.exam-versions.template')} className="inline-flex h-10 items-center gap-2 rounded-md border border-gray-300 px-3 text-xs font-black text-gray-700 dark:border-gray-700 dark:text-gray-200"><DownloadRoundedIcon fontSize="small" /> Template XLSX</a><button type="button" onClick={() => importInput.current?.click()} className="inline-flex h-10 items-center gap-2 rounded-md border border-gray-300 px-3 text-xs font-black text-gray-700 dark:border-gray-700 dark:text-gray-200"><UploadFileRoundedIcon fontSize="small" /> Impor XLSX</button><input ref={importInput} type="file" accept=".xlsx" className="hidden" onChange={onImport} /><button type="button" onClick={() => onOpenQuestion()} className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-600 px-3 text-xs font-black text-white hover:bg-brand-700"><AddRoundedIcon fontSize="small" /> Tambah manual</button></div>}</div>
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"><div><h2 className="font-black text-gray-950 dark:text-white">Naskah soal</h2><p className="mt-1 text-sm text-gray-500">Tambah soal manual, tarik dari bank soal, atau gunakan template XLSX untuk input massal.</p></div>{!readOnly && <div className="flex flex-wrap gap-2"><a href={route('admin.exam-versions.template')} className="inline-flex h-10 items-center gap-2 rounded-md border border-gray-300 px-3 text-xs font-black text-gray-700 dark:border-gray-700 dark:text-gray-200"><DownloadRoundedIcon fontSize="small" /> Template XLSX</a><button type="button" onClick={() => importInput.current?.click()} className="inline-flex h-10 items-center gap-2 rounded-md border border-gray-300 px-3 text-xs font-black text-gray-700 dark:border-gray-700 dark:text-gray-200"><UploadFileRoundedIcon fontSize="small" /> Impor XLSX</button><input ref={importInput} type="file" accept=".xlsx" className="hidden" onChange={onImport} /><button type="button" onClick={onOpenPicker} className="inline-flex h-10 items-center gap-2 rounded-md bg-amber-600 px-3 text-xs font-black text-white hover:bg-amber-700 shadow-sm"><FolderOpenOutlinedIcon fontSize="small" /> Tarik dari Bank Soal</button><button type="button" onClick={() => onOpenQuestion()} className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-600 px-3 text-xs font-black text-white hover:bg-brand-700"><AddRoundedIcon fontSize="small" /> Tambah manual</button></div>}</div>
         <div className="mt-5 overflow-x-auto border border-gray-200 dark:border-gray-800"><table className="w-full min-w-[820px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-800/60"><tr><th className="px-4 py-3">Kode & pertanyaan</th><th className="px-3 py-3">Bagian</th><th className="px-3 py-3">Tipe</th><th className="px-3 py-3">Jawaban</th><th className="px-3 py-3">Status</th><th className="px-3 py-3 text-right">Aksi</th></tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {questions.map((question) => <tr key={question.local_id}><td className="max-w-md px-4 py-4"><p className="text-xs font-black text-brand-600">{question.code || 'TANPA KODE'}</p><p className="mt-1 font-semibold text-gray-900 dark:text-white">{question.prompt}</p></td><td className="px-3 py-4 text-gray-600 dark:text-gray-300">{sections.find((item) => item.key === question.section_key)?.short_label || question.section_key}</td><td className="px-3 py-4 text-gray-600 dark:text-gray-300">{questionTypes.find(([value]) => value === question.type)?.[1]}</td><td className="max-w-[180px] truncate px-3 py-4 font-bold text-gray-800 dark:text-gray-200">{question.answer}</td><td className="px-3 py-4">{question.type !== 'listening' || question.audio_path ? <span className="text-xs font-black text-emerald-600">Siap</span> : <span className="text-xs font-black text-amber-600">Audio belum ada</span>}</td><td className="px-3 py-4">{!readOnly && <div className="flex justify-end gap-1"><button type="button" onClick={() => onOpenQuestion(question)} className="grid h-9 w-9 place-items-center rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Edit soal"><EditOutlinedIcon fontSize="small" /></button><button type="button" onClick={() => setQuestions(questions.filter((item) => item.local_id !== question.local_id))} className="grid h-9 w-9 place-items-center rounded-md text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30" title="Hapus soal"><DeleteOutlineRoundedIcon fontSize="small" /></button></div>}</td></tr>)}
             {questions.length === 0 && <tr><td colSpan="6" className="px-4 py-12 text-center font-semibold text-gray-500">Belum ada soal. Tambahkan manual atau impor XLSX.</td></tr>}
@@ -120,6 +121,11 @@ export default function Editor({ exam, mode = 'create', level_options = [], sect
     const [questionEditor, setQuestionEditor] = useState(null);
     const [importFile, setImportFile] = useState(null);
     const [importPreview, setImportPreview] = useState(null);
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const [pickerBanks, setPickerBanks] = useState([]);
+    const [pickerLoading, setPickerLoading] = useState(false);
+    const [pickerSelectedQuestions, setPickerSelectedQuestions] = useState(new Set());
+    const [pickerTargetSection, setPickerTargetSection] = useState('');
     const { confirmState, openConfirm, closeConfirm, setConfirmProcessing } = useConfirmAction();
     const importInput = useRef(null);
     const readOnly = Boolean(exam && (exam.status === 'archived' || exam.version_status !== 'draft'));
@@ -129,6 +135,71 @@ export default function Editor({ exam, mode = 'create', level_options = [], sect
     });
     const [sections, setSections] = useState(normalizeSections(exam?.sections?.length ? exam.sections : section_templates));
     const [questions, setQuestions] = useState(normalizeQuestions(question_samples));
+
+    const openPicker = async () => {
+        setPickerOpen(true);
+        setPickerLoading(true);
+        setPickerSelectedQuestions(new Set());
+        setPickerTargetSection(sections[0]?.key || 'vocabulary');
+        try {
+            const res = await window.axios.get(route('admin.exams.question-banks.picker'), {
+                params: { level_id: form.level_id || undefined },
+            });
+            setPickerBanks(res.data.banks || []);
+        } catch (e) {
+            alert('Gagal memuat bank soal.');
+        } finally {
+            setPickerLoading(false);
+        }
+    };
+
+    const handleInsertPickedQuestions = () => {
+        const picked = [];
+        pickerBanks.forEach((b) => {
+            (b.wrappers || []).forEach((w) => {
+                (w.questions || []).forEach((q) => {
+                    if (pickerSelectedQuestions.has(q.id)) {
+                        picked.push({
+                            ...q,
+                            wrapper_title: w.title,
+                            stimulus_text: w.stimulus_text,
+                            audio_url: q.audio_url || w.audio_url,
+                        });
+                    }
+                });
+            });
+            (b.standalone_questions || []).forEach((q) => {
+                if (pickerSelectedQuestions.has(q.id)) {
+                    picked.push(q);
+                }
+            });
+        });
+
+        if (!picked.length) return;
+
+        const newItems = picked.map((bq) => ({
+            local_id: `bank-${bq.id}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            id: null,
+            section_key: pickerTargetSection || sections[0]?.key || 'vocabulary',
+            code: bq.code || '',
+            type: bq.type || 'multiple_choice',
+            points: Number(bq.points) || 1,
+            prompt: bq.question_text,
+            question_reading: bq.stimulus_text
+                ? `【${bq.wrapper_title}】\n${bq.stimulus_text}\n\n${bq.question_reading || ''}`
+                : (bq.question_reading || ''),
+            options_text: (bq.options || []).join('\n'),
+            answer: bq.correct_answer,
+            correct_answer_reading: bq.correct_answer_reading || '',
+            explanation: bq.explanation || '',
+            explanation_reading: bq.explanation_reading || '',
+            audio_path: bq.audio_url || '',
+        }));
+
+        setQuestions((current) => [...current, ...newItems]);
+        setPickerOpen(false);
+        setNotice(`${newItems.length} butir soal berhasil ditarik dari Bank Soal ke bagian ${sections.find((s) => s.key === pickerTargetSection)?.short_label || pickerTargetSection}.`);
+    };
 
     useEffect(() => setQuestions(normalizeQuestions(question_samples)), [question_samples]);
     useEffect(() => {
@@ -225,7 +296,7 @@ export default function Editor({ exam, mode = 'create', level_options = [], sect
             <main className="min-w-0 border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 sm:p-6">
                 {step === 0 && <IdentityStep form={form} setForm={setForm} levels={level_options} readOnly={readOnly} />}
                 {step === 1 && <StructureStep sections={sections} setSections={setSections} templates={section_templates} readOnly={readOnly} />}
-                {step === 2 && <QuestionsStep questions={questions} setQuestions={setQuestions} sections={sections} readOnly={readOnly} onImport={previewImport} importInput={importInput} onOpenQuestion={(question = null) => setQuestionEditor(question ? { ...question } : emptyQuestion(sections[0]?.key))} />}
+                {step === 2 && <QuestionsStep questions={questions} setQuestions={setQuestions} sections={sections} readOnly={readOnly} onImport={previewImport} importInput={importInput} onOpenQuestion={(question = null) => setQuestionEditor(question ? { ...question } : emptyQuestion(sections[0]?.key))} onOpenPicker={openPicker} />}
                 {step === 3 && <ValidationStep readiness={readiness} onValidate={validate} busy={busy} />}
                 {step === 4 && <PreviewStep form={form} sections={sections} questions={questions} />}
                 <footer className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-5 dark:border-gray-800"><button type="button" disabled={step === 0} onClick={() => setStep((value) => value - 1)} className="h-10 rounded-md border border-gray-300 px-4 text-sm font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Kembali</button><div className="flex gap-2">{!readOnly && step <= 2 && <button type="button" disabled={busy} onClick={saveCurrentStep} className="inline-flex h-10 items-center gap-2 rounded-md border border-gray-300 px-4 text-sm font-black text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:text-gray-200"><SaveOutlinedIcon fontSize="small" /> {mode === 'create' ? 'Buat draft' : 'Simpan draft'}</button>}{step < steps.length - 1 ? <button type="button" disabled={!exam && step === 0} onClick={() => setStep((value) => value + 1)} className="h-10 rounded-md bg-brand-600 px-5 text-sm font-black text-white disabled:opacity-40">Lanjut</button> : !readOnly && <button type="button" disabled={busy || !readiness?.valid} onClick={confirmPublish} className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-600 px-5 text-sm font-black text-white disabled:opacity-40"><PublishRoundedIcon fontSize="small" /> Publikasikan</button>}</div></footer>
@@ -236,6 +307,142 @@ export default function Editor({ exam, mode = 'create', level_options = [], sect
         {questionEditor && <div className="grid gap-4 sm:grid-cols-2"><Field label="Bagian"><select className={fieldClassName} value={questionEditor.section_key} onChange={(event) => setQuestionEditor({ ...questionEditor, section_key: event.target.value })}>{sections.map((item) => <option key={item.key} value={item.key}>{item.short_label}</option>)}</select></Field><Field label="Tipe soal"><select className={fieldClassName} value={questionEditor.type} onChange={(event) => setQuestionEditor({ ...questionEditor, type: event.target.value })}>{questionTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field><Field label="Kode soal"><input className={fieldClassName} value={questionEditor.code} onChange={(event) => setQuestionEditor({ ...questionEditor, code: event.target.value })} /></Field><Field label="Bobot"><input type="number" min="1" max="100" className={fieldClassName} value={questionEditor.points} onChange={(event) => setQuestionEditor({ ...questionEditor, points: event.target.value })} /></Field><div className="sm:col-span-2"><Field label="Pertanyaan"><textarea rows="3" className={`${fieldClassName} h-auto py-3`} value={questionEditor.prompt} onChange={(event) => setQuestionEditor({ ...questionEditor, prompt: event.target.value })} /></Field></div><div className="sm:col-span-2"><Field label="Bacaan pertanyaan" hint="Opsional."><textarea rows="2" className={`${fieldClassName} h-auto py-3`} value={questionEditor.question_reading} onChange={(event) => setQuestionEditor({ ...questionEditor, question_reading: event.target.value })} /></Field></div>{['multiple_choice', 'listening', 'sentence_builder'].includes(questionEditor.type) && <div className="sm:col-span-2"><Field label="Pilihan jawaban" hint="Satu pilihan per baris. Untuk susun kalimat, isi satu potongan per baris."><textarea rows="5" className={`${fieldClassName} h-auto py-3`} value={questionEditor.options_text} onChange={(event) => setQuestionEditor({ ...questionEditor, options_text: event.target.value })} /></Field></div>}<div className="sm:col-span-2"><Field label="Jawaban benar"><textarea rows="2" className={`${fieldClassName} h-auto py-3`} value={questionEditor.answer} onChange={(event) => setQuestionEditor({ ...questionEditor, answer: event.target.value })} /></Field></div>{questionEditor.type === 'listening' && <div className="sm:col-span-2"><Field label="Path audio" hint="Gunakan path media yang sudah tersedia di server."><input className={fieldClassName} value={questionEditor.audio_path} onChange={(event) => setQuestionEditor({ ...questionEditor, audio_path: event.target.value })} placeholder="audio/exams/n3/listening-01.mp3" /></Field></div>}<div className="sm:col-span-2"><Field label="Pembahasan" hint="Opsional dan mengikuti kebijakan pembahasan paket."><textarea rows="3" className={`${fieldClassName} h-auto py-3`} value={questionEditor.explanation} onChange={(event) => setQuestionEditor({ ...questionEditor, explanation: event.target.value })} /></Field></div></div>}
     </AdminDialog>
     <AdminDialog open={Boolean(importPreview)} onClose={() => { setImportPreview(null); setImportFile(null); }} eyebrow="Impor massal" title="Konfirmasi impor XLSX" description="Impor mengganti struktur dan naskah pada draft versi ini." footer={<div className="flex justify-end gap-2"><button type="button" onClick={() => { setImportPreview(null); setImportFile(null); }} className="h-10 rounded-md border border-gray-300 px-4 text-sm font-black dark:border-gray-700">Batal</button><button type="button" disabled={busy || !importPreview?.valid} onClick={commitImport} className="h-10 rounded-md bg-brand-600 px-4 text-sm font-black text-white disabled:opacity-40">Impor sekarang</button></div>}><p className="text-sm font-semibold text-gray-600 dark:text-gray-300">{importFile?.name}</p>{importPreview?.valid && <p className="mt-3 text-sm font-black text-emerald-700">{importPreview.summary.sections} bagian dan {importPreview.summary.questions} soal siap diimpor.</p>}{importPreview?.errors?.map((item) => <p key={item} className="mt-2 text-sm font-semibold text-rose-600">{item}</p>)}</AdminDialog>
+    <AdminDialog
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        eyebrow="Integrasi Bank Soal"
+        title="Tarik Soal dari Bank Soal"
+        description="Pilih butir-butir pertanyaan dari bank soal yang tersedia untuk disisipkan ke bagian ujian ini."
+        maxWidth="max-w-4xl"
+        footer={
+            <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setPickerOpen(false)} className="h-10 rounded-md border border-gray-300 px-4 text-sm font-black dark:border-gray-700">
+                    Batal
+                </button>
+                <button
+                    type="button"
+                    disabled={pickerSelectedQuestions.size === 0}
+                    onClick={handleInsertPickedQuestions}
+                    className="h-10 rounded-md bg-brand-600 px-5 text-sm font-black text-white hover:bg-brand-700 disabled:opacity-40"
+                >
+                    Tarik {pickerSelectedQuestions.size} Soal ke Draf
+                </button>
+            </div>
+        }
+    >
+        <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-100 p-3 dark:bg-gray-800">
+                <label className="flex items-center gap-2 text-xs font-black text-gray-700 dark:text-gray-300">
+                    Masukkan ke Bagian Ujian:
+                    <select
+                        value={pickerTargetSection}
+                        onChange={(e) => setPickerTargetSection(e.target.value)}
+                        className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-bold text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    >
+                        {sections.map((s) => (
+                            <option key={s.key} value={s.key}>{s.short_label || s.title || s.key}</option>
+                        ))}
+                    </select>
+                </label>
+                <span className="text-xs font-bold text-gray-500">
+                    {pickerSelectedQuestions.size} butir terpilih
+                </span>
+            </div>
+
+            {pickerLoading ? (
+                <div className="py-12 text-center text-sm font-bold text-gray-400">Memuat bank soal...</div>
+            ) : pickerBanks.length === 0 ? (
+                <div className="py-12 text-center text-sm font-bold text-gray-400">Belum ada bank soal terbit untuk level ini.</div>
+            ) : (
+                <div className="max-h-[420px] space-y-4 overflow-y-auto pr-1">
+                    {pickerBanks.map((b) => (
+                        <div key={b.id} className="rounded-lg border border-gray-200 p-4 dark:border-gray-800">
+                            <h3 className="font-black text-gray-950 dark:text-white">{b.title}</h3>
+                            <p className="text-xs text-gray-500">{b.source || 'Sumber Mandiri'} · Level {b.level}</p>
+
+                            <div className="mt-3 space-y-3">
+                                {(b.wrappers || []).map((w) => (
+                                    <div key={w.id} className="rounded border border-gray-100 bg-gray-50/70 p-3 text-xs dark:border-gray-800/80 dark:bg-gray-800/40">
+                                        <div className="flex items-center justify-between font-bold text-gray-800 dark:text-gray-200">
+                                            <span>{w.mondai_number ? `[${w.mondai_number}] ` : ''}{w.title}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const next = new Set(pickerSelectedQuestions);
+                                                    const allSelected = (w.questions || []).every((q) => next.has(q.id));
+                                                    (w.questions || []).forEach((q) => {
+                                                        if (allSelected) next.delete(q.id);
+                                                        else next.add(q.id);
+                                                    });
+                                                    setPickerSelectedQuestions(next);
+                                                }}
+                                                className="text-[11px] font-black text-brand-600 underline"
+                                            >
+                                                Pilih Semua di Wacana Ini
+                                            </button>
+                                        </div>
+
+                                        <div className="mt-2 space-y-1.5 pl-2 border-l-2 border-brand-400">
+                                            {(w.questions || []).map((q) => {
+                                                const checked = pickerSelectedQuestions.has(q.id);
+                                                return (
+                                                    <label key={q.id} className="flex items-start gap-2 cursor-pointer select-none">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={checked}
+                                                            onChange={() => {
+                                                                const next = new Set(pickerSelectedQuestions);
+                                                                if (checked) next.delete(q.id);
+                                                                else next.add(q.id);
+                                                                setPickerSelectedQuestions(next);
+                                                            }}
+                                                            className="mt-0.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                                                        />
+                                                        <span className="font-japanese leading-relaxed text-gray-900 dark:text-gray-100">
+                                                            {q.question_text}
+                                                        </span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {(b.standalone_questions || []).length > 0 && (
+                                    <div className="rounded border border-gray-100 bg-gray-50/70 p-3 text-xs dark:border-gray-800/80 dark:bg-gray-800/40">
+                                        <span className="font-bold text-gray-800 dark:text-gray-200">Soal Mandiri:</span>
+                                        <div className="mt-2 space-y-1.5 pl-2">
+                                            {(b.standalone_questions || []).map((q) => {
+                                                const checked = pickerSelectedQuestions.has(q.id);
+                                                return (
+                                                    <label key={q.id} className="flex items-start gap-2 cursor-pointer select-none">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={checked}
+                                                            onChange={() => {
+                                                                const next = new Set(pickerSelectedQuestions);
+                                                                if (checked) next.delete(q.id);
+                                                                else next.add(q.id);
+                                                                setPickerSelectedQuestions(next);
+                                                            }}
+                                                            className="mt-0.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                                                        />
+                                                        <span className="font-japanese leading-relaxed text-gray-900 dark:text-gray-100">
+                                                            {q.question_text}
+                                                        </span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    </AdminDialog>
     <ConfirmActionDialog {...confirmState} onConfirm={runConfirmed} onCancel={closeConfirm} />
     </AuthenticatedLayout>;
 }

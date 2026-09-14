@@ -51,6 +51,7 @@ export function AdminExamTabs() {
     const pathname = typeof window === 'undefined' ? '' : window.location.pathname;
     const items = [
         ['/admin/exams', 'Paket ujian', pathname === '/admin/exams'],
+        ['/admin/exams/question-banks', 'Bank soal', pathname.startsWith('/admin/exams/question-banks')],
         ['/admin/exams/sessions', 'Sesi & akses', pathname.startsWith('/admin/exams/sessions')],
         ['/admin/exams/results', 'Hasil peserta', pathname.startsWith('/admin/exams/results')],
     ];
