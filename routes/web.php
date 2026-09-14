@@ -61,6 +61,16 @@ Route::get('/terms', [HalamanController::class, 'terms'])->name('terms');
 Route::get('/cookie-policy', [HalamanController::class, 'cookiePolicy'])->name('cookie-policy');
 Route::get('/robots.txt', [HalamanController::class, 'robots'])->name('robots');
 Route::get('/sitemap.xml', [HalamanController::class, 'sitemap'])->name('sitemap');
+Route::get('/exams', function (Request $request) {
+    if (! $request->user()) {
+        return redirect()->route('login');
+    }
+
+    return match ($request->user()->role) {
+        'admin', 'superadmin' => redirect()->route('admin.exams.index'),
+        default => redirect()->route('user.exams.index'),
+    };
+})->name('exams');
 
 // Authenticated Routes
 Route::middleware(['auth', 'verified'])->group(function () {
