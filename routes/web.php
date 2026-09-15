@@ -350,7 +350,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/modul/{week}', [ModulController::class, 'lesson'])->name('modul.lesson');
         Route::get('/modul/{week}/quiz', [ModulController::class, 'quiz'])->name('modul.quiz');
         Route::post('/questions/{question}/check', [ModulController::class, 'checkQuestion'])->middleware('throttle:learning-actions')->name('questions.check');
-        Route::post('/access-keys/redeem', [UserDashboardController::class, 'redeemAccessKey'])->middleware('throttle:access-keys')->name('access-keys.redeem');
         Route::get('/news', [BeritaController::class, 'index'])->name('news.index');
         Route::get('/news/{news}', [BeritaController::class, 'show'])->name('news.show');
         Route::get('/live-classes/{session:join_code}', [UserRuangKelasLiveController::class, 'show'])->name('live-classes.show');
@@ -390,7 +389,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/attempts', [ProgresController::class, 'storeAttempt'])->middleware('throttle:learning-actions')->name('attempts.store');
         Route::post('/quizzes/{quiz}/attempts/start', [ProgresController::class, 'startAttempt'])->middleware('throttle:learning-actions')->name('attempts.start');
         Route::post('/attempts/{attempt}/answers/first', [ProgresController::class, 'storeFirstAnswer'])->middleware('throttle:learning-actions')->name('attempts.answers.first');
-        Route::post('/modules/complete', [ProgresController::class, 'completeModule'])->name('modules.complete');
     });
 });
 

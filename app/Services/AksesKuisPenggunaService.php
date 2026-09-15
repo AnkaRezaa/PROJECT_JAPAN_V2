@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Kuis;
 use App\Models\Pengguna;
-use Illuminate\Http\RedirectResponse;
 
 class AksesKuisPenggunaService
 {
@@ -13,17 +12,6 @@ class AksesKuisPenggunaService
         private KloterBelajarService $kloterBelajar,
         private ProgresRoadmapService $roadmapProgress
     ) {}
-
-    public function redirectJikaTerkunci(Pengguna $user, Kuis $quiz): ?RedirectResponse
-    {
-        $status = $this->status($user, $quiz);
-
-        if (! $status['allowed']) {
-            abort(403, $status['message']);
-        }
-
-        return null;
-    }
 
     public function abortJikaTerkunci(Pengguna $user, Kuis $quiz): void
     {

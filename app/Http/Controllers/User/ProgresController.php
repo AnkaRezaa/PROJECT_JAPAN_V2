@@ -433,42 +433,6 @@ class ProgresController extends Controller
         return redirect()->back()->with('success', 'Jawaban kuis berhasil dikirim.');
     }
 
-    public function completeModule(
-        Request $request,
-        AksesPremiumService $aksesPremium,
-        RingkasanProgresPenggunaService $summary
-    ) {
-        $validated = $request->validate([
-            'module_id' => ['required', 'exists:modules,id'],
-            'score' => ['nullable', 'integer'],
-        ]);
-
-        $user = Auth::user();
-        $module = Modul::where('status', 'published')->findOrFail($validated['module_id']);
-
-        abort_unless($aksesPremium->bolehAksesModul($user, $module), 403);
-        abort_if(
-            $module->days()->where('status', 'published')->exists(),
-            422,
-            'Modul ini diselesaikan melalui urutan Day.'
-        );
-        abort_if(
-            $module->quizzes()->where('status', 'published')->whereHas('questions')->exists(),
-            422,
-            'Modul ini harus diselesaikan lewat kuis agar unlock roadmap tetap valid.'
-        );
-
-        $progress = Progres::firstOrCreate([
-            'user_id' => $user->id,
-            'module_id' => $module->id,
-        ], [
-            'score' => $validated['score'] ?? null,
-            'completed_at' => now(),
-        ]);
-        $summary->forget($user);
-
-        return redirect()->back()->with('success', $progress->wasRecentlyCreated ? 'Modul ditandai selesai.' : 'Progress modul sudah tercatat.');
-    }
 
     private function scoreAnswers($answers, $questionMap): int
     {
@@ -558,21 +522,5 @@ class ProgresController extends Controller
                 'max_points' => max(1, (int) ($question->points ?? 1)),
             ];
         })->values()->all();
-    }
-
-    private function xpForScore(int $score, int $total): int
-    {
-        if ($score <= 0 || $total <= 0) {
-            return 0;
-        }
-
-        $percentage = $total > 0 ? $score / $total : 0;
-
-        return match (true) {
-            $percentage === 1.0 => 50,
-            $percentage >= 0.8 => 35,
-            $percentage >= 0.6 => 20,
-            default => 10,
-        };
     }
 }

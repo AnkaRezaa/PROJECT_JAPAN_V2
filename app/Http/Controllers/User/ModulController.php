@@ -732,9 +732,7 @@ class ModulController extends Controller
 
         abort_unless($quiz, 404, 'Kuis modul belum tersedia.');
 
-        if ($redirect = $aksesKuis->redirectJikaTerkunci($user, $quiz)) {
-            return $redirect;
-        }
+        $aksesKuis->abortJikaTerkunci($user, $quiz);
 
         $payload = $learning->quizPayload($user, $quiz);
 
