@@ -79,6 +79,10 @@
         @endphp
         <script>
             window.__TOKU_UP_THEME__ = @json($tokuUpTheme);
+            window.__TOKU_UP_ANALYTICS__ = @json([
+                'enabled' => (bool) config('beta.google_tag_manager.enabled'),
+                'id' => config('beta.google_tag_manager.id'),
+            ]);
             (() => {
                 const mode = localStorage.getItem('theme') || 'system';
                 const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;

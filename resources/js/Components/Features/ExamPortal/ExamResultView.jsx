@@ -2,6 +2,7 @@ import React from 'react';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
+import ContextualFeedbackPrompt from '@/Components/Features/Feedback/ContextualFeedbackPrompt';
 
 export default function ExamResultView({ result, totalQuestions, onExit, exitLabel = 'Kembali ke kumpulan ujian' }) {
     const sections = result.sections || [];
@@ -157,6 +158,10 @@ export default function ExamResultView({ result, totalQuestions, onExit, exitLab
                         </section>
                     )}
                 </>
+            )}
+
+            {result.id && (
+                <ContextualFeedbackPrompt feature="exam" contextId={result.id} className="mt-8" />
             )}
 
             {onExit && (

@@ -45,6 +45,10 @@ return [
         'snap_expiry_hours' => (int) env('MIDTRANS_SNAP_EXPIRY_HOURS', 24),
     ],
 
+    'sentry' => [
+        'enabled' => (bool) env('SENTRY_ENABLED', false),
+    ],
+
     'mailtrap' => [
         'templates_enabled' => env('MAILTRAP_TEMPLATES_ENABLED', false),
         'api_token' => env('MAILTRAP_API_TOKEN'),

@@ -19,6 +19,7 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import JapaneseSpeechButton from '@/Components/UI/JapaneseSpeechButton';
 import ExamPortalLayout from '@/Layouts/ExamPortalLayout';
 import ExamResultView from '@/Components/Features/ExamPortal/ExamResultView';
+import { pushAnalyticsEvent } from '@/lib/analytics';
 
 const sectionDescriptions = {
     vocabulary: 'Pengenalan huruf, penggunaan kosakata, dan pemahaman makna.',
@@ -241,6 +242,10 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
             window.localStorage.removeItem(startTokenKey);
             window.localStorage.removeItem(localAnswersKey);
             setResult(response.data.result || { pending: true });
+            pushAnalyticsEvent('exam_completed', {
+                exam_type: initialAttempt.exam?.type || 'exam',
+                result_available: response.data.result_available === true,
+            });
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (requestError) {
             hasSubmittedRef.current = false;

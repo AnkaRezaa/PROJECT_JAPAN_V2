@@ -34,6 +34,7 @@
         "@livekit/components-styles": "^1.2.0",
         "@mui/icons-material": "^9.1.1",
         "@mui/material": "^9.1.1",
+        "@sentry/react": "^10.74.0",
         "@tiptap/extension-image": "^3.27.4",
         "@tiptap/extension-link": "^3.27.4",
         "@tiptap/extension-placeholder": "^3.27.4",

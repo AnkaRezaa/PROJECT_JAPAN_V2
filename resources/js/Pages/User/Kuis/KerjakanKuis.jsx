@@ -12,6 +12,8 @@ import StrokeCharacterPreview from '@/Components/Features/Handwriting/StrokeChar
 import { loadStrokeCharacter, resolveAvailableCharacters } from '@/Components/Features/Handwriting/strokeData';
 import HighlightedLearningText from '@/Components/Features/Learning/HighlightedLearningText';
 import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
+import ContextualFeedbackPrompt from '@/Components/Features/Feedback/ContextualFeedbackPrompt';
+import { pushAnalyticsEvent } from '@/lib/analytics';
 
 // MUI Icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -443,6 +445,13 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
             });
 
             setAttemptResult(response.data || null);
+            pushAnalyticsEvent('quiz_completed', {
+                quiz_type: quiz?.quiz_kind || quiz?.type || 'standard',
+                passed: response.data?.passed === true,
+            });
+            if (response.data?.completed_day) {
+                pushAnalyticsEvent('lesson_completed', { completion_type: 'day' });
+            }
         } catch (error) {
             submitted.current = false;
             setAttemptError('Hasil kuis belum tersimpan. Coba kirim ulang sebelum keluar dari halaman ini.');
@@ -777,6 +786,14 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                             {learningFeedback && <p className="mt-3 text-xs font-bold text-emerald-700 dark:text-emerald-300">Feedback hari ini sudah tersimpan.</p>}
                             {feedbackError && <p className="mt-3 text-xs font-bold text-red-700 dark:text-red-300">{feedbackError}</p>}
                         </section>
+                    )}
+                    {!attemptError && attemptResult?.attempt_id && (
+                        <ContextualFeedbackPrompt
+                            feature="quiz"
+                            contextId={attemptResult.attempt_id}
+                            collapsibleLabel={isSuccess ? 'Ada kritik atau kendala soal kuis ini?' : null}
+                            className="mt-4 rounded-2xl"
+                        />
                     )}
                     <button 
                         onClick={() => {

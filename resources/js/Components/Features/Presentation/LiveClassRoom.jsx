@@ -5,6 +5,8 @@ import axios from 'axios';
 import { ConnectionState, DisconnectReason, LogLevel, Room, RoomEvent, setLogLevel, Track, VideoQuality } from 'livekit-client';
 import PresentationStage from '@/Components/Features/Presentation/PresentationStage';
 import { getEcho, leaveLiveClassChannel } from '@/lib/echo';
+import ContextualFeedbackPrompt from '@/Components/Features/Feedback/ContextualFeedbackPrompt';
+import { pushAnalyticsEvent } from '@/lib/analytics';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -685,6 +687,7 @@ export default function LiveClassRoom({
     const [devicePreferences, setDevicePreferences] = useState({ microphoneId: '', cameraId: '' });
     const [raiseHandPromptOpen, setRaiseHandPromptOpen] = useState(false);
     const [raiseHandNotice, setRaiseHandNotice] = useState('');
+    const trackedCompletionRef = useRef(false);
     const currentStudent = role === 'student' ? (selfParticipant || participants[0] || initialParticipants[0]) : (participants[0] || initialParticipants[0]);
     const canDraw = role === 'mentor' || currentStudent?.canWrite;
     const activeSlide = slides[index] || null;
@@ -701,6 +704,12 @@ export default function LiveClassRoom({
             return joinUrl;
         }
     }, [joinUrl]);
+
+    useEffect(() => {
+        if (role !== 'student' || phase !== 'ended' || trackedCompletionRef.current) return;
+        trackedCompletionRef.current = true;
+        pushAnalyticsEvent('class_session_completed', { session_type: 'live_class' });
+    }, [phase, role]);
 
     const visibleStrokes = useMemo(() => strokes.filter((stroke) => !stroke.hidden), [strokes]);
 
@@ -1708,6 +1717,9 @@ export default function LiveClassRoom({
                     <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-orange-500/15 text-orange-300"><CallEndIcon /></div>
                     <h1 className="mt-5 text-3xl font-black">{kicked ? 'Anda dikeluarkan dari sesi' : 'Ruang kelas telah berakhir'}</h1>
                     <p className="mt-3 text-sm font-semibold leading-6 text-gray-400">{kicked ? 'Mentor telah menutup akses Anda ke kelas ini.' : 'Terima kasih sudah mengikuti kelas.'}</p>
+                    {role === 'student' && !kicked && session?.id && (
+                        <ContextualFeedbackPrompt feature="live_class" contextId={session.id} className="mt-6 border-white/10 bg-[#111827] text-left" />
+                    )}
                     <Link href={exitUrl} className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-orange-600 px-5 text-sm font-black text-white">Kembali ke Roadmap</Link>
                 </section>
             </main>

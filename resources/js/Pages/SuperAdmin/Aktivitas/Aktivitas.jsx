@@ -33,7 +33,7 @@ function Pagination({ links = [] }) {
     );
 }
 
-function FeedbackWorkspace({ feedback = { data: [], links: [] }, stats = {}, filters = {} }) {
+function FeedbackWorkspace({ feedback = { data: [], links: [] }, stats = {}, filters = {}, monitoringLinks = {} }) {
     const [editing, setEditing] = React.useState(null);
     const editForm = useForm({ status: 'reviewing', resolution_note: '' });
     const feedbackFilter = useForm({
@@ -42,6 +42,12 @@ function FeedbackWorkspace({ feedback = { data: [], links: [] }, stats = {}, fil
         feedback_category: filters.feedback_category || 'all',
         feedback_status: filters.feedback_status || 'all',
         feedback_role: filters.feedback_role || 'all',
+        feedback_source: filters.feedback_source || 'all',
+        feedback_feature: filters.feedback_feature || 'all',
+        feedback_rating: filters.feedback_rating || 'all',
+        feedback_response: filters.feedback_response || 'submitted',
+        date_from: filters.date_from || '',
+        date_to: filters.date_to || '',
     });
 
     const openEditor = (item) => {
@@ -66,37 +72,65 @@ function FeedbackWorkspace({ feedback = { data: [], links: [] }, stats = {}, fil
     };
 
     const exportHref = route('superadmin.activity.feedback.export', feedbackFilter.data);
-    const categoryLabels = { bug: 'Kendala', suggestion: 'Saran', content: 'Materi', payment: 'Pembayaran', other: 'Lainnya' };
-    const statusLabels = { new: 'Baru', reviewing: 'Ditinjau', resolved: 'Selesai' };
+    const exportXlsxHref = route('superadmin.activity.feedback.export-xlsx', feedbackFilter.data);
+    const categoryLabels = { bug: 'Kendala', suggestion: 'Saran', content: 'Materi', payment: 'Pembayaran', other: 'Lainnya', experience: 'Pengalaman fitur' };
+    const statusLabels = { new: 'Baru', reviewing: 'Ditinjau', resolved: 'Selesai', dismissed: 'Dilewati' };
+    const featureLabels = { quiz: 'Kuis', exam: 'Ujian', lesson_day: 'Day kelas', live_class: 'Kelas live' };
+    const reasonLabels = {
+        clear_questions: 'Soal jelas', unclear_explanation: 'Penjelasan kurang', too_difficult: 'Terlalu sulit', too_easy: 'Terlalu mudah',
+        technical_issue: 'Kendala teknis', clear_instructions: 'Instruksi jelas', clear_results: 'Hasil jelas', confusing_time: 'Waktu membingungkan',
+        difficult_navigation: 'Navigasi sulit', easy_to_understand: 'Mudah dipahami', too_dense: 'Terlalu padat', needs_examples: 'Butuh contoh', unclear_media: 'Media kurang jelas',
+    };
 
     return (
         <div className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
                 {[
                     ['Baru', stats.new || 0, 'text-rose-600'],
                     ['Ditinjau', stats.reviewing || 0, 'text-amber-600'],
                     ['Selesai', stats.resolved || 0, 'text-emerald-600'],
+                    ['Respons beta', stats.responses || 0, 'text-sky-600'],
+                    ['Dilewati', stats.skipped || 0, 'text-gray-600'],
+                    ['Rating rata-rata', stats.average_rating || '-', 'text-violet-600'],
                 ].map(([label, value, tone]) => (
                     <Card key={label}><p className="text-xs font-black uppercase text-gray-400">{label}</p><p className={`mt-2 text-2xl font-black ${tone}`}>{value}</p></Card>
                 ))}
             </div>
 
             <Card>
-                <form onSubmit={submitFilters} className="grid gap-3 lg:grid-cols-[1.5fr_1fr_1fr_1fr_auto_auto]">
+                <form onSubmit={submitFilters} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <input value={feedbackFilter.data.feedback_search} onChange={(event) => feedbackFilter.setData('feedback_search', event.target.value)} placeholder="Cari pesan, pelapor, atau halaman" className="h-11 rounded-xl border border-gray-200 px-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                    <input type="date" value={feedbackFilter.data.date_from} onChange={(event) => feedbackFilter.setData('date_from', event.target.value)} aria-label="Tanggal awal feedback" className="h-11 rounded-xl border border-gray-200 px-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                    <input type="date" value={feedbackFilter.data.date_to} onChange={(event) => feedbackFilter.setData('date_to', event.target.value)} aria-label="Tanggal akhir feedback" className="h-11 rounded-xl border border-gray-200 px-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                     <select value={feedbackFilter.data.feedback_category} onChange={(event) => feedbackFilter.setData('feedback_category', event.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                         <option value="all">Semua kategori</option><option value="bug">Kendala</option><option value="suggestion">Saran</option><option value="content">Materi</option><option value="payment">Pembayaran</option><option value="other">Lainnya</option>
                     </select>
                     <select value={feedbackFilter.data.feedback_status} onChange={(event) => feedbackFilter.setData('feedback_status', event.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white">
-                        <option value="all">Semua status</option><option value="new">Baru</option><option value="reviewing">Ditinjau</option><option value="resolved">Selesai</option>
+                        <option value="all">Semua status</option><option value="new">Baru</option><option value="reviewing">Ditinjau</option><option value="resolved">Selesai</option><option value="dismissed">Dilewati</option>
                     </select>
                     <select value={feedbackFilter.data.feedback_role} onChange={(event) => feedbackFilter.setData('feedback_role', event.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                         <option value="all">Semua role</option><option value="user">User</option><option value="admin">Admin/Mentor</option><option value="superadmin">Superadmin</option>
                     </select>
-                    <button className="h-11 rounded-xl bg-gray-900 px-4 text-sm font-black text-white dark:bg-white dark:text-gray-900">Filter</button>
-                    <a href={exportHref} className="inline-flex h-11 items-center justify-center rounded-xl border border-emerald-200 px-4 text-sm font-black text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/50 dark:text-emerald-300">Ekspor CSV</a>
+                    <select value={feedbackFilter.data.feedback_source} onChange={(event) => feedbackFilter.setData('feedback_source', event.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white"><option value="all">Semua sumber</option><option value="manual">Manual</option><option value="contextual">Kontekstual</option></select>
+                    <select value={feedbackFilter.data.feedback_feature} onChange={(event) => feedbackFilter.setData('feedback_feature', event.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white"><option value="all">Semua fitur</option><option value="quiz">Kuis</option><option value="exam">Ujian</option><option value="lesson_day">Day kelas</option><option value="live_class">Kelas live</option></select>
+                    <select value={feedbackFilter.data.feedback_rating} onChange={(event) => feedbackFilter.setData('feedback_rating', event.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white"><option value="all">Semua rating</option>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} / 5</option>)}</select>
+                    <select value={feedbackFilter.data.feedback_response} onChange={(event) => feedbackFilter.setData('feedback_response', event.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white"><option value="all">Semua respons</option><option value="submitted">Dikirim</option><option value="skipped">Dilewati</option></select>
+                    <div className="flex flex-wrap gap-2 sm:col-span-2 xl:col-span-4">
+                        <button className="h-11 rounded-xl bg-gray-900 px-4 text-sm font-black text-white dark:bg-white dark:text-gray-900">Terapkan filter</button>
+                        <a href={exportHref} className="inline-flex h-11 items-center justify-center rounded-xl border border-emerald-200 px-4 text-sm font-black text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/50 dark:text-emerald-300">CSV</a>
+                        <a href={exportXlsxHref} className="inline-flex h-11 items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-black text-white hover:bg-emerald-700">XLSX</a>
+                        {monitoringLinks.ga4 && <a href={monitoringLinks.ga4} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center rounded-xl border border-sky-200 px-4 text-sm font-black text-sky-700 dark:border-sky-900/50 dark:text-sky-300">Buka GA4</a>}
+                        {monitoringLinks.uptime && <a href={monitoringLinks.uptime} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center rounded-xl border border-violet-200 px-4 text-sm font-black text-violet-700 dark:border-violet-900/50 dark:text-violet-300">Status website</a>}
+                    </div>
                 </form>
             </Card>
+
+            {((stats.by_feature || []).length > 0 || (stats.top_reasons || []).length > 0) && (
+                <div className="grid gap-4 lg:grid-cols-2">
+                    <Card><h2 className="text-sm font-black text-gray-900 dark:text-white">Rating per fitur</h2><div className="mt-3 space-y-2">{(stats.by_feature || []).map((item) => <div key={item.feature} className="flex items-center justify-between border-b border-gray-100 pb-2 text-sm dark:border-gray-800"><span className="font-bold text-gray-600 dark:text-gray-300">{featureLabels[item.feature] || item.feature}</span><span className="font-black text-gray-900 dark:text-white">{item.average_rating || '-'} / 5 · {item.total} respons</span></div>)}</div></Card>
+                    <Card><h2 className="text-sm font-black text-gray-900 dark:text-white">Alasan terbanyak</h2><div className="mt-3 space-y-2">{(stats.top_reasons || []).map((item) => <div key={item.reason} className="flex items-center justify-between border-b border-gray-100 pb-2 text-sm dark:border-gray-800"><span className="font-bold text-gray-600 dark:text-gray-300">{reasonLabels[item.reason] || item.reason}</span><span className="font-black text-gray-900 dark:text-white">{item.total}</span></div>)}</div></Card>
+                </div>
+            )}
 
             <div className="space-y-3">
                 {(feedback.data || []).map((item) => (
@@ -106,19 +140,24 @@ function FeedbackWorkspace({ feedback = { data: [], links: [] }, stats = {}, fil
                                 <div className="flex flex-wrap items-center gap-2">
                                     <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-black text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">{categoryLabels[item.category] || item.category}</span>
                                     <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{statusLabels[item.status] || item.status}</span>
+                                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">{item.source === 'contextual' ? (featureLabels[item.feature] || item.feature) : 'Manual'}</span>
+                                    {item.rating && <span className="text-xs font-black text-amber-600">{item.rating}/5</span>}
                                     <span className="text-xs font-bold text-gray-400">#{item.id} · {item.created_at}</span>
                                 </div>
-                                <p className="mt-3 whitespace-pre-wrap text-sm font-medium leading-6 text-gray-800 dark:text-gray-200">{item.message}</p>
+                                <p className="mt-3 whitespace-pre-wrap text-sm font-medium leading-6 text-gray-800 dark:text-gray-200">{item.message || (item.response_type === 'skipped' ? 'Prompt dilewati tanpa komentar.' : 'Tidak ada komentar tambahan.')}</p>
+                                {item.reason && <p className="mt-2 text-xs font-bold text-gray-500 dark:text-gray-400">Alasan: {reasonLabels[item.reason] || item.reason}</p>}
                                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                                     <span>{item.reporter} · {item.role}</span>
                                     {item.page_url && <span className="break-all">Halaman: {item.page_url}</span>}
                                 </div>
                                 {item.resolution_note && <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">{item.resolution_note}</p>}
                             </div>
-                            <button type="button" onClick={() => openEditor(item)} className="min-h-10 shrink-0 rounded-xl border border-gray-200 px-3 text-xs font-black text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Kelola</button>
+                            {item.response_type !== 'skipped' && item.status !== 'dismissed' && (
+                                <button type="button" onClick={() => openEditor(item)} className="min-h-10 shrink-0 rounded-xl border border-gray-200 px-3 text-xs font-black text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Kelola</button>
+                            )}
                         </div>
 
-                        {editing?.id === item.id && (
+                        {editing?.id === item.id && item.response_type !== 'skipped' && item.status !== 'dismissed' && (
                             <form onSubmit={saveStatus} className="mt-4 grid gap-3 border-t border-gray-100 pt-4 dark:border-gray-800 sm:grid-cols-[160px_1fr_auto]">
                                 <select value={editForm.data.status} onChange={(event) => editForm.setData('status', event.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white"><option value="new">Baru</option><option value="reviewing">Ditinjau</option><option value="resolved">Selesai</option></select>
                                 <input value={editForm.data.resolution_note} onChange={(event) => editForm.setData('resolution_note', event.target.value)} placeholder="Catatan penyelesaian (opsional)" className="h-11 rounded-xl border border-gray-200 px-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
@@ -143,6 +182,7 @@ export default function Activity({
     filterOptions = { actors: [], actions: [] },
     productFeedback = { data: [], links: [] },
     feedbackStats = {},
+    monitoringLinks = {},
 }) {
     const filterForm = useForm({
         date_from: filters.date_from || '',
@@ -193,7 +233,7 @@ export default function Activity({
                     <Link href={route('superadmin.activity', { view: 'feedback' })} preserveScroll className={`flex-1 rounded-lg px-4 py-2.5 text-center text-sm font-black sm:flex-none ${showFeedback ? 'bg-emerald-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'}`}>Feedback & Bug</Link>
                 </div>
 
-                {showFeedback && <FeedbackWorkspace feedback={productFeedback} stats={feedbackStats} filters={filters} />}
+                {showFeedback && <FeedbackWorkspace feedback={productFeedback} stats={feedbackStats} filters={filters} monitoringLinks={monitoringLinks} />}
 
                 {!showFeedback && <>
 

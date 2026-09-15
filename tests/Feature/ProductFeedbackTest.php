@@ -19,6 +19,8 @@ it('stores authenticated product feedback with a role snapshot', function () {
         'user_id' => $user->id,
         'role_snapshot' => 'user',
         'category' => 'bug',
+        'source' => 'manual',
+        'response_type' => 'submitted',
         'status' => 'new',
     ]);
 });
@@ -50,6 +52,13 @@ it('lets a superadmin resolve and export product feedback safely', function () {
     expect($response->streamedContent())
         ->toStartWith("\xEF\xBB\xBF")
         ->toContain("'=HYPERLINK");
+
+    if (class_exists(ZipArchive::class)) {
+        $this->actingAs($superadmin)
+            ->get(route('superadmin.activity.feedback.export-xlsx'))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    }
 });
 
 it('rejects product feedback from guests', function () {

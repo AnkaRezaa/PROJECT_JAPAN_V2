@@ -50,9 +50,12 @@ class HandleInertiaRequests extends Middleware
                                 'created_at' => $notification->created_at ? $notification->created_at->diffForHumans() : 'Baru saja',
                                 'read_at' => $notification->read_at,
                             ];
-                        })->take(10) // Tampilkan 10 terbaru
+                        })->take(10), // Tampilkan 10 terbaru
                     ]
                 ) : null,
+            ],
+            'featureFlags' => [
+                'contextualFeedback' => (bool) config('beta.contextual_feedback_enabled'),
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

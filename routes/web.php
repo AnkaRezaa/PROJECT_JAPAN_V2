@@ -5,22 +5,21 @@ use App\Http\Controllers\Admin\AdminBerandaController;
 use App\Http\Controllers\Admin\AdminExamPortalController;
 use App\Http\Controllers\Admin\AdminExamQuestionBankController;
 use App\Http\Controllers\Admin\AdminFlashcardController;
+use App\Http\Controllers\Admin\AdminGrammarQuizController;
 use App\Http\Controllers\Admin\AdminHariModulController;
 use App\Http\Controllers\Admin\AdminKosakataController;
 use App\Http\Controllers\Admin\AdminKuisController;
-use App\Http\Controllers\Admin\AdminGrammarQuizController;
 use App\Http\Controllers\Admin\AdminLevelController;
 use App\Http\Controllers\Admin\AdminModulController;
 use App\Http\Controllers\Admin\AdminPenggunaController;
 use App\Http\Controllers\Admin\AdminPresentasiController;
-use App\Http\Controllers\Admin\RuangKelasLiveController as AdminRuangKelasLiveController;
 use App\Http\Controllers\Admin\AdminUnggahController;
+use App\Http\Controllers\Admin\RuangKelasLiveController as AdminRuangKelasLiveController;
 use App\Http\Controllers\HalamanController;
 use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\PembayaranMidtransController;
 use App\Http\Controllers\PengarahDashboardController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\UmpanBalikProdukController;
 use App\Http\Controllers\SuperAdmin\SuperAdminAktivitasController;
 use App\Http\Controllers\SuperAdmin\SuperAdminBerandaController;
 use App\Http\Controllers\SuperAdmin\SuperAdminGamifikasiController;
@@ -30,18 +29,19 @@ use App\Http\Controllers\SuperAdmin\SuperAdminPembayaranController;
 use App\Http\Controllers\SuperAdmin\SuperAdminPengelolaAdminController;
 use App\Http\Controllers\SuperAdmin\SuperAdminPenggunaController;
 use App\Http\Controllers\SuperAdmin\SuperAdminSistemController;
+use App\Http\Controllers\UmpanBalikProdukController;
 use App\Http\Controllers\User\BerandaController as UserDashboardController;
 use App\Http\Controllers\User\BeritaController;
 use App\Http\Controllers\User\ExamPortalController;
 use App\Http\Controllers\User\FlashcardController;
+use App\Http\Controllers\User\GrammarQuizController;
 use App\Http\Controllers\User\ModulController;
-use App\Http\Controllers\User\RuangKelasLiveController as UserRuangKelasLiveController;
 use App\Http\Controllers\User\PapanPeringkatController;
 use App\Http\Controllers\User\PembelajaranController;
 use App\Http\Controllers\User\ProgresController;
 use App\Http\Controllers\User\QuickQuizController;
-use App\Http\Controllers\User\GrammarQuizController;
 use App\Http\Controllers\User\ReviewController;
+use App\Http\Controllers\User\RuangKelasLiveController as UserRuangKelasLiveController;
 use App\Http\Controllers\User\SertifikatController;
 use App\Http\Controllers\User\TargetUjianPenggunaController;
 use App\Http\Controllers\User\UmpanBalikPembelajaranController;
@@ -87,6 +87,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/feedback', [UmpanBalikProdukController::class, 'store'])
         ->middleware('throttle:10,1')
         ->name('product-feedback.store');
+    Route::post('/feedback/contextual', [UmpanBalikProdukController::class, 'storeContextual'])
+        ->middleware(['role:user', 'throttle:contextual-feedback'])
+        ->name('contextual-feedback.store');
+    Route::get('/feedback/contextual/status', [UmpanBalikProdukController::class, 'contextualStatus'])
+        ->middleware(['role:user', 'throttle:contextual-feedback'])
+        ->name('contextual-feedback.status');
     Route::post('/profile/access-keys/redeem', [UserDashboardController::class, 'redeemAccessKey'])->middleware(['role:user', 'throttle:access-keys'])->name('profile.access-keys.redeem');
     Route::get('/user/access-status', function (Request $request, AksesPremiumService $aksesPremium) {
         return response()->json($aksesPremium->statusAkses($request->user()));
@@ -154,6 +160,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/activity', SuperAdminAktivitasController::class)->name('activity');
         Route::patch('/activity/feedback/{feedback}', [SuperAdminAktivitasController::class, 'updateFeedback'])->name('activity.feedback.update');
         Route::get('/activity/feedback-export', [SuperAdminAktivitasController::class, 'exportFeedback'])->name('activity.feedback.export');
+        Route::get('/activity/feedback-export-xlsx', [SuperAdminAktivitasController::class, 'exportFeedbackXlsx'])->name('activity.feedback.export-xlsx');
         Route::get('/payments', SuperAdminPembayaranController::class)->name('payments');
         Route::post('/payments/plans', [SuperAdminPembayaranController::class, 'storePlan'])->name('payments.plans.store');
         Route::put('/payments/plans/{plan}', [SuperAdminPembayaranController::class, 'updatePlan'])->name('payments.plans.update');

@@ -15,6 +15,15 @@ class UmpanBalikProduk extends Model
     protected $fillable = [
         'user_id',
         'role_snapshot',
+        'source',
+        'feature',
+        'context_type',
+        'context_id',
+        'context_key',
+        'trigger',
+        'rating',
+        'reason',
+        'response_type',
         'category',
         'message',
         'page_url',
@@ -27,7 +36,11 @@ class UmpanBalikProduk extends Model
 
     protected function casts(): array
     {
-        return ['handled_at' => 'datetime'];
+        return [
+            'context_id' => 'integer',
+            'rating' => 'integer',
+            'handled_at' => 'datetime',
+        ];
     }
 
     public function user(): BelongsTo

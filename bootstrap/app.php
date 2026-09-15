@@ -1,10 +1,16 @@
 <?php
 
+use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SearchEngineIndexing;
+use App\Http\Middleware\SubscriptionMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Sentry\Laravel\Integration;
 use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -16,9 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
-            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
-            \App\Http\Middleware\SearchEngineIndexing::class,
+            HandleInertiaRequests::class,
+            AddLinkHeadersForPreloadedAssets::class,
+            SearchEngineIndexing::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
@@ -26,16 +32,20 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'role' => \App\Http\Middleware\CheckRole::class,
-            'subscribed' => \App\Http\Middleware\SubscriptionMiddleware::class,
+            'role' => CheckRole::class,
+            'subscribed' => SubscriptionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        if (config('services.sentry.enabled')) {
+            Integration::handles($exceptions);
+        }
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || ($request->expectsJson() && ! $request->header('X-Inertia')),
         );
 
-        $exceptions->respond(function (Response $response, \Throwable $exception, Request $request) {
+        $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
             if ($request->is('api/*') || ($request->expectsJson() && ! $request->header('X-Inertia'))) {
                 return $response;
             }
