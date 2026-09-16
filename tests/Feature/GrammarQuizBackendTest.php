@@ -182,3 +182,17 @@ it('authors grammar and completes a day only after grammar and vocabulary checkp
 
     expect(ProgresHariModul::where('user_id', $fixture['user']->id)->where('module_day_id', $fixture['day']->id)->whereNotNull('completed_at')->exists())->toBeTrue();
 });
+
+it('seeds grammar lessons for demo programs via GrammarLessonDemoSeeder', function () {
+    $this->seed(Database\Seeders\KelasDemoSeeder::class);
+    $this->seed(Database\Seeders\GrammarLessonDemoSeeder::class);
+
+    $grammarQuizzes = Kuis::query()->where('type', 'grammar')->get();
+    expect($grammarQuizzes->count())->toBeGreaterThan(0);
+
+    foreach ($grammarQuizzes as $quiz) {
+        expect($quiz->status)->toBe('published')
+            ->and($quiz->grammarLesson)->not->toBeNull()
+            ->and($quiz->questions->count())->toBe(6);
+    }
+});

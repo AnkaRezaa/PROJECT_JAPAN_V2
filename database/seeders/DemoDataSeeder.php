@@ -36,6 +36,7 @@ class DemoDataSeeder extends Seeder
         $this->call([
             PenggunaSeeder::class,
             KelasDemoSeeder::class,
+            GrammarLessonDemoSeeder::class,
             ProgramPaymentPlanSeeder::class,
             KloterDemoSeeder::class,
         ]);
