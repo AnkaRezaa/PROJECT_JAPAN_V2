@@ -47,6 +47,12 @@ class GrammarLessonDemoSeeder extends Seeder
                 }
 
                 $payload = $lessons[$index];
+                $payload['lesson']['lesson_key'] = sprintf(
+                    '%s-%s-d%d',
+                    $payload['lesson']['lesson_key'],
+                    $program->slug,
+                    $day->day_number
+                );
 
                 $quiz = Kuis::updateOrCreate(
                     [
