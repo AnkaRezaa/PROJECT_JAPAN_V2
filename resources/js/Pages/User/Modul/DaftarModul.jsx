@@ -902,8 +902,12 @@ function DayDetailContent({ day, onClose, mobile = false }) {
             }`}
         >
             {mobile && (
-                <div className="flex justify-center bg-[#f1fbe9] pt-2.5 pb-1 dark:bg-gray-900">
-                    <span className="h-1.5 w-10 rounded-full bg-gray-300 dark:bg-gray-700" />
+                <div className={`flex justify-center pt-2.5 pb-1 ${
+                    completed
+                        ? 'bg-emerald-50 dark:bg-emerald-950/30'
+                        : 'bg-[#f1fbe9] dark:bg-green-950/25'
+                }`}>
+                    <span className="h-1.5 w-10 rounded-full bg-black/15 dark:bg-white/20" />
                 </div>
             )}
             <div className={`flex items-start justify-between gap-3 border-b px-4 py-3 sm:px-6 sm:py-5 ${
@@ -1092,9 +1096,11 @@ function MobileDaySheet({ day, onClose }) {
         };
     }, []);
 
-    return (
+    if (typeof document === 'undefined') return null;
+
+    return createPortal(
         <motion.div
-            className="fixed inset-0 z-[90] sm:hidden"
+            className="fixed inset-0 z-[9999] flex flex-col justify-end sm:hidden pointer-events-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1103,18 +1109,19 @@ function MobileDaySheet({ day, onClose }) {
                 type="button"
                 aria-label="Tutup detail Hari"
                 onClick={onClose}
-                className="absolute inset-0 bg-black/55"
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm"
             />
             <motion.div
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-                className="absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col"
+                className="relative z-10 w-full max-h-[88dvh] flex flex-col"
             >
                 <DayDetailContent day={day} onClose={onClose} mobile />
             </motion.div>
-        </motion.div>
+        </motion.div>,
+        document.body,
     );
 }
 
