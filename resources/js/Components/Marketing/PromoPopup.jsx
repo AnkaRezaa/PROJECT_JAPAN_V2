@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useScrollLock } from '@/lib/scrollLock';
 import { Link } from '@inertiajs/react';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -73,6 +74,8 @@ export default function PromoPopup({
         }
     }, [autoShow, finalStorageKey, delay, cooldownDays, show, finalTitle, children]);
 
+    useScrollLock(isOpen);
+
     useEffect(() => {
         if (!isOpen) return;
 
@@ -80,12 +83,9 @@ export default function PromoPopup({
             if (e.key === 'Escape') handleDismiss();
         };
 
-        const originalOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
         window.addEventListener('keydown', handleKeyDown);
 
         return () => {
-            document.body.style.overflow = originalOverflow;
             window.removeEventListener('keydown', handleKeyDown);
         };
     }, [isOpen]);

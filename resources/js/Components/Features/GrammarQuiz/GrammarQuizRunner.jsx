@@ -419,6 +419,19 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
     const answeredBeforeCurrent = quiz.stages.slice(0, stageIndex).reduce((total, item) => total + item.questions.length, 0) + questionIndex;
 
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
+    const hasPushedStateRef = useRef(false);
+
+    useEffect(() => {
+        window.history.pushState({ grammarQuiz: true }, '');
+        hasPushedStateRef.current = true;
+
+        return () => {
+            if (hasPushedStateRef.current) {
+                hasPushedStateRef.current = false;
+                window.history.back();
+            }
+        };
+    }, []);
 
     const handleRequestExit = useCallback(() => {
         if (screen === 'result') {
@@ -437,6 +450,13 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
                 { label: 'Pola Grammar', value: quiz?.pattern || 'Kuis Grammar' },
                 { label: 'Progres', value: screen === 'intro' ? 'Belum dimulai' : `Tahap ${stageIndex + 1} dari ${quiz?.stages?.length || 3}` },
             ],
+            onCancel: () => {
+                closeConfirm();
+                if (!hasPushedStateRef.current) {
+                    window.history.pushState({ grammarQuiz: true }, '');
+                    hasPushedStateRef.current = true;
+                }
+            },
             onConfirm: () => {
                 closeConfirm();
                 onClose();
@@ -453,12 +473,11 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
             }
         };
 
-        window.history.pushState({ grammarQuiz: true }, '');
         const handlePopState = () => {
+            hasPushedStateRef.current = false;
             if (screen === 'result') {
                 onClose();
             } else {
-                window.history.pushState({ grammarQuiz: true }, '');
                 handleRequestExit();
             }
         };

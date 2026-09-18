@@ -1,18 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
+import { useScrollLock } from '@/lib/scrollLock';
 import GrammarQuizRunner from './GrammarQuizRunner';
 
 export default function GrammarQuizPreviewDialog({ open, quiz, onClose, persist = false }) {
-    useEffect(() => {
-        if (!open) return undefined;
-
-        const previousOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-
-        return () => {
-            document.body.style.overflow = previousOverflow;
-        };
-    }, [open]);
+    useScrollLock(open);
 
     if (!open || typeof document === 'undefined') return null;
 

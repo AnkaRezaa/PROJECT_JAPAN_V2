@@ -6,6 +6,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import theme from '@/Components/theme/themes';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
+import { useScrollLock } from '@/lib/scrollLock';
 import GrammarQuizPreviewDialog from '@/Components/Features/GrammarQuiz/GrammarQuizPreviewDialog';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -1107,14 +1108,7 @@ function DesktopDayPopover({ day, x, onClose, onOpenGrammarQuiz }) {
 function MobileDaySheet({ day, onClose, onOpenGrammarQuiz }) {
     const dragControls = useDragControls();
 
-    useEffect(() => {
-        const previousOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-
-        return () => {
-            document.body.style.overflow = previousOverflow;
-        };
-    }, []);
+    useScrollLock(true);
 
     if (typeof document === 'undefined') return null;
 

@@ -273,7 +273,7 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
         <AuthenticatedLayout header={false}>
             <Head title={`Profil ${user.username} — TOKU-UP`} />
 
-            <div className="min-h-screen bg-surface-muted py-10 px-4 sm:px-6 relative overflow-hidden transition-colors duration-300">
+            <div className="min-h-screen bg-surface-muted py-10 px-4 sm:px-6 relative overflow-x-clip transition-colors duration-300">
                 <JapanesePattern />
 
                 <div className="max-w-6xl mx-auto relative z-10">

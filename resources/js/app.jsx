@@ -9,6 +9,7 @@ import { applyThemeVariables } from '@/Components/theme/themes';
 import AnalyticsConsentBanner from '@/Components/Features/Feedback/AnalyticsConsentBanner';
 import AppErrorBoundary from '@/Components/Errors/AppErrorBoundary';
 import { getAnalyticsConsent, initializeAnalytics, pushPageView } from '@/lib/analytics';
+import { resetScrollLock } from '@/lib/scrollLock';
 import * as Sentry from '@sentry/react';
 
 const seoSiteName = import.meta.env.VITE_SEO_SITE_NAME || 'TOKU-UP';
@@ -16,7 +17,10 @@ const seoSiteName = import.meta.env.VITE_SEO_SITE_NAME || 'TOKU-UP';
 applyThemeVariables();
 
 const analyticsReady = getAnalyticsConsent() === 'granted' && initializeAnalytics();
-router.on('navigate', () => pushPageView());
+router.on('navigate', () => {
+    resetScrollLock();
+    pushPageView();
+});
 
 const sentryEnabled = import.meta.env.VITE_SENTRY_ENABLED === 'true' && Boolean(import.meta.env.VITE_SENTRY_DSN);
 if (sentryEnabled) {

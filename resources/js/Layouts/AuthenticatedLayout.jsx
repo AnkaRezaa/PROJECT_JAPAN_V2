@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import SidebarLink from '@/Components/Navigation/SidebarLink';
+import { useScrollLock } from '@/lib/scrollLock';
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
 import ProductFeedbackButton from '@/Components/Features/Feedback/ProductFeedbackButton';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -293,12 +294,13 @@ export default function AuthenticatedLayout({ children }) {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    useScrollLock(mobileOpen);
+
     useEffect(() => {
         if (!mobileOpen) {
             return undefined;
         }
 
-        const previousOverflow = document.body.style.overflow;
         const closeOnEscape = (event) => {
             if (event.key === 'Escape') {
                 setMobileOpen(false);
@@ -308,11 +310,9 @@ export default function AuthenticatedLayout({ children }) {
             }
         };
 
-        document.body.style.overflow = 'hidden';
         document.addEventListener('keydown', closeOnEscape);
 
         return () => {
-            document.body.style.overflow = previousOverflow;
             document.removeEventListener('keydown', closeOnEscape);
             mobileMenuButtonRef.current?.focus();
         };

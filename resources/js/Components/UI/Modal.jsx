@@ -1,13 +1,10 @@
 import { useEffect } from 'react';
+import { useScrollLock } from '@/lib/scrollLock';
 
 export default function Modal({ show = false, onClose, title, children, maxWidth = 'md' }) {
     const widths = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl', '2xl': 'max-w-2xl' };
 
-    useEffect(() => {
-        if (show) document.body.style.overflow = 'hidden';
-        else document.body.style.overflow = '';
-        return () => { document.body.style.overflow = ''; };
-    }, [show]);
+    useScrollLock(show);
 
     useEffect(() => {
         const handleEsc = (e) => { if (e.key === 'Escape') onClose?.(); };

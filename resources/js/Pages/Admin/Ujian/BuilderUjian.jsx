@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Head, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useScrollLock } from '@/lib/scrollLock';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -168,17 +169,16 @@ function ExamQuestionEditor({
 function StudentExamPreview({ quiz, questions, onClose }) {
     const totalPoints = questions.reduce((sum, question) => sum + Math.max(1, Number(question.points || 1)), 0);
 
+    useScrollLock(true);
+
     useEffect(() => {
-        const previousOverflow = document.body.style.overflow;
         const closeWithEscape = (event) => {
             if (event.key === 'Escape') onClose();
         };
 
-        document.body.style.overflow = 'hidden';
         window.addEventListener('keydown', closeWithEscape);
 
         return () => {
-            document.body.style.overflow = previousOverflow;
             window.removeEventListener('keydown', closeWithEscape);
         };
     }, [onClose]);

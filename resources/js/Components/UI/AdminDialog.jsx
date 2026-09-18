@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useScrollLock } from '@/lib/scrollLock';
 import CloseIcon from '@mui/icons-material/Close';
 
 export default function AdminDialog({
@@ -12,6 +13,8 @@ export default function AdminDialog({
     footer,
     maxWidth = 'max-w-2xl',
 }) {
+    useScrollLock(open);
+
     useEffect(() => {
         if (!open) return undefined;
 
@@ -19,12 +22,9 @@ export default function AdminDialog({
             if (event.key === 'Escape') onClose?.();
         };
 
-        const previousOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
         document.addEventListener('keydown', closeOnEscape);
 
         return () => {
-            document.body.style.overflow = previousOverflow;
             document.removeEventListener('keydown', closeOnEscape);
         };
     }, [open, onClose]);

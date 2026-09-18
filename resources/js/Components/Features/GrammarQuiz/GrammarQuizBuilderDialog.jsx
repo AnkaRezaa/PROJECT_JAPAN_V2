@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useScrollLock } from '@/lib/scrollLock';
 import GrammarQuizPreviewDialog from './GrammarQuizPreviewDialog';
 import GrammarBulkImportDialog from './GrammarBulkImportDialog';
 import grammarQuizFixture from './grammarQuizFixture';
@@ -303,10 +304,10 @@ export default function GrammarQuizBuilderDialog({ open, day, module, onClose })
             .catch(() => active && setError('Data Grammar belum dapat dimuat.'));
         setStep('material');
         setSavedAt('');
-        const previousOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-        return () => { active = false; document.body.style.overflow = previousOverflow; };
+        return () => { active = false; };
     }, [day?.id, open]);
+
+    useScrollLock(open);
 
     const totals = useMemo(() => {
         const questions = draft.stages.flatMap((stage) => stage.questions);

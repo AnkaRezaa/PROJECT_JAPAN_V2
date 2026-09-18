@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useScrollLock } from '@/lib/scrollLock';
 import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
 import JapaneseSpeechButton from '@/Components/UI/JapaneseSpeechButton';
 
@@ -38,21 +39,20 @@ function MaterialDetail({ item, onClose }) {
         typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches
     ));
 
+    useScrollLock(true);
+
     useEffect(() => {
         const mediaQuery = window.matchMedia('(min-width: 640px)');
         const syncPanelMode = () => setDesktopPanel(mediaQuery.matches);
-        const previousOverflow = document.body.style.overflow;
         const closeOnEscape = (event) => {
             if (event.key === 'Escape') onClose();
         };
 
         syncPanelMode();
-        document.body.style.overflow = 'hidden';
         mediaQuery.addEventListener('change', syncPanelMode);
         window.addEventListener('keydown', closeOnEscape);
 
         return () => {
-            document.body.style.overflow = previousOverflow;
             mediaQuery.removeEventListener('change', syncPanelMode);
             window.removeEventListener('keydown', closeOnEscape);
         };
