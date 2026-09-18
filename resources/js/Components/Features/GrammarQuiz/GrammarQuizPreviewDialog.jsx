@@ -7,18 +7,12 @@ export default function GrammarQuizPreviewDialog({ open, quiz, onClose, persist 
         if (!open) return undefined;
 
         const previousOverflow = document.body.style.overflow;
-        const onKeyDown = (event) => {
-            if (event.key === 'Escape') onClose();
-        };
-
         document.body.style.overflow = 'hidden';
-        window.addEventListener('keydown', onKeyDown);
 
         return () => {
             document.body.style.overflow = previousOverflow;
-            window.removeEventListener('keydown', onKeyDown);
         };
-    }, [onClose, open]);
+    }, [open]);
 
     if (!open || typeof document === 'undefined') return null;
 

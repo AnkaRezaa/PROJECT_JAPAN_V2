@@ -50,6 +50,7 @@ const defaultState = {
     cancelLabel: 'Batal',
     processing: false,
     presentation: 'default',
+    zIndex: null,
     onConfirm: null,
 };
 
@@ -90,6 +91,7 @@ export default function ConfirmActionDialog({
     cancelLabel = 'Batal',
     processing = false,
     presentation = 'default',
+    zIndex = null,
     onConfirm,
     onCancel,
     children,
@@ -127,9 +129,11 @@ export default function ConfirmActionDialog({
 
     if (!show || typeof document === 'undefined') return null;
 
+    const overlayZIndex = zIndex || (isQuizExit ? 'z-[10050]' : 'z-[200]');
+
     return createPortal(
         <div
-            className="fixed inset-0 z-[200] flex items-end justify-center bg-gray-950/70 p-3 backdrop-blur-[3px] sm:items-center sm:p-6"
+            className={`fixed inset-0 ${overlayZIndex} flex items-end justify-center bg-gray-950/70 p-3 backdrop-blur-[3px] sm:items-center sm:p-6`}
             onMouseDown={(event) => {
                 if (event.target === event.currentTarget && !processing) onCancel?.();
             }}
