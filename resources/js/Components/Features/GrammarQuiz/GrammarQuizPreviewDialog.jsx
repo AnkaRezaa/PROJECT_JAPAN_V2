@@ -23,7 +23,7 @@ export default function GrammarQuizPreviewDialog({ open, quiz, onClose, persist 
     if (!open || typeof document === 'undefined') return null;
 
     return createPortal(
-        <div role="dialog" aria-modal="true" aria-label="Pratinjau Kuis Grammar" className="fixed inset-0 z-[150] bg-[#f7faf8] dark:bg-gray-950">
+        <div role="dialog" aria-modal="true" aria-label="Pratinjau Kuis Grammar" className="fixed inset-0 z-[10000] bg-[#f7faf8] dark:bg-gray-950">
             <GrammarQuizRunner key={quiz.id} quiz={quiz} onClose={onClose} persist={persist} />
         </div>,
         document.body,

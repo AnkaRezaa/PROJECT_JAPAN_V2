@@ -877,16 +877,18 @@ function PathNodeLabel({ item, onDayToggle, selected }) {
     );
 }
 
-function DayDetailContent({ day, onClose, mobile = false, dragControls = null }) {
+function DayDetailContent({ day, onClose, mobile = false, dragControls = null, onOpenGrammarQuiz = null }) {
     const items = dayChildItems(day);
     const completed = day.status === 'done';
-    const [grammarQuiz, setGrammarQuiz] = useState(null);
     const [loadingGrammarId, setLoadingGrammarId] = useState(null);
     const openGrammar = async (quizId) => {
         setLoadingGrammarId(quizId);
         try {
             const { data } = await window.axios.get(`/user/grammar-quizzes/${quizId}`);
-            setGrammarQuiz(data.lesson);
+            if (onOpenGrammarQuiz) {
+                onClose();
+                onOpenGrammarQuiz(data.lesson);
+            }
         } finally {
             setLoadingGrammarId(null);
         }
@@ -1059,18 +1061,11 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null })
                     </span>
                 </motion.button>)}
             </div>
-
-            <GrammarQuizPreviewDialog
-                open={Boolean(grammarQuiz)}
-                quiz={grammarQuiz}
-                persist
-                onClose={() => setGrammarQuiz(null)}
-            />
         </div>
     );
 }
 
-function DesktopDayPopover({ day, x, onClose }) {
+function DesktopDayPopover({ day, x, onClose, onOpenGrammarQuiz }) {
     const openToRight = x <= 50;
 
     return (
@@ -1089,12 +1084,12 @@ function DesktopDayPopover({ day, x, onClose }) {
                     ? '-left-2 border-b-0 border-l border-r-0 border-t border-[#d7edc8] dark:border-gray-700'
                     : '-right-2 border-b border-l-0 border-r border-t-0 border-[#d7edc8] dark:border-gray-700'
             }`} />
-            <DayDetailContent day={day} onClose={onClose} />
+            <DayDetailContent day={day} onClose={onClose} onOpenGrammarQuiz={onOpenGrammarQuiz} />
         </motion.div>
     );
 }
 
-function MobileDaySheet({ day, onClose }) {
+function MobileDaySheet({ day, onClose, onOpenGrammarQuiz }) {
     const dragControls = useDragControls();
 
     useEffect(() => {
@@ -1138,7 +1133,7 @@ function MobileDaySheet({ day, onClose }) {
                 }}
                 className="relative z-10 w-full max-h-[85dvh] flex flex-col"
             >
-                <DayDetailContent day={day} onClose={onClose} mobile dragControls={dragControls} />
+                <DayDetailContent day={day} onClose={onClose} mobile dragControls={dragControls} onOpenGrammarQuiz={onOpenGrammarQuiz} />
             </motion.div>
         </motion.div>,
         document.body,
@@ -1222,7 +1217,7 @@ function PathConnector({ items }) {
     );
 }
 
-function DuolingoPath({ week, selectedDayId, onDayToggle }) {
+function DuolingoPath({ week, selectedDayId, onDayToggle, onOpenGrammarQuiz }) {
     const items = weeklyMainItems(week);
     const selectedDay = items.find((item) => item.dayId === selectedDayId) || null;
 
@@ -1279,6 +1274,7 @@ function DuolingoPath({ week, selectedDayId, onDayToggle }) {
                                     day={item.day}
                                     x={x}
                                     onClose={() => onDayToggle(item.dayId)}
+                                    onOpenGrammarQuiz={onOpenGrammarQuiz}
                                 />
                             )}
                         </AnimatePresence>
@@ -1292,6 +1288,7 @@ function DuolingoPath({ week, selectedDayId, onDayToggle }) {
                         key={`sheet-${selectedDay.dayId}`}
                         day={selectedDay.day}
                         onClose={() => onDayToggle(selectedDay.dayId)}
+                        onOpenGrammarQuiz={onOpenGrammarQuiz}
                     />
                 )}
             </AnimatePresence>
@@ -1302,6 +1299,7 @@ function DuolingoPath({ week, selectedDayId, onDayToggle }) {
 function WeekRoadmapSection({ week, expanded, onToggle }) {
     const days = week.days || [];
     const [selectedDayId, setSelectedDayId] = useState(null);
+    const [activeGrammarQuiz, setActiveGrammarQuiz] = useState(null);
     const locked = ['locked', 'unavailable'].includes(week.status);
     const canExpand = !locked || Boolean(week.live_session);
     const completedDays = days.filter((day) => day.status === 'done').length;
@@ -1405,12 +1403,20 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
                                 week={week}
                                 selectedDayId={selectedDayId}
                                 onDayToggle={toggleDay}
+                                onOpenGrammarQuiz={setActiveGrammarQuiz}
                             />
 
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <GrammarQuizPreviewDialog
+                open={Boolean(activeGrammarQuiz)}
+                quiz={activeGrammarQuiz}
+                persist
+                onClose={() => setActiveGrammarQuiz(null)}
+            />
         </section>
     );
 }
