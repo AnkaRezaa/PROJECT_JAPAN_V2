@@ -895,31 +895,40 @@ function DayDetailContent({ day, onClose, mobile = false }) {
     return (
         <div
             id={`day-materials-${day.id}`}
-            className="overflow-hidden rounded-2xl border border-[#dce8df] bg-white shadow-[0_18px_50px_-24px_rgba(45,55,66,0.32)] dark:border-gray-700 dark:bg-gray-900"
+            className={`overflow-hidden bg-white shadow-2xl dark:bg-gray-900 ${
+                mobile
+                    ? 'rounded-t-3xl border-t border-x border-[#dce8df] pb-[max(16px,env(safe-area-inset-bottom))] dark:border-gray-700'
+                    : 'rounded-2xl border border-[#dce8df] shadow-[0_18px_50px_-24px_rgba(45,55,66,0.32)] dark:border-gray-700'
+            }`}
         >
-            <div className={`flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6 sm:py-5 ${
+            {mobile && (
+                <div className="flex justify-center bg-[#f1fbe9] pt-2.5 pb-1 dark:bg-gray-900">
+                    <span className="h-1.5 w-10 rounded-full bg-gray-300 dark:bg-gray-700" />
+                </div>
+            )}
+            <div className={`flex items-start justify-between gap-3 border-b px-4 py-3 sm:px-6 sm:py-5 ${
                 completed
                     ? 'border-emerald-200 bg-emerald-50 text-[#2d3742] dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-white'
                     : 'border-[#d7edc8] bg-[#f1fbe9] text-[#2d3742] dark:border-green-900 dark:bg-green-950/25 dark:text-white'
             }`}>
-                <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-extrabold ${
+                <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-[11px] sm:text-xs font-extrabold ${
                             completed
                                 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200'
                                 : 'bg-[#dff6cb] text-[#397d08] dark:bg-green-900/60 dark:text-green-200'
                         }`}>
                             Hari {day.day_number}
                         </span>
-                        <span className="text-xs font-bold text-gray-500 dark:text-gray-300">
+                        <span className="text-[11px] sm:text-xs font-bold text-gray-500 dark:text-gray-300">
                             {completed ? 'Selesai' : 'Jalur belajar'}
                         </span>
                     </div>
-                    <h3 className="mt-2 text-lg font-extrabold leading-6 text-[#2d3742] dark:text-white">
+                    <h3 className="mt-1 sm:mt-2 text-base sm:text-lg font-extrabold leading-snug text-[#2d3742] dark:text-white">
                         {day.title || `Hari ${day.day_number}`}
                     </h3>
                     {day.description && (
-                        <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-gray-600 dark:text-gray-300 sm:text-[13px]">
+                        <p className="mt-0.5 sm:mt-1 line-clamp-2 text-xs font-medium leading-4 sm:leading-5 text-gray-600 dark:text-gray-300 sm:text-[13px]">
                             {day.description}
                         </p>
                     )}
@@ -928,33 +937,33 @@ function DayDetailContent({ day, onClose, mobile = false }) {
                     type="button"
                     onClick={onClose}
                     aria-label="Tutup detail Hari"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-black/5 bg-white/75 text-gray-600 shadow-sm transition hover:bg-white hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 dark:border-white/10 dark:bg-gray-900/70 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                    className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg border border-black/5 bg-white/75 text-gray-600 shadow-sm transition hover:bg-white hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 dark:border-white/10 dark:bg-gray-900/70 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
                 >
-                    <CloseIcon sx={{ fontSize: 19 }} />
+                    <CloseIcon sx={{ fontSize: 18 }} />
                 </button>
             </div>
 
-            <div className={`space-y-3 bg-[#f8faf8] p-3 sm:p-4 dark:bg-gray-900 ${mobile ? 'max-h-[65dvh] overflow-y-auto' : ''}`}>
+            <div className={`space-y-2.5 sm:space-y-3 bg-[#f8faf8] p-3 sm:p-4 dark:bg-gray-900 ${mobile ? 'max-h-[60dvh] overflow-y-auto' : ''}`}>
                 {items.map((item, index) => {
                     const locked = ['locked', 'unavailable'].includes(item.status);
                     const row = (
                         <>
-                            <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
+                            <span className={`flex h-10 w-10 min-[380px]:h-11 min-[380px]:w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl ${
                                 locked
                                     ? 'bg-gray-100 text-gray-400 dark:bg-gray-700'
                                     : completed
                                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                                         : 'bg-[#f1e4ff] text-[#7c3aed] dark:bg-violet-950/60 dark:text-violet-300'
                             }`}>
-                                <QuizIcon sx={{ fontSize: 24 }} />
+                                <QuizIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
                             </span>
                             <span className="min-w-0 flex-1">
-                                <span className="flex flex-wrap items-center gap-2">
-                                    <span className="block text-sm font-extrabold leading-5 text-[#2d3742] dark:text-white sm:text-[15px]">
+                                <span className="flex items-center justify-between gap-1.5">
+                                    <span className="truncate text-xs min-[380px]:text-[13px] sm:text-[15px] font-extrabold leading-tight text-[#2d3742] dark:text-white">
                                     {item.status === 'done' ? 'Ulangi Kuis & Repetisi' : 'Mulai Kuis & Repetisi'}
                                     </span>
                                     {!locked && (
-                                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                        <span className={`shrink-0 rounded-full px-1.5 sm:px-2 py-0.5 text-[9px] min-[380px]:text-[10px] sm:text-[11px] font-bold ${
                                             completed
                                                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                                                 : 'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300'
@@ -964,28 +973,28 @@ function DayDetailContent({ day, onClose, mobile = false }) {
                                     )}
                                 </span>
                                 {!locked && (
-                                    <span className="mt-1 block text-xs font-medium leading-5 text-gray-600 dark:text-gray-300">
+                                    <span className="mt-0.5 sm:mt-1 block line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 sm:leading-5 text-gray-600 dark:text-gray-300">
                                         Flashcard, soal, dan latihan menulis tersedia dalam satu sesi.
                                     </span>
                                 )}
                                 {locked && (
-                                    <span className="mt-1 block line-clamp-2 text-xs font-medium leading-5 text-gray-500 dark:text-gray-400">
+                                    <span className="mt-0.5 sm:mt-1 block line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 sm:leading-5 text-gray-500 dark:text-gray-400">
                                         {item.lockReason || 'Materi belum tersedia.'}
                                     </span>
                                 )}
                             </span>
-                            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                            <span className={`flex h-7 w-7 min-[380px]:h-8 min-[380px]:w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full ${
                                 locked
                                     ? 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'
                                     : 'bg-violet-100 text-violet-700 transition group-hover:bg-violet-200 dark:bg-violet-950/60 dark:text-violet-300'
                             }`}>
                                 {locked
                                     ? <LockIcon sx={{ fontSize: 16 }} />
-                                    : <ChevronRightIcon sx={{ fontSize: 21 }} />}
+                                    : <ChevronRightIcon sx={{ fontSize: 19 }} />}
                             </span>
                         </>
                     );
-                    const className = `group flex min-h-[88px] w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition sm:px-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-200/70 ${
+                    const className = `group flex min-h-[68px] sm:min-h-[88px] w-full items-center gap-2.5 sm:gap-3 rounded-xl border p-2.5 min-[380px]:p-3 sm:px-4 sm:py-3 text-left transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-200/70 ${
                         locked
                             ? 'cursor-not-allowed border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
                             : 'border-violet-200 bg-white shadow-[0_3px_0_#ddd6fe] hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/40 hover:shadow-[0_4px_0_#c4b5fd] active:translate-y-0.5 active:shadow-none dark:border-violet-900/70 dark:bg-gray-800 dark:hover:bg-violet-950/20'
@@ -1015,26 +1024,26 @@ function DayDetailContent({ day, onClose, mobile = false }) {
                     transition={{ delay: (items.length + index) * 0.06 }}
                     disabled={loadingGrammarId === lesson.id}
                     onClick={() => openGrammar(lesson.id)}
-                    className="group flex min-h-[88px] w-full items-center gap-3 rounded-xl border border-sky-200 bg-white px-3 py-3 text-left shadow-[0_3px_0_#bae6fd] transition hover:-translate-y-0.5 hover:border-sky-300 hover:bg-sky-50/40 hover:shadow-[0_4px_0_#7dd3fc] active:translate-y-0.5 active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/70 disabled:opacity-60 dark:border-sky-900/70 dark:bg-gray-800 dark:hover:bg-sky-950/20 sm:px-4"
+                    className="group flex min-h-[68px] sm:min-h-[88px] w-full items-center gap-2.5 sm:gap-3 rounded-xl border border-sky-200 bg-white p-2.5 min-[380px]:p-3 sm:px-4 sm:py-3 text-left shadow-[0_3px_0_#bae6fd] transition hover:-translate-y-0.5 hover:border-sky-300 hover:bg-sky-50/40 hover:shadow-[0_4px_0_#7dd3fc] active:translate-y-0.5 active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/70 disabled:opacity-60 dark:border-sky-900/70 dark:bg-gray-800 dark:hover:bg-sky-950/20"
                 >
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
-                        <AutoStoriesIcon sx={{ fontSize: 24 }} />
+                    <span className="flex h-10 w-10 min-[380px]:h-11 min-[380px]:w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
+                        <AutoStoriesIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
                     </span>
                     <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-2">
-                            <span className="block text-sm font-extrabold leading-5 text-[#2d3742] dark:text-white sm:text-[15px]">
+                        <span className="flex items-center justify-between gap-1.5">
+                            <span className="truncate text-xs min-[380px]:text-[13px] sm:text-[15px] font-extrabold leading-tight text-[#2d3742] dark:text-white">
                                 {lesson.pattern} / {lesson.title}
                             </span>
-                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+                            <span className="shrink-0 rounded-full bg-amber-100 px-1.5 sm:px-2 py-0.5 text-[9px] min-[380px]:text-[10px] font-black uppercase text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
                                 {lesson.done ? 'Selesai' : 'Grammar'}
                             </span>
                         </span>
-                        <span className="mt-1 block text-xs font-medium leading-5 text-gray-600 dark:text-gray-300">
+                        <span className="mt-0.5 sm:mt-1 block line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 sm:leading-5 text-gray-600 dark:text-gray-300">
                             {loadingGrammarId === lesson.id ? 'Memuat lesson...' : 'Intro, transformasi bentuk, susun kalimat, dan pilihan konteks.'}
                         </span>
                     </span>
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 transition group-hover:bg-sky-200 dark:bg-sky-950/60 dark:text-sky-300">
-                        <ChevronRightIcon sx={{ fontSize: 21 }} />
+                    <span className="flex h-7 w-7 min-[380px]:h-8 min-[380px]:w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 transition group-hover:bg-sky-200 dark:bg-sky-950/60 dark:text-sky-300">
+                        <ChevronRightIcon sx={{ fontSize: 19 }} />
                     </span>
                 </motion.button>)}
             </div>
@@ -1101,7 +1110,7 @@ function MobileDaySheet({ day, onClose }) {
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-                className="absolute inset-x-0 bottom-0 px-3 pb-[max(12px,env(safe-area-inset-bottom))]"
+                className="absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col"
             >
                 <DayDetailContent day={day} onClose={onClose} mobile />
             </motion.div>
