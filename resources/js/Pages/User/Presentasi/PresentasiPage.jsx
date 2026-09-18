@@ -106,13 +106,13 @@ function SlideCarousel({ deck }) {
     return (
         <div className="space-y-2.5">
             <SlideFrame slide={activeSlide} />
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-white p-2.5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                <button type="button" onClick={previous} disabled={activeIndex === 0} className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Prev</button>
-                <div className="text-center">
-                    <p className="text-xs font-black text-gray-500">Slide {activeIndex + 1} dari {slides.length}</p>
-                    <p className="mt-0.5 max-w-[280px] truncate text-sm font-black text-gray-900 dark:text-white">{activeSlide.title || 'Slide Presentasi'}</p>
+            <div className="flex items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-white p-2 sm:p-2.5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <button type="button" onClick={previous} disabled={activeIndex === 0} className="shrink-0 rounded-xl border border-gray-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Prev</button>
+                <div className="min-w-0 flex-1 px-1 text-center">
+                    <p className="text-[11px] sm:text-xs font-black text-gray-500">Slide {activeIndex + 1} dari {slides.length}</p>
+                    <p className="mt-0.5 max-w-full truncate text-xs sm:text-sm font-black text-gray-900 dark:text-white">{activeSlide.title || 'Slide Presentasi'}</p>
                 </div>
-                <button type="button" onClick={next} disabled={activeIndex >= slides.length - 1} className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Next</button>
+                <button type="button" onClick={next} disabled={activeIndex >= slides.length - 1} className="shrink-0 rounded-xl border border-gray-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Next</button>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2">
                 {slides.map((slide, index) => (

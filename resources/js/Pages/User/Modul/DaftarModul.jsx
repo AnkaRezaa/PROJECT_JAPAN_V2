@@ -757,14 +757,15 @@ function PathNode({ item, selected, onDayToggle }) {
     );
 }
 
-function PathNodeLabel({ item }) {
+function PathNodeLabel({ item, onDayToggle, selected }) {
     const showStatus = item.status !== 'done';
     const hasExtraInfo = showStatus || (item.kind !== 'day' && item.detail);
     const colors = nodeColors(item);
+    const locked = ['locked', 'unavailable'].includes(item.status);
 
     if (item.kind === 'live') {
         const isLive = item.status === 'active';
-        const cardClassName = `relative mt-3 block w-48 overflow-hidden rounded-xl border px-3 py-2 text-left shadow-md transition sm:w-56 ${
+        const cardClassName = `relative mt-2.5 block w-44 overflow-hidden rounded-xl border px-2.5 py-2 text-left shadow-md transition min-[380px]:w-48 sm:mt-3 sm:w-56 sm:px-3 ${
             isLive
                 ? 'border-green-300 bg-white shadow-green-900/10 hover:-translate-y-0.5 hover:border-green-400 dark:border-green-800 dark:bg-gray-900'
                 : 'border-orange-200 bg-white/95 shadow-orange-900/5 dark:border-orange-900/70 dark:bg-gray-900'
@@ -772,9 +773,9 @@ function PathNodeLabel({ item }) {
         const cardContent = (
             <>
                 <span className={`absolute inset-y-0 left-0 w-1 ${isLive ? 'bg-green-500' : 'bg-orange-500'}`} />
-                <div className="flex items-center justify-between gap-2 pl-1">
-                    <span className={`text-[9px] font-black uppercase tracking-[0.14em] ${colors.labelClass}`}>
-                        {item.weekLabel} · Kelas Live
+                <div className="flex items-center justify-between gap-1.5 pl-1">
+                    <span className={`truncate text-[9px] font-black uppercase tracking-[0.12em] ${colors.labelClass}`}>
+                        {item.weekLabel} · Live
                     </span>
                     <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase ${
                         isLive
@@ -801,12 +802,12 @@ function PathNodeLabel({ item }) {
         );
     }
 
-    return (
-        <div className="relative mt-3 w-36 text-center sm:w-44">
-            <p className={`text-xs font-black ${colors.labelClass}`}>
+    const labelInner = (
+        <>
+            <p className={`text-[11px] font-black sm:text-xs ${colors.labelClass}`}>
                 {item.eyebrow}
             </p>
-            <h3 className="mt-0.5 line-clamp-2 text-[13px] font-black leading-4 text-gray-900 dark:text-white sm:text-sm sm:leading-5">
+            <h3 className="mt-0.5 line-clamp-2 text-xs font-black leading-4 text-gray-900 dark:text-white sm:text-sm sm:leading-5">
                 {item.title}
             </h3>
 
@@ -836,6 +837,42 @@ function PathNodeLabel({ item }) {
                     </div>
                 </>
             )}
+        </>
+    );
+
+    const baseClass = "relative mt-2.5 w-32 text-center transition min-[380px]:w-36 sm:mt-3 sm:w-44";
+
+    if (item.kind === 'day') {
+        return (
+            <button
+                type="button"
+                onClick={() => !locked && onDayToggle?.(item.dayId)}
+                disabled={locked}
+                aria-expanded={selected}
+                aria-controls={`day-materials-${item.dayId}`}
+                className={`${baseClass} rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${
+                    locked ? 'cursor-not-allowed opacity-80' : 'cursor-pointer hover:opacity-90 active:scale-95'
+                }`}
+            >
+                {labelInner}
+            </button>
+        );
+    }
+
+    if (!locked && item.href) {
+        return (
+            <Link
+                href={item.href}
+                className={`${baseClass} block rounded-lg hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400`}
+            >
+                {labelInner}
+            </Link>
+        );
+    }
+
+    return (
+        <div className={baseClass}>
+            {labelInner}
         </div>
     );
 }
@@ -1072,11 +1109,11 @@ function MobileDaySheet({ day, onClose }) {
     );
 }
 
-const PATH_ROW_HEIGHT = 148;
+const PATH_ROW_HEIGHT = 164;
 const PATH_NODE_CENTER_Y = 34;
 
 function pathX(index) {
-    return 50 - (Math.sin(index * 1.12) * 19);
+    return 50 - (Math.sin(index * 1.12) * 16);
 }
 
 function connectorColor(previousItem, item) {
@@ -1166,7 +1203,7 @@ function DuolingoPath({ week, selectedDayId, onDayToggle }) {
     }, [onDayToggle, selectedDay]);
 
     return (
-        <div className="relative mx-auto w-full max-w-3xl py-4 sm:py-6">
+        <div className="relative mx-auto w-full max-w-3xl py-3 sm:py-6">
             <PathConnector items={items} />
 
             {selectedDay && (
@@ -1196,7 +1233,7 @@ function DuolingoPath({ week, selectedDayId, onDayToggle }) {
                             style={{ left: `${x}%` }}
                         >
                             <PathNode item={item} selected={selected} onDayToggle={onDayToggle} />
-                            <PathNodeLabel item={item} />
+                            <PathNodeLabel item={item} onDayToggle={onDayToggle} selected={selected} />
                         </motion.div>
 
                         <AnimatePresence initial={false}>
@@ -1327,7 +1364,7 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden"
                     >
-                        <div className="mt-3 rounded-2xl border border-[#cedbd2] bg-[#f1f6f3]/90 px-1 py-3 shadow-[0_18px_44px_-34px_rgba(45,55,66,0.45)] backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/45 sm:mt-4 sm:px-6 sm:py-6">
+                        <div className="mt-3 rounded-2xl border border-[#cedbd2] bg-[#f1f6f3]/90 px-2 py-3 shadow-[0_18px_44px_-34px_rgba(45,55,66,0.45)] backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/45 min-[380px]:px-3 sm:mt-4 sm:px-6 sm:py-6">
                             <DuolingoPath
                                 week={week}
                                 selectedDayId={selectedDayId}

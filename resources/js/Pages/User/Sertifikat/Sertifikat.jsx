@@ -66,7 +66,7 @@ function CertCard({ item, idx }) {
         >
             {isUnlocked ? (
                 /* ── UNLOCKED: Physical certificate mock-up ── */
-                <div className="relative rounded-[20px] overflow-hidden flex flex-col aspect-[7/5] p-6 pb-5 transition-colors duration-300 cert-unlocked bg-gradient-to-br from-[#fffbeb] via-[#ffffff] to-[#fef9ec] shadow-[0_0_0_2px_transparent,0_0_0_2px_#d4a017,0_20px_60px_-10px_rgba(212,160,23,0.4),0_4px_16px_rgba(0,0,0,0.2)]">
+                <div className="relative rounded-[20px] overflow-hidden flex flex-col min-h-[300px] sm:aspect-[7/5] p-4 sm:p-6 pb-5 justify-between transition-colors duration-300 cert-unlocked bg-gradient-to-br from-[#fffbeb] via-[#ffffff] to-[#fef9ec] shadow-[0_0_0_2px_transparent,0_0_0_2px_#d4a017,0_20px_60px_-10px_rgba(212,160,23,0.4),0_4px_16px_rgba(0,0,0,0.2)]">
                     {/* Golden border gradient via pseudo via box shadow trick */}
                     <div className="absolute inset-0 rounded-[20px] p-[2px] bg-gradient-to-br from-[#fde68a] via-[#f59e0b] to-[#fbbf24] pointer-events-none" style={{ WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' }} />
 
@@ -93,7 +93,7 @@ function CertCard({ item, idx }) {
                     {/* Main content */}
                     <div className="text-center flex-1 relative z-10">
                         <p className="text-[10px] text-amber-900 font-semibold tracking-wider uppercase mb-1">Ini adalah bukti bahwa</p>
-                        <h3 className="text-[1.7rem] font-black text-slate-900 tracking-tight leading-tight mb-1">Level {item.level_name}</h3>
+                        <h3 className="text-xl sm:text-[1.7rem] font-black text-slate-900 tracking-tight leading-tight mb-1">Level {item.level_name}</h3>
                         <p className="text-[10px] text-amber-900 italic">telah berhasil diselesaikan dengan sempurna</p>
                     </div>
 
@@ -130,7 +130,7 @@ function CertCard({ item, idx }) {
                 </div>
             ) : (
                 /* ── LOCKED ── */
-                <div className="relative bg-white dark:bg-[#111827] border border-slate-200 dark:border-gray-800 shadow-sm dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col justify-end p-0 overflow-hidden aspect-[7/5] rounded-[20px] transition-colors duration-300">
+                <div className="relative bg-white dark:bg-[#111827] border border-slate-200 dark:border-gray-800 shadow-sm dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col justify-end p-0 overflow-hidden min-h-[260px] sm:aspect-[7/5] rounded-[20px] transition-colors duration-300">
                     {/* Blur overlay */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 dark:bg-[#030712]/60 backdrop-blur-[2px] z-[2] p-6 transition-colors duration-300">
                         <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-800 dark:to-gray-900 border-2 border-slate-200 dark:border-gray-700 flex items-center justify-center text-slate-400 dark:text-gray-500 mb-3 shadow-lg dark:shadow-[0_0_30px_rgba(0,0,0,0.5)] transition-colors duration-300">
@@ -251,7 +251,7 @@ export default function Certificate({ certificates = [] }) {
                         <>
                             <p className="text-[11px] font-extrabold tracking-widest uppercase text-amber-600 dark:text-amber-400 mb-2 transition-colors duration-300">Pencapaianmu</p>
                             <h2 className="text-[1.8rem] font-black text-slate-900 dark:text-gray-50 mb-10 transition-colors duration-300">Sertifikat Anda</h2>
-                            <div className="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-8 mb-20">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-20">
                                 {certificates.map((item, idx) => (
                                     <CertCard key={item.level_id} item={item} idx={idx} />
                                 ))}
@@ -265,7 +265,7 @@ export default function Certificate({ certificates = [] }) {
                     <div className="max-w-4xl mx-auto text-center">
                         <p className="text-[11px] font-extrabold tracking-widest uppercase text-amber-600 dark:text-amber-400 mb-2 transition-colors duration-300">Panduan</p>
                         <h2 className="text-[1.6rem] font-black text-slate-900 dark:text-gray-50 mb-10 transition-colors duration-300">Cara Mendapatkan Sertifikat</h2>
-                        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             <StepCard
                                 num="1"
                                 emoji={<ScrollIcon className="w-8 h-8 text-indigo-500" />}

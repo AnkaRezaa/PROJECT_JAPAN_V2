@@ -9,8 +9,8 @@ export default function DetailSertifikat({ certificate, user }) {
         <AuthenticatedLayout header={<h2 className="font-extrabold text-2xl text-gray-900 leading-tight tracking-tight">Sertifikat</h2>}>
             <Head title={`Sertifikat - ${certificate?.certificate_number}`} />
 
-            <div className="py-12 min-h-screen bg-gray-100">
-                <div className="max-w-4xl mx-auto px-4">
+            <div className="py-6 sm:py-12 min-h-screen bg-gray-100">
+                <div className="max-w-4xl mx-auto px-3 sm:px-4">
                     <div className="mb-6 text-center">
                         <button
                             onClick={() => window.print()}

@@ -201,26 +201,26 @@ export default function Progress({
                                 </div>
 
                                 {weekItems.length > 0 ? (
-                                    <div className="mt-6 grid grid-cols-7 gap-2 sm:gap-3">
+                                    <div className="mt-6 grid grid-cols-7 gap-1.5 sm:gap-3">
                                         {weekItems.map((day, index) => {
                                             const xp = Number(day.xp) || 0;
                                             const height = xp > 0 ? Math.max(14, Math.round((xp / peakWeekXp) * 100)) : 0;
 
                                             return (
                                                 <div key={`${day.day}-${index}`} className="min-w-0 text-center">
-                                                    <div className={`flex h-40 flex-col justify-end overflow-hidden rounded-2xl border p-2 transition ${day.today ? 'border-emerald-400 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-500/10' : 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40'}`}>
-                                                        <span className={`mb-2 text-[11px] font-black tabular-nums ${day.today ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-600 dark:text-slate-300'}`}>
+                                                    <div className={`flex h-40 flex-col justify-end overflow-hidden rounded-xl sm:rounded-2xl border p-1 sm:p-2 transition ${day.today ? 'border-emerald-400 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-500/10' : 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40'}`}>
+                                                        <span className={`mb-1 sm:mb-2 text-[9px] min-[380px]:text-[11px] font-black tabular-nums truncate ${day.today ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-600 dark:text-slate-300'}`}>
                                                             {xp > 0 ? xp : '—'}
                                                         </span>
-                                                        <div className="flex flex-1 items-end rounded-xl bg-white/60 p-1 dark:bg-slate-900/50">
+                                                        <div className="flex flex-1 items-end rounded-lg sm:rounded-xl bg-white/60 p-0.5 sm:p-1 dark:bg-slate-900/50">
                                                             <div
                                                                 aria-label={`${day.day}: ${xp} XP`}
-                                                                className={`w-full rounded-lg ${day.today ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-600'}`}
+                                                                className={`w-full rounded-md sm:rounded-lg ${day.today ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-600'}`}
                                                                 style={{ height: `${height}%` }}
                                                             />
                                                         </div>
                                                     </div>
-                                                    <p className={`mt-2 text-[10px] font-black uppercase tracking-[0.08em] ${day.today ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400'}`}>{day.day}</p>
+                                                    <p className={`mt-2 text-[9px] min-[380px]:text-[10px] font-black uppercase tracking-wider ${day.today ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400'}`}>{day.day}</p>
                                                 </div>
                                             );
                                         })}
