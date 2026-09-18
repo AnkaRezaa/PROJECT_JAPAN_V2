@@ -957,58 +957,58 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null, o
                 </button>
             </div>
 
-            <div className={`space-y-2 sm:space-y-2.5 bg-[#f8faf8] p-3 sm:p-4 dark:bg-gray-900 overscroll-contain ${mobile ? 'max-h-[58dvh] overflow-y-auto' : ''}`}>
+            <div className={`space-y-2 sm:space-y-2.5 bg-[#f8faf8] p-2.5 min-[380px]:p-3 sm:p-4 dark:bg-gray-900 overscroll-contain ${mobile ? 'max-h-[58dvh] overflow-y-auto' : ''}`}>
                 {items.map((item, index) => {
                     const locked = ['locked', 'unavailable'].includes(item.status);
                     const row = (
                         <>
-                            <span className={`flex h-10 w-10 min-[380px]:h-11 min-[380px]:w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl ${
+                            <span className={`flex h-9 w-9 min-[380px]:h-10 min-[380px]:w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl ${
                                 locked
                                     ? 'bg-gray-100 text-gray-400 dark:bg-gray-700'
                                     : completed
                                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                                         : 'bg-[#f1e4ff] text-[#7c3aed] dark:bg-violet-950/60 dark:text-violet-300'
                             }`}>
-                                <QuizIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+                                <QuizIcon sx={{ fontSize: { xs: 19, sm: 22 } }} />
                             </span>
                             <span className="min-w-0 flex-1">
                                 <span className="flex items-center justify-between gap-1.5">
-                                    <span className="truncate text-xs min-[380px]:text-[13px] sm:text-[15px] font-extrabold leading-tight text-[#2d3742] dark:text-white">
-                                    {item.status === 'done' ? 'Ulangi Kuis & Repetisi' : 'Mulai Kuis & Repetisi'}
+                                    <span className="truncate text-xs min-[380px]:text-[13px] sm:text-[14px] font-extrabold leading-tight text-[#2d3742] dark:text-white">
+                                        {item.status === 'done' ? 'Ulangi Kuis Kosakata' : 'Kuis Kosakata & Repetisi'}
                                     </span>
                                     {!locked && (
-                                        <span className={`shrink-0 rounded-full px-1.5 sm:px-2 py-0.5 text-[9px] min-[380px]:text-[10px] sm:text-[11px] font-bold ${
+                                        <span className={`shrink-0 rounded-full px-1.5 sm:px-2 py-0.5 text-[9px] min-[380px]:text-[10px] font-bold ${
                                             completed
                                                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                                                 : 'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300'
                                         }`}>
-                                            {completed ? 'Selesai' : 'Siap dimulai'}
+                                            {completed ? 'Selesai' : 'Kosakata'}
                                         </span>
                                     )}
                                 </span>
                                 {!locked && (
-                                    <span className="mt-0.5 block line-clamp-1 sm:line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 sm:leading-5 text-gray-600 dark:text-gray-300">
-                                        Flashcard, soal, dan latihan menulis tersedia dalam satu sesi.
+                                    <span className="mt-0.5 block truncate text-[10px] min-[380px]:text-xs font-medium leading-4 text-gray-600 dark:text-gray-300">
+                                        {completed ? 'Flashcard kosakata, kanji, dan repetisi harian.' : 'Hafalan flashcard dan latihan kosakata harian.'}
                                     </span>
                                 )}
                                 {locked && (
-                                    <span className="mt-0.5 block line-clamp-1 sm:line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 sm:leading-5 text-gray-500 dark:text-gray-400">
+                                    <span className="mt-0.5 block truncate text-[10px] min-[380px]:text-xs font-medium leading-4 text-gray-500 dark:text-gray-400">
                                         {item.lockReason || 'Materi belum tersedia.'}
                                     </span>
                                 )}
                             </span>
-                            <span className={`flex h-7 w-7 min-[380px]:h-8 min-[380px]:w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full ${
+                            <span className={`flex h-7 w-7 min-[380px]:h-8 min-[380px]:w-8 shrink-0 items-center justify-center rounded-full ${
                                 locked
                                     ? 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'
                                     : 'bg-violet-100 text-violet-700 transition group-hover:bg-violet-200 dark:bg-violet-950/60 dark:text-violet-300'
                             }`}>
                                 {locked
                                     ? <LockIcon sx={{ fontSize: 16 }} />
-                                    : <ChevronRightIcon sx={{ fontSize: 19 }} />}
+                                    : <ChevronRightIcon sx={{ fontSize: 18 }} />}
                             </span>
                         </>
                     );
-                    const className = `group flex min-h-[64px] sm:min-h-[80px] w-full items-center gap-2.5 sm:gap-3 rounded-xl border p-2.5 min-[380px]:p-3 sm:px-4 sm:py-3 text-left transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-200/70 ${
+                    const className = `group flex min-h-[58px] sm:min-h-[66px] w-full items-center gap-2 min-[380px]:gap-2.5 sm:gap-3 rounded-xl border p-2 min-[380px]:p-2.5 sm:px-4 sm:py-3 text-left transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-200/70 ${
                         locked
                             ? 'cursor-not-allowed border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
                             : 'border-violet-200 bg-white shadow-[0_3px_0_#ddd6fe] hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/40 hover:shadow-[0_4px_0_#c4b5fd] active:translate-y-0.5 active:shadow-none dark:border-violet-900/70 dark:bg-gray-800 dark:hover:bg-violet-950/20'
@@ -1030,36 +1030,51 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null, o
                     );
                 })}
 
-                {(day.grammar_lessons || []).map((lesson, index) => <motion.button
-                    key={lesson.id}
-                    type="button"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: (items.length + index) * 0.06 }}
-                    disabled={loadingGrammarId === lesson.id}
-                    onClick={() => openGrammar(lesson.id)}
-                    className="group flex min-h-[64px] sm:min-h-[80px] w-full items-center gap-2.5 sm:gap-3 rounded-xl border border-sky-200 bg-white p-2.5 min-[380px]:p-3 sm:px-4 sm:py-3 text-left shadow-[0_3px_0_#bae6fd] transition hover:-translate-y-0.5 hover:border-sky-300 hover:bg-sky-50/40 hover:shadow-[0_4px_0_#7dd3fc] active:translate-y-0.5 active:scale-[0.98] active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/70 disabled:opacity-60 dark:border-sky-900/70 dark:bg-gray-800 dark:hover:bg-sky-950/20"
-                >
-                    <span className="flex h-10 w-10 min-[380px]:h-11 min-[380px]:w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
-                        <AutoStoriesIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                        <span className="flex items-center justify-between gap-1.5">
-                            <span className="truncate text-xs min-[380px]:text-[13px] sm:text-[15px] font-extrabold leading-tight text-[#2d3742] dark:text-white">
-                                {lesson.pattern} / {lesson.title}
+                {(day.grammar_lessons || []).map((lesson, index) => {
+                    const isLoading = loadingGrammarId === lesson.id;
+                    const isLessonDone = Boolean(lesson.done);
+
+                    return (
+                        <motion.button
+                            key={lesson.id}
+                            type="button"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: (items.length + index) * 0.06 }}
+                            disabled={isLoading}
+                            onClick={() => openGrammar(lesson.id)}
+                            className="group flex min-h-[58px] sm:min-h-[66px] w-full items-center gap-2 min-[380px]:gap-2.5 sm:gap-3 rounded-xl border border-sky-200 bg-white p-2 min-[380px]:p-2.5 sm:px-4 sm:py-3 text-left shadow-[0_3px_0_#bae6fd] transition hover:-translate-y-0.5 hover:border-sky-300 hover:bg-sky-50/40 hover:shadow-[0_4px_0_#7dd3fc] active:translate-y-0.5 active:scale-[0.98] active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/70 disabled:opacity-75 dark:border-sky-900/70 dark:bg-gray-800 dark:hover:bg-sky-950/20"
+                        >
+                            <span className="flex h-9 w-9 min-[380px]:h-10 min-[380px]:w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
+                                {isLoading ? (
+                                    <span className="h-4 w-4 sm:h-5 sm:w-5 animate-spin rounded-full border-2 border-sky-600 border-t-transparent dark:border-sky-300" />
+                                ) : (
+                                    <AutoStoriesIcon sx={{ fontSize: { xs: 19, sm: 22 } }} />
+                                )}
                             </span>
-                            <span className="shrink-0 rounded-full bg-amber-100 px-1.5 sm:px-2 py-0.5 text-[9px] min-[380px]:text-[10px] font-black uppercase text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
-                                {lesson.done ? 'Selesai' : 'Grammar'}
+                            <span className="min-w-0 flex-1">
+                                <span className="flex items-center justify-between gap-1.5">
+                                    <span className="truncate text-xs min-[380px]:text-[13px] sm:text-[14px] font-extrabold leading-tight text-[#2d3742] dark:text-white">
+                                        Kuis Grammar · {lesson.pattern}
+                                    </span>
+                                    <span className={`shrink-0 rounded-full px-1.5 sm:px-2 py-0.5 text-[9px] min-[380px]:text-[10px] font-bold ${
+                                        isLessonDone
+                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                            : 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
+                                    }`}>
+                                        {isLessonDone ? 'Selesai' : 'Grammar'}
+                                    </span>
+                                </span>
+                                <span className="mt-0.5 block truncate text-[10px] min-[380px]:text-xs font-medium leading-4 text-gray-600 dark:text-gray-300">
+                                    {isLoading ? 'Memuat kuis grammar...' : (lesson.title || 'Latihan pola kalimat & pemahaman konteks.')}
+                                </span>
                             </span>
-                        </span>
-                        <span className="mt-0.5 block line-clamp-1 sm:line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 sm:leading-5 text-gray-600 dark:text-gray-300">
-                            {loadingGrammarId === lesson.id ? 'Memuat lesson...' : 'Intro, transformasi bentuk, susun kalimat, dan pilihan konteks.'}
-                        </span>
-                    </span>
-                    <span className="flex h-7 w-7 min-[380px]:h-8 min-[380px]:w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 transition group-hover:bg-sky-200 dark:bg-sky-950/60 dark:text-sky-300">
-                        <ChevronRightIcon sx={{ fontSize: 19 }} />
-                    </span>
-                </motion.button>)}
+                            <span className="flex h-7 w-7 min-[380px]:h-8 min-[380px]:w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 transition group-hover:bg-sky-200 dark:bg-sky-950/60 dark:text-sky-300">
+                                <ChevronRightIcon sx={{ fontSize: 18 }} />
+                            </span>
+                        </motion.button>
+                    );
+                })}
             </div>
         </div>
     );
