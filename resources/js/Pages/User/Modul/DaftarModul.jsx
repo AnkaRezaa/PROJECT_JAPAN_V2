@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
+import { AnimatePresence, MotionConfig, motion, useDragControls } from 'framer-motion';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import theme from '@/Components/theme/themes';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
@@ -877,7 +877,7 @@ function PathNodeLabel({ item, onDayToggle, selected }) {
     );
 }
 
-function DayDetailContent({ day, onClose, mobile = false }) {
+function DayDetailContent({ day, onClose, mobile = false, dragControls = null }) {
     const items = dayChildItems(day);
     const completed = day.status === 'done';
     const [grammarQuiz, setGrammarQuiz] = useState(null);
@@ -897,20 +897,28 @@ function DayDetailContent({ day, onClose, mobile = false }) {
             id={`day-materials-${day.id}`}
             className={`overflow-hidden bg-white shadow-2xl dark:bg-gray-900 ${
                 mobile
-                    ? 'rounded-t-3xl border-t border-x border-[#dce8df] pb-[max(16px,env(safe-area-inset-bottom))] dark:border-gray-700'
+                    ? 'rounded-t-3xl border-t border-x border-[#dce8df] pb-[max(20px,env(safe-area-inset-bottom))] dark:border-gray-700'
                     : 'rounded-2xl border border-[#dce8df] shadow-[0_18px_50px_-24px_rgba(45,55,66,0.32)] dark:border-gray-700'
             }`}
         >
             {mobile && (
-                <div className={`flex justify-center pt-2.5 pb-1 ${
-                    completed
-                        ? 'bg-emerald-50 dark:bg-emerald-950/30'
-                        : 'bg-[#f1fbe9] dark:bg-green-950/25'
-                }`}>
-                    <span className="h-1.5 w-10 rounded-full bg-black/15 dark:bg-white/20" />
+                <div
+                    onPointerDown={(e) => dragControls?.start(e)}
+                    className={`flex cursor-grab touch-none justify-center pt-3 pb-1.5 active:cursor-grabbing ${
+                        completed
+                            ? 'bg-emerald-50 dark:bg-emerald-950/30'
+                            : 'bg-[#f1fbe9] dark:bg-green-950/25'
+                    }`}
+                >
+                    <span className="h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-600 transition-colors" />
                 </div>
             )}
-            <div className={`flex items-start justify-between gap-3 border-b px-4 py-3 sm:px-6 sm:py-5 ${
+            <div
+                onPointerDown={(e) => {
+                    if (e.target.closest('button')) return;
+                    dragControls?.start(e);
+                }}
+                className={`flex items-start justify-between gap-3 border-b px-4 py-2.5 sm:px-6 sm:py-4 ${mobile ? 'touch-none cursor-grab active:cursor-grabbing' : ''} ${
                 completed
                     ? 'border-emerald-200 bg-emerald-50 text-[#2d3742] dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-white'
                     : 'border-[#d7edc8] bg-[#f1fbe9] text-[#2d3742] dark:border-green-900 dark:bg-green-950/25 dark:text-white'
@@ -928,11 +936,11 @@ function DayDetailContent({ day, onClose, mobile = false }) {
                             {completed ? 'Selesai' : 'Jalur belajar'}
                         </span>
                     </div>
-                    <h3 className="mt-1 sm:mt-2 text-base sm:text-lg font-extrabold leading-snug text-[#2d3742] dark:text-white">
+                    <h3 className="mt-1 text-base sm:text-lg font-extrabold leading-snug text-[#2d3742] dark:text-white">
                         {day.title || `Hari ${day.day_number}`}
                     </h3>
                     {day.description && (
-                        <p className="mt-0.5 sm:mt-1 line-clamp-2 text-xs font-medium leading-4 sm:leading-5 text-gray-600 dark:text-gray-300 sm:text-[13px]">
+                        <p className="mt-0.5 line-clamp-1 sm:line-clamp-2 text-xs font-medium leading-4 sm:leading-5 text-gray-600 dark:text-gray-300">
                             {day.description}
                         </p>
                     )}
@@ -941,13 +949,13 @@ function DayDetailContent({ day, onClose, mobile = false }) {
                     type="button"
                     onClick={onClose}
                     aria-label="Tutup detail Hari"
-                    className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg border border-black/5 bg-white/75 text-gray-600 shadow-sm transition hover:bg-white hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 dark:border-white/10 dark:bg-gray-900/70 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                    className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg border border-black/5 bg-white/80 text-gray-600 shadow-sm transition hover:bg-white hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 dark:border-white/10 dark:bg-gray-900/70 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
                 >
                     <CloseIcon sx={{ fontSize: 18 }} />
                 </button>
             </div>
 
-            <div className={`space-y-2.5 sm:space-y-3 bg-[#f8faf8] p-3 sm:p-4 dark:bg-gray-900 ${mobile ? 'max-h-[60dvh] overflow-y-auto' : ''}`}>
+            <div className={`space-y-2 sm:space-y-2.5 bg-[#f8faf8] p-3 sm:p-4 dark:bg-gray-900 overscroll-contain ${mobile ? 'max-h-[58dvh] overflow-y-auto' : ''}`}>
                 {items.map((item, index) => {
                     const locked = ['locked', 'unavailable'].includes(item.status);
                     const row = (
@@ -977,12 +985,12 @@ function DayDetailContent({ day, onClose, mobile = false }) {
                                     )}
                                 </span>
                                 {!locked && (
-                                    <span className="mt-0.5 sm:mt-1 block line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 sm:leading-5 text-gray-600 dark:text-gray-300">
+                                    <span className="mt-0.5 block line-clamp-1 sm:line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 sm:leading-5 text-gray-600 dark:text-gray-300">
                                         Flashcard, soal, dan latihan menulis tersedia dalam satu sesi.
                                     </span>
                                 )}
                                 {locked && (
-                                    <span className="mt-0.5 sm:mt-1 block line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 sm:leading-5 text-gray-500 dark:text-gray-400">
+                                    <span className="mt-0.5 block line-clamp-1 sm:line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 sm:leading-5 text-gray-500 dark:text-gray-400">
                                         {item.lockReason || 'Materi belum tersedia.'}
                                     </span>
                                 )}
@@ -998,7 +1006,7 @@ function DayDetailContent({ day, onClose, mobile = false }) {
                             </span>
                         </>
                     );
-                    const className = `group flex min-h-[68px] sm:min-h-[88px] w-full items-center gap-2.5 sm:gap-3 rounded-xl border p-2.5 min-[380px]:p-3 sm:px-4 sm:py-3 text-left transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-200/70 ${
+                    const className = `group flex min-h-[64px] sm:min-h-[80px] w-full items-center gap-2.5 sm:gap-3 rounded-xl border p-2.5 min-[380px]:p-3 sm:px-4 sm:py-3 text-left transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-200/70 ${
                         locked
                             ? 'cursor-not-allowed border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
                             : 'border-violet-200 bg-white shadow-[0_3px_0_#ddd6fe] hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/40 hover:shadow-[0_4px_0_#c4b5fd] active:translate-y-0.5 active:shadow-none dark:border-violet-900/70 dark:bg-gray-800 dark:hover:bg-violet-950/20'
@@ -1028,7 +1036,7 @@ function DayDetailContent({ day, onClose, mobile = false }) {
                     transition={{ delay: (items.length + index) * 0.06 }}
                     disabled={loadingGrammarId === lesson.id}
                     onClick={() => openGrammar(lesson.id)}
-                    className="group flex min-h-[68px] sm:min-h-[88px] w-full items-center gap-2.5 sm:gap-3 rounded-xl border border-sky-200 bg-white p-2.5 min-[380px]:p-3 sm:px-4 sm:py-3 text-left shadow-[0_3px_0_#bae6fd] transition hover:-translate-y-0.5 hover:border-sky-300 hover:bg-sky-50/40 hover:shadow-[0_4px_0_#7dd3fc] active:translate-y-0.5 active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/70 disabled:opacity-60 dark:border-sky-900/70 dark:bg-gray-800 dark:hover:bg-sky-950/20"
+                    className="group flex min-h-[64px] sm:min-h-[80px] w-full items-center gap-2.5 sm:gap-3 rounded-xl border border-sky-200 bg-white p-2.5 min-[380px]:p-3 sm:px-4 sm:py-3 text-left shadow-[0_3px_0_#bae6fd] transition hover:-translate-y-0.5 hover:border-sky-300 hover:bg-sky-50/40 hover:shadow-[0_4px_0_#7dd3fc] active:translate-y-0.5 active:scale-[0.98] active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/70 disabled:opacity-60 dark:border-sky-900/70 dark:bg-gray-800 dark:hover:bg-sky-950/20"
                 >
                     <span className="flex h-10 w-10 min-[380px]:h-11 min-[380px]:w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
                         <AutoStoriesIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
@@ -1042,7 +1050,7 @@ function DayDetailContent({ day, onClose, mobile = false }) {
                                 {lesson.done ? 'Selesai' : 'Grammar'}
                             </span>
                         </span>
-                        <span className="mt-0.5 sm:mt-1 block line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 sm:leading-5 text-gray-600 dark:text-gray-300">
+                        <span className="mt-0.5 block line-clamp-1 sm:line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 sm:leading-5 text-gray-600 dark:text-gray-300">
                             {loadingGrammarId === lesson.id ? 'Memuat lesson...' : 'Intro, transformasi bentuk, susun kalimat, dan pilihan konteks.'}
                         </span>
                     </span>
@@ -1087,6 +1095,8 @@ function DesktopDayPopover({ day, x, onClose }) {
 }
 
 function MobileDaySheet({ day, onClose }) {
+    const dragControls = useDragControls();
+
     useEffect(() => {
         const previousOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
@@ -1109,16 +1119,26 @@ function MobileDaySheet({ day, onClose }) {
                 type="button"
                 aria-label="Tutup detail Hari"
                 onClick={onClose}
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
             />
             <motion.div
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
-                transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-                className="relative z-10 w-full max-h-[88dvh] flex flex-col"
+                transition={{ type: 'spring', stiffness: 340, damping: 32 }}
+                drag="y"
+                dragControls={dragControls}
+                dragListener={false}
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0.05, bottom: 0.6 }}
+                onDragEnd={(_event, info) => {
+                    if (info.offset.y > 80 || info.velocity.y > 350) {
+                        onClose();
+                    }
+                }}
+                className="relative z-10 w-full max-h-[85dvh] flex flex-col"
             >
-                <DayDetailContent day={day} onClose={onClose} mobile />
+                <DayDetailContent day={day} onClose={onClose} mobile dragControls={dragControls} />
             </motion.div>
         </motion.div>,
         document.body,
