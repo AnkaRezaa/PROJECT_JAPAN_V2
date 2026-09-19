@@ -122,6 +122,7 @@ class AdminModulController extends Controller
                         ->withCount('flashcards'),
                     'quizzes' => fn ($resourceQuery) => $resourceQuery
                         ->select(['id', 'module_id', 'module_day_id', 'type', 'passing_score', 'status'])
+                        ->with(['grammarLesson:id,quiz_id,pattern,title'])
                         ->withCount('questions'),
                     'presentationDecks' => fn ($resourceQuery) => $resourceQuery
                         ->select(['id', 'module_id', 'module_day_id', 'title', 'status'])
@@ -220,6 +221,13 @@ class AdminModulController extends Controller
                         'item_count' => $quiz->questions_count,
                     ])->values(),
                     'grammar_lesson_count' => $day->quizzes->where('type', 'grammar')->count(),
+                    'grammar_quizzes' => $day->quizzes->where('type', 'grammar')->map(fn ($quiz) => [
+                        'id' => $quiz->id,
+                        'status' => $quiz->status,
+                        'pattern' => $quiz->grammarLesson?->pattern,
+                        'title' => $quiz->grammarLesson?->title,
+                        'item_count' => $quiz->questions_count,
+                    ])->values(),
                     'presentation_decks' => $day->presentationDecks->map(fn ($deck) => [
                         'id' => $deck->id,
                         'title' => $deck->title,

@@ -380,8 +380,8 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                             <OptionCard
                                 href={route('admin.modules.index', { program_id: managingProgram.id, focus: 'flashcard' })}
                                 icon={<QuizOutlinedIcon sx={{ fontSize: 20 }} />}
-                                label="Kuis & Repetisi"
-                                description="Kelola soal, repetisi, dan latihan menulis kanji."
+                                label="Kuis Harian & Grammar"
+                                description="Kelola kuis kosakata, kanji, flashcard, dan latihan grammar per hari."
                                 tone="teal"
                             />
                         </div>

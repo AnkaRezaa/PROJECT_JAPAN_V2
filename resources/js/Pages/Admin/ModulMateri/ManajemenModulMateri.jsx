@@ -19,7 +19,7 @@ import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 
 const focusLabels = {
     roadmap: 'Roadmap',
-    flashcard: 'Kuis & Repetisi',
+    flashcard: 'Kuis Harian & Grammar',
     presentation: 'Presentasi Mingguan',
 };
 
@@ -35,8 +35,8 @@ const focusPageCopy = {
         emptyProgram: 'Kelola presentasi mingguan kelas ini.',
     },
     flashcard: {
-        title: 'Kuis & Repetisi',
-        description: 'Kelola materi repetisi, kuis, dan latihan menulis untuk setiap Hari.',
+        title: 'Kuis Harian & Grammar',
+        description: 'Kelola materi kuis kosakata, kanji, repetisi flashcard, dan latihan grammar untuk setiap Hari.',
         emptyProgram: 'Kelola latihan harian kelas ini.',
     },
 };
@@ -119,7 +119,7 @@ function ResourceRow({
                     </button>
                 ) : resources.length === 1 ? (
                     <Link href={route(routeNames[type], resources[0].id)} className="inline-flex h-9 shrink-0 items-center rounded-lg bg-gray-900 px-3 text-xs font-black text-white dark:bg-white dark:text-gray-900">
-                        Buka Editor
+                        Buka Builder
                     </Link>
                 ) : (
                     <span className="shrink-0 text-xs font-black text-gray-500 dark:text-gray-300">Pilih di bawah</span>
@@ -138,7 +138,7 @@ function ResourceRow({
                                     </span>
                                 )}
                             </span>
-                            <span className="shrink-0 text-xs font-black text-orange-600">Buka Editor</span>
+                            <span className="shrink-0 text-xs font-black text-orange-600">Buka Builder</span>
                         </Link>
                     ))}
                 </div>
@@ -159,16 +159,11 @@ function DailyPracticeRow({ module, day, onCreate, focused = false }) {
         (total, quiz) => total + Number(quiz.item_count || 0),
         0,
     );
+    const publishedQuizzes = quizzes.filter((item) => item.status === 'published').length;
+    const publishedFlashcards = flashcardSets.filter((item) => item.status === 'published').length;
+    const totalPublished = publishedQuizzes + publishedFlashcards;
     const hasMaterial = flashcardSets.length > 0;
     const hasQuiz = quizzes.length > 0;
-    const setupNextStep = () => {
-        if (!hasMaterial) {
-            onCreate('flashcard', module, day);
-            return;
-        }
-
-        onCreate('quiz', module, day);
-    };
 
     return (
         <div
@@ -186,63 +181,98 @@ function DailyPracticeRow({ module, day, onCreate, focused = false }) {
                 <span className="min-w-0 flex-1">
                     <span className="block text-sm font-black text-gray-900 dark:text-white">Kuis & Repetisi</span>
                     <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                        {flashcardCount} kartu repetisi / {questionCount} soal
+                        {flashcardCount} kartu repetisi / {questionCount} soal • {totalPublished} terbit
                     </span>
                 </span>
                 <div className="flex flex-wrap gap-2">
-                    {(!hasMaterial || !hasQuiz) && (
+                    {!hasMaterial && (
                         <button
                             type="button"
-                            onClick={setupNextStep}
+                            onClick={() => onCreate('flashcard', module, day)}
                             className="inline-flex h-9 items-center gap-1 rounded-lg border border-teal-200 px-3 text-xs font-black text-teal-700 dark:border-teal-900/50 dark:text-teal-300"
                         >
                             <AddIcon sx={{ fontSize: 15 }} />
-                            {!hasMaterial ? 'Siapkan Materi' : 'Buat Kuis'}
+                            Siapkan Flashcard
                         </button>
                     )}
-                    {primaryQuiz && (
+                    {primaryQuiz ? (
                         <Link
                             href={route('admin.quizzes.builder', primaryQuiz.id)}
-                            className="inline-flex h-9 items-center rounded-lg bg-gray-900 px-3 text-xs font-black text-white dark:bg-white dark:text-gray-900"
+                            className="inline-flex h-9 items-center rounded-lg bg-gray-900 px-3 text-xs font-black text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
                         >
                             Buka Builder
                         </Link>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => onCreate('quiz', module, day)}
+                            className="inline-flex h-9 items-center rounded-lg bg-gray-900 px-3 text-xs font-black text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+                        >
+                            Buka Builder
+                        </button>
                     )}
                 </div>
             </div>
-            {(!hasMaterial || !hasQuiz || quizzes.length > 1) && (
-                <p className="mt-2 border-t border-gray-100 pt-2 text-xs font-semibold text-gray-400 dark:border-gray-800">
-                    {!hasMaterial
-                        ? 'Langkah 1 dari 2: siapkan materi repetisi, lalu buat kuis untuk Hari ini.'
-                        : !hasQuiz
-                            ? 'Langkah 2 dari 2: buat kuis agar latihan Hari ini dapat digunakan siswa.'
-                            : `${quizzes.length} kuis tersedia; builder membuka kuis utama Hari ini.`}
-                </p>
-            )}
+            <p className="mt-2 border-t border-gray-100 pt-2 text-xs font-semibold text-gray-400 dark:border-gray-800">
+                {!hasMaterial && !hasQuiz
+                    ? 'Belum ada materi repetisi maupun kuis checkpoint untuk Hari ini.'
+                    : [
+                        hasMaterial ? `Flashcard: ${flashcardSets[0]?.title || 'Set Utama'} (${flashcardSets[0]?.status === 'published' ? 'Terbit' : 'Draf'})` : null,
+                        hasQuiz ? `Kuis: ${primaryQuiz?.title || 'Checkpoint'} (${primaryQuiz?.status === 'published' ? 'Terbit' : 'Draf'})` : null,
+                    ].filter(Boolean).join(' • ')}
+            </p>
         </div>
     );
 }
 
-function GrammarPracticeRow({ module, day, onOpen }) {
+function GrammarPracticeRow({ module, day, onOpen, focused = false }) {
+    const grammarQuizzes = day.grammar_quizzes || [];
+    const lessonCount = day.grammar_lesson_count || grammarQuizzes.length;
+    const questionCount = grammarQuizzes.reduce(
+        (total, quiz) => total + Number(quiz.item_count || 0),
+        0,
+    );
+    const primaryQuiz = grammarQuizzes[0] || null;
+    const hasGrammar = lessonCount > 0 || Boolean(primaryQuiz);
+    const isPublished = primaryQuiz?.status === 'published';
+    const publishedCount = grammarQuizzes.filter((item) => item.status === 'published').length;
+
     return (
-        <div className="rounded-xl border border-sky-200 bg-sky-50/40 p-3 dark:border-sky-900/60 dark:bg-sky-950/15">
+        <div
+            data-content-focus={focused ? 'grammar' : undefined}
+            className={`rounded-xl border p-3 transition ${
+                focused
+                    ? 'border-sky-400 ring-2 ring-sky-100 dark:ring-sky-900/30'
+                    : 'border-gray-200 dark:border-gray-800'
+            }`}
+        >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300">
                     <AutoStoriesIcon sx={{ fontSize: 19 }} />
                 </span>
                 <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-2">
-                        <span className="block text-sm font-black text-gray-900 dark:text-white">Kuis Grammar</span>
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">Frontend</span>
-                    </span>
-                    <span className="mt-0.5 block text-xs font-bold text-gray-500 dark:text-gray-400">
-                        Intro, Transformation, Sentence Builder, dan Context Choice.
+                    <span className="block text-sm font-black text-gray-900 dark:text-white">Kuis Grammar</span>
+                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                        {lessonCount} lesson grammar / {questionCount} soal • {publishedCount} terbit
                     </span>
                 </span>
-                <button type="button" onClick={() => onOpen({ module, day })} className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-sky-600 px-3 text-xs font-black text-white transition hover:bg-sky-700">
-                    Buka Builder Grammar
-                </button>
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        onClick={() => onOpen({ module, day })}
+                        className="inline-flex h-9 items-center rounded-lg bg-gray-900 px-3 text-xs font-black text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+                    >
+                        Buka Builder
+                    </button>
+                </div>
             </div>
+            <p className="mt-2 border-t border-gray-100 pt-2 text-xs font-semibold text-gray-400 dark:border-gray-800">
+                {!hasGrammar
+                    ? 'Belum ada materi & kuis grammar untuk Hari ini.'
+                    : (primaryQuiz?.pattern || primaryQuiz?.title)
+                        ? `${primaryQuiz.pattern ? primaryQuiz.pattern : ''}${primaryQuiz.pattern && primaryQuiz.title ? ' — ' : ''}${primaryQuiz.title || ''} (${isPublished ? 'Terbit' : 'Draf'})`
+                        : `Latihan grammar aktif (${isPublished ? 'Terbit' : 'Draf'})`}
+            </p>
         </div>
     );
 }
@@ -289,9 +319,9 @@ function WeeklyPresentationRow({ module, focused = false }) {
                 </span>
                 <Link
                     href={route('admin.modules.presentations.builder', module.id)}
-                    className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-gray-900 px-3 text-xs font-black text-white dark:bg-white dark:text-gray-900"
+                    className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-gray-900 px-3 text-xs font-black text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
                 >
-                    Kelola Presentasi
+                    Buka Builder
                 </Link>
             </div>
         </div>
@@ -671,7 +701,12 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                                             onCreate={openResourceCreate}
                                                                             focused={focus === 'flashcard'}
                                                                         />
-                                                                        <GrammarPracticeRow module={module} day={day} onOpen={setGrammarBuilder} />
+                                                                        <GrammarPracticeRow
+                                                                            module={module}
+                                                                            day={day}
+                                                                            onOpen={setGrammarBuilder}
+                                                                            focused={focus === 'flashcard'}
+                                                                        />
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -721,9 +756,9 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                                      onCreate={openResourceCreate}
                                                                      focused
                                                                  />
-                                                                 <div className="mt-2">
-                                                                     <GrammarPracticeRow module={module} day={day} onOpen={setGrammarBuilder} />
-                                                                 </div>
+                                                                  <div className="mt-2">
+                                                                      <GrammarPracticeRow module={module} day={day} onOpen={setGrammarBuilder} focused />
+                                                                  </div>
                                                              </div>
                                                          ))}
 
@@ -857,7 +892,10 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                 open={Boolean(grammarBuilder)}
                 module={grammarBuilder?.module}
                 day={grammarBuilder?.day}
-                onClose={() => setGrammarBuilder(null)}
+                onClose={() => {
+                    setGrammarBuilder(null);
+                    router.reload({ only: ['modules'] });
+                }}
             />
 
             <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />

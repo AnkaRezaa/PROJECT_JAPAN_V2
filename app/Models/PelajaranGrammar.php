@@ -11,6 +11,7 @@ class PelajaranGrammar extends Model
 
     protected $fillable = [
         'quiz_id',
+        'grammar_bank_id',
         'lesson_key',
         'level',
         'pattern',
@@ -31,4 +32,10 @@ class PelajaranGrammar extends Model
     {
         return $this->belongsTo(Kuis::class, 'quiz_id');
     }
+
+    public function grammarBank(): BelongsTo
+    {
+        return $this->belongsTo(GrammarBank::class, 'grammar_bank_id');
+    }
 }
+

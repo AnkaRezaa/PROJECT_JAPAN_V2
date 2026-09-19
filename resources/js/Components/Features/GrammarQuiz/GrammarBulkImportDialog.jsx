@@ -117,7 +117,16 @@ export default function GrammarBulkImportDialog({ open, program, onClose }) {
                         <p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-emerald-600">{program?.title || 'Kelas terpilih'}</p>
                         <h1 className="truncate text-base font-black text-gray-900 dark:text-white">Import Banyak Grammar</h1>
                     </div>
-                    {program?.id && <a href={`/admin/programs/${program.id}/grammar-quizzes/template`} className="rounded-xl border border-emerald-200 px-3 py-2 text-xs font-black text-emerald-700">Unduh Template</a>}
+                    {program?.id && (
+                        <div className="flex items-center gap-1.5">
+                            <a href={`/admin/programs/${program.id}/grammar-quizzes/template?format=csv`} className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
+                                Unduh CSV
+                            </a>
+                            <a href={`/admin/programs/${program.id}/grammar-quizzes/template?format=xlsx`} className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                                Unduh XLSX
+                            </a>
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -128,8 +137,8 @@ export default function GrammarBulkImportDialog({ open, program, onClose }) {
                             <div className="flex items-start gap-3">
                                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"><DescriptionOutlinedIcon sx={{ fontSize: 20 }} /></span>
                                 <div>
-                                    <h2 className="text-base font-black text-gray-900 dark:text-white">1. Siapkan workbook</h2>
-                                    <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">Satu file dapat membawa beberapa lesson. Gunakan lesson_key yang sama pada ketiga sheet.</p>
+                                    <h2 className="text-base font-black text-gray-900 dark:text-white">1. Siapkan file (XLSX multi-sheet atau CSV 1-tabel)</h2>
+                                    <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">File XLSX multi-sheet (Materi, Contoh, Soal) untuk banyak lesson, atau CSV 1-tabel praktis untuk per-Day.</p>
                                 </div>
                             </div>
 
@@ -147,9 +156,9 @@ export default function GrammarBulkImportDialog({ open, program, onClose }) {
                             <h2 className="text-base font-black text-gray-900 dark:text-white">2. Unggah dan periksa</h2>
                             <label className="mt-4 flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-4 text-center transition hover:border-emerald-400 hover:bg-emerald-50/40 dark:border-gray-700 dark:bg-gray-950/40 dark:hover:border-emerald-700">
                                 <UploadFileIcon className="text-emerald-600" sx={{ fontSize: 30 }} />
-                                <span className="mt-2 text-sm font-black text-gray-800 dark:text-white">Pilih workbook XLSX</span>
-                                <span className="mt-1 text-xs font-medium text-gray-500">Maksimal 2 MB, berisi sheet Materi, Contoh, dan Soal.</span>
-                                <input type="file" accept=".xlsx" className="sr-only" onChange={(event) => { setSelectedFile(event.target.files?.[0] || null); setPreview(null); setMessage(''); }} />
+                                <span className="mt-2 text-sm font-black text-gray-800 dark:text-white">Pilih file XLSX atau CSV</span>
+                                <span className="mt-1 text-xs font-medium text-gray-500">Maksimal 2 MB (UTF-8 didukung).</span>
+                                <input type="file" accept=".xlsx,.csv" className="sr-only" onChange={(event) => { setSelectedFile(event.target.files?.[0] || null); setPreview(null); setMessage(''); }} />
                             </label>
                             {selectedFile && (
                                 <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
@@ -158,7 +167,7 @@ export default function GrammarBulkImportDialog({ open, program, onClose }) {
                                 </div>
                             )}
                             <button type="button" disabled={!selectedFile || processing} onClick={() => sendFile(false)} className="mt-4 h-10 rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-xs font-black text-emerald-800 transition hover:border-emerald-400 disabled:opacity-50 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
-                                {processing ? 'Memeriksa...' : 'Periksa Workbook'}
+                                {processing ? 'Memeriksa...' : 'Periksa File'}
                             </button>
                         </section>
 

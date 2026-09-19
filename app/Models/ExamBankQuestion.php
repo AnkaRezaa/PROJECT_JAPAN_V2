@@ -10,6 +10,7 @@ class ExamBankQuestion extends Model
     protected $fillable = [
         'exam_question_bank_id',
         'exam_question_wrapper_id',
+        'grammar_id',
         'code',
         'type',
         'sort_order',
@@ -42,4 +43,10 @@ class ExamBankQuestion extends Model
     {
         return $this->belongsTo(ExamQuestionWrapper::class, 'exam_question_wrapper_id');
     }
+
+    public function grammar(): BelongsTo
+    {
+        return $this->belongsTo(GrammarBank::class, 'grammar_id');
+    }
 }
+

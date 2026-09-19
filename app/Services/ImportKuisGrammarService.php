@@ -251,6 +251,104 @@ class ImportKuisGrammarService
         return true;
     }
 
+    public function previewFlatCsv(ProgramPembelajaran $program, array $rows, ?HariModul $day = null): array
+    {
+        $errors = [];
+        $questions = [];
+
+        $firstRow = $rows[0] ?? [];
+        $pattern = trim((string) ($firstRow['pattern'] ?? ''));
+        $title = trim((string) ($firstRow['title'] ?? ($pattern ?: 'Grammar Practice')));
+        $formula = trim((string) ($firstRow['formula'] ?? ''));
+        $meaning = trim((string) ($firstRow['meaning'] ?? ''));
+        $lessonKey = trim((string) ($firstRow['lesson_key'] ?? ''));
+
+        if ($lessonKey === '') {
+            $lessonKey = 'csv-grammar-' . ($day ? $day->id : time());
+        }
+
+        foreach ($rows as $index => $row) {
+            $rowNumber = $index + 2;
+            $stage = trim((string) ($row['stage'] ?? ''));
+            $items = $this->pipeValues($row['options_or_tokens'] ?? '');
+            $correct = $this->pipeValues($row['correct_answer_or_order'] ?? '');
+
+            foreach (['stage', 'prompt', 'options_or_tokens', 'correct_answer_or_order'] as $column) {
+                if (! filled($row[$column] ?? null)) {
+                    $errors[] = $this->error('CSV', $rowNumber, $column, 'Kolom wajib diisi.');
+                }
+            }
+
+            if ($stage !== '' && ! in_array($stage, KuisGrammarService::STAGES, true)) {
+                $errors[] = $this->error('CSV', $rowNumber, 'stage', 'Stage harus transformation, sentence_builder, atau context_choice.');
+            }
+            if (count($items) < 2) {
+                $errors[] = $this->error('CSV', $rowNumber, 'options_or_tokens', 'Minimal dua pilihan atau token diperlukan.');
+            }
+            if ($correct === []) {
+                $errors[] = $this->error('CSV', $rowNumber, 'correct_answer_or_order', 'Jawaban benar wajib diisi.');
+            }
+            if ($stage !== 'sentence_builder' && count($correct) > 1) {
+                $errors[] = $this->error('CSV', $rowNumber, 'correct_answer_or_order', 'Soal pilihan hanya boleh memiliki satu jawaban benar.');
+            }
+            if ($correct !== [] && ! $this->isMultisetSubset($correct, $items)) {
+                $errors[] = $this->error('CSV', $rowNumber, 'correct_answer_or_order', 'Jawaban benar harus tersedia pada pilihan atau token.');
+            }
+
+            if (empty($errors)) {
+                $questions[] = $this->questionPayload($stage, $row, $index);
+            }
+        }
+
+        $stages = collect(KuisGrammarService::STAGES)->map(fn ($stage) => [
+            'id' => $stage,
+            'questions' => collect($questions)->filter(fn ($q) => ($q['type'] ?? null) === $stage)->values()->all(),
+        ])->all();
+
+        $resolvedModuleId = $day?->module_id;
+        $resolvedDayId = $day?->id;
+
+        if (! $resolvedModuleId || ! $resolvedDayId) {
+            $firstModule = $program->modules()->first();
+            $firstDay = $firstModule?->days()->first();
+            $resolvedModuleId = $firstModule?->id;
+            $resolvedDayId = $firstDay?->id;
+        }
+
+        $lesson = [
+            'module_id' => $resolvedModuleId,
+            'module_day_id' => $resolvedDayId,
+            'time_limit' => null,
+            'passing_score' => 70,
+            'lesson' => [
+                'lesson_key' => $lessonKey,
+                'level' => trim((string) ($firstRow['level'] ?? 'N3')),
+                'pattern' => $pattern ?: 'Grammar Pattern',
+                'title' => $title,
+                'meaning' => $meaning ?: 'Penjelasan grammar',
+                'formula' => $formula ?: '-',
+                'explanation' => trim((string) ($firstRow['explanation'] ?? '')),
+                'examples' => [],
+            ],
+            'stages' => $stages,
+        ];
+
+        return [
+            'valid' => $errors === [],
+            'format' => 'flat_csv',
+            'lesson_count' => 1,
+            'example_count' => 0,
+            'question_count' => count($questions),
+            'lessons' => [$lesson],
+            'errors' => array_slice($errors, 0, 100),
+        ];
+    }
+
+    public function commitFlatCsv(ProgramPembelajaran $program, array $preview, ?HariModul $day = null): int
+    {
+        return $this->commit($program, $preview);
+    }
+
     private function error(string $sheet, int $row, string $column, string $message): array
     {
         return compact('sheet', 'row', 'column', 'message');

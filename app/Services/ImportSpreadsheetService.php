@@ -33,7 +33,27 @@ class ImportSpreadsheetService
             return [];
         }
 
-        $header = fgetcsv($handle);
+        $firstLine = fgets($handle);
+
+        if ($firstLine === false) {
+            fclose($handle);
+
+            return [];
+        }
+
+        // Strip UTF-8 BOM if present
+        $firstLine = preg_replace('/^\xEF\xBB\xBF/', '', $firstLine);
+
+        // Detect delimiter
+        $delimiters = [',', ';', "\t"];
+        $counts = [];
+        foreach ($delimiters as $delim) {
+            $counts[$delim] = substr_count($firstLine, $delim);
+        }
+        arsort($counts);
+        $delimiter = key($counts) ?: ',';
+
+        $header = str_getcsv($firstLine, $delimiter);
 
         if (! $header) {
             fclose($handle);
@@ -46,7 +66,7 @@ class ImportSpreadsheetService
 
         $rowCount = 0;
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
             if (++$rowCount > self::MAX_ROWS + 1 || count($row) > self::MAX_COLUMNS) {
                 fclose($handle);
 
