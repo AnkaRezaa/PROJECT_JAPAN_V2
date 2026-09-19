@@ -8,6 +8,7 @@ import SearchableSelect from '@/Components/UI/SearchableSelect';
 import SearchableMultiSelect from '@/Components/UI/SearchableMultiSelect';
 import StrokeCharacterPreview from '@/Components/Features/Handwriting/StrokeCharacterPreview';
 import { resolveAvailableCharacters, writingCharacters } from '@/Components/Features/Handwriting/strokeData';
+import BankSoalNavbar from '@/Components/Features/BankSoal/BankSoalNavbar';
 
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -266,6 +267,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
             <Head title="Admin - Bank Konten" />
 
             <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+                <BankSoalNavbar activeTab="vocabulary" stats={{ total_vocabulary: vocabulary?.total || rows?.length }} />
                 <section className="relative z-20 rounded-[1.5rem] border border-orange-100 bg-gradient-to-br from-orange-50 via-white to-amber-50 p-5 shadow-sm dark:border-orange-900/30 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900">
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                         <div>

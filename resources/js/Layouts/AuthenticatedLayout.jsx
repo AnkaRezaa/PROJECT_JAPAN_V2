@@ -395,7 +395,12 @@ export default function AuthenticatedLayout({ children }) {
             icon: <SchoolIcon sx={{ fontSize: 24 }} />,
             label: 'Kelas',
         },
-        { href: '/admin/vocabulary', activePaths: ['/admin/vocabulary'], icon: <LibraryBooksIcon sx={{ fontSize: 24 }} />, label: 'Bank Konten N3' },
+        {
+            href: '/admin/bank-soal-konten',
+            activePaths: ['/admin/bank-soal-konten', '/admin/vocabulary', '/admin/exams/question-banks', '/admin/grammar-banks'],
+            icon: <LibraryBooksIcon sx={{ fontSize: 24 }} />,
+            label: 'Pusat Bank Konten & Soal',
+        },
     ];
     
     const superadminMenu = [
@@ -482,6 +487,10 @@ export default function AuthenticatedLayout({ children }) {
     const isActiveItem = (item) => isActivePath(item.activePaths || item.href);
 
     const workspaceTitleRules = [
+        ['/admin/bank-soal-konten', 'Pusat Bank Konten & Soal'],
+        ['/admin/grammar-banks', 'Pusat Bank Konten & Soal'],
+        ['/admin/exams/question-banks', 'Bank Soal Ujian (CBT)'],
+        ['/admin/vocabulary', 'Bank Kosakata & Kanji (N3)'],
         ['/admin/exams', 'Ujian'],
         ['/admin/presentations', 'Presentasi'],
         ['/admin/flashcards', 'Flashcard'],
@@ -493,7 +502,6 @@ export default function AuthenticatedLayout({ children }) {
         ['/admin/users', 'Kloter & Siswa'],
         ['/admin/kloters', 'Kloter & Siswa'],
         ['/admin/analytics', 'Monitoring Kloter'],
-        ['/admin/vocabulary', 'Bank Konten N3'],
         ['/admin/gamification', 'Gamifikasi'],
         ['/admin/achievements', 'Pencapaian'],
         ['/admin/levels', 'Level'],

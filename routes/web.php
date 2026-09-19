@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminBerandaController;
 use App\Http\Controllers\Admin\AdminExamPortalController;
 use App\Http\Controllers\Admin\AdminExamQuestionBankController;
 use App\Http\Controllers\Admin\AdminFlashcardController;
+use App\Http\Controllers\Admin\AdminGrammarBankController;
 use App\Http\Controllers\Admin\AdminGrammarQuizController;
 use App\Http\Controllers\Admin\AdminHariModulController;
 use App\Http\Controllers\Admin\AdminKosakataController;
@@ -202,6 +203,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/exam-attempts/{attempt}/invalidate', [AdminExamPortalController::class, 'invalidate'])->middleware('throttle:exam-admin')->name('exam-attempts.invalidate');
         Route::get('/exams/{exam}/edit', [AdminExamPortalController::class, 'edit'])->name('exams.edit');
         Route::get('/exams/{exam}/preview', [AdminExamPortalController::class, 'preview'])->name('exams.preview');
+        Route::get('/bank-soal-konten', [AdminGrammarBankController::class, 'index'])->name('bank-soal-konten.index');
+        Route::get('/grammar-banks/picker', [AdminGrammarBankController::class, 'picker'])->name('grammar-banks.picker');
+        Route::post('/grammar-banks', [AdminGrammarBankController::class, 'store'])->name('grammar-banks.store');
+        Route::get('/grammar-banks/{grammarBank}', [AdminGrammarBankController::class, 'show'])->name('grammar-banks.show');
+        Route::put('/grammar-banks/{grammarBank}', [AdminGrammarBankController::class, 'update'])->name('grammar-banks.update');
+        Route::delete('/grammar-banks/{grammarBank}', [AdminGrammarBankController::class, 'destroy'])->name('grammar-banks.destroy');
+        Route::post('/grammar-banks/{grammarBank}/assign-day', [AdminGrammarBankController::class, 'assignToDay'])->name('grammar-banks.assign-day');
         Route::get('/exams/question-banks', [AdminExamQuestionBankController::class, 'index'])->name('exams.question-banks.index');
         Route::post('/exams/question-banks', [AdminExamQuestionBankController::class, 'store'])->name('exams.question-banks.store');
         Route::get('/exams/question-banks/template/{format}', [AdminExamQuestionBankController::class, 'template'])->name('exams.question-banks.template');
@@ -287,6 +295,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/grammar-quizzes/{quiz}/status', [AdminGrammarQuizController::class, 'updateStatus'])->name('grammar-quizzes.status');
         Route::delete('/grammar-quizzes/{quiz}', [AdminGrammarQuizController::class, 'destroy'])->name('grammar-quizzes.destroy');
         Route::get('/programs/{program}/grammar-quizzes/template', [AdminGrammarQuizController::class, 'template'])->name('grammar-quizzes.template');
+        Route::post('/grammar-quizzes/generate-draft', [AdminGrammarQuizController::class, 'generateDraft'])->name('grammar-quizzes.generate-draft');
+        Route::post('/grammar-quizzes/regenerate-question', [AdminGrammarQuizController::class, 'regenerateQuestion'])->name('grammar-quizzes.regenerate-question');
         Route::post('/programs/{program}/grammar-quizzes/import/preview', [AdminGrammarQuizController::class, 'previewImport'])->middleware('throttle:admin-imports')->name('grammar-quizzes.import.preview');
         Route::post('/programs/{program}/grammar-quizzes/import', [AdminGrammarQuizController::class, 'import'])->middleware('throttle:admin-imports')->name('grammar-quizzes.import');
 

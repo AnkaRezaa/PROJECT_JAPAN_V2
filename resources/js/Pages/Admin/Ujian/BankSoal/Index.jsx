@@ -10,6 +10,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import AdminDialog from '@/Components/UI/AdminDialog';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import { AdminExamHeader, AdminExamTabs, AdminPagination, Metric, StatusBadge, fieldClassName } from '@/Components/Features/AdminExam/AdminExamUI';
+import BankSoalNavbar from '@/Components/Features/BankSoal/BankSoalNavbar';
 
 export default function Index({ banks = { data: [] }, levels = [], filters = {} }) {
     const [term, setTerm] = useState(filters.search || '');
@@ -94,6 +95,7 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
             <Head title="Bank Soal Ujian" />
             <div className="min-h-screen bg-slate-50 px-4 py-7 dark:bg-[#0b1121] sm:px-6 lg:px-8">
                 <div className="mx-auto max-w-7xl space-y-6">
+                    <BankSoalNavbar activeTab="exams" stats={{ total_exam_banks: banks.total || banks.data.length }} />
                     <AdminExamHeader
                         eyebrow="Repositori & Bank Ujian"
                         title="Bank Soal Ujian"
