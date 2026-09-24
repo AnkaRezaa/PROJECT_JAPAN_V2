@@ -32,7 +32,7 @@ import {
     getQuestionError,
     normalizeQuestionType,
     normalizeQuestions,
-} from './Builder/helpers';
+} from '@/lib/quizHelpers';
 
 export default function QuizBuilder({
     quiz,

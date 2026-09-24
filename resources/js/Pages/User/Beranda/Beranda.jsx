@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PromoPopup from '@/Components/Marketing/PromoPopup';
-import { HitodamaIcon, KabutoIcon, ScrollIcon } from '@/Components/JapaneseIcons';
+import { HitodamaIcon, KabutoIcon, ScrollIcon } from '@/Components/UI/JapaneseIcons';
 import theme from '@/Components/theme/themes';
 import MountFujiBg from '../../../../Images/Mount-Fuji-New.jpg';
 

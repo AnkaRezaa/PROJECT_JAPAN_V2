@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
-import LearningResourceCreateDialog from '@/Components/Admin/LearningResourceCreateDialog';
-import ModuleDayDialog from '@/Components/Admin/ModuleDayDialog';
+import LearningResourceCreateDialog from '@/Components/Features/Admin/LearningResourceCreateDialog';
+import ModuleDayDialog from '@/Components/Features/Admin/ModuleDayDialog';
 import SearchableSelect from '@/Components/UI/SearchableSelect';
-import GrammarQuizBuilderDialog from '@/Components/Features/GrammarQuiz/GrammarQuizBuilderDialog';
+import BuilderKuisGrammar from '@/Components/Features/GrammarQuiz/BuilderKuisGrammar';
 
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -72,80 +72,7 @@ function ResourceStatus({ resources = [], emptyLabel = 'Belum dibuat' }) {
     );
 }
 
-function ResourceRow({
-    type,
-    label,
-    icon,
-    tone,
-    module,
-    day,
-    resources = [],
-    focused = false,
-    onCreate,
-    createOptions = {},
-    allowMultiple = false,
-}) {
-    const routeNames = {
-        flashcard: 'admin.flashcards.builder',
-        quiz: 'admin.quizzes.builder',
-        presentation: 'admin.presentations.builder',
-    };
-    const toneClasses = {
-        blue: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300',
-        teal: 'bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300',
-        red: 'bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300',
-        orange: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300',
-    };
 
-    return (
-        <div className={`rounded-xl border transition ${
-            focused ? 'border-orange-400 ring-2 ring-orange-100 dark:ring-orange-900/30' : 'border-gray-200 dark:border-gray-800'
-        }`}>
-            <div className="flex min-h-16 items-center gap-3 px-3 py-3">
-                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${toneClasses[tone]}`}>{icon}</span>
-                <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-black text-gray-900 dark:text-white">{label}</span>
-                    <ResourceStatus resources={resources} />
-                </span>
-                {allowMultiple ? (
-                    <button type="button" onClick={() => onCreate(type, module, day, createOptions)} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg bg-gray-900 px-3 text-xs font-black text-white dark:bg-white dark:text-gray-900">
-                        <AddIcon sx={{ fontSize: 15 }} />
-                        Tambah
-                    </button>
-                ) : resources.length === 0 ? (
-                    <button type="button" onClick={() => onCreate(type, module, day, createOptions)} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg bg-gray-900 px-3 text-xs font-black text-white dark:bg-white dark:text-gray-900">
-                        <AddIcon sx={{ fontSize: 15 }} />
-                        Buat
-                    </button>
-                ) : resources.length === 1 ? (
-                    <Link href={route(routeNames[type], resources[0].id)} className="inline-flex h-9 shrink-0 items-center rounded-lg bg-gray-900 px-3 text-xs font-black text-white dark:bg-white dark:text-gray-900">
-                        Buka Builder
-                    </Link>
-                ) : (
-                    <span className="shrink-0 text-xs font-black text-gray-500 dark:text-gray-300">Pilih di bawah</span>
-                )}
-            </div>
-
-            {(resources.length > 1 || (allowMultiple && resources.length > 0)) && (
-                <div className="space-y-1 border-t border-gray-100 p-2 dark:border-gray-800">
-                    {resources.map((resource) => (
-                        <Link key={resource.id} href={route(routeNames[type], resource.id)} className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <span className="min-w-0">
-                                <span className="block truncate font-bold text-gray-700 dark:text-gray-200">{resource.title}</span>
-                                {allowMultiple && (
-                                    <span className="mt-0.5 block text-[11px] font-semibold text-gray-400">
-                                        {resource.item_count || 0} soal / {resource.attempt_count || 0} pengerjaan
-                                    </span>
-                                )}
-                            </span>
-                            <span className="shrink-0 text-xs font-black text-orange-600">Buka Builder</span>
-                        </Link>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
 
 function DailyPracticeRow({ module, day, onCreate, focused = false }) {
     const flashcardSets = day.flashcard_sets || [];
@@ -629,19 +556,8 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                     </div>
                                                 </div>
 
-                                                <div className="mb-3 grid gap-2 lg:grid-cols-2">
+                                                <div className="mb-3">
                                                     <WeeklyPresentationRow module={module} focused={focus === 'presentation'} />
-                                                    <ResourceRow
-                                                        type="quiz"
-                                                        label="Ujian Mingguan"
-                                                        icon={<QuizOutlinedIcon sx={{ fontSize: 19 }} />}
-                                                        tone="red"
-                                                        module={module}
-                                                        day={null}
-                                                        resources={module.weekly_exams || []}
-                                                        onCreate={openResourceCreate}
-                                                        allowMultiple
-                                                    />
                                                 </div>
 
                                                 <Link
@@ -888,7 +804,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                 lockContext
             />
 
-            <GrammarQuizBuilderDialog
+            <BuilderKuisGrammar
                 open={Boolean(grammarBuilder)}
                 module={grammarBuilder?.module}
                 day={grammarBuilder?.day}

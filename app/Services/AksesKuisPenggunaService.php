@@ -41,52 +41,17 @@ class AksesKuisPenggunaService
             return $this->blocked('kloter_locked', 'Minggu ini belum terbuka untuk kloter kamu.', $module);
         }
 
-        $isWeeklyExam = $quiz->isWeeklyExam();
-
         if ($quiz->day) {
             $dayAccess = $this->roadmapProgress->statusAksesHari($user, $quiz->day);
             if (! $dayAccess['allowed']) {
                 return $this->blocked($dayAccess['reason'], $dayAccess['message'], $module);
             }
-        } elseif ($module->days()->where('status', 'published')->exists() && ! $isWeeklyExam) {
+        } elseif ($module->days()->where('status', 'published')->exists()) {
             return $this->blocked(
                 'quiz_not_assigned',
-                'Kuis ini belum ditetapkan sebagai ujian Mingguan.',
+                'Kuis ini belum ditetapkan pada Day materi.',
                 $module
             );
-        } elseif ($isWeeklyExam) {
-            if ($quiz->available_at?->isFuture()) {
-                return $this->blocked(
-                    'exam_scheduled',
-                    'Ujian Mingguan dibuka '.$quiz->available_at->translatedFormat('d M Y H:i').'.',
-                    $module
-                );
-            }
-
-            $publishedDayIds = $module->days()
-                ->where('status', 'published')
-                ->pluck('id');
-            $completedDayCount = $user->dayProgress()
-                ->whereIn('module_day_id', $publishedDayIds)
-                ->whereNotNull('completed_at')
-                ->count();
-
-            if ($completedDayCount !== $publishedDayIds->count()) {
-                return $this->blocked(
-                    'days_required',
-                    'Selesaikan semua Hari sebelum mengikuti ujian Mingguan.',
-                    $module
-                );
-            }
-
-            return [
-                'allowed' => true,
-                'reason' => null,
-                'message' => null,
-                'module' => $module,
-                'flashcard_set' => null,
-                'flashcard_stats' => ['total' => 0, 'reviewed' => 0],
-            ];
         }
 
         return [

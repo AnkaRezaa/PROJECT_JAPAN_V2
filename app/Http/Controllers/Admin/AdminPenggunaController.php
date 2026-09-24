@@ -231,14 +231,6 @@ class AdminPenggunaController extends Controller
                     'created_at' => $log->created_at->format('d M Y H:i'),
                 ])
                 : [],
-            'certificates' => $admin->isAdminGlobal()
-                ? $user->certificates->map(fn ($certificate) => [
-                    'id' => $certificate->id,
-                    'level' => $certificate->level?->level_name,
-                    'certificate_number' => $certificate->certificate_number,
-                    'issued_at' => optional($certificate->issued_at)->format('d M Y'),
-                ])
-                : [],
         ]);
     }
 

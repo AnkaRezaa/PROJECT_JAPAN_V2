@@ -13,6 +13,7 @@ use App\Services\KloterBelajarService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -40,11 +41,11 @@ class AdminGrammarBankController extends Controller
         $grammarList = $this->grammarService->list($filters, 15);
         $levels = $this->grammarService->levels();
 
-        $stats = [
+        $stats = Cache::remember('admin:bank_soal:stats', 60, fn () => [
             'total_vocabulary' => Kosakata::count(),
             'total_grammar' => \Illuminate\Support\Facades\Schema::hasTable('grammar_bank') ? GrammarBank::count() : 0,
             'total_exam_banks' => ExamQuestionBank::count(),
-        ];
+        ]);
 
         $moduleDays = HariModul::query()
             ->with([
@@ -56,7 +57,7 @@ class AdminGrammarBankController extends Controller
             })
             ->orderBy('module_id')
             ->orderBy('day_number')
-            ->get()
+            ->get(['id', 'module_id', 'day_number', 'title'])
             ->map(fn ($day) => [
                 'id' => $day->id,
                 'day_number' => $day->day_number,
@@ -118,6 +119,7 @@ class AdminGrammarBankController extends Controller
         ]);
 
         $entry = $this->grammarService->store($validated, $request->user()?->id);
+        Cache::forget('admin:bank_soal:stats');
 
         if ($request->wantsJson()) {
             return response()->json(['message' => 'Pola grammar berhasil disimpan ke bank.', 'data' => $entry], 201);
@@ -152,6 +154,7 @@ class AdminGrammarBankController extends Controller
         ]);
 
         $updated = $this->grammarService->update($grammarBank, $validated, $request->user()?->id);
+        Cache::forget('admin:bank_soal:stats');
 
         if ($request->wantsJson()) {
             return response()->json(['message' => 'Pola grammar berhasil diperbarui.', 'data' => $updated]);
@@ -164,6 +167,7 @@ class AdminGrammarBankController extends Controller
     {
         $pattern = $grammarBank->pattern;
         $this->grammarService->delete($grammarBank);
+        Cache::forget('admin:bank_soal:stats');
 
         if ($request->wantsJson()) {
             return response()->json(['message' => "Pola {$pattern} berhasil dihapus dari Bank Grammar."]);

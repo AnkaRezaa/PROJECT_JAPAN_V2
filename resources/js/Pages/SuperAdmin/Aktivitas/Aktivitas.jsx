@@ -33,7 +33,80 @@ function Pagination({ links = [] }) {
     );
 }
 
-function FeedbackWorkspace({ feedback = { data: [], links: [] }, stats = {}, filters = {}, monitoringLinks = {} }) {
+function AnalyticsMonitoringBar({ monitoringLinks = {} }) {
+    const gtm = monitoringLinks.gtm || { enabled: false, id: null, configured: false };
+    const ga4 = monitoringLinks.ga4;
+    const uptime = monitoringLinks.uptime;
+
+    return (
+        <section aria-label="Integrasi analitik dan pemantauan" className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-wrap items-center gap-6">
+                    <div className="flex items-center gap-3">
+                        <span className={`h-3 w-3 shrink-0 rounded-full ${gtm.enabled ? 'bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-950/60' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                        <div>
+                            <p className="text-[11px] font-black uppercase tracking-wider text-gray-400">Google Tag Manager</p>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                                <span className="text-sm font-black text-gray-900 dark:text-white">
+                                    {gtm.enabled ? (gtm.id || 'Aktif (ID belum diisi)') : 'Non-aktif'}
+                                </span>
+                                {!gtm.enabled && (
+                                    <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                                        .env: GTM_ENABLED=true
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="hidden h-8 w-px bg-gray-200 dark:bg-gray-800 sm:block" />
+
+                    <div className="flex items-center gap-3">
+                        <span className={`h-3 w-3 shrink-0 rounded-full ${ga4 ? 'bg-sky-500 ring-4 ring-sky-100 dark:ring-sky-950/60' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                        <div>
+                            <p className="text-[11px] font-black uppercase tracking-wider text-gray-400">Google Analytics 4</p>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                                <span className="text-sm font-black text-gray-900 dark:text-white">
+                                    {ga4 ? 'Terkoneksi' : 'Belum Terhubung'}
+                                </span>
+                                {!ga4 && (
+                                    <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                                        .env: GA4_PROPERTY_URL
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    {ga4 && (
+                        <a
+                            href={ga4}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3.5 text-xs font-black text-sky-700 transition hover:bg-sky-100 dark:border-sky-900/50 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:bg-sky-900/60"
+                        >
+                            Buka GA4 ↗
+                        </a>
+                    )}
+                    {uptime && (
+                        <a
+                            href={uptime}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3.5 text-xs font-black text-violet-700 transition hover:bg-violet-100 dark:border-violet-900/50 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-900/60"
+                        >
+                            Status Website ↗
+                        </a>
+                    )}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function FeedbackWorkspace({ feedback = { data: [], links: [] }, stats = {}, filters = {} }) {
     const [editing, setEditing] = React.useState(null);
     const editForm = useForm({ status: 'reviewing', resolution_note: '' });
     const feedbackFilter = useForm({
@@ -119,8 +192,6 @@ function FeedbackWorkspace({ feedback = { data: [], links: [] }, stats = {}, fil
                         <button className="h-11 rounded-xl bg-gray-900 px-4 text-sm font-black text-white dark:bg-white dark:text-gray-900">Terapkan filter</button>
                         <a href={exportHref} className="inline-flex h-11 items-center justify-center rounded-xl border border-emerald-200 px-4 text-sm font-black text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/50 dark:text-emerald-300">CSV</a>
                         <a href={exportXlsxHref} className="inline-flex h-11 items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-black text-white hover:bg-emerald-700">XLSX</a>
-                        {monitoringLinks.ga4 && <a href={monitoringLinks.ga4} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center rounded-xl border border-sky-200 px-4 text-sm font-black text-sky-700 dark:border-sky-900/50 dark:text-sky-300">Buka GA4</a>}
-                        {monitoringLinks.uptime && <a href={monitoringLinks.uptime} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center rounded-xl border border-violet-200 px-4 text-sm font-black text-violet-700 dark:border-violet-900/50 dark:text-violet-300">Status website</a>}
                     </div>
                 </form>
             </Card>
@@ -233,7 +304,9 @@ export default function Activity({
                     <Link href={route('superadmin.activity', { view: 'feedback' })} preserveScroll className={`flex-1 rounded-lg px-4 py-2.5 text-center text-sm font-black sm:flex-none ${showFeedback ? 'bg-emerald-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'}`}>Feedback & Bug</Link>
                 </div>
 
-                {showFeedback && <FeedbackWorkspace feedback={productFeedback} stats={feedbackStats} filters={filters} monitoringLinks={monitoringLinks} />}
+                <AnalyticsMonitoringBar monitoringLinks={monitoringLinks} />
+
+                {showFeedback && <FeedbackWorkspace feedback={productFeedback} stats={feedbackStats} filters={filters} />}
 
                 {!showFeedback && <>
 

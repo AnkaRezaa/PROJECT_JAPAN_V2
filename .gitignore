@@ -58,3 +58,7 @@ Thumbs.db
 /AGENTS.md
 /.tmp-chrome-exam-profile/
 /storage/framework/psysh/
+askpass.bat
+ssh_cmd.ps1
+/scratch/
+

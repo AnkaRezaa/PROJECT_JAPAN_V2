@@ -12,6 +12,7 @@ use App\Services\NotifikasiPenggunaService;
 use App\Services\SoalKuisService;
 use App\Services\TemplateExcelService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -108,7 +109,7 @@ class AdminKosakataController extends Controller
             'programs' => ProgramPembelajaran::with(['level:id,level_name', 'curriculumTrack:id,code,name'])
                 ->orderBy('sort_order')
                 ->orderBy('id')
-                ->get()
+                ->get(['id', 'title', 'status', 'level_id', 'curriculum_track_id', 'sort_order'])
                 ->map(fn (ProgramPembelajaran $program) => [
                     'id' => $program->id,
                     'title' => $program->title,
@@ -148,8 +149,15 @@ class AdminKosakataController extends Controller
         $validated = $this->validateVocabulary($request);
         $dayIds = $validated['module_day_ids'] ?? [];
         unset($validated['module_day_ids']);
-        $content = Kosakata::create($validated);
-        $content->days()->sync($dayIds);
+
+        $content = DB::transaction(function () use ($validated, $dayIds) {
+            $content = Kosakata::create($validated);
+            $content->days()->sync($dayIds);
+
+            return $content;
+        });
+
+        Cache::forget('admin:bank_soal:stats');
 
         if ($content->status === 'published') {
             $this->kirimNotifikasiKosakataTerbit($content, $notifikasi);
@@ -164,9 +172,14 @@ class AdminKosakataController extends Controller
         $validated = $this->validateVocabulary($request, $vocabulary);
         $dayIds = $validated['module_day_ids'] ?? [];
         unset($validated['module_day_ids']);
-        $vocabulary->update($validated);
-        $vocabulary->days()->sync($dayIds);
-        $this->syncLinkedFlashcards($vocabulary);
+
+        DB::transaction(function () use ($vocabulary, $validated, $dayIds) {
+            $vocabulary->update($validated);
+            $vocabulary->days()->sync($dayIds);
+            $this->syncLinkedFlashcards($vocabulary);
+        });
+
+        Cache::forget('admin:bank_soal:stats');
 
         if ($oldStatus !== 'published' && $vocabulary->status === 'published') {
             $this->kirimNotifikasiKosakataTerbit($vocabulary, $notifikasi);
@@ -178,6 +191,7 @@ class AdminKosakataController extends Controller
     public function destroy(Kosakata $vocabulary)
     {
         $vocabulary->delete();
+        Cache::forget('admin:bank_soal:stats');
 
         return redirect()->back()->with('success', 'Konten berhasil dihapus.');
     }
@@ -267,6 +281,8 @@ class AdminKosakataController extends Controller
 
             return $imported;
         });
+
+        Cache::forget('admin:bank_soal:stats');
 
         return redirect()->back()->with('success', "{$created} konten berhasil diimport.");
     }

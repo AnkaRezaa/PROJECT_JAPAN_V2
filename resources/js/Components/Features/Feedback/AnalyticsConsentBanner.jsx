@@ -17,7 +17,7 @@ export default function AnalyticsConsentBanner() {
     };
 
     return (
-        <section aria-label="Persetujuan analitik" className="fixed inset-x-3 bottom-3 z-[140] mx-auto max-w-2xl border border-gray-200 bg-white p-4 shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:flex sm:items-center sm:gap-4">
+        <section aria-label="Persetujuan analitik" className="fixed inset-x-3 bottom-3 z-[140] mx-auto max-w-2xl rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:flex sm:items-center sm:gap-4">
             <p className="flex-1 text-sm leading-6 text-gray-700 dark:text-gray-200">
                 TOKU-UP memakai analitik anonim untuk memperbaiki alur belajar. Nilai, jawaban, dan komentar tidak dikirim.
             </p>

@@ -48,15 +48,7 @@ class ModulController extends Controller
         $moduls = $program->modules()
             ->with([
                 'level',
-                'weeklyExams' => fn ($query) => $query
-                    ->where('status', 'published')
-                    ->whereHas('questions')
-                    ->with([
-                        'questions',
-                        'attempts' => fn ($attemptQuery) => $attemptQuery
-                            ->where('user_id', $user->id)
-                            ->where('status', 'completed'),
-                    ]),
+
                 'presentationDecks' => fn ($query) => $query
                     ->shared()
                     ->whereIn('week_slot', ['opening', 'after_day', 'closing'])
@@ -143,20 +135,12 @@ class ModulController extends Controller
 
         $weeks = $moduls->values()->map(function (Modul $modul, int $index) use (&$completedModulIds, $user, $aksesPremium, $moduls, $program, $kloterAktif, $mingguAktifKloter, $aksesKuis, $liveSessionsByModule) {
             $flashcardSet = $this->firstFlashcardSetFor($modul);
-            $weeklyExams = $modul->weeklyExams;
-            $weeklyExamStats = $weeklyExams->mapWithKeys(
-                fn (Kuis $exam) => [$exam->id => $this->quizStats($user->id, $exam)]
-            );
-            $quiz = $weeklyExams->first();
             $flashcardStats = $this->flashcardStats($user->id, $flashcardSet);
-            $quizStats = $quiz ? $weeklyExamStats->get($quiz->id) : $this->quizStats($user->id, null);
-            $passingScore = (int) ($quiz?->passing_score ?? 70);
             $presentationCount = $modul->presentationDecks->count();
             $liveSession = $liveSessionsByModule->get($modul->id);
             $vocabularyCount = $this->vocabularyQueryForModules(collect([$modul->id]))->count('vocabulary_bank.id');
 
             $hasFlashcard = $flashcardStats['total'] > 0;
-            $hasQuiz = $weeklyExams->isNotEmpty();
             $hasPresentation = $presentationCount > 0;
             $hasVocabulary = $vocabularyCount > 0;
             $hasDayContent = $modul->days->contains(fn (HariModul $day) => (
@@ -166,27 +150,15 @@ class ModulController extends Controller
                 || $day->vocabulary->isNotEmpty()
             ));
             $flashcardDone = ! $hasFlashcard || $flashcardStats['reviewed'] >= $flashcardStats['total'];
-            $quizDone = ! $hasQuiz || $weeklyExams->every(
-                fn (Kuis $exam) => (bool) ($weeklyExamStats->get($exam->id)['done'] ?? false)
-            );
-            $quizUnlocked = (bool) $hasQuiz;
             $isDone = $user->progress()
                 ->where('module_id', $modul->id)
                 ->whereNotNull('completed_at')
                 ->exists();
             $isSubscriptionLocked = ! $aksesPremium->bolehAksesModul($user, $modul);
             $isKloterLocked = $kloterAktif && $mingguAktifKloter !== null && (int) $modul->week_number > $mingguAktifKloter;
-            $hasContent = $hasFlashcard || $hasQuiz || $hasPresentation || $hasVocabulary || $hasDayContent;
+            $hasContent = $hasFlashcard || $hasPresentation || $hasVocabulary || $hasDayContent;
             $primaryUrl = null;
             $primaryLabel = 'Pilih Resource';
-
-            if ($quiz && ! $quizDone) {
-                $primaryUrl = route('user.modul.quiz', $modul->id);
-                $primaryLabel = 'Mulai Sesi';
-            } elseif ($quiz) {
-                $primaryUrl = route('user.modul.quiz', $modul->id);
-                $primaryLabel = 'Review Sesi';
-            }
 
             $status = 'unavailable';
             if (! $hasContent) {
@@ -235,7 +207,7 @@ class ModulController extends Controller
                     ])
                     ->values();
                 $hasContent = $presentationCount > 0 || $flashcardCount > 0 || $questionCount > 0 || $day->vocabulary->isNotEmpty();
-                $completionMethod = $checkpointQuiz ? 'checkpoint' : null;
+                $completionMethod = $checkpointQuiz ? 'checkpoint' : ($flashcardCount > 0 ? 'flashcard' : null);
                 $isReady = $hasContent && $completionMethod;
                 $presentationPreviews = $day->presentationDecks
                     ->take(3)
@@ -289,6 +261,10 @@ class ModulController extends Controller
                     'vocabulary_preview' => $vocabularyPreview,
                     'flashcard_total' => $flashcardCount,
                     'flashcard_reviewed' => $flashcardReviewed,
+                    'flashcard_summary' => [
+                        'total' => $flashcardCount,
+                        'reviewed' => $flashcardReviewed,
+                    ],
                     'questions_count' => $questionCount,
                     'grammar_lessons' => $grammarLessons,
                     'checkpoint_summary' => $checkpointQuiz ? [
@@ -317,27 +293,7 @@ class ModulController extends Controller
                 ];
             });
             $allDaysCompleted = $days->isNotEmpty() && $days->every(fn (array $day) => $day['status'] === 'done');
-            $weeklyExamPayload = $weeklyExams->map(function (Kuis $exam) use ($aksesKuis, $user, $weeklyExamStats) {
-                $access = $aksesKuis->status($user, $exam);
-                $stats = $weeklyExamStats->get($exam->id, ['done' => false, 'best_score' => null]);
-
-                return [
-                    'id' => $exam->id,
-                    'title' => 'Ujian '.$exam->exam_order,
-                    'exam_order' => $exam->exam_order,
-                    'questions_count' => $exam->questions->count(),
-                    'passing_score' => (int) ($exam->passing_score ?? 70),
-                    'best_score' => $stats['best_score'],
-                    'done' => $stats['done'],
-                    'locked' => ! $access['allowed'],
-                    'lock_reason' => $access['allowed']
-                        ? null
-                        : ($access['message'] ?? 'Selesaikan semua Hari terlebih dahulu.'),
-                    'url' => $access['allowed']
-                        ? route('user.quizzes.show', $exam->id)
-                        : null,
-                ];
-            })->values();
+            $weeklyExamPayload = [];
             $presentationPayloads = $modul->presentationDecks
                 ->sortBy(fn (DeckPresentasi $deck) => [
                     ['opening' => 0, 'after_day' => 1, 'closing' => 2][$deck->week_slot] ?? 3,
@@ -345,10 +301,10 @@ class ModulController extends Controller
                     $deck->sort_order,
                     $deck->id,
                 ])
-                ->map(function (DeckPresentasi $deck) use ($program, $modul, $weekCanOpen, $completedDayIds, $quizDone) {
+                ->map(function (DeckPresentasi $deck) use ($program, $modul, $weekCanOpen, $completedDayIds, $allDaysCompleted) {
                     $locked = match ($deck->week_slot) {
                         'after_day' => ! $weekCanOpen || ! $completedDayIds->contains($deck->module_day_id),
-                        'closing' => ! $quizDone,
+                        'closing' => ! $allDaysCompleted,
                         default => ! $weekCanOpen,
                     };
 
@@ -384,30 +340,30 @@ class ModulController extends Controller
                         ? 'Minggu ini belum terbuka untuk kloter kamu.'
                         : ($isSubscriptionLocked ? 'Preview gratis hanya membuka Week 1.' : 'Selesaikan minggu sebelumnya.')),
                 'has_content' => $hasContent,
-                'has_study_content' => $hasFlashcard || $hasQuiz || $hasDayContent,
+                'has_study_content' => $hasFlashcard || $hasDayContent,
                 'flashcard_set_id' => $flashcardSet?->id,
-                'quiz_id' => $quiz?->id,
+                'quiz_id' => null,
                 'flashcard_done' => $flashcardDone,
-                'quiz_done' => $quizDone,
-                'quiz_unlocked' => $quizUnlocked,
+                'quiz_done' => $allDaysCompleted,
+                'quiz_unlocked' => false,
                 'quiz_locked_reason' => null,
-                'passing_score' => $passingScore,
+                'passing_score' => 70,
                 'flashcard_total' => $flashcardStats['total'],
                 'flashcard_reviewed' => $flashcardStats['reviewed'],
-                'questions_count' => $weeklyExams->sum(fn (Kuis $exam) => $exam->questions->count()),
+                'questions_count' => 0,
                 'presentations_count' => $presentationCount,
                 'vocabulary_count' => $vocabularyCount,
                 'presentation_url' => $hasPresentation ? route('user.modul.program.presentasi', ['program' => $program->slug, 'module' => $modul->id]) : null,
                 'vocabulary_url' => $hasVocabulary ? route('user.modul.program.kosakata', ['program' => $program->slug, 'module' => $modul->id]) : null,
-                'quiz_url' => $quiz ? route('user.modul.quiz', $modul->id) : null,
+                'quiz_url' => null,
                 'primary_url' => $primaryUrl,
                 'primary_label' => $primaryLabel,
-                'best_score' => $weeklyExamStats->pluck('best_score')->filter(fn ($score) => $score !== null)->min(),
+                'best_score' => null,
                 'kloter_locked' => (bool) $isKloterLocked,
                 'isFinal' => $index === $moduls->count() - 1,
                 'days' => $days,
                 'presentations' => $presentationPayloads,
-                'weekly_exams' => $weeklyExamPayload,
+                'weekly_exams' => [],
                 'all_days_completed' => $allDaysCompleted,
                 'live_session' => $liveSession ? [
                     'id' => $liveSession->id,
@@ -717,36 +673,14 @@ class ModulController extends Controller
             ->with('info', 'Latihan flashcard mandiri sudah dipindahkan ke dalam kuis Day.');
     }
 
-    public function quiz(
-        $weekId,
-        AksesPremiumService $aksesPremium,
-        PembelajaranPenggunaService $learning,
-        AksesKuisPenggunaService $aksesKuis
-    ) {
-        $user = Auth::user();
-        $modul = Modul::where('status', 'published')->findOrFail($weekId);
+    public function quiz($weekId)
+    {
+        $modul = Modul::with('programPembelajaran')->findOrFail($weekId);
+        $url = $modul->programPembelajaran
+            ? route('user.modul.program', $modul->programPembelajaran->slug)
+            : route('user.kelas.index');
 
-        abort_unless($aksesPremium->bolehAksesModul($user, $modul), 403);
-
-        $quiz = $this->firstQuizFor($modul, $user->id, true);
-
-        abort_unless($quiz, 404, 'Kuis modul belum tersedia.');
-
-        $aksesKuis->abortJikaTerkunci($user, $quiz);
-
-        $payload = $learning->quizPayload($user, $quiz);
-
-        $isWeeklyExam = (bool) data_get($payload, 'quiz.is_weekly_exam');
-
-        return Inertia::render($isWeeklyExam ? 'User/Ujian/KerjakanUjian' : 'User/Kuis/KerjakanKuis', $payload + [
-            'module_flow' => true,
-            'back_url' => $modul->programPembelajaran
-                ? route('user.modul.program', $modul->programPembelajaran->slug)
-                : route('user.kelas.index'),
-            'finish_url' => $modul->programPembelajaran
-                ? route('user.modul.program', $modul->programPembelajaran->slug)
-                : route('user.kelas.index'),
-        ]);
+        return redirect($url);
     }
 
     public function checkQuestion(Request $request, Soal $question, AksesKuisPenggunaService $aksesKuis, PenilaianJawabanKuisService $penilaian)
@@ -807,27 +741,7 @@ class ModulController extends Controller
 
     private function firstQuizFor(Modul $modul, int $userId, bool $withQuestions = false): ?Kuis
     {
-        $query = Kuis::query()
-            ->where('module_id', $modul->id)
-            ->whereNull('module_day_id')
-            ->whereNotNull('exam_order')
-            ->where('status', 'published')
-            ->whereHas('questions')
-            ->with(['attempts' => fn ($attemptQuery) => $attemptQuery
-                ->where('user_id', $userId)
-                ->where('status', 'completed')])
-            ->orderBy('exam_order')
-            ->orderBy('id');
-
-        if ($withQuestions) {
-            $query->with(['questions' => fn ($query) => $query->orderBy('order')]);
-        }
-
-        $exams = $query->get();
-
-        return $exams->first(
-            fn (Kuis $exam) => ! $this->quizStats($userId, $exam)['done']
-        ) ?? $exams->first();
+        return null;
     }
 
     private function flashcardStats(int $userId, ?SetFlashcard $flashcardSet): array

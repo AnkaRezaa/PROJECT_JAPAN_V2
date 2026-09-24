@@ -33,15 +33,14 @@ class PembelajaranController extends Controller
         $aksesKuis->abortJikaTerkunci(Auth::user(), $quiz);
 
         $payload = $learning->quizPayload(Auth::user(), $quiz);
-        $isWeeklyExam = (bool) data_get($payload, 'quiz.is_weekly_exam');
         $roadmapUrl = $quiz->module?->programPembelajaran
             ? route('user.modul.program', $quiz->module->programPembelajaran->slug)
             : route('user.kelas.index');
 
         return Inertia::render(
-            $isWeeklyExam ? 'User/Ujian/KerjakanUjian' : 'User/Kuis/KerjakanKuis',
+            'User/Kuis/KerjakanKuis',
             $payload + [
-                'module_flow' => $isWeeklyExam,
+                'module_flow' => false,
                 'back_url' => $roadmapUrl,
                 'finish_url' => $roadmapUrl,
                 'learning_feedback' => UmpanBalikPembelajaran::query()

@@ -124,7 +124,6 @@ class GrammarBankService
             $quiz = Kuis::create([
                 'module_id' => $day->module_id,
                 'module_day_id' => $day->id,
-                'exam_order' => null,
                 'type' => 'grammar',
                 'time_limit' => null,
                 'passing_score' => 70,

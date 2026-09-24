@@ -20,6 +20,16 @@ class SuperAdminSistemController extends SuperAdminDasarController
                 $this->stat('Filesystem', config('filesystems.default'), 'FS'),
             ],
             'themeSettings' => $this->themeSettings(),
+            'analyticsStatus' => [
+                'gtm' => [
+                    'enabled' => (bool) config('beta.google_tag_manager.enabled'),
+                    'id' => config('beta.google_tag_manager.id'),
+                ],
+                'ga4' => [
+                    'configured' => filled(config('beta.links.ga4')),
+                    'url' => filter_var(config('beta.links.ga4'), FILTER_VALIDATE_URL) ?: null,
+                ],
+            ],
         ]);
     }
 

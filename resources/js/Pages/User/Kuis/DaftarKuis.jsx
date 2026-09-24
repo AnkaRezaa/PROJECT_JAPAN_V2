@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { ScrollIcon, KabutoIcon, ShurikenIcon, HitodamaIcon, DarumaIcon } from '@/Components/JapaneseIcons';
+import { ScrollIcon, KabutoIcon, ShurikenIcon, HitodamaIcon, DarumaIcon } from '@/Components/UI/JapaneseIcons';
 import { Head, Link } from '@inertiajs/react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import theme from '@/Components/theme/themes';

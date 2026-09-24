@@ -8,6 +8,9 @@ use App\Models\Kuis;
 use App\Models\SetFlashcard;
 use App\Services\AksesFlashcardPenggunaService;
 use App\Services\RepetisiPembelajaranService;
+use App\Services\ProgresRoadmapService;
+use App\Services\RingkasanProgresPenggunaService;
+use App\Services\XpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -53,11 +56,15 @@ class FlashcardController extends Controller
         Request $request,
         Flashcard $flashcard,
         RepetisiPembelajaranService $repetisi,
-        AksesFlashcardPenggunaService $aksesFlashcard
+        AksesFlashcardPenggunaService $aksesFlashcard,
+        XpService $xpService,
+        ProgresRoadmapService $roadmapProgress,
+        RingkasanProgresPenggunaService $summary
     ) {
         $validated = $request->validate([
             'action' => ['required', 'in:known,learning'],
             'skill' => ['nullable', 'in:recognition,writing'],
+            'completed' => ['nullable', 'boolean'],
         ]);
 
         $user = Auth::user();
@@ -69,6 +76,32 @@ class FlashcardController extends Controller
             $validated['skill'] ?? 'recognition',
         );
 
-        return redirect()->back()->with('success', 'Progres repetisi disimpan.');
+        $completion = null;
+        if ($request->boolean('completed')) {
+            $xpService->awardXP(
+                $user,
+                10,
+                'flashcard',
+                $flashcard->flashcard_set_id,
+                'Menyelesaikan sesi flashcard.'
+            );
+
+            $flashcard->loadMissing('set.day.module.programPembelajaran');
+            if ($flashcard->set) {
+                $completion = $roadmapProgress->selesaikanDariFlashcard($user, $flashcard->set);
+
+                if ($completion['day_completed'] ?? false) {
+                    $summary->forget($user);
+                }
+            }
+        }
+
+        $message = match (true) {
+            (bool) ($completion['module_completed'] ?? false) => 'Flashcard selesai. Minggu berikutnya sudah terbuka.',
+            (bool) ($completion['day_completed'] ?? false) => 'Flashcard selesai. Hari berikutnya sudah terbuka.',
+            default => 'Progres repetisi disimpan.',
+        };
+
+        return redirect()->back()->with('success', $message);
     }
 }

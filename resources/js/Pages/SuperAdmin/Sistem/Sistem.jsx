@@ -28,6 +28,7 @@ function InfoRow({ label, value }) {
 export default function System({
     stats = [],
     themeSettings = { activeTheme: DEFAULT_THEME, customTheme: {} },
+    analyticsStatus = { gtm: { enabled: false, id: null }, ga4: { configured: false, url: null } },
 }) {
     const savedTheme = themeSettings.activeTheme || DEFAULT_THEME;
     const savedCustomTheme = themeSettings.customTheme || {};
@@ -127,6 +128,14 @@ export default function System({
                                 <InfoRow label="Scope aktif" value="N3 + Gamification" />
                                 <InfoRow label="Queue" value="Database worker" />
                                 <InfoRow label="Storage" value="Public / Local" />
+                                <InfoRow
+                                    label="Google Tag Manager"
+                                    value={analyticsStatus?.gtm?.enabled ? (analyticsStatus.gtm.id || 'Aktif') : 'Non-aktif'}
+                                />
+                                <InfoRow
+                                    label="Google Analytics 4"
+                                    value={analyticsStatus?.ga4?.configured ? 'Terkoneksi' : 'Belum diatur'}
+                                />
                             </div>
                         </Card>
 

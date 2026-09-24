@@ -54,6 +54,11 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
 
+        @if (config('beta.google_tag_manager.enabled'))
+            <link rel="preconnect" href="https://www.googletagmanager.com">
+            <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+        @endif
+
         <!-- Scripts -->
         @routes
         @php

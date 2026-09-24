@@ -572,7 +572,6 @@ class AdminPresentasiController extends Controller
             'level:id,level_name',
             'programPembelajaran:id,title,slug',
             'days:id,module_id,day_number,title',
-            'weeklyExams:id,module_id,exam_order,status',
         ]);
 
         $decks = DeckPresentasi::query()
@@ -645,11 +644,6 @@ class AdminPresentasiController extends Controller
                 'day' => $deck->day,
             ]),
             'days' => $module->days->sortBy('day_number')->values(),
-            'weeklyExams' => $module->weeklyExams->map(fn ($exam) => [
-                'id' => $exam->id,
-                'exam_order' => $exam->exam_order,
-                'status' => $exam->status,
-            ])->values(),
             'createMode' => $canCreate && ($createMode || $decks->isEmpty()),
             'activePlacement' => $createMode ? $placement : ($activeDeck?->week_slot ?? $placement),
             'audienceScope' => $requestedScope,

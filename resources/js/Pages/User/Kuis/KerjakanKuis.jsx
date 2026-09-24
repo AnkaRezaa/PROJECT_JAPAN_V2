@@ -197,7 +197,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
     const [attemptError, setAttemptError] = useState(null);
     const [isSubmittingAttempt, setIsSubmittingAttempt] = useState(false);
     const [attemptSession, setAttemptSession] = useState(null);
-    const [attemptStarting, setAttemptStarting] = useState(Boolean(quiz?.is_weekly_exam));
+    const [attemptStarting, setAttemptStarting] = useState(false);
     const [learningFeedback, setLearningFeedback] = useState(learning_feedback);
     const [feedbackRating, setFeedbackRating] = useState(learning_feedback?.rating || null);
     const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
@@ -232,37 +232,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    useEffect(() => {
-        if (!quiz?.is_weekly_exam) return undefined;
 
-        let active = true;
-        const submissionToken = window.crypto?.randomUUID?.()
-            || 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
-                const random = Math.floor(Math.random() * 16);
-                const value = character === 'x' ? random : (random & 0x3) | 0x8;
-
-                return value.toString(16);
-            });
-
-        window.axios.post(route('user.attempts.start', quiz.id), {
-            submission_token: submissionToken,
-        }).then((response) => {
-            if (!active) return;
-            setAttemptSession(response.data);
-            if (response.data?.remaining_seconds !== null && response.data?.remaining_seconds !== undefined) {
-                setSecondsLeft(Number(response.data.remaining_seconds));
-            }
-        }).catch((error) => {
-            if (!active) return;
-            setAttemptError(error.response?.data?.message || 'Sesi ujian tidak dapat dimulai.');
-        }).finally(() => {
-            if (active) setAttemptStarting(false);
-        });
-
-        return () => {
-            active = false;
-        };
-    }, [quiz?.id, quiz?.is_weekly_exam]);
 
     const currentQ = questions[currentIndex];
     const currentType = currentQ?.type || 'multiple_choice';
@@ -288,7 +258,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
         ? Math.min(100, (completedOriginalQuestionIds.size / originalQuestionCount) * 100)
         : 0;
     const flashcardSchedule = useMemo(() => {
-        if (quiz?.is_weekly_exam || scoredQuestionCount <= 0) return [];
+        if (scoredQuestionCount <= 0) return [];
 
         const cardCount = Math.min(sessionFlashcards.length, scoredQuestionCount);
 
@@ -299,7 +269,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                 Math.ceil(((index + 1) * scoredQuestionCount) / (cardCount + 1)),
             ),
         }));
-    }, [quiz?.is_weekly_exam, scoredQuestionCount, sessionFlashcards]);
+    }, [scoredQuestionCount, sessionFlashcards]);
     const activeFlashcard = flashcardSchedule[flashcardIndex] || null;
     const shouldShowScheduledFlashcard = (gameOver) => (
         !gameOver
@@ -426,10 +396,6 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
 
     const submitAttempt = async ({ timeout = false } = {}) => {
         if (submitted.current || !quiz?.id) return;
-        if (quiz.is_weekly_exam && !attemptSession) {
-            setAttemptError('Sesi ujian belum siap. Muat ulang halaman sebelum mengirim jawaban.');
-            return;
-        }
         submitted.current = true;
         setIsSubmittingAttempt(true);
         setAttemptError(null);
@@ -467,7 +433,6 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
             || showResult
             || showFlashcard
             || handwritingPractice
-            || (quiz?.is_weekly_exam && (attemptStarting || !attemptSession))
         ) return undefined;
 
         const timer = window.setInterval(() => {
@@ -485,7 +450,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
         }, 1000);
 
         return () => window.clearInterval(timer);
-    }, [attemptSession, attemptStarting, handwritingPractice, hasTimeLimit, questions.length, quiz?.is_weekly_exam, showResult, showFlashcard, score]);
+    }, [handwritingPractice, hasTimeLimit, questions.length, showResult, showFlashcard, score]);
 
     const handleNext = () => {
         const gameOver = lives <= 0;

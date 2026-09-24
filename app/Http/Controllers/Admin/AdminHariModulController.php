@@ -91,7 +91,7 @@ class AdminHariModulController extends Controller
             ->mapWithKeys(fn ($id, $index) => [(int) $id => ['sort_order' => $index]])
             ->all();
 
-        $moduleDay->vocabulary()->sync($sync);
+        DB::transaction(fn () => $moduleDay->vocabulary()->sync($sync));
 
         return redirect()->back()->with('success', 'Konten untuk Day berhasil diperbarui.');
     }

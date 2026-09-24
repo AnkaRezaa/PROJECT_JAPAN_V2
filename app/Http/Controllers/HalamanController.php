@@ -31,7 +31,7 @@ class HalamanController extends Controller
             ->latest()
             ->first();
 
-        return Inertia::render('landingPage', [
+        return Inertia::render('LandingPage', [
             'programs' => $this->publicPricingPrograms($kelasPayload),
             'activePopup' => $activePopup ? [
                 'id' => $activePopup->id,

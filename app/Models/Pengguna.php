@@ -118,10 +118,6 @@ class Pengguna extends Authenticatable implements MustVerifyEmailContract
         return $this->hasMany(ProgresHariModul::class, 'user_id');
     }
 
-    public function certificates(): HasMany
-    {
-        return $this->hasMany(Sertifikat::class, 'user_id');
-    }
 
     public function achievements(): BelongsToMany
     {

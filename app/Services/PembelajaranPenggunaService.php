@@ -48,32 +48,23 @@ class PembelajaranPenggunaService
     public function quizPayload(Pengguna $user, Kuis $quiz): array
     {
         $module = $quiz->module;
-        $isWeeklyExam = $quiz->isWeeklyExam();
         $questions = $quiz->questions
             ->where('type', '!=', 'handwriting')
             ->values();
-        $questionReviews = $isWeeklyExam
-            ? collect()
-            : ReviewSoal::where('user_id', $user->id)
-                ->whereIn('question_id', $questions->pluck('id'))
-                ->get()
-                ->keyBy('question_id');
+        $questionReviews = ReviewSoal::where('user_id', $user->id)
+            ->whereIn('question_id', $questions->pluck('id'))
+            ->get()
+            ->keyBy('question_id');
 
         return [
             'quiz' => [
                 'id' => $quiz->id,
-                'title' => $isWeeklyExam
-                    ? 'Ujian '.($quiz->exam_order ?? 1).' - Minggu '.($module?->week_number ?? '')
-                    : $this->quizTitle($quiz),
-                'description' => $isWeeklyExam
-                    ? 'Evaluasi akhir untuk materi pada minggu ini.'
-                    : ($quiz->description ?? 'Kuis evaluasi modul mingguan.'),
+                'title' => $this->quizTitle($quiz),
+                'description' => $quiz->description ?? 'Kuis evaluasi materi.',
                 'type' => $quiz->type,
                 'time_limit' => $quiz->time_limit,
                 'passing_score' => $quiz->passing_score ?? 70,
                 'available_at' => $quiz->available_at?->toISOString(),
-                'is_weekly_exam' => $isWeeklyExam,
-                'exam_order' => $quiz->exam_order,
                 'lesson' => [
                     'id' => $module?->id,
                     'title' => $module?->title ?? 'Modul Mingguan',
@@ -108,7 +99,7 @@ class PembelajaranPenggunaService
             'total_points' => (int) $questions->sum(
                 fn ($question) => max(1, (int) ($question->points ?? 1))
             ),
-            'flashcards' => $isWeeklyExam ? [] : $this->quizFlashcards($user, $quiz),
+            'flashcards' => $this->quizFlashcards($user, $quiz),
         ];
     }
 

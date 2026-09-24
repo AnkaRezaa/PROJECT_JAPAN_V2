@@ -71,8 +71,7 @@ export default function LearningResourceCreateDialog({
     const selectedDay = lockContext
         ? day
         : (selectedModule?.days || []).find((item) => String(item.id) === String(form.data.module_day_id));
-    const isWeeklyExam = resourceType === 'quiz' && !selectedDay;
-    const displayLabel = isWeeklyExam ? 'Ujian' : config.label;
+    const displayLabel = config.label;
 
     const submit = (event) => {
         event.preventDefault();
@@ -80,11 +79,10 @@ export default function LearningResourceCreateDialog({
         const payload = resourceType === 'quiz'
             ? {
                 module_id: form.data.module_id,
-                module_day_id: form.data.module_day_id || null,
+                module_day_id: form.data.module_day_id,
                 type: form.data.type,
                 time_limit: form.data.time_limit || null,
                 passing_score: form.data.passing_score,
-                available_at: form.data.module_day_id ? null : form.data.available_at || null,
                 status: form.data.status,
             }
             : {
@@ -122,7 +120,7 @@ export default function LearningResourceCreateDialog({
                             <p className="text-xs font-black text-orange-700 dark:text-orange-300">{module?.program?.title || 'Kelas'}</p>
                             <p className="mt-1 text-sm font-bold text-gray-800 dark:text-gray-100">
                                 Minggu {module?.week_number || '-'}
-                                {day ? ` / Hari ${day.day_number} / ${day.title}` : ' / Ujian Mingguan'}
+                                {day ? ` / Hari ${day.day_number} / ${day.title}` : ''}
                             </p>
                         </div>
                     ) : (
@@ -157,24 +155,22 @@ export default function LearningResourceCreateDialog({
                                 <SearchableSelect
                                     value={form.data.module_day_id}
                                     onChange={(moduleDayId) => form.setData('module_day_id', moduleDayId)}
-                                    placeholder={resourceType === 'quiz' ? 'Ujian Mingguan (setelah semua Hari)' : resourceType === 'presentation' ? 'Presentasi Mingguan' : 'Pilih Day'}
+                                    placeholder={resourceType === 'presentation' ? 'Presentasi Mingguan' : 'Pilih Day'}
                                     searchPlaceholder="Cari day..."
-                                    allowClear={resourceType === 'quiz' || resourceType === 'presentation'}
-                                    clearLabel={resourceType === 'quiz' ? 'Ujian Mingguan (setelah semua Hari)' : 'Presentasi Mingguan'}
+                                    allowClear={resourceType === 'presentation'}
+                                    clearLabel="Presentasi Mingguan"
                                     options={(selectedModule?.days || []).map((item) => ({ value: item.id, label: `Day ${item.day_number} - ${item.title}`, description: `Week ${selectedModule?.week_number || '-'}` }))}
                                 />
                                 <select
                                     value={form.data.module_day_id}
                                     onChange={(event) => form.setData('module_day_id', event.target.value)}
                                     className="hidden"
-                                    required={resourceType === 'flashcard' || (resourceType === 'presentation' && form.data.week_slot === 'after_day')}
+                                    required={resourceType === 'flashcard' || resourceType === 'quiz' || (resourceType === 'presentation' && form.data.week_slot === 'after_day')}
                                 >
                                     <option value="">
-                                        {resourceType === 'quiz'
-                                            ? 'Ujian Mingguan (setelah semua Hari)'
-                                            : resourceType === 'presentation'
-                                                ? 'Presentasi Mingguan'
-                                                : 'Pilih Hari'}
+                                        {resourceType === 'presentation'
+                                            ? 'Presentasi Mingguan'
+                                            : 'Pilih Hari'}
                                     </option>
                                     {(selectedModule?.days || []).map((item) => (
                                         <option key={item.id} value={item.id}>Hari {item.day_number} · {item.title}</option>
@@ -241,12 +237,6 @@ export default function LearningResourceCreateDialog({
                                 <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Nilai Lulus</span>
                                 <input type="number" min="1" max="100" value={form.data.passing_score} onChange={(event) => form.setData('passing_score', event.target.value)} className={inputClass} required />
                             </label>
-                            {!form.data.module_day_id && (
-                                <label className="sm:col-span-2">
-                                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Dibuka Pada (opsional)</span>
-                                    <input type="datetime-local" value={form.data.available_at} onChange={(event) => form.setData('available_at', event.target.value)} className={inputClass} />
-                                </label>
-                            )}
                         </div>
                     )}
 
@@ -258,7 +248,7 @@ export default function LearningResourceCreateDialog({
                         </select>
                         {resourceType === 'quiz' && (
                             <span className="mt-1.5 block text-xs font-semibold text-gray-500">
-                                Tambahkan soal terlebih dahulu sebelum menerbitkan ujian.
+                                Tambahkan soal terlebih dahulu sebelum menerbitkan kuis.
                             </span>
                         )}
                     </label>

@@ -219,8 +219,7 @@ class QuickQuizSessionService
                 fn ($moduleQuery) => $moduleQuery->where('program_pembelajaran_id', $programId)
             ))
             ->get()
-            ->filter(fn (Kuis $quiz) => ! $quiz->isWeeklyExam()
-                && $quiz->module?->program_pembelajaran_id
+            ->filter(fn (Kuis $quiz) => $quiz->module?->program_pembelajaran_id
                 && $this->aksesPremium->punyaAksesKelas($user, $quiz->module->program_pembelajaran_id)
                 && $this->aksesKuis->status($user, $quiz)['allowed']);
 
@@ -318,7 +317,7 @@ class QuickQuizSessionService
             ->with(['quiz.module.programPembelajaran:id,title,slug', 'quiz.day:id,module_id,day_number,title,status,checkpoint_quiz_id'])
             ->find($questionId);
 
-        if (! $question?->quiz || $question->quiz->status !== 'published' || $question->quiz->isWeeklyExam()) {
+        if (! $question?->quiz || $question->quiz->status !== 'published') {
             return null;
         }
 

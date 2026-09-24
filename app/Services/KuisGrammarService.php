@@ -41,9 +41,10 @@ class KuisGrammarService
             foreach ($payload['stages'] as $stage) {
                 foreach ($stage['questions'] as $question) {
                     $normalized = $this->normalizeQuestion($stage['id'], $question);
+                    $attributes = Arr::except($normalized, ['context']);
                     $model = $quiz->questions()->updateOrCreate(
                         ['id' => $question['id'] ?? null],
-                        [...$normalized, 'order' => $order++]
+                        [...$attributes, 'order' => $order++]
                     );
                     $kept[] = $model->id;
                 }
@@ -110,9 +111,9 @@ class KuisGrammarService
         ];
     }
 
-    private function normalizeQuestion(string $stage, array $question): array
+    public function normalizeQuestion(string $stage, array $question): array
     {
-        if (! in_array($stage, self::STAGES, true) || ($question['type'] ?? $stage) !== $stage) {
+        if (! in_array($stage, self::STAGES, true) || (($question['type'] ?? $stage) !== $stage && ($question['type'] ?? '') !== 'multiple_choice')) {
             throw ValidationException::withMessages(['stages' => 'Tipe soal harus sesuai dengan stage Grammar.']);
         }
 
@@ -135,7 +136,7 @@ class KuisGrammarService
             $options['tokens'] = $tokens;
             $correctAnswer = json_encode($correctOrder, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         } else {
-            $choices = array_values(array_filter($question['choices'] ?? [], fn ($value) => filled($value)));
+            $choices = array_values(array_filter($question['choices'] ?? $question['options'] ?? [], fn ($value) => filled($value)));
             $correctAnswer = trim((string) ($question['correctAnswer'] ?? $question['correct_answer'] ?? ''));
 
             if (count($choices) < 2 || $correctAnswer === '' || ! in_array($correctAnswer, $choices, true)) {
@@ -145,14 +146,21 @@ class KuisGrammarService
             $options['choices'] = $choices;
         }
 
+        $normalizedType = match ($stage) {
+            'sentence_builder' => 'sentence_builder',
+            'transformation' => 'transformation',
+            default => 'multiple_choice',
+        };
+
         return [
-            'type' => $stage,
+            'type' => $question['type'] ?? $normalizedType,
             'stage' => $stage,
             'question_text' => trim((string) ($question['prompt'] ?? '')),
             'question_reading' => $options['source_reading'],
             'correct_answer' => $correctAnswer,
             'correct_answer_reading' => null,
             'options' => array_filter($options, fn ($value) => $value !== null),
+            'context' => $options['context'] ?? null,
             'option_readings' => null,
             'explanation' => $this->nullableText($question['explanation'] ?? $question['feedback'] ?? null),
             'explanation_reading' => null,

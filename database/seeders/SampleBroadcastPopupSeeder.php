@@ -12,7 +12,7 @@ class SampleBroadcastPopupSeeder extends Seeder
         BroadcastPopup::updateOrCreate(
             ['title' => 'Promo Spesial JLPT N5-N3: Diskon 40%!'],
             [
-                'description' => 'Akses seluruh materi JLPT, ribuan bank soal interaktif, live class mingguan, dan tryout bersertifikat dengan harga hemat.',
+                'description' => 'Akses seluruh materi JLPT, ribuan bank soal interaktif, live class mingguan, dan simulasi tryout lengkap dengan harga hemat.',
                 'type' => 'promo',
                 'badge' => 'DISKON 40%',
                 'image_path' => '/images/promo_jlpt_banner.jpg',

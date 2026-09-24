@@ -27,6 +27,96 @@ const stageMeta = {
     context_choice: { label: 'Context Choice', description: 'Pilih sesuai konteks' },
 };
 
+const samplePresets = [
+    {
+        key: 'n3-ba-hodo',
+        label: '〜ば〜ほど (N3)',
+        level: 'JLPT N3',
+        pattern: '〜ば〜ほど',
+        title: 'Semakin..., semakin...',
+        intro: {
+            meaning: 'Semakin kondisi A terjadi, semakin meningkat kondisi B',
+            formula: 'V-ば + V-辞書形 + ほど',
+            explanation: 'Menunjukkan hubungan dua hal yang berbanding lurus dan berubah seimbang.',
+            examples: [
+                {
+                    japanese: '勉強すれば | するほど | 日本語が | 上手になります',
+                    reading: 'べんきょうすればするほど、にほんごがじょうずになります',
+                    translation: 'Semakin banyak belajar, semakin mahir bahasa Jepang.',
+                },
+                {
+                    japanese: '練習すれば | するほど | 慣れてきます',
+                    reading: 'れんしゅうすればするほど、なれてきます',
+                    translation: 'Semakin sering latihan, semakin terbiasa.',
+                },
+                {
+                    japanese: '考えれば | 考えるほど | 分からなくなります',
+                    reading: 'かんがえればかんがえるほど、わからなくなります',
+                    translation: 'Semakin dipikirkan, semakin tidak mengerti.',
+                },
+            ],
+        },
+    },
+    {
+        key: 'n5-te-wa-ikenai',
+        label: '〜てはいけない (N5)',
+        level: 'JLPT N5',
+        pattern: '〜てはいけない',
+        title: 'Tidak boleh...',
+        intro: {
+            meaning: 'Larangan melakukan suatu perbuatan',
+            formula: 'V-て + はいけない',
+            explanation: 'Pola dasar untuk menyatakan larangan atau aturan formal.',
+            examples: [
+                {
+                    japanese: 'ここで | タバコを | 吸って | はいけません',
+                    reading: 'ここでたばこをすってはいけません',
+                    translation: 'Tidak boleh merokok di sini.',
+                },
+                {
+                    japanese: '教室で | 大声を | 出して | はいけません',
+                    reading: 'きょうしつでおおごえをだしてはいけません',
+                    translation: 'Tidak boleh bersuara keras di ruang kelas.',
+                },
+                {
+                    japanese: 'テスト中 | 辞書を | 見て | はいけません',
+                    reading: 'てすとちゅうじしょをみてはいけません',
+                    translation: 'Tidak boleh melihat kamus saat ujian.',
+                },
+            ],
+        },
+    },
+    {
+        key: 'n3-you-ni',
+        label: '〜ように (N3)',
+        level: 'JLPT N3',
+        pattern: '〜ように',
+        title: 'Supaya / Agar...',
+        intro: {
+            meaning: 'Melakukan usaha agar tujuan atau keadaan tertentu tercapai',
+            formula: 'V-辞書形 / V-ない形 + ように',
+            explanation: 'Digunakan dengan kata kerja non-volisional untuk menyatakan tujuan.',
+            examples: [
+                {
+                    japanese: '忘れない | ように | メモを | 取ります',
+                    reading: 'わすれないようにめもをとります',
+                    translation: 'Mencatat agar tidak lupa.',
+                },
+                {
+                    japanese: '聞こえる | ように | 大きい声で | 話してください',
+                    reading: 'きこえるようにおおきいこえではなしてください',
+                    translation: 'Tolong bicara dengan suara keras agar terdengar.',
+                },
+                {
+                    japanese: '試験に | 合格できる | ように | 毎日勉強します',
+                    reading: 'しけんにごうかくできるようにまいにちべんきょうします',
+                    translation: 'Belajar setiap hari agar bisa lulus ujian.',
+                },
+            ],
+        },
+    },
+];
+
 function makeDraft(day, defaultLevel = 'JLPT N5') {
     return {
         id: null,
@@ -124,6 +214,30 @@ function IntroEditor({ draft, onChange }) {
 
     return (
         <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-2.5 text-xs dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                <span className="font-black text-emerald-800 dark:text-emerald-300">
+                    ⚡ Muat Contoh Siap Pakai:
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                    {samplePresets.map((preset) => (
+                        <button
+                            key={preset.key}
+                            type="button"
+                            onClick={() => onChange({
+                                ...draft,
+                                level: preset.level,
+                                pattern: preset.pattern,
+                                title: preset.title,
+                                intro: clone(preset.intro),
+                            })}
+                            className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-black text-emerald-700 shadow-2xs transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-gray-900 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+                        >
+                            {preset.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <div>
                 <span className="mb-1.5 block text-xs font-black text-gray-600 dark:text-gray-300">Level JLPT</span>
                 <div className="flex flex-wrap gap-1.5">
@@ -664,7 +778,7 @@ function ReviewQuestions({
     );
 }
 
-export default function GrammarQuizBuilderDialog({ open, day, module, onClose }) {
+export default function BuilderKuisGrammar({ open, day, module, onClose }) {
     const defaultLevel = module?.program?.level?.name || 'JLPT N5';
     const [draft, setDraft] = useState(() => makeDraft(day, defaultLevel));
     const [activeStageId, setActiveStageId] = useState('transformation');

@@ -46,14 +46,14 @@ class AdminExamPortalController extends Controller
 
     public function create(Request $request): Response
     {
-        return Inertia::render('Admin/Ujian/Editor', [...$this->portal->adminPortal($request), 'exam' => null, 'mode' => 'create']);
+        return Inertia::render('Admin/Ujian/BuilderUjian', [...$this->portal->adminPortal($request), 'exam' => null, 'mode' => 'create']);
     }
 
     public function edit(Request $request, Exam $exam): Response
     {
         $data = $this->portal->adminPortal($request, $exam);
 
-        return Inertia::render('Admin/Ujian/Editor', [...$data, 'exam' => collect($data['exam_packages'])->firstWhere('id', $exam->id), 'mode' => 'edit']);
+        return Inertia::render('Admin/Ujian/BuilderUjian', [...$data, 'exam' => collect($data['exam_packages'])->firstWhere('id', $exam->id), 'mode' => 'edit']);
     }
 
     public function sessions(Request $request): Response

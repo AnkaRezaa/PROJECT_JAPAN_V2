@@ -65,17 +65,26 @@ class GamifikasiConfigService
             ->all();
     }
 
-    public function quizXpForScore(int $correctCount, int $totalQuestions): int
+    public function quizXpForScore(int|float $scoreOrCorrectCount, ?int $totalQuestions = null): int
     {
-        if ($correctCount <= 0 || $totalQuestions <= 0) {
-            return 0;
+        if ($totalQuestions !== null) {
+            if ($scoreOrCorrectCount <= 0 || $totalQuestions <= 0) {
+                return 0;
+            }
+            $percentage = (float) ($scoreOrCorrectCount / $totalQuestions);
+        } else {
+            if ($scoreOrCorrectCount <= 0) {
+                return 0;
+            }
+            $percentage = $scoreOrCorrectCount > 1.0
+                ? ((float) $scoreOrCorrectCount / 100.0)
+                : (float) $scoreOrCorrectCount;
         }
 
-        $percentage = $correctCount / $totalQuestions;
         $config = $this->quizXp();
 
         return match (true) {
-            $percentage === 1.0 => (int) Arr::get($config, 'perfect', self::DEFAULTS['quiz_xp']['perfect']),
+            $percentage >= 0.9999 => (int) Arr::get($config, 'perfect', self::DEFAULTS['quiz_xp']['perfect']),
             $percentage >= 0.8 => (int) Arr::get($config, 'score_80', self::DEFAULTS['quiz_xp']['score_80']),
             $percentage >= 0.6 => (int) Arr::get($config, 'score_60', self::DEFAULTS['quiz_xp']['score_60']),
             default => (int) Arr::get($config, 'participation', self::DEFAULTS['quiz_xp']['participation']),

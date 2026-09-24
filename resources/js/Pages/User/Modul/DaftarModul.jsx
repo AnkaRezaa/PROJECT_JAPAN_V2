@@ -569,7 +569,7 @@ function weeklyMainItems(week) {
         detail: `${presentation.slides_count} slide`,
         status: presentation.locked ? 'locked' : 'active',
         lockReason: presentation.placement === 'closing'
-            ? 'Selesaikan ujian Mingguan untuk membuka presentasi ini.'
+            ? 'Selesaikan semua Day untuk membuka presentasi ini.'
             : presentation.placement === 'after_day'
                 ? 'Selesaikan Day terkait untuk membuka presentasi ini.'
                 : 'Minggu ini belum terbuka.',
@@ -612,43 +612,6 @@ function weeklyMainItems(week) {
                 `Setelah Hari ${day.day_number}`,
             )));
     });
-
-    const exams = week.weekly_exams || [];
-
-    if (exams.length > 0) {
-        exams.forEach((exam, examIndex) => {
-            const scoreDetail = exam.best_score === null
-                ? `Belum dikerjakan · Target ${exam.passing_score}`
-                : exam.done
-                    ? `Nilai ${exam.best_score} · Lulus`
-                    : `Nilai ${exam.best_score} · Target ${exam.passing_score}`;
-
-            items.push({
-                key: `exam-${exam.id}`,
-                kind: 'exam',
-                level: 'root',
-                eyebrow: `Evaluasi Minggu ${week.week_number}`,
-                title: exam.title || `Ujian ${examIndex + 1}`,
-                detail: scoreDetail,
-                status: exam.done ? 'done' : exam.locked ? 'locked' : 'active',
-                lockReason: exam.lock_reason,
-                href: exam.url,
-                mainPosition: items.length % 2 === 0 ? 'left' : 'right',
-            });
-        });
-    } else {
-        items.push({
-            key: `exam-empty-${week.id}`,
-            kind: 'exam',
-            level: 'root',
-            eyebrow: `Evaluasi Minggu ${week.week_number}`,
-            title: 'Ujian Mingguan',
-            detail: 'Admin belum menambahkan ujian Mingguan.',
-            status: 'unavailable',
-            href: null,
-            mainPosition: 'center',
-        });
-    }
 
     presentations
         .filter((presentation) => presentation.placement === 'closing')

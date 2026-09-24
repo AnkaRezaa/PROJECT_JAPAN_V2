@@ -144,7 +144,6 @@ class ProgresController extends Controller
             ->findOrFail($validated['quiz_id']);
 
         $module = $quiz->module;
-        $isWeeklyExam = $quiz->isWeeklyExam();
         $isGrammar = $quiz->isGrammar();
         $scoredQuestionIds = $quiz->questions
             ->where('type', '!=', 'handwriting')
@@ -154,7 +153,7 @@ class ProgresController extends Controller
         $aksesKuis->abortJikaTerkunci($user, $quiz);
         abort_if($quiz->questions->isEmpty(), 422, 'Kuis belum memiliki soal.');
         abort_if(
-            ($isWeeklyExam || $isGrammar) && (empty($validated['attempt_id']) || empty($validated['submission_token'])),
+            $isGrammar && (empty($validated['attempt_id']) || empty($validated['submission_token'])),
             422,
             'Sesi kuis belum dimulai.'
         );
@@ -173,10 +172,10 @@ class ProgresController extends Controller
             ->where('source_id', $quiz->id)
             ->exists();
 
-        $attempt = DB::transaction(function () use ($validated, $quiz, $user, $repetisi, $gamifikasiConfig, $isWeeklyExam, $isGrammar, $rewardAlreadyGranted, &$wrongAttemptCount, &$answeredUniqueCount, &$attemptAlreadyCompleted) {
+        $attempt = DB::transaction(function () use ($validated, $quiz, $user, $repetisi, $gamifikasiConfig, $isGrammar, $rewardAlreadyGranted, &$wrongAttemptCount, &$answeredUniqueCount, &$attemptAlreadyCompleted) {
             $attempt = null;
 
-            if ($isWeeklyExam || $isGrammar) {
+            if ($isGrammar) {
                 $attempt = PengerjaanKuis::query()
                     ->whereKey($validated['attempt_id'])
                     ->where('user_id', $user->id)
@@ -225,9 +224,9 @@ class ProgresController extends Controller
                     : 0;
             });
             $score = $totalPoints > 0 ? (int) round(($earnedPoints / $totalPoints) * 100) : 0;
-            $xpEarned = $isWeeklyExam || $rewardAlreadyGranted
+            $xpEarned = $rewardAlreadyGranted
                 ? 0
-                : $gamifikasiConfig->quizXpForScore($correctCount, $totalQuestions);
+                : $gamifikasiConfig->quizXpForScore($score);
             $wrongAttemptCount = $answerEvents
                 ->filter(function ($answer) use ($questionMap) {
                     $question = $questionMap->get((int) $answer['question_id']);
@@ -279,22 +278,20 @@ class ProgresController extends Controller
                 });
             }
 
-            if (! $isWeeklyExam) {
-                $answerEvents->each(function ($answer) use ($questionMap, $user, $quiz, $repetisi) {
-                    $question = $questionMap->get((int) $answer['question_id']);
+            $answerEvents->each(function ($answer) use ($questionMap, $user, $quiz, $repetisi) {
+                $question = $questionMap->get((int) $answer['question_id']);
 
-                    if (! $question) {
-                        return;
-                    }
+                if (! $question) {
+                    return;
+                }
 
-                    $repetisi->catatJawabanSoal(
-                        $user,
-                        $question,
-                        $this->penilaian->benar($question, $answer['answer_text'] ?? '', $answer['answer_payload'] ?? []),
-                        $quiz
-                    );
-                });
-            }
+                $repetisi->catatJawabanSoal(
+                    $user,
+                    $question,
+                    $this->penilaian->benar($question, $answer['answer_text'] ?? '', $answer['answer_payload'] ?? []),
+                    $quiz
+                );
+            });
 
             return $attempt;
         });
@@ -333,50 +330,28 @@ class ProgresController extends Controller
         }
 
         if ($module) {
-            $passed = $isWeeklyExam
-                ? $scoredQuestionCount > 0 && $attempt->score >= $passingScore
-                : ($isGrammar
-                    ? $scoredQuestionCount > 0
-                        && $attempt->score >= $passingScore
-                        && $answeredUniqueCount >= $scoredQuestionCount
-                    : (
-                        $scoredQuestionCount > 0
-                        &&
-                        $attempt->score >= $passingScore
-                        && $wrongAttemptCount < $maxLives
-                        && $answeredUniqueCount >= $scoredQuestionCount
-                        && ! ($validated['finished_by_timeout'] ?? false)
-                    ));
+            $passed = $isGrammar
+                ? $scoredQuestionCount > 0
+                    && $attempt->score >= $passingScore
+                    && $answeredUniqueCount >= $scoredQuestionCount
+                : (
+                    $scoredQuestionCount > 0
+                    &&
+                    $attempt->score >= $passingScore
+                    && $wrongAttemptCount < $maxLives
+                    && $answeredUniqueCount >= $scoredQuestionCount
+                    && ! ($validated['finished_by_timeout'] ?? false)
+                );
 
-            if ($passed) {
-                if ($quiz->module_day_id) {
-                    $result = $roadmapProgress->selesaikanDariKuis($user, $quiz, (int) $attempt->score);
-                    $completedDay = $result['day_completed'];
-                    $completedModule = $result['module_completed'];
-                    $wasCompleted = $result['was_module_completed'];
-                } elseif ($isWeeklyExam) {
-                    $result = $roadmapProgress->selesaikanDariUjianMingguan($user, $quiz, (int) $attempt->score);
-                    $completedModule = $result['module_completed'];
-                    $wasCompleted = $result['was_module_completed'];
-                } else {
-                    $progress = Progres::firstOrNew([
-                        'user_id' => $user->id,
-                        'module_id' => $module->id,
-                    ]);
-                    $wasCompleted = (bool) $progress->completed_at;
-                    $progress->score = max((int) ($progress->score ?? 0), (int) $attempt->score);
-                    $progress->completed_at = $progress->completed_at ?: now();
-                    $progress->save();
-                    $completedModule = true;
-                }
-            }
-
-            if ($completedModule && ! $wasCompleted && ! $quiz->module_day_id && ! $isWeeklyExam) {
-                $roadmapProgress->notifyWeekUnlocked($user, $module, $attempt->score);
+            if ($passed && $quiz->module_day_id) {
+                $result = $roadmapProgress->selesaikanDariKuis($user, $quiz, (int) $attempt->score);
+                $completedDay = $result['day_completed'];
+                $completedModule = $result['module_completed'];
+                $wasCompleted = $result['was_module_completed'];
             }
         }
 
-        if (! $isWeeklyExam && $scoredQuestionCount > 0) {
+        if ($scoredQuestionCount > 0) {
             event(new KuisSelesai($user, $quiz->id, $attempt->score, $attempt->xp_earned));
         }
         $summary->forget($user);
@@ -404,29 +379,23 @@ class ProgresController extends Controller
                 'wrong_attempt_count' => $wrongAttemptCount,
                 'passing_score' => $passingScore,
                 'finished_by_timeout' => (bool) ($validated['finished_by_timeout'] ?? false),
-                'answer_review' => $isWeeklyExam ? $this->attemptReview($attempt, $quiz) : [],
+                'answer_review' => [],
                 'next_url' => $finishUrl,
-                'message' => $isWeeklyExam
+                'message' => $isGrammar
                     ? ($passed
                         ? ($completedModule
-                            ? 'Semua ujian lulus. Week berikutnya sudah terbuka.'
-                            : 'Ujian ini lulus. Selesaikan ujian Mingguan lainnya untuk menutup Week.')
-                        : 'Hasil ujian tersimpan. Nilai belum mencapai batas kelulusan.')
-                    : ($isGrammar
-                        ? ($passed
-                            ? ($completedModule
-                                ? 'Lesson Grammar lulus. Week selesai dan roadmap berikutnya terbuka.'
-                                : ($completedDay
-                                    ? 'Lesson Grammar lulus. Day berikutnya sudah terbuka.'
-                                    : 'Lesson Grammar lulus. Selesaikan kebutuhan Day lainnya.'))
-                            : 'Hasil Grammar tersimpan. Ulangi lesson untuk meningkatkan skor.')
-                        : ($passed
-                            ? ($completedModule
-                                ? 'Kuis lulus. Week selesai dan roadmap berikutnya terbuka.'
-                                : ($completedDay
-                                    ? 'Kuis lulus. Day berikutnya sudah terbuka.'
-                                    : 'Kuis lulus. Selesaikan kebutuhan Day lainnya.'))
-                            : 'Kuis tersimpan. Ulangi sampai skor dan mastery cukup.')),
+                            ? 'Lesson Grammar lulus. Week selesai dan roadmap berikutnya terbuka.'
+                            : ($completedDay
+                                ? 'Lesson Grammar lulus. Day berikutnya sudah terbuka.'
+                                : 'Lesson Grammar lulus. Selesaikan kebutuhan Day lainnya.'))
+                        : 'Hasil Grammar tersimpan. Ulangi lesson untuk meningkatkan skor.')
+                    : ($passed
+                        ? ($completedModule
+                            ? 'Kuis lulus. Week selesai dan roadmap berikutnya terbuka.'
+                            : ($completedDay
+                                ? 'Kuis lulus. Day berikutnya sudah terbuka.'
+                                : 'Kuis lulus. Selesaikan kebutuhan Day lainnya.'))
+                        : 'Kuis tersimpan. Ulangi sampai skor dan mastery cukup.'),
             ]);
         }
 

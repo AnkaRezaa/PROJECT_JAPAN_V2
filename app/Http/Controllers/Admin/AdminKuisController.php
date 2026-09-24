@@ -40,18 +40,9 @@ class AdminKuisController extends Controller
         $validated['status'] = 'draft';
 
         $quiz = DB::transaction(function () use ($validated) {
-            $module = Modul::query()->lockForUpdate()->findOrFail($validated['module_id']);
+            Modul::query()->lockForUpdate()->findOrFail($validated['module_id']);
 
-            $validated['exam_order'] = empty($validated['module_day_id'])
-                ? ((int) Kuis::query()
-                    ->where('module_id', $module->id)
-                    ->whereNotNull('exam_order')
-                    ->max('exam_order')) + 1
-                : null;
-
-            $quiz = Kuis::create($validated);
-
-            return $quiz;
+            return Kuis::create($validated);
         });
 
         if ($quiz->status === 'published') {
@@ -81,25 +72,9 @@ class AdminKuisController extends Controller
         }
 
         DB::transaction(function () use ($quiz, $validated) {
-            $oldModuleId = $quiz->module_id;
-            $wasWeeklyExam = $quiz->isWeeklyExam();
-            $newModule = Modul::query()->lockForUpdate()->findOrFail($validated['module_id']);
-            $becomesWeeklyExam = empty($validated['module_day_id']);
-
-            $validated['exam_order'] = $becomesWeeklyExam
-                ? ($wasWeeklyExam && (int) $oldModuleId === (int) $newModule->id
-                    ? $quiz->exam_order
-                    : ((int) Kuis::query()
-                        ->where('module_id', $newModule->id)
-                        ->whereNotNull('exam_order')
-                        ->max('exam_order')) + 1)
-                : null;
+            Modul::query()->lockForUpdate()->findOrFail($validated['module_id']);
 
             $quiz->update($validated);
-
-            if ($wasWeeklyExam && ((int) $oldModuleId !== (int) $quiz->module_id || ! $becomesWeeklyExam)) {
-                $this->renumberWeeklyExams((int) $oldModuleId);
-            }
         });
 
         if ($oldStatus !== 'published' && $quiz->status === 'published') {
@@ -119,7 +94,7 @@ class AdminKuisController extends Controller
 
         if ($validated['status'] === 'published' && ! $quiz->questions()->exists()) {
             throw ValidationException::withMessages([
-                'status' => 'Ujian tanpa soal tidak dapat dipublikasikan.',
+                'status' => 'Kuis tanpa soal tidak dapat dipublikasikan.',
             ]);
         }
 
@@ -139,14 +114,7 @@ class AdminKuisController extends Controller
         $dayId = $quiz->module_day_id;
 
         DB::transaction(function () use ($quiz) {
-            $moduleId = (int) $quiz->module_id;
-            $wasWeeklyExam = $quiz->isWeeklyExam();
-
             $quiz->delete();
-
-            if ($wasWeeklyExam) {
-                $this->renumberWeeklyExams($moduleId);
-            }
         });
 
         return $module
@@ -191,10 +159,9 @@ class AdminKuisController extends Controller
                 ->orderBy('order'),
         ]);
 
-        $isWeeklyExam = $quiz->isWeeklyExam();
         $flashcardWorkspace = null;
 
-        if (! $isWeeklyExam && $quiz->module_day_id) {
+        if ($quiz->module_day_id) {
             $vocabularyQuery = Kosakata::query()
                 ->where(function ($query) use ($quiz) {
                     $query->whereNull('module_id')
@@ -237,14 +204,10 @@ class AdminKuisController extends Controller
             ];
         }
 
-        return Inertia::render($isWeeklyExam ? 'Admin/Ujian/BuilderUjian' : 'Admin/Kuis/BuilderKuis', [
+        return Inertia::render('Admin/Kuis/BuilderKuisKosakata', [
             'quiz' => [
                 'id' => $quiz->id,
-                'title' => $isWeeklyExam
-                    ? 'Ujian '.($quiz->exam_order ?? 1).' - Minggu '.($quiz->module?->week_number ?? '')
-                    : 'Kuis '.($quiz->day?->title ?? $quiz->module?->title ?? ''),
-                'is_weekly_exam' => $isWeeklyExam,
-                'exam_order' => $quiz->exam_order,
+                'title' => 'Kuis '.($quiz->day?->title ?? $quiz->module?->title ?? ''),
                 'attempt_count' => $quiz->attempts()->count(),
                 'type' => $quiz->type,
                 'time_limit' => $quiz->time_limit,
@@ -468,22 +431,5 @@ class AdminKuisController extends Controller
             $url,
             ['quiz_id' => $quiz->id, 'module_id' => $quiz->module_id]
         );
-    }
-
-    private function renumberWeeklyExams(int $moduleId): void
-    {
-        Kuis::query()
-            ->where('module_id', $moduleId)
-            ->whereNotNull('exam_order')
-            ->orderBy('exam_order')
-            ->orderBy('id')
-            ->get()
-            ->each(function (Kuis $exam, int $index) {
-                $expectedOrder = $index + 1;
-
-                if ((int) $exam->exam_order !== $expectedOrder) {
-                    $exam->update(['exam_order' => $expectedOrder]);
-                }
-            });
     }
 }

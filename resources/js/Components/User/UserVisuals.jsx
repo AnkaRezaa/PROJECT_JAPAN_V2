@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import theme from '@/Components/theme/themes';
-import { DarumaIcon, SakuraIcon, ToriiIcon, KabutoIcon, ShurikenIcon, ScrollIcon, HitodamaIcon } from '@/Components/JapaneseIcons';
+import { DarumaIcon, SakuraIcon, ToriiIcon, KabutoIcon, ShurikenIcon, ScrollIcon, HitodamaIcon } from '@/Components/UI/JapaneseIcons';
 
 const themeGradient = theme.ctaBg || 'from-brand-600 to-brand-700';
 

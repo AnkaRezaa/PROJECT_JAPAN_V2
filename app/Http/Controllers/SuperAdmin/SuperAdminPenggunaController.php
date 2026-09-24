@@ -102,7 +102,6 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
         $user->load([
             'progress.module.level',
             'attempts.quiz.module.level',
-            'certificates.level',
             'kloterBelajar.programPembelajaran',
             'subscriptions.paymentPlan',
         ]);
@@ -169,9 +168,6 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
             ]),
             'rewardHistory' => LogReward::query()->where('user_id', $user->id)->latest()->take(10)->get()->map(fn (LogReward $log) => [
                 'id' => $log->id, 'description' => $log->description, 'source_type' => $log->source_type, 'xp_amount' => $log->xp_amount, 'created_at' => $log->created_at->format('d M Y H:i'),
-            ]),
-            'certificates' => $user->certificates->map(fn ($certificate) => [
-                'id' => $certificate->id, 'level' => $certificate->level?->level_name, 'certificate_number' => $certificate->certificate_number, 'issued_at' => optional($certificate->issued_at)->format('d M Y'),
             ]),
         ]);
     }

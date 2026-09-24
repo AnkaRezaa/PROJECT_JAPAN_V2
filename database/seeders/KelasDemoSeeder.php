@@ -133,7 +133,6 @@ class KelasDemoSeeder extends Seeder
                     $quiz = Kuis::updateOrCreate(
                         ['module_id' => $module->id, 'module_day_id' => $day->id],
                         [
-                            'exam_order' => null,
                             'type' => 'multiple_choice',
                             'time_limit' => 420,
                             'passing_score' => 70,
@@ -146,7 +145,6 @@ class KelasDemoSeeder extends Seeder
                     return ['day' => $day, 'vocabulary' => $vocabulary];
                 })->values();
 
-                $this->seedWeeklyExam($module, $days);
                 $this->seedSharedPresentations($module, $weekData, $days, $globalAdmin);
 
                 if ($programData['slug'] === self::MENTOR_SLUG && $weekIndex === 0 && $mentor) {
@@ -189,46 +187,6 @@ class KelasDemoSeeder extends Seeder
         Soal::where('quiz_id', $quiz->id)->where('order', '>', count($vocabulary))->delete();
     }
 
-    private function seedWeeklyExam(Modul $module, $days): void
-    {
-        $exam = Kuis::updateOrCreate(
-            ['module_id' => $module->id, 'exam_order' => 1],
-            [
-                'module_day_id' => null,
-                'type' => 'weekly_exam',
-                'time_limit' => 900,
-                'passing_score' => 70,
-                'status' => 'published',
-            ]
-        );
-
-        $words = $days
-            ->flatMap(fn (array $day) => $day['vocabulary']->take(2))
-            ->values();
-        $meaningPool = $words->pluck('meaning_id')->values();
-
-        $words->each(function (Kosakata $word, int $index) use ($exam, $meaningPool) {
-            $options = collect([$word->meaning_id])
-                ->merge($meaningPool->reject(fn ($meaning) => $meaning === $word->meaning_id))
-                ->take(4)
-                ->values()
-                ->all();
-
-            Soal::updateOrCreate(
-                ['quiz_id' => $exam->id, 'order' => $index + 1],
-                [
-                    'type' => 'multiple_choice',
-                    'question_text' => "Pilih arti yang tepat untuk {$word->word}.",
-                    'correct_answer' => $word->meaning_id,
-                    'options' => $options,
-                    'explanation' => "{$word->word} berarti {$word->meaning_id}.",
-                    'points' => 1,
-                ]
-            );
-        });
-        Soal::where('quiz_id', $exam->id)->where('order', '>', $words->count())->delete();
-    }
-
     private function seedSharedPresentations(Modul $module, array $weekData, $days, ?Pengguna $creator): void
     {
         $placements = [
@@ -249,7 +207,7 @@ class KelasDemoSeeder extends Seeder
             [
                 'key' => 'closing',
                 'title' => 'Penutup - '.$weekData['title'],
-                'description' => 'Rangkuman dan tindak lanjut setelah ujian mingguan.',
+                'description' => 'Rangkuman dan penutup setelah menyelesaikan seluruh Day.',
                 'day_id' => null,
                 'sort_order' => 2,
             ],
@@ -341,7 +299,7 @@ class KelasDemoSeeder extends Seeder
             [
                 'slug' => self::MANDIRI_SLUG,
                 'title' => 'JLPT N3 Mandiri',
-                'description' => 'Belajar mandiri melalui roadmap Week dan Day dengan repetisi, kuis, serta ujian mingguan.',
+                'description' => 'Belajar mandiri melalui roadmap Week dan Day dengan presentasi, flashcard, dan kuis harian.',
                 'instructor_name' => 'Tim Akademik TOKU-UP',
                 'thumbnail_url' => '/images/kelas-n3-mingguan.jpg',
             ],

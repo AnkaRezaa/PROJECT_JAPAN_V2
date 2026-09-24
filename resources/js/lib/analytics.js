@@ -25,7 +25,23 @@ export function setAnalyticsConsent(value) {
 
 export function initializeAnalytics() {
     const { enabled, id } = analyticsConfig();
-    if (initialized || !enabled || !/^GTM-[A-Z0-9]+$/.test(String(id || '')) || getAnalyticsConsent() !== 'granted') {
+    const cleanId = String(id || '').trim();
+    const consent = getAnalyticsConsent();
+
+    if (initialized) return true;
+    if (!enabled) return false;
+
+    if (!/^GTM-[A-Z0-9]+$/i.test(cleanId)) {
+        if (import.meta.env.DEV) {
+            console.warn('[Analytics] GTM ID tidak valid atau belum diisi:', id);
+        }
+        return false;
+    }
+
+    if (consent !== 'granted') {
+        if (import.meta.env.DEV) {
+            console.info('[Analytics] Inisialisasi GTM ditunda menunggu consent user. Status saat ini:', consent);
+        }
         return false;
     }
 
@@ -34,8 +50,8 @@ export function initializeAnalytics() {
 
     const script = document.createElement('script');
     script.async = true;
-    script.src = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(id)}`;
-    script.dataset.tokuUpGtm = id;
+    script.src = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(cleanId)}`;
+    script.dataset.tokuUpGtm = cleanId;
     document.head.appendChild(script);
     initialized = true;
 

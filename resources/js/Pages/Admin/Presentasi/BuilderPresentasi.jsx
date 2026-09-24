@@ -345,9 +345,9 @@ const parseSlotKey = (slotKey) => slotKey.startsWith('after_day:')
     ? { week_slot: 'after_day', module_day_id: Number(slotKey.split(':')[1]) }
     : { week_slot: slotKey === 'closing' ? 'closing' : 'opening', module_day_id: null };
 
-const slotLabel = (slotKey, days, hasExam) => {
+const slotLabel = (slotKey, days) => {
     if (slotKey === 'opening') return days.length > 0 ? 'Sebelum Hari 1' : 'Awal Week';
-    if (slotKey === 'closing') return hasExam ? 'Setelah ujian mingguan' : 'Akhir Week';
+    if (slotKey === 'closing') return 'Akhir Week';
 
     const day = days.find((item) => Number(item.id) === Number(slotKey.split(':')[1]));
     return day ? `Setelah Hari ${day.day_number}` : 'Setelah Hari';
@@ -428,7 +428,7 @@ function TimelineAnchor({ eyebrow, title, tone = 'day' }) {
     );
 }
 
-function WeekPlacementEditor({ days, weeklyExams, decks, draft = null, selectedDeckId = null, busy = false, onMoveDeck, onMoveDraft, onOpenDeck }) {
+function WeekPlacementEditor({ days, decks, draft = null, selectedDeckId = null, busy = false, onMoveDeck, onMoveDraft, onOpenDeck }) {
     const [activeItem, setActiveItem] = useState(null);
     const [moveMenuId, setMoveMenuId] = useState(null);
     const sensors = useSensors(
@@ -462,7 +462,7 @@ function WeekPlacementEditor({ days, weeklyExams, decks, draft = null, selectedD
 
         return (
             <div key={slotKey} className="ml-4 border-l-2 border-gray-200 pl-4 dark:border-gray-700 sm:ml-6 sm:pl-5">
-                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.12em] text-gray-400">{slotLabel(slotKey, days, weeklyExams.length > 0)}</p>
+                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.12em] text-gray-400">{slotLabel(slotKey, days)}</p>
                 {items.map((item, index) => {
                     const itemId = item.isDraft ? 'draft' : `deck:${item.id}`;
                     return (
@@ -483,7 +483,7 @@ function WeekPlacementEditor({ days, weeklyExams, decks, draft = null, selectedD
                                     )}
                                     {slotKeys.map((targetSlotKey) => (
                                         <button key={targetSlotKey} type="button" onClick={() => moveItem(item, targetSlotKey)} className={`rounded-md px-3 py-2 text-left text-xs font-bold transition ${targetSlotKey === slotKey ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300' : 'bg-white text-gray-700 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800'}`}>
-                                            {slotLabel(targetSlotKey, days, weeklyExams.length > 0)}
+                                            {slotLabel(targetSlotKey, days)}
                                         </button>
                                     ))}
                                 </div>
@@ -518,7 +518,6 @@ function WeekPlacementEditor({ days, weeklyExams, decks, draft = null, selectedD
                         {renderSlot(`after_day:${day.id}`)}
                     </React.Fragment>
                 ))}
-                {weeklyExams.map((exam) => <TimelineAnchor key={exam.id} eyebrow="Evaluasi" title={`Ujian Mingguan ${exam.exam_order}`} tone="exam" />)}
                 {renderSlot('closing')}
                 <TimelineAnchor eyebrow="Selesai" title="Akhir Week" />
             </div>
@@ -538,7 +537,6 @@ export default function BuilderPresentasi({
     deck = null,
     decks = [],
     days = [],
-    weeklyExams = [],
     module = null,
     createMode = false,
     activePlacement = 'opening',
@@ -1145,7 +1143,6 @@ export default function BuilderPresentasi({
                                 <p className="mb-4 text-sm font-medium text-gray-600 dark:text-gray-400">Geser presentasi ke celah yang sesuai. Perubahan posisi langsung disimpan tanpa mengubah isi slide.</p>
                                 <WeekPlacementEditor
                                     days={days}
-                                    weeklyExams={weeklyExams}
                                     decks={timelineDecks}
                                     selectedDeckId={deck.id}
                                     busy={isPositionSaving}
@@ -1201,7 +1198,7 @@ export default function BuilderPresentasi({
                                         <p className="text-[10px] font-black uppercase tracking-[0.12em] text-gray-400">Pengaturan presentasi</p>
                                         <div className="rounded-lg bg-gray-50 px-3 py-2.5 dark:bg-gray-950">
                                             <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Posisi di Week</p>
-                                            <p className="mt-0.5 text-xs font-black text-gray-900 dark:text-white">{slotLabel(deckSlotKey({ week_slot: deckPlacement, module_day_id: deckDayId }), days, weeklyExams.length > 0)}</p>
+                                            <p className="mt-0.5 text-xs font-black text-gray-900 dark:text-white">{slotLabel(deckSlotKey({ week_slot: deckPlacement, module_day_id: deckDayId }), days)}</p>
                                         </div>
                                         <button type="button" onClick={() => { setShowDeckSettings(false); setShowPlacementEditor(true); }} className="h-10 w-full rounded-lg border border-orange-200 text-xs font-black text-orange-700 transition hover:bg-orange-50 dark:border-orange-900 dark:text-orange-300 dark:hover:bg-orange-950/30">
                                             Atur posisi di alur Week
@@ -1357,7 +1354,7 @@ export default function BuilderPresentasi({
                             </label>
                             {!isMentorDeck && <div className="mt-4 rounded-lg bg-gray-100 px-3 py-2.5 dark:bg-gray-900">
                                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Posisi terpilih</p>
-                                <p className="mt-0.5 text-xs font-black text-gray-900 dark:text-white">{slotLabel(draftSlotKey, days, weeklyExams.length > 0)}</p>
+                                <p className="mt-0.5 text-xs font-black text-gray-900 dark:text-white">{slotLabel(draftSlotKey, days)}</p>
                             </div>}
                             <button
                                 type="button"
@@ -1379,7 +1376,6 @@ export default function BuilderPresentasi({
                             </div>
                             <WeekPlacementEditor
                                 days={days}
-                                weeklyExams={weeklyExams}
                                 decks={timelineDecks}
                                 draft={{ isDraft: true, title: newDeckTitle || 'Presentasi baru', slotKey: draftSlotKey, sort_order: draftSortOrder }}
                                 busy={isPositionSaving}

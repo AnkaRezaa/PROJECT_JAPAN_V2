@@ -12,13 +12,14 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import CloseIcon from '@mui/icons-material/Close';
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
 
-import PaymentMethodSelector from './Components/PaymentMethodSelector';
-import VirtualAccountView from './Components/VirtualAccountView';
-import QrisView from './Components/QrisView';
-import EWalletView from './Components/EWalletView';
-import ConvenienceStoreView from './Components/ConvenienceStoreView';
-import PayLaterView from './Components/PayLaterView';
-import PaymentCountdownTimer from './Components/PaymentCountdownTimer';
+import PaymentMethodSelector from '@/Components/Features/Checkout/PaymentMethodSelector';
+import VirtualAccountView from '@/Components/Features/Checkout/VirtualAccountView';
+import QrisView from '@/Components/Features/Checkout/QrisView';
+import EWalletView from '@/Components/Features/Checkout/EWalletView';
+import ConvenienceStoreView from '@/Components/Features/Checkout/ConvenienceStoreView';
+import PayLaterView from '@/Components/Features/Checkout/PayLaterView';
+import PaymentCountdownTimer from '@/Components/Features/Checkout/PaymentCountdownTimer';
+
 
 const statusPresentation = {
   pending: {

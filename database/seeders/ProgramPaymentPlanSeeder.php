@@ -37,7 +37,7 @@ class ProgramPaymentPlanSeeder extends Seeder
                     'Roadmap 3 Week dan 9 Day',
                     'PPT materi kelas',
                     'Kosakata dan repetisi',
-                    'Kuis harian dan ujian mingguan',
+                    'Kuis checkpoint harian',
                 ],
                 'is_active' => true,
             ]
@@ -55,7 +55,7 @@ class ProgramPaymentPlanSeeder extends Seeder
                 'features' => [
                     'Roadmap 3 Week dan 9 Day',
                     'PPT materi kelas',
-                    'Kuis harian dan ujian mingguan',
+                    'Kuis checkpoint harian',
                     'Kloter dan pendampingan mentor',
                     'Ruang kelas live',
                 ],

@@ -102,9 +102,6 @@ class AdminModulController extends Controller
                 ->select(['id', 'module_id', 'module_day_id', 'week_slot', 'sort_order', 'title', 'status'])
                 ->with('day:id,module_id,day_number,title')
                 ->withCount('slides'),
-            'weeklyExams' => fn ($quizQuery) => $quizQuery
-                ->select(['id', 'module_id', 'module_day_id', 'exam_order', 'type', 'passing_score', 'available_at', 'status'])
-                ->withCount(['questions', 'attempts']),
             'days' => fn ($dayQuery) => $dayQuery
                 ->select([
                     'id',
@@ -174,17 +171,7 @@ class AdminModulController extends Controller
             'weekly_presentations' => $module->presentationDecks
                 ->map(fn ($deck) => $this->presentationPayload($deck))
                 ->values(),
-            'weekly_exams' => $module->weeklyExams->map(fn (Kuis $exam) => [
-                'id' => $exam->id,
-                'title' => 'Ujian '.$exam->exam_order,
-                'exam_order' => $exam->exam_order,
-                'type' => $exam->type,
-                'status' => $exam->status,
-                'passing_score' => $exam->passing_score,
-                'available_at' => $exam->available_at?->toISOString(),
-                'item_count' => $exam->questions_count,
-                'attempt_count' => $exam->attempts_count,
-            ])->values(),
+            'weekly_exams' => [],
             'days' => $module->days->map(function ($day) {
                 $publishedFlashcardCount = $day->flashcardSets
                     ->where('status', 'published')

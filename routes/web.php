@@ -43,7 +43,6 @@ use App\Http\Controllers\User\ProgresController;
 use App\Http\Controllers\User\QuickQuizController;
 use App\Http\Controllers\User\ReviewController;
 use App\Http\Controllers\User\RuangKelasLiveController as UserRuangKelasLiveController;
-use App\Http\Controllers\User\SertifikatController;
 use App\Http\Controllers\User\TargetUjianPenggunaController;
 use App\Http\Controllers\User\UmpanBalikPembelajaranController;
 use App\Services\AksesPremiumService;
@@ -358,7 +357,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/modul/program/{program:slug}/kosakata', [ModulController::class, 'kosakata'])->name('modul.program.kosakata');
         Route::get('/modul/program/{program:slug}/presentasi', [ModulController::class, 'presentasi'])->name('modul.program.presentasi');
         Route::get('/modul/{week}', [ModulController::class, 'lesson'])->name('modul.lesson');
-        Route::get('/modul/{week}/quiz', [ModulController::class, 'quiz'])->name('modul.quiz');
+        Route::redirect('/modul/{week}/quiz', '/user/kelas')->name('modul.quiz');
         Route::post('/questions/{question}/check', [ModulController::class, 'checkQuestion'])->middleware('throttle:learning-actions')->name('questions.check');
         Route::get('/news', [BeritaController::class, 'index'])->name('news.index');
         Route::get('/news/{news}', [BeritaController::class, 'show'])->name('news.show');
@@ -392,8 +391,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/flashcards/review/{flashcard}', [FlashcardController::class, 'review'])->middleware('throttle:learning-actions')->name('flashcards.review');
 
         Route::get('/leaderboard', PapanPeringkatController::class)->name('leaderboard');
-        Route::get('/certificates', [SertifikatController::class, 'index'])->name('certificates');
-        Route::get('/certificates/{certificate}/download', [SertifikatController::class, 'download'])->name('certificates.download');
         Route::get('/progress', [ProgresController::class, 'index'])->name('progress');
 
         Route::post('/attempts', [ProgresController::class, 'storeAttempt'])->middleware('throttle:learning-actions')->name('attempts.store');

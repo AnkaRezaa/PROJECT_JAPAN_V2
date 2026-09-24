@@ -177,7 +177,6 @@ class ImportKuisGrammarService
                 $quiz->update([
                     'module_id' => $payload['module_id'],
                     'module_day_id' => $payload['module_day_id'],
-                    'exam_order' => null,
                     'status' => 'draft',
                 ]);
                 $this->grammar->sync($quiz, $payload);

@@ -53,7 +53,6 @@ class AdminGrammarQuizController extends Controller
             $quiz = Kuis::create([
                 'module_id' => $moduleDay->module_id,
                 'module_day_id' => $moduleDay->id,
-                'exam_order' => null,
                 'type' => 'grammar',
                 'time_limit' => $validated['time_limit'] ?? null,
                 'passing_score' => $validated['passing_score'] ?? 70,
@@ -236,18 +235,29 @@ class AdminGrammarQuizController extends Controller
         $path = $excel->xlsxWorkbookPath([
             'Materi' => [
                 'headers' => ['lesson_key', 'level', 'module_week', 'day_number', 'pattern', 'title', 'meaning', 'formula', 'explanation'],
-                'rows' => [['n3-ba-hodo', 'JLPT N3', 1, 1, '～ば～ほど', 'Semakin..., semakin...', 'Semakin A, semakin B', 'Vば + V辞書形 + ほど', 'Hubungan perubahan A dan B.']],
+                'rows' => [
+                    ['n3-ba-hodo', 'JLPT N3', 1, 1, '〜ば〜ほど', 'Semakin..., semakin...', 'Semakin kondisi A terjadi, semakin meningkat kondisi B', 'V-ば + V-辞書形 + ほど', 'Menunjukkan hubungan dua hal yang berbanding lurus dan berubah seimbang.'],
+                    ['n5-te-wa-ikenai', 'JLPT N5', 1, 1, '〜てはいけない', 'Tidak boleh...', 'Larangan melakukan suatu perbuatan', 'V-て + はいけない', 'Pola dasar untuk menyatakan larangan atau aturan formal.'],
+                ],
             ],
             'Contoh' => [
                 'headers' => ['lesson_key', 'order', 'japanese', 'reading', 'translation'],
-                'rows' => [['n3-ba-hodo', 1, '勉強すればするほど、日本語が上手になります。', 'べんきょうすればするほど、にほんごがじょうずになります。', 'Semakin banyak belajar, semakin mahir bahasa Jepang.']],
+                'rows' => [
+                    ['n3-ba-hodo', 1, '勉強すればするほど、日本語が上手になります。', 'べんきょうすればするほど、にほんごがじょうずになります。', 'Semakin banyak belajar, semakin mahir bahasa Jepang.'],
+                    ['n3-ba-hodo', 2, '練習すればするほど、慣れてきます。', 'れんしゅうすればするほど、なれてきます。', 'Semakin sering latihan, semakin terbiasa.'],
+                    ['n5-te-wa-ikenai', 1, 'ここでタバコを吸ってはいけません。', 'ここでたばこをすってはいけません。', 'Tidak boleh merokok di sini.'],
+                    ['n5-te-wa-ikenai', 2, '教室で大声を出してはいけません。', 'きょうしつでおおごえをだしてはいけません。', 'Tidak boleh bersuara keras di ruang kelas.'],
+                ],
             ],
             'Soal' => [
                 'headers' => ['lesson_key', 'stage', 'order', 'prompt', 'source_text', 'context', 'options_or_tokens', 'correct_answer_or_order', 'feedback', 'points'],
                 'rows' => [
-                    ['n3-ba-hodo', 'transformation', 1, 'Ubah ke bentuk ば.', '勉強する', '', '勉強すれば|勉強したら|勉強して', '勉強すれば', 'する berubah menjadi すれば.', 1],
-                    ['n3-ba-hodo', 'sentence_builder', 1, 'Susun kalimat yang benar.', '', 'Semakin belajar, semakin mahir.', '勉強すれば|する|ほど|上手になります|まで', '勉強すれば|する|ほど|上手になります', 'Susun pola ば～ほど.', 1],
-                    ['n3-ba-hodo', 'context_choice', 1, 'Pilih kalimat yang sesuai.', '', 'Semakin sering latihan, semakin mahir.', '練習すればするほど、上手になります。|練習したことがあります。', '練習すればするほど、上手になります。', 'Gunakan pola ば～ほど.', 1],
+                    ['n3-ba-hodo', 'transformation', 1, 'Ubah kata kerja ke bentuk yang tepat untuk pola 〜ば〜ほど.', '勉強する', '', '勉強すればほど|勉強したらほど|勉強してほど|勉強しないほど', '勉強すればほど', 'Gunakan bentuk pengandaian ば dari kata 勉強する yaitu 勉強すれば.', 1],
+                    ['n3-ba-hodo', 'sentence_builder', 1, 'Susun potongan kata berikut menjadi kalimat utuh.', '', 'Semakin banyak belajar, semakin mahir bahasa Jepang.', '勉強すれば|するほど|日本語が|上手になります|まで', '勉強すれば|するほど|日本語が|上手になります', 'Urutan yang benar mengikuti kaidah V-ば + するほど. Kata sampai (まで) adalah pengecoh.', 1],
+                    ['n3-ba-hodo', 'context_choice', 1, 'Pilih kalimat yang paling tepat untuk situasi di bawah.', '', 'Situasi: Semakin sering latihan, kemampuan berbicara semakin meningkat.', '練習すればするほど、上手になりますよ。|練習したことがありますよ。|練習しなければなりませんよ。|練習してもいいですよ。', '練習すればするほど、上手になりますよ。', 'Kalimat ini menyatakan hubungan berbanding lurus antara latihan dan peningkatan kemampuan.', 1],
+                    ['n5-te-wa-ikenai', 'transformation', 1, 'Ubah kata kerja berikut ke bentuk larangan 〜てはいけません.', '吸う', '', '吸ってはいけません|吸ってはいけます|吸わなくてはいけません|吸ったらいいです', '吸ってはいけません', 'Bentuk て dari 吸う adalah 吸って lalu disambung はいけません.', 1],
+                    ['n5-te-wa-ikenai', 'sentence_builder', 1, 'Susun potongan kata berikut menjadi kalimat larangan.', '', 'Dilarang merokok di dalam ruangan ini.', 'この部屋で|タバコを|吸って|はいけません|から', 'この部屋で|タバコを|吸って|はいけません', 'Urutan yang tepat: lokasi -> objek -> kata kerja larangan.', 1],
+                    ['n5-te-wa-ikenai', 'context_choice', 1, 'Pilih kalimat yang tepat untuk situasi larangan.', '', 'Situasi: Memberitahu anak kecil agar tidak berlari di dalam koridor rumah sakit.', '病院の廊下を走ってはいけません。|病院の廊下を走ったことがあります。|病院の廊下を走らなければなりません。|病院の廊下を走ってもいいです。', '病院の廊下を走ってはいけません。', 'Gunakan pola 〜てはいけません untuk menyatakan larangan tegas.', 1],
                 ],
             ],
         ], 'grammar-template-');

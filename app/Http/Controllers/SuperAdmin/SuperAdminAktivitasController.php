@@ -139,6 +139,11 @@ class SuperAdminAktivitasController extends SuperAdminDasarController
             'monitoringLinks' => [
                 'ga4' => filter_var(config('beta.links.ga4'), FILTER_VALIDATE_URL) ?: null,
                 'uptime' => filter_var(config('beta.links.monitoring'), FILTER_VALIDATE_URL) ?: null,
+                'gtm' => [
+                    'enabled' => (bool) config('beta.google_tag_manager.enabled'),
+                    'id' => config('beta.google_tag_manager.id') ? trim((string) config('beta.google_tag_manager.id')) : null,
+                    'configured' => (bool) (config('beta.google_tag_manager.enabled') && filled(config('beta.google_tag_manager.id'))),
+                ],
             ],
             'riskyEvents' => $this->riskyEvents(),
             'filters' => $filters,
