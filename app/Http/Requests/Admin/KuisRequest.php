@@ -23,7 +23,7 @@ class KuisRequest extends FormRequest
         return [
             'module_id' => 'required|exists:modules,id',
             'module_day_id' => [
-                'nullable',
+                'required',
                 'integer',
                 Rule::exists('module_days', 'id')
                     ->where('module_id', $this->integer('module_id')),
@@ -45,6 +45,7 @@ class KuisRequest extends FormRequest
         return [
             'module_id.required' => 'Modul mingguan wajib dipilih.',
             'module_id.exists' => 'Modul mingguan yang dipilih tidak valid di sistem.',
+            'module_day_id.required' => 'Day wajib dipilih.',
             'module_day_id.integer' => 'Day yang dipilih tidak valid.',
             'module_day_id.exists' => 'Day tidak sesuai dengan modul mingguan yang dipilih.',
             'type.required' => 'Tipe kuis wajib ditentukan.',

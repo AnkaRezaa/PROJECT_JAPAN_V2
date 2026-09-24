@@ -17,7 +17,6 @@ class Kuis extends Model
     protected $fillable = [
         'module_id',
         'module_day_id',
-        'exam_order',
         'type',
         'time_limit',
         'passing_score',
@@ -27,13 +26,7 @@ class Kuis extends Model
 
     protected $casts = [
         'available_at' => 'datetime',
-        'exam_order' => 'integer',
     ];
-
-    public function isWeeklyExam(): bool
-    {
-        return $this->module_day_id === null && $this->exam_order !== null;
-    }
 
     public function isGrammar(): bool
     {

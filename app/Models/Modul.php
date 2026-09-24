@@ -61,12 +61,4 @@ class Modul extends Model
     {
         return $this->hasMany(HariModul::class, 'module_id')->orderBy('day_number');
     }
-
-    public function weeklyExams(): HasMany
-    {
-        return $this->hasMany(Kuis::class, 'module_id')
-            ->whereNull('module_day_id')
-            ->whereNotNull('exam_order')
-            ->orderBy('exam_order');
-    }
 }
