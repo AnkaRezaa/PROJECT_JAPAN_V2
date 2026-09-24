@@ -97,7 +97,6 @@ it('builds a quick quiz only from owned and unlocked daily quizzes', function ()
 
     $exam = Kuis::create([
         'module_id' => $first['module']->id,
-        'exam_order' => 1,
         'type' => 'typing',
         'status' => 'published',
     ]);

@@ -11,6 +11,7 @@ use App\Models\PaketPembayaran;
 use App\Models\Pengguna;
 use App\Models\ProgramPembelajaran;
 use Database\Seeders\DemoDataSeeder;
+use Database\Seeders\PenggunaSeeder;
 use Illuminate\Support\Facades\Hash;
 
 it('builds the complete two-class demo dataset idempotently', function () {
@@ -22,8 +23,7 @@ it('builds the complete two-class demo dataset idempotently', function () {
         'jlpt-n3-mingguan',
     ])->and(Modul::count())->toBe(6)
         ->and(HariModul::count())->toBe(18)
-        ->and(Kuis::whereNotNull('module_day_id')->count())->toBe(18)
-        ->and(Kuis::whereNotNull('exam_order')->count())->toBe(6)
+        ->and(Kuis::whereNotNull('module_day_id')->count())->toBe(24)
         ->and(DeckPresentasi::where('audience_scope', 'shared')->count())->toBe(18)
         ->and(DeckPresentasi::where('audience_scope', 'mentor_session')->count())->toBe(1);
 
@@ -38,7 +38,7 @@ it('builds the complete two-class demo dataset idempotently', function () {
 
         expect($user->hasVerifiedEmail())->toBeTrue()
             ->and($user->password_login_enabled)->toBeTrue()
-            ->and(Hash::check('TOKU-UP#2026', $user->password))->toBeTrue();
+            ->and(Hash::check(PenggunaSeeder::DEMO_PASSWORD, $user->password))->toBeTrue();
     }
 });
 

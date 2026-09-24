@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Flashcard;
+use App\Models\HariModul;
 use App\Models\Kuis;
 use App\Models\LevelPembelajaran;
 use App\Models\LogReward;
@@ -245,7 +246,6 @@ it('does not treat published quizzes without questions as available weekly conte
     Kuis::create([
         'module_id' => $module->id,
         'lesson_id' => null,
-        'exam_order' => 1,
         'type' => 'typing',
         'time_limit' => 300,
         'status' => 'published',
@@ -287,14 +287,21 @@ it('skips empty flashcard sets and sends weekly module users to the valid quiz',
         'source_type' => 'manual',
         'status' => 'published',
     ]);
+    $day = HariModul::create([
+        'module_id' => $module->id,
+        'day_number' => 1,
+        'title' => 'Hari 1',
+        'status' => 'published',
+    ]);
     $quiz = Kuis::create([
         'module_id' => $module->id,
+        'module_day_id' => $day->id,
         'lesson_id' => null,
-        'exam_order' => 1,
         'type' => 'typing',
         'time_limit' => 300,
         'status' => 'published',
     ]);
+    $day->update(['checkpoint_quiz_id' => $quiz->id]);
     Soal::create([
         'quiz_id' => $quiz->id,
         'type' => 'typing',
@@ -313,12 +320,12 @@ it('skips empty flashcard sets and sends weekly module users to the valid quiz',
             ->where('weeks.0.status', 'active')
             ->where('weeks.0.has_content', true)
             ->where('weeks.0.flashcard_total', 0)
-            ->where('weeks.0.questions_count', 1)
+            ->where('weeks.0.days.0.status', 'active')
         );
 
     $this->actingAs($user)
         ->get(route('user.modul.lesson', $module))
-        ->assertRedirect(route('user.modul.quiz', $module));
+        ->assertRedirect(route('user.modul.program', $program->slug));
 });
 
 it('checks quiz answers through the realtime endpoint with explanation payload', function () {

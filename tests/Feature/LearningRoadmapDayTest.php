@@ -422,215 +422,44 @@ it('only completes a Day from its checkpoint quiz', function () {
         ->and($roadmap->hariSelesai($user, $fixture['dayOne']))->toBeTrue();
 });
 
-it('opens the weekly exam after all Days and only then completes the Week', function () {
+it('completes the Week automatically after all Days are completed', function () {
     $fixture = createDayRoadmapFixture();
     $user = Pengguna::factory()->create(['role' => 'user']);
-    $weeklyExam = Kuis::create([
-        'module_id' => $fixture['module']->id,
-        'module_day_id' => null,
-        'exam_order' => 1,
-        'type' => 'multiple_choice',
-        'passing_score' => 70,
-        'status' => 'published',
-    ]);
-    $question = Soal::create([
-        'quiz_id' => $weeklyExam->id,
-        'type' => 'multiple_choice',
-        'question_text' => 'Pilih jawaban benar.',
-        'correct_answer' => 'benar',
-        'options' => ['benar', 'salah'],
-        'order' => 1,
-    ]);
     $roadmap = app(ProgresRoadmapService::class);
-    $access = app(AksesKuisPenggunaService::class);
 
-    expect($access->status($user, $weeklyExam)['allowed'])->toBeFalse()
-        ->and($access->status($user, $weeklyExam)['reason'])->toBe('days_required');
+    $setOne = SetFlashcard::where('module_day_id', $fixture['dayOne']->id)->firstOrFail();
+    ReviewFlashcard::create([
+        'user_id' => $user->id,
+        'flashcard_id' => $setOne->flashcards()->firstOrFail()->id,
+        'status' => 'learning',
+    ]);
+    $resOne = $roadmap->selesaikanDariFlashcard($user, $setOne);
+    expect($resOne['module_completed'])->toBeFalse()
+        ->and($user->progress()->where('module_id', $fixture['module']->id)->whereNotNull('completed_at')->exists())->toBeFalse();
 
-    foreach ([$fixture['dayOne'], $fixture['dayTwo']] as $day) {
-        $set = SetFlashcard::where('module_day_id', $day->id)->firstOrFail();
-        ReviewFlashcard::create([
-            'user_id' => $user->id,
-            'flashcard_id' => $set->flashcards()->firstOrFail()->id,
-            'status' => 'learning',
-        ]);
-        $result = $roadmap->selesaikanDariFlashcard($user, $set);
-    }
-
-    expect($result['module_completed'])->toBeFalse()
-        ->and($user->progress()->where('module_id', $fixture['module']->id)->whereNotNull('completed_at')->exists())->toBeFalse()
-        ->and($access->status($user, $weeklyExam->fresh())['allowed'])->toBeTrue();
-
-    $this->actingAs($user)
-        ->get(route('user.quizzes.show', $weeklyExam))
-        ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('User/Ujian/KerjakanUjian')
-            ->where('quiz.is_weekly_exam', true)
-            ->where('quiz.title', 'Ujian 1 - Minggu 1')
-            ->where('questions.0.points', 1)
-            ->missing('questions.0.correct_answer'));
-
-    $token = (string) Str::uuid();
-    $session = $this->actingAs($user)
-        ->postJson(route('user.attempts.start', $weeklyExam), [
-            'submission_token' => $token,
-        ])
-        ->assertOk()
-        ->json();
-
-    $payload = [
-        'quiz_id' => $weeklyExam->id,
-        'module_flow' => true,
-        'attempt_id' => $session['attempt_id'],
-        'submission_token' => $session['submission_token'],
-        'answers' => [[
-            'question_id' => $question->id,
-            'answer_text' => 'benar',
-        ]],
-    ];
-
-    $this->actingAs($user)
-        ->postJson(route('user.attempts.store'), $payload)
-        ->assertOk()
-        ->assertJsonPath('passed', true)
-        ->assertJsonPath('completed_module', true)
-        ->assertJsonPath('xp_earned', 0);
-
-    $this->actingAs($user)
-        ->postJson(route('user.attempts.store'), $payload)
-        ->assertOk()
-        ->assertJsonPath('idempotent', true)
-        ->assertJsonPath('attempt_id', $session['attempt_id']);
-
-    expect(PengerjaanKuis::where('quiz_id', $weeklyExam->id)->count())->toBe(1)
-        ->and(PengerjaanKuis::where('quiz_id', $weeklyExam->id)->value('xp_earned'))->toBe(0)
-        ->and(PengerjaanKuis::where('quiz_id', $weeklyExam->id)->firstOrFail()->answers()->count())->toBe(1)
-        ->and(LogReward::where('source_type', 'quiz')->where('source_id', $weeklyExam->id)->exists())->toBeFalse()
+    $setTwo = SetFlashcard::where('module_day_id', $fixture['dayTwo']->id)->firstOrFail();
+    ReviewFlashcard::create([
+        'user_id' => $user->id,
+        'flashcard_id' => $setTwo->flashcards()->firstOrFail()->id,
+        'status' => 'learning',
+    ]);
+    $resTwo = $roadmap->selesaikanDariFlashcard($user, $setTwo);
+    expect($resTwo['module_completed'])->toBeTrue()
         ->and($user->progress()->where('module_id', $fixture['module']->id)->whereNotNull('completed_at')->exists())->toBeTrue();
 });
 
-it('allows an admin to create a weekly exam without selecting a Day', function () {
+it('requires a Day when an admin creates a quiz', function () {
     $fixture = createDayRoadmapFixture();
     $admin = Pengguna::factory()->create(['role' => 'admin']);
-
-    $response = $this->actingAs($admin)
-        ->post(route('admin.quizzes.store'), [
-            'module_id' => $fixture['module']->id,
-            'module_day_id' => null,
-            'type' => 'multiple_choice',
-            'passing_score' => 70,
-            'status' => 'draft',
-        ]);
-
-    $quiz = Kuis::query()->latest('id')->firstOrFail();
-
-    $response->assertRedirect(route('admin.quizzes.builder', $quiz));
-    expect($quiz->module_day_id)->toBeNull()
-        ->and($quiz->exam_order)->toBe(1);
 
     $this->actingAs($admin)
-        ->get(route('admin.quizzes.builder', $quiz))
-        ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Admin/Ujian/BuilderUjian')
-            ->where('quiz.is_weekly_exam', true));
-});
-
-it('allows multiple ordered weekly exams in the same Week', function () {
-    $fixture = createDayRoadmapFixture();
-    $admin = Pengguna::factory()->create(['role' => 'admin']);
-    $payload = [
-        'module_id' => $fixture['module']->id,
-        'module_day_id' => null,
-        'type' => 'multiple_choice',
-        'passing_score' => 70,
-        'status' => 'draft',
-    ];
-
-    $this->actingAs($admin)->post(route('admin.quizzes.store'), $payload)->assertRedirect();
-    $this->actingAs($admin)->post(route('admin.quizzes.store'), $payload)->assertRedirect();
-
-    expect(
-        Kuis::query()
-            ->where('module_id', $fixture['module']->id)
-            ->whereNotNull('exam_order')
-            ->orderBy('exam_order')
-            ->pluck('exam_order')
-            ->all()
-    )->toBe([1, 2]);
-});
-
-it('keeps the Week incomplete until every published weekly exam is passed', function () {
-    $fixture = createDayRoadmapFixture();
-    $user = Pengguna::factory()->create(['role' => 'user']);
-    $roadmap = app(ProgresRoadmapService::class);
-
-    $exams = collect([1, 2])->map(function (int $order) use ($fixture) {
-        $exam = Kuis::create([
+        ->post(route('admin.quizzes.store'), [
             'module_id' => $fixture['module']->id,
-            'module_day_id' => null,
-            'exam_order' => $order,
             'type' => 'multiple_choice',
+            'time_limit' => 600,
             'passing_score' => 70,
-            'status' => 'published',
-        ]);
-        Soal::create([
-            'quiz_id' => $exam->id,
-            'type' => 'multiple_choice',
-            'question_text' => "Soal ujian {$order}.",
-            'correct_answer' => 'A',
-            'options' => ['A', 'B'],
-            'order' => 1,
-        ]);
-
-        return $exam;
-    });
-
-    foreach ([$fixture['dayOne'], $fixture['dayTwo']] as $day) {
-        $set = SetFlashcard::where('module_day_id', $day->id)->firstOrFail();
-        ReviewFlashcard::create([
-            'user_id' => $user->id,
-            'flashcard_id' => $set->flashcards()->firstOrFail()->id,
-            'status' => 'learning',
-        ]);
-        $roadmap->selesaikanDariFlashcard($user, $set);
-    }
-
-    $this->actingAs($user)
-        ->get(route('user.modul.program', $fixture['program']->slug))
-        ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
-            ->has('weeks.0.weekly_exams', 2)
-            ->where('weeks.0.weekly_exams.0.locked', false)
-            ->where('weeks.0.weekly_exams.1.locked', false));
-
-    PengerjaanKuis::create([
-        'user_id' => $user->id,
-        'quiz_id' => $exams[0]->id,
-        'status' => 'completed',
-        'score' => 90,
-        'xp_earned' => 0,
-        'started_at' => now(),
-        'completed_at' => now(),
-        'attempted_at' => now(),
-    ]);
-
-    expect($roadmap->selesaikanDariUjianMingguan($user, $exams[0], 90)['module_completed'])->toBeFalse();
-
-    PengerjaanKuis::create([
-        'user_id' => $user->id,
-        'quiz_id' => $exams[1]->id,
-        'status' => 'completed',
-        'score' => 80,
-        'xp_earned' => 0,
-        'started_at' => now(),
-        'completed_at' => now(),
-        'attempted_at' => now(),
-    ]);
-
-    expect($roadmap->selesaikanDariUjianMingguan($user, $exams[1], 80)['module_completed'])->toBeTrue()
-        ->and($user->progress()->where('module_id', $fixture['module']->id)->value('score'))->toBe(80);
+        ])
+        ->assertSessionHasErrors(['module_day_id']);
 });
 
 it('allows an admin to clear every exam question and forces the exam back to draft', function () {
@@ -638,8 +467,7 @@ it('allows an admin to clear every exam question and forces the exam back to dra
     $admin = Pengguna::factory()->create(['role' => 'admin']);
     $exam = Kuis::create([
         'module_id' => $fixture['module']->id,
-        'module_day_id' => null,
-        'exam_order' => 1,
+        'module_day_id' => $fixture['dayOne']->id,
         'type' => 'multiple_choice',
         'passing_score' => 70,
         'status' => 'published',
@@ -665,136 +493,7 @@ it('allows an admin to clear every exam question and forces the exam back to dra
         ->and($exam->questions()->count())->toBe(0);
 });
 
-it('scores a weekly exam from question weights', function () {
-    $fixture = createDayRoadmapFixture();
-    $user = Pengguna::factory()->create(['role' => 'user']);
-    $weeklyExam = Kuis::create([
-        'module_id' => $fixture['module']->id,
-        'exam_order' => 1,
-        'type' => 'multiple_choice',
-        'passing_score' => 70,
-        'status' => 'published',
-    ]);
-    $lightQuestion = Soal::create([
-        'quiz_id' => $weeklyExam->id,
-        'type' => 'multiple_choice',
-        'question_text' => 'Soal ringan.',
-        'correct_answer' => 'A',
-        'options' => ['A', 'B'],
-        'order' => 1,
-        'points' => 1,
-    ]);
-    $heavyQuestion = Soal::create([
-        'quiz_id' => $weeklyExam->id,
-        'type' => 'multiple_choice',
-        'question_text' => 'Soal utama.',
-        'correct_answer' => 'B',
-        'options' => ['A', 'B'],
-        'order' => 2,
-        'points' => 3,
-    ]);
-    $roadmap = app(ProgresRoadmapService::class);
-
-    foreach ([$fixture['dayOne'], $fixture['dayTwo']] as $day) {
-        $set = SetFlashcard::where('module_day_id', $day->id)->firstOrFail();
-        ReviewFlashcard::create([
-            'user_id' => $user->id,
-            'flashcard_id' => $set->flashcards()->firstOrFail()->id,
-            'status' => 'learning',
-        ]);
-        $roadmap->selesaikanDariFlashcard($user, $set);
-    }
-
-    $session = $this->actingAs($user)
-        ->postJson(route('user.attempts.start', $weeklyExam), [
-            'submission_token' => (string) Str::uuid(),
-        ])
-        ->assertOk()
-        ->json();
-
-    $this->actingAs($user)
-        ->postJson(route('user.attempts.store'), [
-            'quiz_id' => $weeklyExam->id,
-            'attempt_id' => $session['attempt_id'],
-            'submission_token' => $session['submission_token'],
-            'answers' => [
-                ['question_id' => $lightQuestion->id, 'answer_text' => 'B'],
-                ['question_id' => $heavyQuestion->id, 'answer_text' => 'B'],
-            ],
-        ])
-        ->assertOk()
-        ->assertJsonPath('score', 75)
-        ->assertJsonPath('passed', true)
-        ->assertJsonPath('answer_review.0.is_correct', false)
-        ->assertJsonPath('answer_review.0.earned_points', 0)
-        ->assertJsonPath('answer_review.1.is_correct', true)
-        ->assertJsonPath('answer_review.1.earned_points', 3);
-});
-
-it('grades weekly exams by weighted score without quiz lives or timeout failure rules', function () {
-    $fixture = createDayRoadmapFixture();
-    $user = Pengguna::factory()->create(['role' => 'user']);
-    $weeklyExam = Kuis::create([
-        'module_id' => $fixture['module']->id,
-        'exam_order' => 1,
-        'type' => 'multiple_choice',
-        'passing_score' => 70,
-        'time_limit' => 60,
-        'status' => 'published',
-    ]);
-
-    $questions = collect(range(1, 7))->map(function ($number) use ($weeklyExam) {
-        return Soal::create([
-            'quiz_id' => $weeklyExam->id,
-            'type' => 'multiple_choice',
-            'question_text' => "Soal {$number}.",
-            'correct_answer' => 'A',
-            'options' => ['A', 'B'],
-            'order' => $number,
-            'points' => $number === 7 ? 20 : 1,
-        ]);
-    });
-    $roadmap = app(ProgresRoadmapService::class);
-
-    foreach ([$fixture['dayOne'], $fixture['dayTwo']] as $day) {
-        $set = SetFlashcard::where('module_day_id', $day->id)->firstOrFail();
-        ReviewFlashcard::create([
-            'user_id' => $user->id,
-            'flashcard_id' => $set->flashcards()->firstOrFail()->id,
-            'status' => 'learning',
-        ]);
-        $roadmap->selesaikanDariFlashcard($user, $set);
-    }
-
-    $session = $this->actingAs($user)
-        ->postJson(route('user.attempts.start', $weeklyExam), [
-            'submission_token' => (string) Str::uuid(),
-        ])
-        ->assertOk()
-        ->json();
-
-    $answers = $questions->map(fn (Soal $question) => [
-        'question_id' => $question->id,
-        'answer_text' => $question->order === 7 ? 'A' : 'B',
-    ])->all();
-
-    $this->actingAs($user)
-        ->postJson(route('user.attempts.store'), [
-            'quiz_id' => $weeklyExam->id,
-            'attempt_id' => $session['attempt_id'],
-            'submission_token' => $session['submission_token'],
-            'finished_by_timeout' => true,
-            'answers' => $answers,
-        ])
-        ->assertOk()
-        ->assertJsonPath('score', 77)
-        ->assertJsonPath('wrong_attempt_count', 6)
-        ->assertJsonPath('finished_by_timeout', true)
-        ->assertJsonPath('passed', true)
-        ->assertJsonPath('xp_earned', 0);
-});
-
-it('returns weekly presentation and exam nodes in the roadmap payload', function () {
+it('returns weekly presentation nodes in the roadmap payload', function () {
     $fixture = createDayRoadmapFixture();
     $user = Pengguna::factory()->create(['role' => 'user']);
     $deck = DeckPresentasi::create([
@@ -829,22 +528,6 @@ it('returns weekly presentation and exam nodes in the roadmap payload', function
         'background' => 'light',
         'order' => 1,
     ]);
-    $weeklyExam = Kuis::create([
-        'module_id' => $fixture['module']->id,
-        'module_day_id' => null,
-        'exam_order' => 1,
-        'type' => 'multiple_choice',
-        'passing_score' => 75,
-        'status' => 'published',
-    ]);
-    Soal::create([
-        'quiz_id' => $weeklyExam->id,
-        'type' => 'multiple_choice',
-        'question_text' => 'Soal Mingguan.',
-        'correct_answer' => 'A',
-        'options' => ['A', 'B'],
-        'order' => 1,
-    ]);
 
     $this->actingAs($user)
         ->get(route('user.modul.program', $fixture['program']->slug))
@@ -853,9 +536,7 @@ it('returns weekly presentation and exam nodes in the roadmap payload', function
             ->where('weeks.0.presentations.0.title', 'PPT Pembuka Mingguan')
             ->where('weeks.0.presentations.0.placement', 'opening')
             ->where('weeks.0.presentations.0.slides_count', 1)
-            ->where('weeks.0.weekly_exams.0.id', $weeklyExam->id)
-            ->where('weeks.0.weekly_exams.0.passing_score', 75)
-            ->where('weeks.0.weekly_exams.0.locked', true)
+            ->where('weeks.0.weekly_exams', [])
             ->where('weeks.0.presentations.1.title', 'PPT Penutup Mingguan')
             ->where('weeks.0.presentations.1.placement', 'closing')
             ->where('weeks.0.presentations.1.locked', true)
@@ -1466,14 +1147,14 @@ it('seeds an idempotent three-Day roadmap for every demo Week', function () {
         ->and(Modul::count())->toBe(6)
         ->and(HariModul::count())->toBe(18)
         ->and(SetFlashcard::count())->toBe(18)
-        ->and(Kuis::count())->toBe(24);
+        ->and(Kuis::count())->toBe(18);
 
     Modul::with(['days', 'flashcardSets', 'quizzes', 'presentationDecks'])
         ->get()
         ->each(function (Modul $module) {
             expect($module->days->pluck('day_number')->sort()->values()->all())->toBe([1, 2, 3])
                 ->and($module->flashcardSets)->toHaveCount(3)
-                ->and($module->quizzes)->toHaveCount(4)
+                ->and($module->quizzes)->toHaveCount(3)
                 ->and($module->presentationDecks->where('audience_scope', 'shared'))->toHaveCount(3);
 
             $module->days->each(function (HariModul $day) use ($module) {
@@ -1481,7 +1162,5 @@ it('seeds an idempotent three-Day roadmap for every demo Week', function () {
                     ->and($day->checkpoint_quiz_id)->not->toBeNull()
                     ->and($module->quizzes->firstWhere('id', $day->checkpoint_quiz_id)?->module_day_id)->toBe($day->id);
             });
-
-            expect($module->quizzes->whereNotNull('exam_order'))->toHaveCount(1);
         });
 });
