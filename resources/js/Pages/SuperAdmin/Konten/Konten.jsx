@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
@@ -8,6 +8,7 @@ import ChartCard from '@/Components/Features/Dashboard/ChartCard';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import NewsEditor from '@/Components/Features/Editor/NewsEditor';
 import ArticleBody from '@/Components/Features/News/ArticleBody';
+import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
 import PopupManager from '@/Components/Features/Marketing/PopupManager';
 import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartEmpty, ChartTooltip, ChartTooltipContent } from '@/Components/UI/Chart';
@@ -57,6 +58,7 @@ export default function Konten({
     const [attachmentFile, setAttachmentFile] = useState(null);
     const [videoEmbedUrl, setVideoEmbedUrl] = useState('');
     const [showPreview, setShowPreview] = useState(false);
+    const [coverPreviewUrl, setCoverPreviewUrl] = useState(null);
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
 
     const items = news?.data || [];
@@ -71,8 +73,40 @@ export default function Konten({
 
     const selectedNewsAttachments = useMemo(() => editingNews?.attachments || [], [editingNews]);
 
+    useEffect(() => {
+        return () => {
+            if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+        };
+    }, [coverPreviewUrl]);
+
+    const handleCoverImageChange = (e) => {
+        const file = e.target.files?.[0] || null;
+        if (coverPreviewUrl) {
+            URL.revokeObjectURL(coverPreviewUrl);
+        }
+        if (file) {
+            setCoverPreviewUrl(URL.createObjectURL(file));
+            setData('cover_image', file);
+        } else {
+            setCoverPreviewUrl(null);
+            setData('cover_image', null);
+        }
+    };
+
+    const clearCoverImage = () => {
+        if (coverPreviewUrl) {
+            URL.revokeObjectURL(coverPreviewUrl);
+            setCoverPreviewUrl(null);
+        }
+        setData('cover_image', null);
+    };
+
     const openCreate = () => {
         setEditingNews(null);
+        if (coverPreviewUrl) {
+            URL.revokeObjectURL(coverPreviewUrl);
+            setCoverPreviewUrl(null);
+        }
         transform((values) => values);
         reset();
         setShowForm(true);
@@ -83,6 +117,10 @@ export default function Konten({
 
     const openEdit = (item) => {
         setEditingNews(item);
+        if (coverPreviewUrl) {
+            URL.revokeObjectURL(coverPreviewUrl);
+            setCoverPreviewUrl(null);
+        }
         transform((values) => values);
         setData({
             title: item.title || '',
@@ -111,6 +149,10 @@ export default function Konten({
     const closeForm = () => {
         setShowForm(false);
         setEditingNews(null);
+        if (coverPreviewUrl) {
+            URL.revokeObjectURL(coverPreviewUrl);
+            setCoverPreviewUrl(null);
+        }
         transform((values) => values);
         reset();
         setAttachmentFile(null);
@@ -120,23 +162,34 @@ export default function Konten({
     const submitNews = (e) => {
         e.preventDefault();
 
-        if (editingNews) {
-            transform((values) => ({ ...values, _method: 'put' }));
-            post(route('superadmin.content.news.update', editingNews.id), {
-                preserveScroll: true,
-                forceFormData: true,
-                onSuccess: () => {
-                    transform((values) => values);
-                    closeForm();
-                },
-            });
-            return;
-        }
+        const cleanReadingBlocks = (data.reading_blocks || []).filter(
+            (b) => (b.japanese && b.japanese.trim()) || (b.reading && b.reading.trim())
+        );
 
-        post(route('superadmin.content.news.store'), {
+        const cleanScheduledAt = data.status === 'scheduled' ? data.scheduled_at : '';
+
+        transform((values) => ({
+            ...values,
+            reading_blocks: cleanReadingBlocks,
+            scheduled_at: cleanScheduledAt,
+            ...(editingNews ? { _method: 'put' } : {}),
+        }));
+
+        const submitRoute = editingNews
+            ? route('superadmin.content.news.update', editingNews.id)
+            : route('superadmin.content.news.store');
+
+        post(submitRoute, {
             preserveScroll: true,
             forceFormData: true,
-            onSuccess: closeForm,
+            onSuccess: () => {
+                transform((values) => values);
+                closeForm();
+            },
+            onError: () => {
+                const modalBody = document.getElementById('news-form-scrollable');
+                if (modalBody) modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+            },
         });
     };
 
@@ -171,23 +224,29 @@ export default function Konten({
 
     const uploadAttachment = async () => {
         if (!editingNews) return;
+        if (attachmentType === 'video_embed' && !videoEmbedUrl.trim()) return;
+        if (attachmentType !== 'video_embed' && !attachmentFile) return;
 
-        const formData = new FormData();
-        formData.append('type', attachmentType);
+        try {
+            const formData = new FormData();
+            formData.append('type', attachmentType);
 
-        if (attachmentType === 'video_embed') {
-            formData.append('video_embed_url', videoEmbedUrl);
-        } else if (attachmentFile) {
-            formData.append('file', attachmentFile);
+            if (attachmentType === 'video_embed') {
+                formData.append('video_embed_url', videoEmbedUrl.trim());
+            } else if (attachmentFile) {
+                formData.append('file', attachmentFile);
+            }
+
+            await window.axios.post(route('superadmin.content.news.attachments.store', editingNews.id), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            router.reload({ only: ['news', 'updates'] });
+            setAttachmentFile(null);
+            setVideoEmbedUrl('');
+        } catch (error) {
+            alert(error.response?.data?.message || 'Gagal menambahkan attachment. Pastikan file valid.');
         }
-
-        await window.axios.post(route('superadmin.content.news.attachments.store', editingNews.id), formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
-
-        router.reload({ only: ['news', 'updates'] });
-        setAttachmentFile(null);
-        setVideoEmbedUrl('');
     };
 
     const deleteAttachment = (attachment) => {
@@ -451,15 +510,47 @@ export default function Konten({
 
                         <form onSubmit={submitNews} className="flex min-h-0 flex-1 flex-col">
                             <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[minmax(0,1fr)_380px]">
-                                <div className="min-h-0 space-y-5 overflow-y-auto p-4 sm:p-6 lg:p-8">
+                                <div id="news-form-scrollable" className="min-h-0 space-y-5 overflow-y-auto p-4 sm:p-6 lg:p-8">
+                                    {Object.keys(errors).length > 0 && (
+                                        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30">
+                                            <div className="flex items-center gap-2">
+                                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-600 text-xs font-black text-white">!</span>
+                                                <h4 className="text-sm font-black text-red-800 dark:text-red-300">
+                                                    Terdapat {Object.keys(errors).length} kesalahan pada formulir, mohon periksa bidang berikut:
+                                                </h4>
+                                            </div>
+                                            <ul className="mt-2 list-inside list-disc space-y-1 text-xs font-bold text-red-700 dark:text-red-400">
+                                                {Object.entries(errors).map(([field, msg]) => (
+                                                    <li key={field}>{msg}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+
                                     <div>
-                                        <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Judul</label>
-                                        <input value={data.title} onChange={(e) => setData('title', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm text-gray-900 dark:text-white" />
+                                        <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">
+                                            Judul <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            value={data.title}
+                                            onChange={(e) => setData('title', e.target.value)}
+                                            placeholder="Masukkan judul berita"
+                                            className={`h-11 w-full rounded-xl border bg-white px-4 text-sm text-gray-900 dark:bg-gray-900 dark:text-white ${
+                                                errors.title ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                            }`}
+                                        />
                                         {errors.title && <p className="mt-1 text-xs font-bold text-red-500">{errors.title}</p>}
                                     </div>
                                     <div>
                                         <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Ringkasan</label>
-                                        <input value={data.excerpt} onChange={(e) => setData('excerpt', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm text-gray-900 dark:text-white" />
+                                        <input
+                                            value={data.excerpt}
+                                            onChange={(e) => setData('excerpt', e.target.value)}
+                                            placeholder="Ringkasan singkat isi berita (opsional)"
+                                            className={`h-11 w-full rounded-xl border bg-white px-4 text-sm text-gray-900 dark:bg-gray-900 dark:text-white ${
+                                                errors.excerpt ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                            }`}
+                                        />
                                         {errors.excerpt && <p className="mt-1 text-xs font-bold text-red-500">{errors.excerpt}</p>}
                                     </div>
                                     <div>
@@ -475,30 +566,64 @@ export default function Konten({
                                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                             <div>
                                                 <h4 className="text-sm font-black text-gray-900 dark:text-white">Bantuan Baca Jepang</h4>
-                                                <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">Tambahkan reading kana dan terjemahan per bagian. Romaji dibuat dari reading, bukan ditebak dari kanji.</p>
+                                                <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">Tambahkan reading kana dan terjemahan per bagian. Bagian yang kosong akan dibersihkan otomatis.</p>
                                             </div>
                                             <button type="button" onClick={addReadingBlock} className="shrink-0 rounded-xl bg-sky-600 px-4 py-2.5 text-xs font-black text-white hover:bg-sky-700">Tambah Bagian</button>
                                         </div>
                                         <div className="mt-4 space-y-3">
-                                            {(data.reading_blocks || []).map((block, index) => (
-                                                <div key={index} className="rounded-xl border border-sky-100 bg-white p-4 dark:border-sky-900/40 dark:bg-gray-900">
-                                                    <div className="grid gap-3 lg:grid-cols-2">
-                                                        <label className="space-y-1.5">
-                                                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Teks Jepang</span>
-                                                            <textarea rows={2} value={block.japanese} onChange={(event) => updateReadingBlock(index, 'japanese', event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
-                                                        </label>
-                                                        <label className="space-y-1.5">
-                                                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Reading kana</span>
-                                                            <textarea rows={2} value={block.reading} onChange={(event) => updateReadingBlock(index, 'reading', event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
-                                                        </label>
-                                                        <label className="space-y-1.5 lg:col-span-2">
-                                                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Terjemahan Indonesia</span>
-                                                            <textarea rows={2} value={block.translation} onChange={(event) => updateReadingBlock(index, 'translation', event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
-                                                        </label>
+                                            {(data.reading_blocks || []).map((block, index) => {
+                                                const japError = errors[`reading_blocks.${index}.japanese`];
+                                                const readError = errors[`reading_blocks.${index}.reading`];
+                                                const transError = errors[`reading_blocks.${index}.translation`];
+
+                                                return (
+                                                    <div key={index} className="rounded-xl border border-sky-100 bg-white p-4 dark:border-sky-900/40 dark:bg-gray-900">
+                                                        <div className="grid gap-3 lg:grid-cols-2">
+                                                            <label className="space-y-1.5">
+                                                                <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
+                                                                    Teks Jepang <span className="text-red-500">*</span>
+                                                                </span>
+                                                                <textarea
+                                                                    rows={2}
+                                                                    value={block.japanese}
+                                                                    onChange={(event) => updateReadingBlock(index, 'japanese', event.target.value)}
+                                                                    className={`w-full rounded-xl border bg-white px-3 py-2 text-sm dark:bg-gray-950 dark:text-white ${
+                                                                        japError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                                                    }`}
+                                                                />
+                                                                {japError && <p className="text-xs font-bold text-red-500">{japError}</p>}
+                                                            </label>
+                                                            <label className="space-y-1.5">
+                                                                <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
+                                                                    Reading kana <span className="text-red-500">*</span>
+                                                                </span>
+                                                                <textarea
+                                                                    rows={2}
+                                                                    value={block.reading}
+                                                                    onChange={(event) => updateReadingBlock(index, 'reading', event.target.value)}
+                                                                    className={`w-full rounded-xl border bg-white px-3 py-2 text-sm dark:bg-gray-950 dark:text-white ${
+                                                                        readError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                                                    }`}
+                                                                />
+                                                                {readError && <p className="text-xs font-bold text-red-500">{readError}</p>}
+                                                            </label>
+                                                            <label className="space-y-1.5 lg:col-span-2">
+                                                                <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Terjemahan Indonesia</span>
+                                                                <textarea
+                                                                    rows={2}
+                                                                    value={block.translation}
+                                                                    onChange={(event) => updateReadingBlock(index, 'translation', event.target.value)}
+                                                                    className={`w-full rounded-xl border bg-white px-3 py-2 text-sm dark:bg-gray-950 dark:text-white ${
+                                                                        transError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                                                    }`}
+                                                                />
+                                                                {transError && <p className="text-xs font-bold text-red-500">{transError}</p>}
+                                                            </label>
+                                                        </div>
+                                                        <button type="button" onClick={() => removeReadingBlock(index)} className="mt-3 text-xs font-black text-rose-600 hover:text-rose-700">Hapus bagian</button>
                                                     </div>
-                                                    <button type="button" onClick={() => removeReadingBlock(index)} className="mt-3 text-xs font-black text-rose-600 hover:text-rose-700">Hapus bagian</button>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                             {(data.reading_blocks || []).length === 0 && <p className="rounded-xl border border-dashed border-sky-200 px-4 py-6 text-center text-xs font-bold text-sky-700 dark:border-sky-900/50 dark:text-sky-300">Belum ada bantuan baca.</p>}
                                         </div>
                                         {errors.reading_blocks && <p className="mt-2 text-xs font-bold text-red-500">{errors.reading_blocks}</p>}
@@ -508,7 +633,13 @@ export default function Konten({
                                 <div className="min-h-0 space-y-4 overflow-y-auto border-t border-gray-100 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-gray-900/40 sm:p-6 xl:border-l xl:border-t-0">
                                     <div>
                                         <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Kategori</label>
-                                        <select value={data.category} onChange={(e) => setData('category', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                                        <select
+                                            value={data.category}
+                                            onChange={(e) => setData('category', e.target.value)}
+                                            className={`h-11 w-full rounded-xl border bg-white px-4 text-sm font-bold text-gray-900 dark:bg-gray-900 dark:text-white ${
+                                                errors.category ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                            }`}
+                                        >
                                             {categories.map((category) => (
                                                 <option key={category} value={category}>{category.replaceAll('-', ' ')}</option>
                                             ))}
@@ -517,69 +648,170 @@ export default function Konten({
                                     </div>
                                     <div>
                                         <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Status</label>
-                                        <select value={data.status} onChange={(e) => setData('status', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm font-bold text-gray-900 dark:text-white">
+                                        <select
+                                            value={data.status}
+                                            onChange={(e) => setData('status', e.target.value)}
+                                            className={`h-11 w-full rounded-xl border bg-white px-4 text-sm font-bold text-gray-900 dark:bg-gray-900 dark:text-white ${
+                                                errors.status ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                            }`}
+                                        >
                                             <option value="draft">Draft</option>
                                             <option value="scheduled">Terjadwal</option>
                                             <option value="published">Terbitkan sekarang</option>
                                             <option value="archived">Arsip</option>
                                         </select>
+                                        {errors.status && <p className="mt-1 text-xs font-bold text-red-500">{errors.status}</p>}
                                     </div>
                                     <div>
                                         <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Audience</label>
-                                        <select value={data.audience} onChange={(e) => setData('audience', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm font-bold text-gray-900 dark:text-white">
+                                        <select
+                                            value={data.audience}
+                                            onChange={(e) => setData('audience', e.target.value)}
+                                            className={`h-11 w-full rounded-xl border bg-white px-4 text-sm font-bold text-gray-900 dark:bg-gray-900 dark:text-white ${
+                                                errors.audience ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                            }`}
+                                        >
                                             <option value="students">Students</option>
                                             <option value="admins">Admins</option>
                                             <option value="all">All</option>
                                         </select>
+                                        {errors.audience && <p className="mt-1 text-xs font-bold text-red-500">{errors.audience}</p>}
                                     </div>
                                     {data.status === 'scheduled' && (
                                         <div>
-                                            <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Jadwalkan Terbit</label>
-                                            <input type="datetime-local" value={data.scheduled_at} onChange={(e) => setData('scheduled_at', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                                            <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">
+                                                Jadwalkan Terbit <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                value={data.scheduled_at}
+                                                onChange={(e) => setData('scheduled_at', e.target.value)}
+                                                className={`h-11 w-full rounded-xl border bg-white px-4 text-sm text-gray-900 dark:bg-gray-900 dark:text-white ${
+                                                    errors.scheduled_at ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                                }`}
+                                            />
                                             {errors.scheduled_at && <p className="mt-1 text-xs font-bold text-red-500">{errors.scheduled_at}</p>}
                                         </div>
                                     )}
                                     <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
                                         <div>
                                             <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Gambar Utama</label>
-                                            {editingNews?.cover_url && !data.cover_image && (
-                                                <img src={editingNews.cover_url} alt={editingNews.cover_image_alt || editingNews.title} className="mb-3 aspect-[16/9] w-full rounded-lg object-cover" />
+                                            {coverPreviewUrl ? (
+                                                <div className="mb-3 space-y-2">
+                                                    <img src={coverPreviewUrl} alt="Preview baru" className="aspect-[16/9] w-full rounded-lg object-cover ring-2 ring-brand-500" />
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Preview Gambar Baru</span>
+                                                        <button type="button" onClick={clearCoverImage} className="text-xs font-bold text-red-500 hover:underline">Hapus pilihan</button>
+                                                    </div>
+                                                </div>
+                                            ) : editingNews?.cover_url && (
+                                                <div className="mb-3">
+                                                    <img src={editingNews.cover_url} alt={editingNews.cover_image_alt || editingNews.title} className="aspect-[16/9] w-full rounded-lg object-cover" />
+                                                </div>
                                             )}
-                                            <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={(e) => setData('cover_image', e.target.files?.[0] || null)} className="block w-full text-xs text-gray-600 dark:text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-bold file:text-brand-700 dark:file:bg-brand-900/30 dark:file:text-brand-300" />
+                                            <input
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png,.webp"
+                                                onChange={handleCoverImageChange}
+                                                className={`block w-full text-xs text-gray-600 dark:text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-bold file:text-brand-700 dark:file:bg-brand-900/30 dark:file:text-brand-300 ${
+                                                    errors.cover_image ? 'border border-red-500 rounded-lg p-1' : ''
+                                                }`}
+                                            />
                                             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">JPG, PNG, atau WebP. Maksimum 4 MB.</p>
+                                            {errors.cover_image && <p className="mt-1 text-xs font-bold text-red-500">{errors.cover_image}</p>}
                                         </div>
                                         <div>
-                                            <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Alt gambar</label>
-                                            <input value={data.cover_image_alt} onChange={(e) => setData('cover_image_alt', e.target.value)} placeholder="Deskripsi gambar untuk aksesibilitas" className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                            <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">
+                                                Alt gambar {Boolean(data.cover_image || editingNews?.cover_url) && <span className="text-red-500">*</span>}
+                                            </label>
+                                            <input
+                                                value={data.cover_image_alt}
+                                                onChange={(e) => setData('cover_image_alt', e.target.value)}
+                                                placeholder="Deskripsi gambar untuk aksesibilitas"
+                                                className={`h-10 w-full rounded-lg border bg-white px-3 text-sm text-gray-900 dark:bg-gray-950 dark:text-white ${
+                                                    errors.cover_image_alt ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                                }`}
+                                            />
                                             {errors.cover_image_alt && <p className="mt-1 text-xs font-bold text-red-500">{errors.cover_image_alt}</p>}
                                         </div>
                                         <div>
                                             <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Keterangan gambar</label>
-                                            <input value={data.cover_image_caption} onChange={(e) => setData('cover_image_caption', e.target.value)} placeholder="Opsional" className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                            <input
+                                                value={data.cover_image_caption}
+                                                onChange={(e) => setData('cover_image_caption', e.target.value)}
+                                                placeholder="Opsional"
+                                                className={`h-10 w-full rounded-lg border bg-white px-3 text-sm text-gray-900 dark:bg-gray-950 dark:text-white ${
+                                                    errors.cover_image_caption ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                                }`}
+                                            />
+                                            {errors.cover_image_caption && <p className="mt-1 text-xs font-bold text-red-500">{errors.cover_image_caption}</p>}
                                         </div>
                                     </div>
                                     <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
                                         <p className="text-sm font-black text-gray-900 dark:text-white">URL & pencarian</p>
                                         <div>
                                             <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Slug URL</label>
-                                            <input value={data.slug} onChange={(e) => setData('slug', e.target.value)} placeholder="Dibuat otomatis dari judul" className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                            <input
+                                                value={data.slug}
+                                                onChange={(e) => setData('slug', e.target.value)}
+                                                placeholder="Dibuat otomatis dari judul"
+                                                className={`h-10 w-full rounded-lg border bg-white px-3 text-sm text-gray-900 dark:bg-gray-950 dark:text-white ${
+                                                    errors.slug ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                                }`}
+                                            />
+                                            {errors.slug && <p className="mt-1 text-xs font-bold text-red-500">{errors.slug}</p>}
                                         </div>
                                         <div>
                                             <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Judul SEO</label>
-                                            <input value={data.seo_title} onChange={(e) => setData('seo_title', e.target.value)} maxLength={70} placeholder="Opsional, maksimal 70 karakter" className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                            <input
+                                                value={data.seo_title}
+                                                onChange={(e) => setData('seo_title', e.target.value)}
+                                                maxLength={70}
+                                                placeholder="Opsional, maksimal 70 karakter"
+                                                className={`h-10 w-full rounded-lg border bg-white px-3 text-sm text-gray-900 dark:bg-gray-950 dark:text-white ${
+                                                    errors.seo_title ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                                }`}
+                                            />
+                                            {errors.seo_title && <p className="mt-1 text-xs font-bold text-red-500">{errors.seo_title}</p>}
                                         </div>
                                         <div>
                                             <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Deskripsi SEO</label>
-                                            <textarea value={data.seo_description} onChange={(e) => setData('seo_description', e.target.value)} maxLength={160} rows={3} placeholder="Opsional, maksimal 160 karakter" className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                            <textarea
+                                                value={data.seo_description}
+                                                onChange={(e) => setData('seo_description', e.target.value)}
+                                                maxLength={160}
+                                                rows={3}
+                                                placeholder="Opsional, maksimal 160 karakter"
+                                                className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 dark:bg-gray-950 dark:text-white ${
+                                                    errors.seo_description ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                                }`}
+                                            />
+                                            {errors.seo_description && <p className="mt-1 text-xs font-bold text-red-500">{errors.seo_description}</p>}
                                         </div>
                                     </div>
                                     <div>
                                         <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Mulai tampil</label>
-                                        <input type="datetime-local" value={data.starts_at} onChange={(e) => setData('starts_at', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm text-gray-900 dark:text-white" />
+                                        <input
+                                            type="datetime-local"
+                                            value={data.starts_at}
+                                            onChange={(e) => setData('starts_at', e.target.value)}
+                                            className={`h-11 w-full rounded-xl border bg-white px-4 text-sm text-gray-900 dark:bg-gray-900 dark:text-white ${
+                                                errors.starts_at ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                            }`}
+                                        />
+                                        {errors.starts_at && <p className="mt-1 text-xs font-bold text-red-500">{errors.starts_at}</p>}
                                     </div>
                                     <div>
                                         <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Berhenti tampil</label>
-                                        <input type="datetime-local" value={data.ends_at} onChange={(e) => setData('ends_at', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm text-gray-900 dark:text-white" />
+                                        <input
+                                            type="datetime-local"
+                                            value={data.ends_at}
+                                            onChange={(e) => setData('ends_at', e.target.value)}
+                                            className={`h-11 w-full rounded-xl border bg-white px-4 text-sm text-gray-900 dark:bg-gray-900 dark:text-white ${
+                                                errors.ends_at ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
+                                            }`}
+                                        />
+                                        {errors.ends_at && <p className="mt-1 text-xs font-bold text-red-500">{errors.ends_at}</p>}
                                     </div>
                                     <label className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300">
                                         <input type="checkbox" checked={data.is_pinned} onChange={(e) => setData('is_pinned', e.target.checked)} className="rounded border-gray-300 text-brand-600 focus:ring-focus" />
@@ -598,7 +830,7 @@ export default function Konten({
                                                                 <p className="truncate font-bold text-gray-900 dark:text-white">{attachment.file_name}</p>
                                                                 <p className="text-xs text-gray-500 dark:text-gray-400">{attachment.file_type}</p>
                                                             </div>
-                                                                            <button type="button" onClick={() => deleteAttachment(attachment)} className="text-xs font-black text-red-600 dark:text-red-400">Hapus</button>
+                                                            <button type="button" onClick={() => deleteAttachment(attachment)} className="text-xs font-black text-red-600 dark:text-red-400">Hapus</button>
                                                         </div>
                                                         {attachment.url && <a href={attachment.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-bold text-brand-600 dark:text-brand-400">Buka file</a>}
                                                         {attachment.video_embed_url && <a href={attachment.video_embed_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-bold text-brand-600 dark:text-brand-400">Buka video</a>}
@@ -617,7 +849,14 @@ export default function Konten({
                                                 ) : (
                                                     <input type="file" onChange={(e) => setAttachmentFile(e.target.files[0] || null)} accept={attachmentType === 'image' ? '.jpg,.jpeg,.png,.webp' : '.pdf,.doc,.docx'} className="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-4 file:rounded-xl file:border-0 file:bg-brand-50 file:px-4 file:py-3 file:text-sm file:font-black file:text-brand-600" />
                                                 )}
-                                                <button type="button" onClick={uploadAttachment} className="w-full rounded-xl bg-gray-900 px-4 py-3 text-sm font-black text-white dark:bg-white dark:text-gray-900">Tambah Attachment</button>
+                                                <button
+                                                    type="button"
+                                                    disabled={attachmentType === 'video_embed' ? !videoEmbedUrl.trim() : !attachmentFile}
+                                                    onClick={uploadAttachment}
+                                                    className="w-full rounded-xl bg-gray-900 px-4 py-3 text-sm font-black text-white transition disabled:opacity-50 dark:bg-white dark:text-gray-900"
+                                                >
+                                                    Tambah Attachment
+                                                </button>
                                             </div>
                                         </div>
                                     )}
@@ -670,8 +909,47 @@ export default function Konten({
                                 )}
                             </header>
 
+                            {(coverPreviewUrl || editingNews?.cover_url) && (
+                                <div className="px-5 pt-6 sm:px-8">
+                                    <figure>
+                                        <img
+                                            src={coverPreviewUrl || editingNews?.cover_url}
+                                            alt={data.cover_image_alt || data.title || 'Cover image'}
+                                            className="max-h-[420px] w-full rounded-2xl object-cover shadow-sm"
+                                        />
+                                        {data.cover_image_caption && (
+                                            <figcaption className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                                {data.cover_image_caption}
+                                            </figcaption>
+                                        )}
+                                    </figure>
+                                </div>
+                            )}
+
                             <div className="px-5 py-8 sm:px-8">
                                 <ArticleBody html={data.body} className="prose-lg" />
+
+                                {data.reading_blocks?.filter((b) => b.japanese?.trim() || b.reading?.trim()).length > 0 && (
+                                    <section className="mt-8 space-y-4 border-t border-gray-100 pt-8 dark:border-gray-800">
+                                        <div>
+                                            <h4 className="text-base font-black text-gray-900 dark:text-white">Bantuan Baca</h4>
+                                            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Pratinjau pembacaan kanji, romaji, dan terjemahan bahasa Indonesia.</p>
+                                        </div>
+                                        {data.reading_blocks
+                                            .filter((b) => b.japanese?.trim() || b.reading?.trim())
+                                            .map((block, idx) => (
+                                                <div key={idx} className="rounded-2xl border border-sky-100 bg-sky-50/50 p-4 dark:border-sky-900/40 dark:bg-sky-950/20">
+                                                    <JapaneseReading
+                                                        japanese={block.japanese}
+                                                        reading={block.reading}
+                                                        translation={block.translation}
+                                                        forcePreferences={{ showRomaji: true, showTranslation: true }}
+                                                        className="text-base font-bold leading-7 text-gray-900 dark:text-white"
+                                                    />
+                                                </div>
+                                            ))}
+                                    </section>
+                                )}
                             </div>
                         </article>
                     </div>

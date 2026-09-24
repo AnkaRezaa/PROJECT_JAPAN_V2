@@ -74,3 +74,60 @@ it('lets a superadmin save portal metadata as a draft', function () {
         ->and($news->category)->toBe('pengumuman')
         ->and($news->seo_description)->toBe('Informasi kelas musim panas TOKU-UP.');
 });
+
+it('cleans empty reading blocks and ignores scheduled_at for draft news', function () {
+    $admin = Pengguna::factory()->create(['role' => 'superadmin']);
+
+    $this->actingAs($admin)
+        ->post(route('superadmin.content.news.store'), [
+            'title' => 'Berita Sanitasi Sukses',
+            'status' => 'draft',
+            'audience' => 'students',
+            'category' => 'platform',
+            'scheduled_at' => now()->subDays(5)->toDateTimeString(),
+            'reading_blocks' => [
+                ['japanese' => '', 'reading' => '', 'translation' => ''],
+                ['japanese' => '日本語', 'reading' => 'にほんご', 'translation' => 'Bahasa Jepang'],
+                ['japanese' => '   ', 'reading' => '   ', 'translation' => 'kosong'],
+            ],
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    $news = Berita::where('title', 'Berita Sanitasi Sukses')->firstOrFail();
+
+    expect($news->status)->toBe('draft')
+        ->and($news->scheduled_at)->toBeNull()
+        ->and($news->reading_blocks)->toHaveCount(1)
+        ->and($news->reading_blocks[0]['japanese'])->toBe('日本語');
+});
+
+it('requires scheduled_at when status is scheduled', function () {
+    $admin = Pengguna::factory()->create(['role' => 'superadmin']);
+
+    $this->actingAs($admin)
+        ->post(route('superadmin.content.news.store'), [
+            'title' => 'Berita Gagal Terjadwal',
+            'status' => 'scheduled',
+            'audience' => 'students',
+            'category' => 'platform',
+            'scheduled_at' => null,
+        ])
+        ->assertSessionHasErrors(['scheduled_at']);
+});
+
+it('validates ends_at must be after or equal to starts_at', function () {
+    $admin = Pengguna::factory()->create(['role' => 'superadmin']);
+
+    $this->actingAs($admin)
+        ->post(route('superadmin.content.news.store'), [
+            'title' => 'Berita Jadwal Tidak Valid',
+            'status' => 'draft',
+            'audience' => 'students',
+            'category' => 'platform',
+            'starts_at' => now()->addDays(5)->toDateString(),
+            'ends_at' => now()->addDays(2)->toDateString(),
+        ])
+        ->assertSessionHasErrors(['ends_at']);
+});
+

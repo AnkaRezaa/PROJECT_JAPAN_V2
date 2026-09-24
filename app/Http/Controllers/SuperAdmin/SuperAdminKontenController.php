@@ -13,6 +13,7 @@ use App\Services\HtmlSanitizerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class SuperAdminKontenController extends SuperAdminDasarController
@@ -238,6 +239,18 @@ class SuperAdminKontenController extends SuperAdminDasarController
 
     private function validateNews(Request $request): array
     {
+        if ($request->has('reading_blocks') && is_array($request->input('reading_blocks'))) {
+            $cleaned = collect($request->input('reading_blocks'))
+                ->filter(fn ($b) => is_array($b) && (! empty(trim((string) ($b['japanese'] ?? ''))) || ! empty(trim((string) ($b['reading'] ?? '')))))
+                ->values()
+                ->all();
+            $request->merge(['reading_blocks' => $cleaned]);
+        }
+
+        if ($request->input('status') !== 'scheduled') {
+            $request->merge(['scheduled_at' => null]);
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255'],
@@ -251,14 +264,25 @@ class SuperAdminKontenController extends SuperAdminDasarController
             'audience' => ['required', 'in:students,admins,all'],
             'category' => ['required', 'in:'.implode(',', $this->categories())],
             'is_pinned' => ['boolean'],
-            'scheduled_at' => ['nullable', 'required_if:status,scheduled', 'date', 'after:now'],
+            'scheduled_at' => ['nullable', 'required_if:status,scheduled', 'date'],
             'starts_at' => ['nullable', 'date'],
-            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'ends_at' => ['nullable', 'date', Rule::when($request->filled('starts_at'), ['after_or_equal:starts_at'])],
             'cover_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'cover_image_alt' => ['nullable', 'string', 'max:160', 'required_with:cover_image'],
             'cover_image_caption' => ['nullable', 'string', 'max:255'],
             'seo_title' => ['nullable', 'string', 'max:70'],
             'seo_description' => ['nullable', 'string', 'max:160'],
+        ], [
+            'title.required' => 'Judul berita wajib diisi.',
+            'category.required' => 'Kategori berita wajib dipilih.',
+            'cover_image.image' => 'File gambar utama harus berupa gambar.',
+            'cover_image.mimes' => 'Format gambar utama harus JPG, JPEG, PNG, atau WebP.',
+            'cover_image.max' => 'Ukuran gambar utama maksimal 4 MB.',
+            'cover_image_alt.required_with' => 'Alt gambar wajib diisi jika mengunggah gambar utama.',
+            'scheduled_at.required_if' => 'Waktu jadwal terbit wajib diisi jika status Terjadwal.',
+            'ends_at.after_or_equal' => 'Tanggal berhenti tampil harus setelah atau sama dengan tanggal mulai.',
+            'reading_blocks.*.japanese.required' => 'Teks Jepang pada bagian bantuan baca wajib diisi.',
+            'reading_blocks.*.reading.required' => 'Reading kana pada bagian bantuan baca wajib diisi.',
         ]);
 
         $validated['body'] = app(HtmlSanitizerService::class)->clean($validated['body'] ?? '');

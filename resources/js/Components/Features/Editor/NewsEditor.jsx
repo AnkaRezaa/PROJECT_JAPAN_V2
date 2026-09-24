@@ -27,6 +27,7 @@ export default function NewsEditor({ value, onChange, uploadImageUrl }) {
     const [imageCaption, setImageCaption] = useState('');
     const [isImagePanelOpen, setIsImagePanelOpen] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState('');
 
     const editor = useEditor({
         extensions: [
@@ -52,7 +53,7 @@ export default function NewsEditor({ value, onChange, uploadImageUrl }) {
     });
 
     useEffect(() => {
-        if (editor && value !== editor.getHTML()) {
+        if (editor && !editor.isFocused && value !== editor.getHTML()) {
             editor.commands.setContent(value || '', false);
         }
     }, [editor, value]);
@@ -73,9 +74,14 @@ export default function NewsEditor({ value, onChange, uploadImageUrl }) {
     };
 
     const uploadImage = async () => {
-        if (!editor || !imageFile || !uploadImageUrl || !imageAlt.trim()) return;
+        if (!editor || !imageFile || !uploadImageUrl) return;
+        if (!imageAlt.trim()) {
+            setUploadError('Alt text wajib diisi untuk mendeskripsikan gambar.');
+            return;
+        }
 
         setIsUploading(true);
+        setUploadError('');
 
         try {
             const formData = new FormData();
@@ -103,7 +109,11 @@ export default function NewsEditor({ value, onChange, uploadImageUrl }) {
             setImageFile(null);
             setImageAlt('');
             setImageCaption('');
+            setUploadError('');
             setIsImagePanelOpen(false);
+        } catch (error) {
+            const message = error.response?.data?.errors?.image?.[0] || error.response?.data?.message || 'Gagal mengunggah gambar. Pastikan format JPG/PNG/WebP dan ukuran maksimal 4 MB.';
+            setUploadError(message);
         } finally {
             setIsUploading(false);
         }
@@ -145,14 +155,25 @@ export default function NewsEditor({ value, onChange, uploadImageUrl }) {
             {isImagePanelOpen && (
                 <div className="grid gap-3 border-b border-gray-200 bg-brand-50/60 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end dark:border-gray-700 dark:bg-brand-950/20">
                     <label className="block text-xs font-bold text-gray-700 dark:text-gray-200">
-                        Gambar
+                        Gambar (Maks 4 MB)
                         <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setImageFile(event.target.files?.[0] || null)} className="mt-1 block w-full text-xs" />
                     </label>
                     <div className="grid gap-2 sm:grid-cols-2">
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-200">Alt text<input value={imageAlt} onChange={(event) => setImageAlt(event.target.value)} placeholder="Deskripsikan isi gambar" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-200">Caption opsional<input value={imageCaption} onChange={(event) => setImageCaption(event.target.value)} placeholder="Keterangan gambar" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-200">
+                            Alt text <span className="text-red-500">*</span>
+                            <input value={imageAlt} onChange={(event) => setImageAlt(event.target.value)} placeholder="Deskripsi gambar (wajib)" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                        </label>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-200">
+                            Caption opsional
+                            <input value={imageCaption} onChange={(event) => setImageCaption(event.target.value)} placeholder="Keterangan gambar" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                        </label>
                     </div>
                     <button type="button" disabled={!imageFile || !imageAlt.trim() || isUploading} onClick={uploadImage} className="min-h-11 rounded-lg bg-[var(--toku-primary)] px-4 text-sm font-black text-white transition hover:bg-[var(--toku-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--toku-focus)] disabled:opacity-50">{isUploading ? 'Mengunggah...' : 'Sisipkan'}</button>
+                    {uploadError && (
+                        <p className="col-span-full rounded-lg bg-red-50 p-2 text-xs font-bold text-red-600 dark:bg-red-950/30 dark:text-red-400">
+                            {uploadError}
+                        </p>
+                    )}
                 </div>
             )}
 
