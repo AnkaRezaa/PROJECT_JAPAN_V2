@@ -24,7 +24,10 @@ class AdminModulController extends Controller
     public function programsIndex(Request $request)
     {
         $query = ProgramPembelajaran::with(['level', 'curriculumTrack'])
-            ->withCount(['modules' => fn ($query) => $query->where('status', 'published')])
+            ->withCount([
+                'modules' => fn ($query) => $query->where('status', 'published'),
+                'kloterBelajar',
+            ])
             ->orderBy('sort_order')
             ->orderBy('id');
         $this->kloterService->batasiProgramDikelola($query, $request->user());
@@ -41,11 +44,39 @@ class AdminModulController extends Controller
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('type') && in_array($request->type, ['mandiri', 'mentor'], true)) {
+            if ($request->type === 'mentor') {
+                $query->where(function ($q) {
+                    $q->whereHas('kloterBelajar')
+                      ->orWhere('title', 'like', '%mentor%')
+                      ->orWhere('slug', 'like', '%mentor%');
+                });
+            } else {
+                $query->whereDoesntHave('kloterBelajar')
+                      ->where('title', 'not like', '%mentor%')
+                      ->where('slug', 'not like', '%mentor%');
+            }
+        }
+
+        $programs = $query->paginate(12)->through(function ($program) {
+            $isMentor = $program->kloter_belajar_count > 0
+                || str_contains(strtolower($program->title), 'mentor')
+                || str_contains(strtolower($program->slug), 'mentor');
+
+            return [
+                ...$program->toArray(),
+                'is_mentor' => $isMentor,
+                'learning_type' => $isMentor ? 'mentor' : 'mandiri',
+                'learning_type_label' => $isMentor ? 'Kelas Mentor (Bimbingan Guru)' : 'Kelas Mandiri (Self-Paced)',
+                'kloters_count' => (int) $program->kloter_belajar_count,
+            ];
+        })->withQueryString();
+
         return Inertia::render('Admin/ModulMateri/ManajemenKelas', [
-            'programs' => $query->paginate(10)->withQueryString(),
+            'programs' => $programs,
             'tracks' => CurriculumTrack::where('status', 'active')->orderBy('sort_order')->get(['id', 'code', 'name']),
             'levels' => LevelPembelajaran::with('curriculumTrack:id,code,name')->orderBy('stage')->get(),
-            'filters' => $request->only('search', 'status'),
+            'filters' => $request->only('search', 'status', 'type'),
         ]);
     }
 
@@ -93,6 +124,38 @@ class AdminModulController extends Controller
         $focus = in_array($request->string('focus')->toString(), ['roadmap', 'flashcard', 'presentation'], true)
             ? $request->string('focus')->toString()
             : 'roadmap';
+
+        $availableProgramsQuery = ProgramPembelajaran::with(['level', 'curriculumTrack'])
+            ->withCount(['modules', 'kloterBelajar'])
+            ->orderBy('sort_order')
+            ->orderBy('id');
+        $this->kloterService->batasiProgramDikelola($availableProgramsQuery, $request->user());
+        $availablePrograms = $availableProgramsQuery->get()->map(function ($p) {
+            $isMentor = $p->kloter_belajar_count > 0
+                || str_contains(strtolower($p->title), 'mentor')
+                || str_contains(strtolower($p->slug), 'mentor');
+
+            return [
+                ...$p->toArray(),
+                'is_mentor' => $isMentor,
+                'learning_type' => $isMentor ? 'mentor' : 'mandiri',
+                'learning_type_label' => $isMentor ? 'Kelas Mentor (Bimbingan Guru)' : 'Kelas Mandiri (Self-Paced)',
+                'kloters_count' => (int) $p->kloter_belajar_count,
+            ];
+        });
+
+        if (! $request->filled('program_id') || $request->program_id === 'all') {
+            if ($availablePrograms->isNotEmpty()) {
+                return redirect()->route('admin.modules.index', [
+                    'program_id' => $availablePrograms->first()['id'],
+                    'focus' => $focus,
+                ]);
+            }
+
+            return redirect()->route('admin.programs.index')->with('warning', 'Silakan buat kelas terlebih dahulu.');
+        }
+
+        $this->kloterService->abortJikaProgramDiLuarCakupan($request->user(), $request->integer('program_id'));
 
         $query = Modul::with([
             'level',
@@ -145,13 +208,7 @@ class AdminModulController extends Controller
             $query->where('title', 'like', '%'.$request->search.'%');
         }
 
-        if ($request->filled('program_id') && $request->program_id !== 'all') {
-            $this->kloterService->abortJikaProgramDiLuarCakupan($request->user(), $request->integer('program_id'));
-            $query->where('program_pembelajaran_id', $request->integer('program_id'));
-        } else {
-            // The roadmap is a class workspace; never mix weeks from multiple classes.
-            $query->whereRaw('1 = 0');
-        }
+        $query->where('program_pembelajaran_id', $request->integer('program_id'));
 
         $modules = $query->paginate(10)->through(fn ($module) => [
             'id' => $module->id,
@@ -228,7 +285,7 @@ class AdminModulController extends Controller
         return Inertia::render('Admin/ModulMateri/ManajemenModulMateri', [
             'modules' => $modules,
             'levels' => LevelPembelajaran::orderBy('stage')->get(),
-            'programs' => ProgramPembelajaran::with(['level', 'curriculumTrack'])->orderBy('sort_order')->orderBy('id')->get(),
+            'programs' => $availablePrograms,
             'filters' => [
                 ...$request->only('search', 'program_id', 'week_id', 'day_id'),
                 'focus' => $focus,

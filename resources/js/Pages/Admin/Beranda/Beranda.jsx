@@ -44,16 +44,31 @@ function DashboardIcon({ name, className = '' }) {
 
 function MetricGrid({ stats = [] }) {
     return (
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-            {stats.map((item) => (
-                <div key={item.title} className="min-h-[136px] border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/30 dark:text-brand-300">
-                        <DashboardIcon name={item.icon} />
-                    </span>
-                    <p className="mt-5 text-2xl font-black tabular-nums text-gray-950 dark:text-white">{item.value}</p>
-                    <p className="mt-1 text-xs font-bold leading-5 text-gray-500 dark:text-gray-400">{item.title}</p>
-                </div>
-            ))}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {stats.map((item) => {
+                const Wrapper = item.href ? Link : 'div';
+                return (
+                    <Wrapper key={item.title} href={item.href} className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-brand-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700 ${item.href ? 'cursor-pointer' : ''}`}>
+                        <div>
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
+                                    <DashboardIcon name={item.icon} />
+                                </span>
+                                {item.badge && <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-gray-600 dark:bg-gray-800 dark:text-gray-300">{item.badge}</span>}
+                            </div>
+                            <p className="text-2xl font-black tabular-nums text-gray-950 dark:text-white">{item.value}</p>
+                            <p className="mt-1 text-xs font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">{item.title}</p>
+                        </div>
+                        {item.detail && <p className="mt-3 text-xs font-medium text-gray-500 dark:text-gray-400">{item.detail}</p>}
+                    </Wrapper>
+                );
+
+
+
+
+
+
+            })}
         </div>
     );
 }
@@ -247,9 +262,9 @@ export default function BerandaAdmin({
                         </div>
                         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
                             {isKloterWorkspace && <KloterFilter routeName="admin.dashboard" kloters={kloters} filters={filters} adminScope={adminScope} className="sm:w-72" />}
-                            <Link href={isKloterWorkspace ? route('admin.analytics', filters.kloter ? { kloter: filters.kloter } : {}) : route('admin.modules.index')} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-black text-white transition hover:bg-brand-700">
+                            <Link href={isKloterWorkspace ? route('admin.analytics', filters.kloter ? { kloter: filters.kloter } : {}) : route('admin.programs.index')} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-black text-white transition hover:bg-brand-700">
                                 {isKloterWorkspace ? <TrendingUpRounded fontSize="small" /> : <AutoStoriesRounded fontSize="small" />}
-                                {isKloterWorkspace ? 'Buka Analitik' : 'Kelola Modul'}
+                                {isKloterWorkspace ? 'Buka Analitik' : 'Kelola Kelas & Modul'}
                             </Link>
                         </div>
                     </div>

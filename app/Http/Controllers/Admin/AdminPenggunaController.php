@@ -118,7 +118,6 @@ class AdminPenggunaController extends Controller
             'progress.module.level',
             'attempts' => fn ($relation) => $this->batasiAttemptProgram($relation->getQuery(), $programIds),
             'attempts.quiz.module.level',
-            'certificates.level',
             'achievements',
             'kloterBelajar.programPembelajaran',
             'subscriptions.paymentPlan',

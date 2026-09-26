@@ -92,12 +92,76 @@ function OptionCard({ href, icon, label, description, tone = 'orange' }) {
     );
 }
 
+function ProgramCard({ program, onManage }) {
+    return (
+        <article className="overflow-hidden rounded-[1.4rem] border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-gray-800 dark:bg-gray-900">
+            <div className="relative h-44 overflow-hidden bg-gradient-to-br from-orange-500 to-rose-600">
+                {program.thumbnail_url ? (
+                    <img src={program.thumbnail_url} alt={program.title} className="h-full w-full object-cover" />
+                ) : (
+                    <div className="flex h-full w-full items-center justify-center text-white/80">
+                        <ImageOutlinedIcon sx={{ fontSize: 54 }} />
+                    </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-gray-950/25 to-transparent" />
+                <div className="absolute bottom-4 left-4 right-4">
+                    <div className="mb-2 flex flex-wrap gap-2">
+                        <StatusBadge status={program.status} />
+                        <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider backdrop-blur ${
+                            program.is_mentor
+                                ? 'bg-indigo-600/90 text-white shadow-sm'
+                                : 'bg-emerald-600/90 text-white shadow-sm'
+                        }`}>
+                            {program.is_mentor ? `🎓 Kelas Mentor (${program.kloters_count} Kloter)` : '📖 Belajar Mandiri'}
+                        </span>
+                        {program.curriculum_track && <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-black text-white backdrop-blur">{program.curriculum_track.name}</span>}
+                        {program.level && <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-black text-white backdrop-blur">{program.level.level_name}</span>}
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-white line-clamp-1">{program.title}</h2>
+                </div>
+            </div>
+
+            <div className="space-y-4 p-5">
+                <p className="line-clamp-2 text-sm font-semibold text-gray-500 dark:text-gray-400">{program.description || 'Belum ada deskripsi.'}</p>
+                <div className="grid gap-2 text-sm font-bold text-gray-600 dark:text-gray-300">
+                    <div className="flex items-center gap-2">
+                        <span className={`inline-block h-2 w-2 rounded-full ${program.is_mentor ? 'bg-indigo-500' : 'bg-emerald-500'}`} />
+                        <span className="text-xs font-black uppercase tracking-wider text-gray-400">Model:</span>
+                        <span className={`text-xs font-black ${program.is_mentor ? 'text-indigo-600 dark:text-indigo-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                            {program.is_mentor ? `Bimbingan Guru (${program.kloters_count} Kloter)` : 'Roadmap Belajar Mandiri'}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <GroupsIcon sx={{ fontSize: 18 }} className="text-gray-400" />
+                        {program.instructor_name || 'Pengajar belum diisi'}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <MenuBookIcon sx={{ fontSize: 18 }} className="text-gray-400" />
+                        {program.modules_count || 0} minggu terbit
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => onManage(program)}
+                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-black text-white shadow-sm shadow-brand-500/20 transition-colors hover:bg-brand-700"
+                >
+                    <MenuBookIcon sx={{ fontSize: 18 }} />
+                    Kelola Isi
+                </button>
+            </div>
+        </article>
+    );
+}
+
 export default function ManajemenKelas({ programs = {}, tracks = [], levels = [], filters = {} }) {
     const { auth } = usePage().props;
     const isAdminGlobal = auth?.user?.admin_scope !== 'kloter';
     const rows = programs.data || [];
+    const mentorPrograms = rows.filter((p) => p.is_mentor);
+    const mandiriPrograms = rows.filter((p) => !p.is_mentor);
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || 'all');
+    const [type, setType] = useState(filters.type || 'all');
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState(null);
     const [managingProgram, setManagingProgram] = useState(null);
@@ -171,9 +235,14 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
         setThumbnailPreviewUrl(thumbnailUrl);
     };
 
-    const submitFilters = (event) => {
-        event.preventDefault();
-        router.get(route('admin.programs.index'), { search, status }, { preserveState: true, replace: true });
+    const submitFilters = (event, overrideType) => {
+        if (event) event.preventDefault();
+        const activeType = overrideType !== undefined ? overrideType : type;
+        router.get(route('admin.programs.index'), {
+            search: search || undefined,
+            status: status !== 'all' ? status : undefined,
+            type: activeType !== 'all' ? activeType : undefined,
+        }, { preserveState: true, replace: true });
     };
 
     const submitForm = (event) => {
@@ -223,12 +292,41 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                         </div>
                     </section>
 
-                    <section className="rounded-[1.35rem] border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                        <form onSubmit={submitFilters} className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto]">
+                    <section className="space-y-3 rounded-[1.35rem] border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                        <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 pb-3 dark:border-gray-800">
+                            {[
+                                { value: 'all', label: 'Semua Kelas' },
+                                { value: 'mentor', label: '🎓 Kelas Mentor (Ada Guru)' },
+                                { value: 'mandiri', label: '📖 Belajar Mandiri (Self-Paced)' },
+                            ].map((tab) => (
+                                <button
+                                    key={tab.value}
+                                    type="button"
+                                    onClick={() => {
+                                        setType(tab.value);
+                                        submitFilters(null, tab.value);
+                                    }}
+                                    className={`rounded-xl px-3.5 py-1.5 text-xs font-black transition ${
+                                        type === tab.value
+                                            ? 'bg-brand-600 text-white shadow-sm shadow-brand-500/20'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <form onSubmit={submitFilters} className="grid gap-3 md:grid-cols-[minmax(0,1fr)_170px_170px_auto]">
                             <label className="flex h-11 items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 dark:border-gray-700 dark:bg-gray-950">
                                 <SearchIcon sx={{ fontSize: 18 }} className="text-gray-400" />
                                 <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari kelas atau pengajar..." className="w-full border-0 bg-transparent text-sm font-semibold outline-none focus:ring-0 dark:text-white" />
                             </label>
+                            <select value={type} onChange={(event) => setType(event.target.value)} className="h-11 rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white">
+                                <option value="all">Semua Tipe</option>
+                                <option value="mentor">🎓 Kelas Mentor</option>
+                                <option value="mandiri">📖 Belajar Mandiri</option>
+                            </select>
                             <select value={status} onChange={(event) => setStatus(event.target.value)} className="h-11 rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                                 <option value="all">Semua Status</option>
                                 <option value="published">Terbit</option>
@@ -238,54 +336,75 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                         </form>
                     </section>
 
-                    <section className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-                        {rows.map((program) => (
-                            <article key={program.id} className="overflow-hidden rounded-[1.4rem] border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-gray-800 dark:bg-gray-900">
-                                <div className="relative h-44 overflow-hidden bg-gradient-to-br from-orange-500 to-rose-600">
-                                    {program.thumbnail_url ? (
-                                        <img src={program.thumbnail_url} alt={program.title} className="h-full w-full object-cover" />
+                    {rows.length > 0 ? (
+                        <div className="space-y-8">
+                            {(type === 'all' || type === 'mentor') && (
+                                <section className="space-y-4">
+                                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200/70 pb-3 dark:border-gray-800">
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="grid h-9 w-9 place-items-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
+                                                <SchoolIcon sx={{ fontSize: 20 }} />
+                                            </span>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h2 className="text-lg font-black text-gray-900 dark:text-white">Kelas Mentor (Bimbingan Guru)</h2>
+                                                    <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-black text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
+                                                        {mentorPrograms.length} Kelas
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Kelas berjadwal dengan alokasi kloter siswa dan live class tatap muka bersama mentor.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {mentorPrograms.length > 0 ? (
+                                        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                                            {mentorPrograms.map((program) => (
+                                                <ProgramCard key={program.id} program={program} onManage={setManagingProgram} />
+                                            ))}
+                                        </div>
                                     ) : (
-                                        <div className="flex h-full w-full items-center justify-center text-white/80">
-                                            <ImageOutlinedIcon sx={{ fontSize: 54 }} />
+                                        <div className="rounded-2xl border border-dashed border-gray-200 bg-white/60 p-6 text-center text-xs font-bold text-gray-400 dark:border-gray-800 dark:bg-gray-900/40">
+                                            Belum ada kelas mentor pada filter ini.
                                         </div>
                                     )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-gray-950/25 to-transparent" />
-                                    <div className="absolute bottom-4 left-4 right-4">
-                                        <div className="mb-2 flex flex-wrap gap-2">
-                                            <StatusBadge status={program.status} />
-                                            {program.curriculum_track && <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-black text-white backdrop-blur">{program.curriculum_track.name}</span>}
-                                            {program.level && <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-black text-white backdrop-blur">{program.level.level_name}</span>}
-                                        </div>
-                                        <h2 className="text-2xl font-black text-white">{program.title}</h2>
-                                    </div>
-                                </div>
+                                </section>
+                            )}
 
-                                <div className="space-y-4 p-5">
-                                    <p className="line-clamp-2 text-sm font-semibold text-gray-500 dark:text-gray-400">{program.description || 'Belum ada deskripsi.'}</p>
-                                    <div className="grid gap-2 text-sm font-bold text-gray-600 dark:text-gray-300">
-                                        <div className="flex items-center gap-2">
-                                            <GroupsIcon sx={{ fontSize: 18 }} className="text-gray-400" />
-                                            {program.instructor_name || 'Pengajar belum diisi'}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <MenuBookIcon sx={{ fontSize: 18 }} className="text-gray-400" />
-                                            {program.modules_count || 0} minggu terbit
+                            {(type === 'all' || type === 'mandiri') && (
+                                <section className="space-y-4">
+                                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200/70 pb-3 dark:border-gray-800">
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+                                                <MenuBookIcon sx={{ fontSize: 20 }} />
+                                            </span>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h2 className="text-lg font-black text-gray-900 dark:text-white">Kelas Belajar Mandiri (Self-Paced)</h2>
+                                                    <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-black text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                                        {mandiriPrograms.length} Kelas
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Roadmap belajar mandiri fleksibel tanpa pembagian kloter atau jadwal live bimbingan.</p>
+                                            </div>
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setManagingProgram(program)}
-                                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-black text-white shadow-sm shadow-brand-500/20 transition-colors hover:bg-brand-700"
-                                    >
-                                        <MenuBookIcon sx={{ fontSize: 18 }} />
-                                        Kelola Isi
-                                    </button>
-                                </div>
-                            </article>
-                        ))}
-                    </section>
 
-                    {rows.length === 0 && (
+                                    {mandiriPrograms.length > 0 ? (
+                                        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                                            {mandiriPrograms.map((program) => (
+                                                <ProgramCard key={program.id} program={program} onManage={setManagingProgram} />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-2xl border border-dashed border-gray-200 bg-white/60 p-6 text-center text-xs font-bold text-gray-400 dark:border-gray-800 dark:bg-gray-900/40">
+                                            Belum ada kelas belajar mandiri pada filter ini.
+                                        </div>
+                                    )}
+                                </section>
+                            )}
+                        </div>
+                    ) : (
                         <section className="rounded-[1.4rem] border border-dashed border-gray-300 bg-white px-6 py-14 text-center dark:border-gray-700 dark:bg-gray-900">
                             <SchoolIcon sx={{ fontSize: 44 }} className="text-gray-300" />
                             <h2 className="mt-4 text-lg font-black text-gray-900 dark:text-white">Belum ada kelas</h2>
@@ -338,9 +457,15 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                 <h2 id="manage-class-title" className="mt-1 truncate text-xl font-black text-gray-900 dark:text-white">
                                     {managingProgram.title}
                                 </h2>
-                                <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
-                                    Pilih bagian yang ingin dikerjakan.
-                                </p>
+                                <div className="mt-1.5 flex items-center gap-2">
+                                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                                        managingProgram.is_mentor
+                                            ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300'
+                                            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                    }`}>
+                                        {managingProgram.is_mentor ? `🎓 Kelas Mentor (${managingProgram.kloters_count || 0} Kloter)` : '📖 Belajar Mandiri (Self-Paced)'}
+                                    </span>
+                                </div>
                             </div>
                             <button
                                 type="button"
@@ -361,13 +486,15 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                 tone="orange"
                             />
 
-                            <OptionCard
-                                href={route('admin.live-classes.create', { program_id: managingProgram.id })}
-                                icon={<VideoCameraFrontIcon sx={{ fontSize: 20 }} />}
-                                label="Ruang Kelas"
-                                description="Jadwalkan atau mulai sesi live bersama kloter."
-                                tone="charcoal"
-                            />
+                            {managingProgram.is_mentor && (
+                                <OptionCard
+                                    href={route('admin.live-classes.create', { program_id: managingProgram.id })}
+                                    icon={<VideoCameraFrontIcon sx={{ fontSize: 20 }} />}
+                                    label="Ruang Kelas & Sesi Live"
+                                    description="Jadwalkan atau mulai sesi live tatap muka bersama kloter."
+                                    tone="charcoal"
+                                />
+                            )}
 
                             {isAdminGlobal && <OptionCard
                                 href={route('admin.modules.index', { program_id: managingProgram.id, focus: 'presentation' })}
@@ -418,114 +545,128 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
             </AnimatePresence>
 
             {showForm && (
-                <div className="fixed inset-0 z-[110] overflow-y-auto bg-gray-950/60 p-3 backdrop-blur-sm sm:p-5">
-                    <div className="mx-auto my-6 max-w-6xl overflow-hidden rounded-[1.6rem] bg-white shadow-2xl dark:bg-gray-900">
-                        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-2.5 sm:p-4 bg-gray-950/60 backdrop-blur-sm">
+                    <div className="relative flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl dark:bg-gray-900">
+                        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3.5 sm:px-6 sm:py-4 dark:border-gray-800">
                             <div>
-                            <p className="text-xs font-black uppercase tracking-[0.25em] text-orange-600">Pengaturan Kelas</p>
-                                <h2 className="text-xl font-black text-gray-900 dark:text-white">{editing ? 'Edit Kelas' : 'Tambah Kelas'}</h2>
+                                <p className="text-[11px] font-black uppercase tracking-[0.25em] text-orange-600">Pengaturan Kelas</p>
+                                <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white">{editing ? 'Edit Kelas' : 'Tambah Kelas'}</h2>
                             </div>
-                            <button onClick={closeForm} className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                            <button
+                                type="button"
+                                onClick={closeForm}
+                                className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                            >
                                 <CloseIcon sx={{ fontSize: 18 }} />
                             </button>
                         </div>
 
-                        <form onSubmit={submitForm} className="grid gap-0 lg:grid-cols-[380px_minmax(0,1fr)]">
-                            <aside className="bg-gradient-to-br from-orange-500 to-rose-600 p-6 text-white">
-                                <p className="text-xs font-black uppercase tracking-[0.25em] text-white/70">Preview Kelas</p>
-                                <div className="mt-6 overflow-hidden rounded-[1.4rem] bg-white/15 shadow-xl backdrop-blur">
-                                    <div className="relative h-48 bg-white/10">
-                                        {thumbnailPreviewUrl ? (
-                                            <img src={thumbnailPreviewUrl} alt={form.data.title || 'Preview kelas'} className="h-full w-full object-cover" />
-                                        ) : (
-                                            <div className="flex h-full items-center justify-center">
-                                                <ImageOutlinedIcon sx={{ fontSize: 54 }} />
+                        <form onSubmit={submitForm} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                            <div className="grid flex-1 overflow-y-auto lg:grid-cols-[330px_minmax(0,1fr)]">
+                                <aside className="bg-gradient-to-br from-orange-500 to-rose-600 p-4 sm:p-5 lg:p-6 text-white shrink-0">
+                                    <p className="text-[11px] font-black uppercase tracking-[0.25em] text-white/75">Preview Tampilan</p>
+                                    <div className="mt-3 sm:mt-4 overflow-hidden rounded-[1.2rem] bg-white/15 shadow-xl backdrop-blur">
+                                        <div className="relative h-36 sm:h-44 bg-white/10">
+                                            {thumbnailPreviewUrl ? (
+                                                <img src={thumbnailPreviewUrl} alt={form.data.title || 'Preview kelas'} className="h-full w-full object-cover" />
+                                            ) : (
+                                                <div className="flex h-full items-center justify-center text-white/70">
+                                                    <ImageOutlinedIcon sx={{ fontSize: 48 }} />
+                                                </div>
+                                            )}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 to-transparent" />
+                                            <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4">
+                                                <h3 className="text-base sm:text-lg font-black line-clamp-1">{form.data.title || 'Judul Kelas'}</h3>
+                                                <p className="text-xs font-bold text-white/80">{form.data.instructor_name || 'Nama pengajar'}</p>
                                             </div>
-                                        )}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-gray-950/70 to-transparent" />
-                                        <div className="absolute bottom-4 left-4 right-4">
-                                            <h3 className="text-2xl font-black">{form.data.title || 'Judul Kelas'}</h3>
+                                        </div>
+                                        <div className="p-3 sm:p-4">
+                                            <p className="line-clamp-2 text-xs sm:text-sm font-semibold text-white/80">{form.data.description || 'Deskripsi kelas akan tampil di sini.'}</p>
                                         </div>
                                     </div>
-                                    <div className="p-4">
-                                        <p className="text-sm font-bold text-white/75">{form.data.instructor_name || 'Nama pengajar'}</p>
-                                        <p className="mt-2 line-clamp-3 text-sm font-semibold text-white/70">{form.data.description || 'Deskripsi kelas akan tampil di sini.'}</p>
+                                </aside>
+
+                                <div className="p-4 sm:p-6 space-y-4">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <Field label="Judul Kelas" wide>
+                                            <input value={form.data.title} onChange={(event) => form.setData('title', event.target.value)} placeholder="Contoh: JLPT N4 Mingguan atau SSW Careworker" className={inputClass} />
+                                        </Field>
+                                        <Field label="Nama Pengajar">
+                                            <input value={form.data.instructor_name} onChange={(event) => form.setData('instructor_name', event.target.value)} placeholder="Masukkan nama pengajar" className={inputClass} />
+                                        </Field>
+                                        <Field label="Jalur Kurikulum">
+                                            <select
+                                                value={form.data.curriculum_track_id}
+                                                onChange={(event) => {
+                                                    form.setData((current) => ({
+                                                        ...current,
+                                                        curriculum_track_id: event.target.value,
+                                                        level_id: '',
+                                                    }));
+                                                }}
+                                                className={inputClass}
+                                            >
+                                                <option value="">Pilih jalur</option>
+                                                {tracks.map((track) => <option key={track.id} value={track.id}>{track.name}</option>)}
+                                            </select>
+                                        </Field>
+                                        <Field label="Level">
+                                            <select value={form.data.level_id} onChange={(event) => form.setData('level_id', event.target.value)} disabled={!form.data.curriculum_track_id} className={inputClass}>
+                                                <option value="">Tanpa Level</option>
+                                                {availableLevels.map((level) => <option key={level.id} value={level.id}>{level.level_name}</option>)}
+                                            </select>
+                                        </Field>
+                                        <Field label="Status">
+                                            <select value={form.data.status} onChange={(event) => form.setData('status', event.target.value)} className={inputClass}>
+                                                <option value="published">Terbit</option>
+                                                <option value="draft">Draf</option>
+                                            </select>
+                                        </Field>
+                                        <Field label="Urutan Tampil">
+                                            <input type="number" min="1" value={form.data.sort_order} onChange={(event) => form.setData('sort_order', event.target.value)} className={inputClass} />
+                                        </Field>
+                                        <Field label="Thumbnail Kelas" wide>
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <label className="block rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-3 transition hover:border-orange-300 hover:bg-orange-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:border-orange-800 dark:hover:bg-orange-950/20">
+                                                    <span className="mb-2 flex items-center gap-2 text-xs font-black text-gray-800 dark:text-gray-100">
+                                                        <ImageOutlinedIcon sx={{ fontSize: 17 }} /> Unggah Gambar
+                                                    </span>
+                                                    <input
+                                                        ref={thumbnailFileInputRef}
+                                                        type="file"
+                                                        accept="image/png,image/jpeg,image/webp"
+                                                        onChange={selectThumbnailFile}
+                                                        className="block w-full text-xs font-semibold text-gray-600 file:mr-2 file:rounded-lg file:border-0 file:bg-orange-100 file:px-2.5 file:py-1.5 file:text-xs file:font-black file:text-orange-700 hover:file:bg-orange-200 dark:text-gray-300 dark:file:bg-orange-900/30 dark:file:text-orange-300"
+                                                    />
+                                                    <span className="mt-1.5 block text-[11px] font-medium text-gray-500 dark:text-gray-400">PNG, JPG, WebP. Maks 5MB.</span>
+                                                </label>
+                                                <label className="block">
+                                                    <span className="mb-2 block text-xs font-black text-gray-800 dark:text-gray-100">URL Gambar Eksternal</span>
+                                                    <input type="text" inputMode="url" value={form.data.thumbnail_url} onChange={setThumbnailUrl} placeholder="https://contoh.com/thumbnail.webp" className={inputClass} />
+                                                    <span className="mt-1.5 block text-[11px] font-medium text-gray-500 dark:text-gray-400">Gunakan link langsung file gambar.</span>
+                                                </label>
+                                            </div>
+                                        </Field>
+                                        <Field label="Deskripsi" wide>
+                                            <textarea rows="3" value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} placeholder="Ringkasan isi dan target pembelajaran kelas..." className={`${inputClass} min-h-24`} />
+                                        </Field>
                                     </div>
-                                </div>
-                            </aside>
 
-                            <div className="max-h-[78vh] overflow-y-auto p-6">
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <Field label="Judul Kelas" wide>
-                                <input value={form.data.title} onChange={(event) => form.setData('title', event.target.value)} placeholder="Contoh: JLPT N4 Mingguan atau SSW Careworker" className={inputClass} />
-                                    </Field>
-                                    <Field label="Nama Pengajar">
-                                        <input value={form.data.instructor_name} onChange={(event) => form.setData('instructor_name', event.target.value)} placeholder="Masukkan nama pengajar" className={inputClass} />
-                                    </Field>
-                                    <Field label="Jalur Kurikulum">
-                                        <select
-                                            value={form.data.curriculum_track_id}
-                                            onChange={(event) => {
-                                                form.setData((current) => ({
-                                                    ...current,
-                                                    curriculum_track_id: event.target.value,
-                                                    level_id: '',
-                                                }));
-                                            }}
-                                            className={inputClass}
-                                        >
-                                            <option value="">Pilih jalur</option>
-                                            {tracks.map((track) => <option key={track.id} value={track.id}>{track.name}</option>)}
-                                        </select>
-                                    </Field>
-                                    <Field label="Level">
-                                        <select value={form.data.level_id} onChange={(event) => form.setData('level_id', event.target.value)} disabled={!form.data.curriculum_track_id} className={inputClass}>
-                                            <option value="">Tanpa Level</option>
-                                            {availableLevels.map((level) => <option key={level.id} value={level.id}>{level.level_name}</option>)}
-                                        </select>
-                                    </Field>
-                                    <Field label="Thumbnail Kelas" wide>
-                                        <div className="grid gap-3 md:grid-cols-2">
-                                            <label className="block rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-3 transition hover:border-orange-300 hover:bg-orange-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:border-orange-800 dark:hover:bg-orange-950/20">
-                                                <span className="mb-2 flex items-center gap-2 text-sm font-black text-gray-800 dark:text-gray-100">
-                                                    <ImageOutlinedIcon sx={{ fontSize: 18 }} /> Unggah Gambar
-                                                </span>
-                                                <input
-                                                    ref={thumbnailFileInputRef}
-                                                    type="file"
-                                                    accept="image/png,image/jpeg,image/webp"
-                                                    onChange={selectThumbnailFile}
-                                                    className="block w-full text-xs font-semibold text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-orange-100 file:px-3 file:py-2 file:text-xs file:font-black file:text-orange-700 hover:file:bg-orange-200 dark:text-gray-300 dark:file:bg-orange-900/30 dark:file:text-orange-300"
-                                                />
-                                                <span className="mt-2 block text-xs font-medium text-gray-500 dark:text-gray-400">PNG, JPG, JPEG, atau WebP. Maks. 5 MB.</span>
-                                            </label>
-                                            <label className="block">
-                                                <span className="mb-2 block text-sm font-black text-gray-800 dark:text-gray-100">URL Gambar Eksternal</span>
-                                                <input type="text" inputMode="url" value={form.data.thumbnail_url} onChange={setThumbnailUrl} placeholder="https://contoh.com/thumbnail-kelas.webp" className={inputClass} />
-                                                <span className="mt-2 block text-xs font-medium text-gray-500 dark:text-gray-400">Gunakan URL file gambar langsung, bukan halaman Google Drive atau Canva.</span>
-                                            </label>
-                                        </div>
-                                    </Field>
-                                    <Field label="Deskripsi" wide>
-                                        <textarea value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} placeholder="Ringkasan kelas" className={`${inputClass} min-h-28`} />
-                                    </Field>
-                                    <Field label="Status">
-                                        <select value={form.data.status} onChange={(event) => form.setData('status', event.target.value)} className={inputClass}>
-                                            <option value="published">Terbit</option>
-                                            <option value="draft">Draf</option>
-                                        </select>
-                                    </Field>
-                                    <Field label="Urutan Tampil">
-                                        <input type="number" min="1" value={form.data.sort_order} onChange={(event) => form.setData('sort_order', event.target.value)} className={inputClass} />
-                                    </Field>
+                                    {Object.values(form.errors).length > 0 && (
+                                        <p className="rounded-xl bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-600 dark:bg-rose-950/30 dark:text-rose-300">
+                                            {Object.values(form.errors)[0]}
+                                        </p>
+                                    )}
                                 </div>
+                            </div>
 
-                                {Object.values(form.errors).length > 0 && <p className="mt-4 rounded-2xl bg-brand-50 px-4 py-3 text-sm font-bold text-brand-600 dark:bg-brand-950/30">{Object.values(form.errors)[0]}</p>}
-
-                                <div className="sticky bottom-0 mt-6 flex justify-end gap-3 border-t border-gray-100 bg-white/95 pt-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
-                                    <button type="button" onClick={closeForm} className="rounded-2xl border border-gray-200 px-5 py-3 text-sm font-black text-gray-600 dark:border-gray-700 dark:text-gray-300">Batal</button>
-                                    <button disabled={form.processing} className="rounded-2xl bg-brand-600 px-6 py-3 text-sm font-black text-white disabled:opacity-50">{form.processing ? 'Menyimpan...' : 'Simpan Kelas'}</button>
-                                </div>
+                            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-gray-100 bg-white/95 px-4 py-3 sm:px-6 sm:py-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
+                                <button type="button" onClick={closeForm} className="h-10 sm:h-11 w-full sm:w-auto rounded-xl border border-gray-200 px-5 text-xs sm:text-sm font-black text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                                    Batal
+                                </button>
+                                <button type="submit" disabled={form.processing} className="h-10 sm:h-11 w-full sm:w-auto rounded-xl bg-brand-600 px-6 text-xs sm:text-sm font-black text-white shadow-sm shadow-brand-500/20 transition hover:bg-brand-700 disabled:opacity-50">
+                                    {form.processing ? 'Menyimpan...' : 'Simpan Kelas'}
+                                </button>
                             </div>
                         </form>
                     </div>

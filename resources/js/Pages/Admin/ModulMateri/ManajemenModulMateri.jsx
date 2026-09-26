@@ -444,25 +444,42 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                     <ArrowBackIcon sx={{ fontSize: 18 }} />
                                 </Link>
                                 <div className="min-w-0">
-                                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-orange-600">
-                                        Kelas / {focusLabels[focus]}
-                                    </p>
-                                    <h1 className="mt-1 text-xl font-black text-gray-900 dark:text-white sm:text-2xl">
-                                        {selectedProgram ? `${pageCopy.title} ${selectedProgram.title}` : 'Pilih Kelas'}
-                                    </h1>
+                                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.22em] text-orange-600">
+                                        <Link href={route('admin.programs.index')} className="hover:underline">Kelas</Link>
+                                        <span>/</span>
+                                        <span>{focusLabels[focus]}</span>
+                                    </div>
+                                    <div className="mt-1 flex flex-wrap items-center gap-2.5">
+                                        <h1 className="text-xl font-black text-gray-900 dark:text-white sm:text-2xl">
+                                            {selectedProgram ? `${pageCopy.title} ${selectedProgram.title}` : 'Pilih Kelas'}
+                                        </h1>
+                                        {selectedProgram && (
+                                            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-black uppercase tracking-wider ${
+                                                selectedProgram.is_mentor
+                                                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300'
+                                                    : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                            }`}>
+                                                {selectedProgram.is_mentor ? `🎓 Kelas Mentor (${selectedProgram.kloters_count || 0} Kloter)` : '📖 Belajar Mandiri'}
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
                                         {pageCopy.description}
                                     </p>
                                 </div>
                             </div>
 
-                            <div className={`grid w-full gap-2 lg:w-auto ${isRoadmapFocus ? 'sm:grid-cols-[minmax(0,260px)_auto]' : 'sm:w-[300px]'}`}>
+                            <div className={`grid w-full gap-2 lg:w-auto ${isRoadmapFocus ? 'sm:grid-cols-[minmax(0,280px)_auto]' : 'sm:w-[320px]'}`}>
                                 <SearchableSelect
                                     value={selectedProgramId}
                                     onChange={chooseProgram}
                                     placeholder="Pilih kelas"
                                     searchPlaceholder="Cari kelas..."
-                                    options={programs.map((program) => ({ value: program.id, label: program.title }))}
+                                    options={programs.map((program) => ({
+                                        value: program.id,
+                                        label: `${program.is_mentor ? '🎓' : '📖'} ${program.title}`,
+                                        description: program.learning_type_label || (program.is_mentor ? 'Kelas Mentor (Bimbingan Guru)' : 'Kelas Mandiri (Self-Paced)'),
+                                    }))}
                                 />
                                 {isRoadmapFocus && (
                                     <button type="button" onClick={openCreateModule} disabled={!selectedProgramId} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
@@ -482,6 +499,15 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                         <MenuBookIcon sx={{ fontSize: 21 }} />
                                     </span>
                                     <span className="min-w-0">
+                                        <div className="mb-1 flex items-center gap-1.5">
+                                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                                                program.is_mentor
+                                                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300'
+                                                    : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                            }`}>
+                                                {program.is_mentor ? '🎓 Kelas Mentor' : '📖 Belajar Mandiri'}
+                                            </span>
+                                        </div>
                                         <span className="block font-black text-gray-900 dark:text-white">{program.title}</span>
                                         <span className="mt-1 block text-sm font-medium text-gray-500 dark:text-gray-400">{program.description || pageCopy.emptyProgram}</span>
                                     </span>

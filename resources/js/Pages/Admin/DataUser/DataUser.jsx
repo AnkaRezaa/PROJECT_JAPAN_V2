@@ -20,7 +20,17 @@ export default function Users({
     const [search, setSearch] = useState(filters.search || '');
     const [activeTab, setActiveTab] = useState(filters.tab || 'students');
     const [rejectTarget, setRejectTarget] = useState(null);
+    const [isNavigating, setIsNavigating] = useState(false);
     const items = students?.data || [];
+
+    useEffect(() => {
+        const unbindStart = router.on('start', () => setIsNavigating(true));
+        const unbindFinish = router.on('finish', () => setIsNavigating(false));
+        return () => {
+            unbindStart();
+            unbindFinish();
+        };
+    }, []);
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
     const scheduleForm = useForm({
         tanggal_mulai: selectedKloter?.tanggal_mulai || '',
@@ -157,9 +167,17 @@ export default function Users({
                         <h1 className="text-2xl font-black text-gray-900 dark:text-white">Kloter & Siswa</h1>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Pantau progress, nilai, aktivitas, jadwal, dan roster belajar.</p>
                     </div>
-                    <span className="w-fit rounded-lg bg-gray-100 px-3 py-2 text-xs font-black text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                        {students?.total || 0} siswa tampil
-                    </span>
+                    <div className="flex items-center gap-2">
+                        {isNavigating && (
+                            <div className="flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-bold text-brand-600 dark:bg-brand-900/20 dark:text-brand-400">
+                                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                                <span>Memuat...</span>
+                            </div>
+                        )}
+                        <span className="w-fit rounded-lg bg-gray-100 px-3 py-2 text-xs font-black text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                            {students?.total || 0} siswa tampil
+                        </span>
+                    </div>
                 </div>
 
                 <div className="flex w-full gap-2 overflow-x-auto border-b border-gray-200 dark:border-gray-800">
@@ -203,125 +221,145 @@ export default function Users({
                     </form>
                 </Card>
 
-                <Card className="!overflow-hidden !p-0">
-                    <div className="hidden overflow-x-auto md:block">
-                        <table className="w-full min-w-[820px] text-left">
-                            <thead className="bg-gray-50/80 dark:bg-gray-800/60">
-                                <tr className="text-xs font-black uppercase text-gray-500 dark:text-gray-400">
-                                    <th className="px-5 py-4">Siswa</th>
-                                    <th className="px-4 py-4">Progress</th>
-                                    <th className="px-4 py-4">Skor</th>
-                                    <th className="px-4 py-4">Gamifikasi</th>
-                                    <th className="px-4 py-4">Status</th>
-                                    <th className="px-5 py-4 text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                {items.map((user) => (
-                                    <tr key={user.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40">
-                                        <td className="px-5 py-4"><StudentIdentity user={user} /></td>
-                                        <td className="px-4 py-4 text-sm"><strong>{user.lessons_done} modul</strong><p className="text-xs text-gray-500">{user.quizzes_done} percobaan kuis</p></td>
-                                        <td className="px-4 py-4 text-sm font-black">{user.average_score || 0}</td>
-                                        <td className="px-4 py-4 text-sm"><strong>{user.xp.toLocaleString()} XP</strong><p className="text-xs text-gray-500">{user.streak_count} hari streak</p></td>
-                                        <td className="px-4 py-4"><Badge color={user.status === 'active' ? 'green' : 'red'}>{user.status}</Badge></td>
-                                        <td className="px-5 py-4">
-                                            <div className="flex justify-end gap-2">
-                                                <Link href={detailUrl(user.id)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 dark:border-gray-700 dark:text-gray-300">Detail</Link>
-                                                {selectedKloter && <button onClick={() => confirmRemoval(user)} className="rounded-lg border border-brand-100 px-3 py-2 text-xs font-black text-brand-600 dark:border-brand-900/40 dark:text-brand-400">Keluarkan</button>}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div className="divide-y divide-gray-100 dark:divide-gray-800 md:hidden">
-                        {items.map((user) => (
-                            <article key={user.id} className="space-y-3 p-4">
-                                <StudentIdentity user={user} />
-                                <div className="grid grid-cols-3 gap-2 text-center">
-                                    <MobileMetric label="Modul" value={user.lessons_done} />
-                                    <MobileMetric label="Skor" value={user.average_score || 0} />
-                                    <MobileMetric label="XP" value={user.xp.toLocaleString()} />
-                                </div>
-                                <div className="flex gap-2">
-                                    <Link href={detailUrl(user.id)} className="flex min-h-11 flex-1 items-center justify-center rounded-xl bg-gray-900 px-3 text-xs font-black text-white dark:bg-white dark:text-gray-900">Lihat Detail</Link>
-                                    {selectedKloter && <button onClick={() => confirmRemoval(user)} className="min-h-11 rounded-xl border border-brand-200 px-3 text-xs font-black text-brand-600 dark:border-brand-900/50 dark:text-brand-400">Keluarkan</button>}
-                                </div>
-                            </article>
-                        ))}
-                    </div>
-
-                    {items.length === 0 && <p className="px-5 py-12 text-center text-sm font-medium text-gray-500 dark:text-gray-400">{emptyMessage}</p>}
-
-                    {students?.links && students.links.length > 3 && (
-                        <div className="flex flex-wrap justify-center gap-2 border-t border-gray-100 p-4 dark:border-gray-800">
-                            {students.links.map((link, index) => (
-                                <Link key={`${link.label}-${index}`} href={link.url || '#'} dangerouslySetInnerHTML={{ __html: link.label }} className={`rounded-lg px-3 py-2 text-sm font-bold ${link.active ? 'bg-brand-600 text-white' : 'border border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-300'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`} />
-                            ))}
+                <Card className="relative !overflow-hidden !p-0">
+                    {isNavigating && (
+                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px] dark:bg-gray-900/70">
+                            <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-5 py-3 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                                <span className="text-sm font-bold text-gray-800 dark:text-gray-200">Memuat data siswa...</span>
+                            </div>
                         </div>
                     )}
+                    <div className={`transition-opacity duration-200 ${isNavigating ? 'pointer-events-none opacity-30' : 'opacity-100'}`}>
+                        <div className="hidden overflow-x-auto md:block">
+                            <table className="w-full min-w-[820px] text-left">
+                                <thead className="bg-gray-50/80 dark:bg-gray-800/60">
+                                    <tr className="text-xs font-black uppercase text-gray-500 dark:text-gray-400">
+                                        <th className="px-5 py-4">Siswa</th>
+                                        <th className="px-4 py-4">Progress</th>
+                                        <th className="px-4 py-4">Skor</th>
+                                        <th className="px-4 py-4">Gamifikasi</th>
+                                        <th className="px-4 py-4">Status</th>
+                                        <th className="px-5 py-4 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                    {items.map((user) => (
+                                        <tr key={user.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40">
+                                            <td className="px-5 py-4"><StudentIdentity user={user} /></td>
+                                            <td className="px-4 py-4 text-sm"><strong>{user.lessons_done} modul</strong><p className="text-xs text-gray-500">{user.quizzes_done} percobaan kuis</p></td>
+                                            <td className="px-4 py-4 text-sm font-black">{user.average_score || 0}</td>
+                                            <td className="px-4 py-4 text-sm"><strong>{user.xp.toLocaleString()} XP</strong><p className="text-xs text-gray-500">{user.streak_count} hari streak</p></td>
+                                            <td className="px-4 py-4"><Badge color={user.status === 'active' ? 'green' : 'red'}>{user.status}</Badge></td>
+                                            <td className="px-5 py-4">
+                                                <div className="flex justify-end gap-2">
+                                                    <Link href={detailUrl(user.id)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 dark:border-gray-700 dark:text-gray-300">Detail</Link>
+                                                    {selectedKloter && <button onClick={() => confirmRemoval(user)} className="rounded-lg border border-brand-100 px-3 py-2 text-xs font-black text-brand-600 dark:border-brand-900/40 dark:text-brand-400">Keluarkan</button>}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="divide-y divide-gray-100 dark:divide-gray-800 md:hidden">
+                            {items.map((user) => (
+                                <article key={user.id} className="space-y-3 p-4">
+                                    <StudentIdentity user={user} />
+                                    <div className="grid grid-cols-3 gap-2 text-center">
+                                        <MobileMetric label="Modul" value={user.lessons_done} />
+                                        <MobileMetric label="Skor" value={user.average_score || 0} />
+                                        <MobileMetric label="XP" value={user.xp.toLocaleString()} />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Link href={detailUrl(user.id)} className="flex min-h-11 flex-1 items-center justify-center rounded-xl bg-gray-900 px-3 text-xs font-black text-white dark:bg-white dark:text-gray-900">Lihat Detail</Link>
+                                        {selectedKloter && <button onClick={() => confirmRemoval(user)} className="min-h-11 rounded-xl border border-brand-200 px-3 text-xs font-black text-brand-600 dark:border-brand-900/50 dark:text-brand-400">Keluarkan</button>}
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+
+                        {items.length === 0 && <p className="px-5 py-12 text-center text-sm font-medium text-gray-500 dark:text-gray-400">{emptyMessage}</p>}
+
+                        {students?.links && students.links.length > 3 && (
+                            <div className="flex flex-wrap justify-center gap-2 border-t border-gray-100 p-4 dark:border-gray-800">
+                                {students.links.map((link, index) => (
+                                    <Link key={`${link.label}-${index}`} href={link.url || '#'} dangerouslySetInnerHTML={{ __html: link.label }} className={`rounded-lg px-3 py-2 text-sm font-bold ${link.active ? 'bg-brand-600 text-white' : 'border border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-300'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </Card>
                 </>}
 
                 {activeTab === 'pending' && (
-                    <Card className="!p-4 sm:!p-5">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                                <h2 className="font-black text-gray-900 dark:text-white">Menunggu Persetujuan</h2>
-                                <p className="mt-1 max-w-2xl text-xs leading-5 text-gray-500 dark:text-gray-400">
-                                    Pembayaran kelas mentor sudah berhasil. {adminScope === 'global' ? 'Admin global dapat memproses seluruh kloter sebagai penanggung jawab cadangan.' : 'Setujui peserta pada kloter yang Anda ampu.'}
-                                </p>
-                            </div>
-                            <Badge color={pendingEnrollments.length ? 'yellow' : 'gray'}>{pendingEnrollments.length} pending</Badge>
-                        </div>
-
-                        <div className="mt-4 max-w-md">
-                            <SearchableSelect
-                                value={filters.kloter || ''}
-                                onChange={(kloter) => visitFilters({ kloter })}
-                                placeholder={adminScope === 'global' ? 'Semua kloter' : 'Semua kloter yang diampu'}
-                                searchPlaceholder="Cari kloter atau kelas..."
-                                allowClear
-                                clearLabel={adminScope === 'global' ? 'Semua kloter' : 'Semua kloter yang diampu'}
-                                options={kloters.map((kloter) => ({ value: kloter.id, label: kloter.name, description: kloter.program_name }))}
-                            />
-                        </div>
-
-                        <div className="mt-4 divide-y divide-gray-100 border-t border-gray-100 dark:divide-gray-800 dark:border-gray-800">
-                            {pendingEnrollments.map((enrollment) => (
-                                <article key={enrollment.id} className="grid gap-4 py-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-                                    <div className="min-w-0">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <p className="text-sm font-black text-gray-900 dark:text-white">{enrollment.user.username}</p>
-                                            <span className="rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-black uppercase text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Sudah dibayar</span>
-                                        </div>
-                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{enrollment.user.email}</p>
-                                        <p className="mt-2 text-sm font-bold text-gray-700 dark:text-gray-200">{enrollment.kloter.program_name} · {enrollment.kloter.name}</p>
-                                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-                                            <span>{enrollment.transaction_code} · {enrollment.amount_formatted}</span>
-                                            <span>Pengampu: {enrollment.kloter.mentor?.username || 'Belum ditentukan'}</span>
-                                            {enrollment.paid_at && <span>Dibayar {enrollment.paid_at}</span>}
-                                        </div>
-                                        <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase">
-                                            <span className="rounded-md bg-emerald-100 px-2 py-1 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">1 · Pembayaran selesai</span>
-                                            <span className="rounded-md bg-amber-100 px-2 py-1 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">2 · Menunggu persetujuan</span>
-                                            <span className="rounded-md bg-gray-100 px-2 py-1 text-gray-500 dark:bg-gray-800 dark:text-gray-400">3 · Akses aktif</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => confirmApproval(enrollment)} className="min-h-10 flex-1 rounded-lg bg-emerald-600 px-4 text-xs font-black text-white hover:bg-emerald-700 lg:flex-none">Setujui</button>
-                                        <button onClick={() => { setRejectTarget(enrollment); rejectForm.reset(); }} className="min-h-10 flex-1 rounded-lg border border-red-200 px-4 text-xs font-black text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-950/30 lg:flex-none">Tolak</button>
-                                    </div>
-                                </article>
-                            ))}
-                            {pendingEnrollments.length === 0 && (
-                                <div className="py-10 text-center">
-                                    <p className="text-sm font-black text-gray-700 dark:text-gray-200">Belum ada pembayaran mentor yang menunggu persetujuan</p>
-                                    <p className="mx-auto mt-2 max-w-xl text-xs leading-5 text-gray-500 dark:text-gray-400">Hanya transaksi kelas mentor yang sudah sukses dan memiliki reservasi kloter yang tampil. Pembayaran pending, kelas mandiri, access key, dan siswa yang ditambahkan manual tidak masuk antrean ini.</p>
+                    <Card className="relative !p-4 sm:!p-5">
+                        {isNavigating && (
+                            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px] dark:bg-gray-900/70">
+                                <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-5 py-3 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+                                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                                    <span className="text-sm font-bold text-gray-800 dark:text-gray-200">Memuat persetujuan...</span>
                                 </div>
-                            )}
+                            </div>
+                        )}
+                        <div className={`transition-opacity duration-200 ${isNavigating ? 'pointer-events-none opacity-30' : 'opacity-100'}`}>
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <h2 className="font-black text-gray-900 dark:text-white">Menunggu Persetujuan</h2>
+                                    <p className="mt-1 max-w-2xl text-xs leading-5 text-gray-500 dark:text-gray-400">
+                                        Pembayaran kelas mentor sudah berhasil. {adminScope === 'global' ? 'Admin global dapat memproses seluruh kloter sebagai penanggung jawab cadangan.' : 'Setujui peserta pada kloter yang Anda ampu.'}
+                                    </p>
+                                </div>
+                                <Badge color={pendingEnrollments.length ? 'yellow' : 'gray'}>{pendingEnrollments.length} pending</Badge>
+                            </div>
+
+                            <div className="mt-4 max-w-md">
+                                <SearchableSelect
+                                    value={filters.kloter || ''}
+                                    onChange={(kloter) => visitFilters({ kloter })}
+                                    placeholder={adminScope === 'global' ? 'Semua kloter' : 'Semua kloter yang diampu'}
+                                    searchPlaceholder="Cari kloter atau kelas..."
+                                    allowClear
+                                    clearLabel={adminScope === 'global' ? 'Semua kloter' : 'Semua kloter yang diampu'}
+                                    options={kloters.map((kloter) => ({ value: kloter.id, label: kloter.name, description: kloter.program_name }))}
+                                />
+                            </div>
+
+                            <div className="mt-4 divide-y divide-gray-100 border-t border-gray-100 dark:divide-gray-800 dark:border-gray-800">
+                                {pendingEnrollments.map((enrollment) => (
+                                    <article key={enrollment.id} className="grid gap-4 py-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                                        <div className="min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="text-sm font-black text-gray-900 dark:text-white">{enrollment.user.username}</p>
+                                                <span className="rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-black uppercase text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Sudah dibayar</span>
+                                            </div>
+                                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{enrollment.user.email}</p>
+                                            <p className="mt-2 text-sm font-bold text-gray-700 dark:text-gray-200">{enrollment.kloter.program_name} · {enrollment.kloter.name}</p>
+                                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                                                <span>{enrollment.transaction_code} · {enrollment.amount_formatted}</span>
+                                                <span>Pengampu: {enrollment.kloter.mentor?.username || 'Belum ditentukan'}</span>
+                                                {enrollment.paid_at && <span>Dibayar {enrollment.paid_at}</span>}
+                                            </div>
+                                            <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase">
+                                                <span className="rounded-md bg-emerald-100 px-2 py-1 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">1 · Pembayaran selesai</span>
+                                                <span className="rounded-md bg-amber-100 px-2 py-1 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">2 · Menunggu persetujuan</span>
+                                                <span className="rounded-md bg-gray-100 px-2 py-1 text-gray-500 dark:bg-gray-800 dark:text-gray-400">3 · Akses aktif</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => confirmApproval(enrollment)} className="min-h-10 flex-1 rounded-lg bg-emerald-600 px-4 text-xs font-black text-white hover:bg-emerald-700 lg:flex-none">Setujui</button>
+                                            <button onClick={() => { setRejectTarget(enrollment); rejectForm.reset(); }} className="min-h-10 flex-1 rounded-lg border border-red-200 px-4 text-xs font-black text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-950/30 lg:flex-none">Tolak</button>
+                                        </div>
+                                    </article>
+                                ))}
+                                {pendingEnrollments.length === 0 && (
+                                    <div className="py-10 text-center">
+                                        <p className="text-sm font-black text-gray-700 dark:text-gray-200">Belum ada pembayaran mentor yang menunggu persetujuan</p>
+                                        <p className="mx-auto mt-2 max-w-xl text-xs leading-5 text-gray-500 dark:text-gray-400">Hanya transaksi kelas mentor yang sudah sukses dan memiliki reservasi kloter yang tampil. Pembayaran pending, kelas mandiri, access key, dan siswa yang ditambahkan manual tidak masuk antrean ini.</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </Card>
                 )}

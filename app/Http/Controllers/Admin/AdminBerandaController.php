@@ -9,7 +9,10 @@ use App\Models\Kuis;
 use App\Models\Modul;
 use App\Models\PengerjaanKuis;
 use App\Models\Pengguna;
+use App\Models\ProgramPembelajaran;
 use App\Models\Progres;
+use App\Models\SetFlashcard;
+use App\Models\Soal;
 use App\Services\ChartDataService;
 use App\Services\KloterBelajarService;
 use Illuminate\Database\Eloquent\Builder;
@@ -201,9 +204,22 @@ class AdminBerandaController extends Controller
      */
     private function contentWorkspace(?Collection $programIds): array
     {
+        $programsQuery = ProgramPembelajaran::query()
+            ->when($programIds !== null, fn (Builder $query) => $query->whereIn('id', $programIds));
+        $totalPrograms = (clone $programsQuery)->count();
+        $mentorProgramsCount = (clone $programsQuery)->where(function ($q) {
+            $q->whereHas('kloterBelajar')
+              ->orWhere('title', 'like', '%mentor%')
+              ->orWhere('slug', 'like', '%mentor%');
+        })->count();
+        $mandiriProgramsCount = max(0, $totalPrograms - $mentorProgramsCount);
+
         $modulesQuery = Modul::query()
             ->with('programPembelajaran:id,title')
             ->when($programIds !== null, fn (Builder $query) => $query->whereIn('program_pembelajaran_id', $programIds));
+        $totalModules = (clone $modulesQuery)->count();
+        $publishedModules = (clone $modulesQuery)->where('status', 'published')->count();
+
         $modules = (clone $modulesQuery)
             ->withCount([
                 'presentationDecks as presentation_ready_count' => fn (Builder $query) => $query->where('status', 'published'),
@@ -245,19 +261,56 @@ class AdminBerandaController extends Controller
         })->values();
         $incompleteModules = $coverage->filter(fn (array $module) => $module['ready_count'] < 4)->count();
 
+        $quizzesQuery = Kuis::query()->whereHas('module', fn (Builder $query) => $this->scopePrograms($query, $programIds));
+        $readyQuizzes = (clone $quizzesQuery)->whereHas('questions')->count();
+        $unreadyQuizzes = (clone $quizzesQuery)->whereDoesntHave('questions')->count();
+        $totalQuestions = Soal::query()->whereHas('quiz.module', fn (Builder $query) => $this->scopePrograms($query, $programIds))->count();
+
+        $vocabQuery = Kosakata::query()->when($programIds !== null, fn (Builder $query) => $query->whereHas('module', fn (Builder $module) => $module->whereIn('program_pembelajaran_id', $programIds)));
+        $totalVocab = (clone $vocabQuery)->where('status', 'published')->count();
+        $totalFlashcardSets = SetFlashcard::query()->when($programIds !== null, fn (Builder $query) => $query->whereHas('module', fn (Builder $module) => $module->whereIn('program_pembelajaran_id', $programIds)))->where('status', 'published')->count();
+
         return [
             'workspace' => 'content',
             'workspaceTitle' => 'Ruang Kerja Konten',
             'workspaceDescription' => 'Pastikan setiap minggu memiliki PPT, kosakata, flashcard, dan kuis sebelum dipublikasikan.',
             'stats' => [
-                $this->stat('Modul dipublikasikan', (clone $modulesQuery)->where('status', 'published')->count(), 'module'),
-                $this->stat('Minggu perlu dilengkapi', $incompleteModules, 'warning'),
-                $this->stat('Kuis belum siap', (clone Kuis::query())->whereHas('module', fn (Builder $query) => $this->scopePrograms($query, $programIds))->whereDoesntHave('questions')->count(), 'quiz'),
-                $this->stat('Kosakata siap pakai', (clone Kosakata::query())->when($programIds !== null, fn (Builder $query) => $query->whereHas('module', fn (Builder $module) => $module->whereIn('program_pembelajaran_id', $programIds)))->where('status', 'published')->count(), 'vocabulary'),
+                $this->stat(
+                    'Modul Terbit',
+                    "{$publishedModules} / {$totalModules} Minggu",
+                    'module',
+                    "{$totalPrograms} Kelas aktif ({$mandiriProgramsCount} Mandiri · {$mentorProgramsCount} Bimbingan Guru)",
+                    "{$totalPrograms} Kelas",
+                    route('admin.programs.index')
+                ),
+                $this->stat(
+                    'Kesiapan Materi',
+                    $incompleteModules > 0 ? "{$incompleteModules} Perlu Dilengkapi" : 'Semua Lengkap',
+                    $incompleteModules > 0 ? 'warning' : 'complete',
+                    'Kelengkapan PPT, Kosakata, Flashcard, & Kuis',
+                    $incompleteModules > 0 ? 'Perlu Perhatian' : 'Optimal',
+                    route('admin.programs.index')
+                ),
+                $this->stat(
+                    'Bank Kuis & Soal',
+                    "{$readyQuizzes} Kuis Siap",
+                    'quiz',
+                    "Total {$totalQuestions} butir soal aktif" . ($unreadyQuizzes > 0 ? " ({$unreadyQuizzes} kuis draf tanpa butir soal)" : ''),
+                    "{$totalQuestions} Soal",
+                    route('admin.bank-soal-konten.index')
+                ),
+                $this->stat(
+                    'Kosakata & Flashcard',
+                    "{$totalVocab} Kosakata",
+                    'vocabulary',
+                    "{$totalFlashcardSets} set repetisi materi flashcard aktif",
+                    'Siap Pakai',
+                    route('admin.bank-soal-konten.index')
+                ),
             ],
             'actionItems' => [
-                $this->actionItem('Modul belum lengkap', $incompleteModules, 'Lengkapi komponen belajar sebelum status publish.', 'warning', route('admin.modules.index')),
-                $this->actionItem('Kuis tanpa soal', (clone Kuis::query())->whereHas('module', fn (Builder $query) => $this->scopePrograms($query, $programIds))->whereDoesntHave('questions')->count(), 'Masuk ke roadmap kelas untuk menambahkan soal.', 'danger', route('admin.programs.index')),
+                $this->actionItem('Modul belum lengkap', $incompleteModules, 'Lengkapi komponen belajar sebelum status publish.', 'warning', route('admin.programs.index')),
+                $this->actionItem('Kuis tanpa soal', $unreadyQuizzes, 'Masuk ke roadmap kelas untuk menambahkan soal.', 'danger', route('admin.programs.index')),
                 $this->actionItem('Presentasi belum publish', (clone $modulesQuery)->whereDoesntHave('presentationDecks', fn (Builder $query) => $query->where('status', 'published'))->count(), 'Buka kelas dan lengkapi presentasi pada Week terkait.', 'info', route('admin.programs.index')),
             ],
             'coverage' => $coverage,
@@ -295,10 +348,10 @@ class AdminBerandaController extends Controller
             : $service->kloterDikelola($admin)->pluck('id');
     }
 
-    /** @return array{title:string,value:string,icon:string} */
-    private function stat(string $title, int|float|string $value, string $icon): array
+    /** @return array{title:string,value:string,icon:string,detail:?string,badge:?string,href:?string} */
+    private function stat(string $title, int|float|string $value, string $icon, ?string $detail = null, ?string $badge = null, ?string $href = null): array
     {
-        return compact('title', 'value', 'icon');
+        return compact('title', 'value', 'icon', 'detail', 'badge', 'href');
     }
 
     /** @return array{label:string,value:int,description:string,tone:string,href:string} */
