@@ -166,6 +166,10 @@ export default function AuthenticatedLayout({ children }) {
     const { user } = page.props.auth;
     const flash = page.props.flash || {};
     const currentPath = page.url?.split(/[?#]/)[0] || '/';
+    const isSuperadmin = user?.role === 'superadmin';
+    const isAdmin = user?.role === 'admin' || isSuperadmin;
+    const isUser = user?.role === 'user';
+    const isAdminSection = isAdmin || currentPath.startsWith('/admin') || currentPath.startsWith('/superadmin');
     const flashNotice = [
         ['error', flash.error],
         ['warning', flash.warning],
@@ -208,6 +212,10 @@ export default function AuthenticatedLayout({ children }) {
 
     useEffect(() => {
         const syncTheme = () => {
+            if (isAdminSection) {
+                document.documentElement.classList.remove('dark');
+                return;
+            }
             const mode = resolveThemeMode();
             setThemeMode(mode);
             applyDocumentTheme(mode);
@@ -222,7 +230,7 @@ export default function AuthenticatedLayout({ children }) {
             window.removeEventListener('storage', syncTheme);
             mediaQuery?.removeEventListener?.('change', syncTheme);
         };
-    }, []);
+    }, [isAdminSection]);
 
     const toggleThemeMode = () => {
         const nextMode = shouldUseDarkMode(themeMode) ? 'light' : 'dark';
@@ -388,7 +396,7 @@ export default function AuthenticatedLayout({ children }) {
     const adminMenu = [
         { href: '/admin/dashboard', activePaths: ['/admin/dashboard'], icon: <DashboardIcon sx={{ fontSize: 24 }} />, label: 'Beranda' },
         { href: '/admin/users', activePaths: ['/admin/users', '/admin/kloters', '/admin/analytics'], icon: <PeopleIcon sx={{ fontSize: 24 }} />, label: 'Kloter & Siswa' },
-        { href: '/admin/exams', activePaths: ['/admin/exams'], icon: <FactCheckOutlinedIcon sx={{ fontSize: 24 }} />, label: 'Ujian' },
+        { href: '/admin/exams', activePaths: ['/admin/exams'], excludePaths: ['/admin/exams/question-banks'], icon: <FactCheckOutlinedIcon sx={{ fontSize: 24 }} />, label: 'Ujian' },
         {
             href: '/admin/programs',
             activePaths: ['/admin/programs', '/admin/modules', '/admin/module-days', '/admin/quizzes', '/admin/questions', '/admin/flashcards', '/admin/presentations', '/admin/boards'],
@@ -447,9 +455,6 @@ export default function AuthenticatedLayout({ children }) {
         },
     ];
 
-    const isSuperadmin = user?.role === 'superadmin';
-    const isAdmin = user?.role === 'admin' || isSuperadmin;
-    const isUser = user?.role === 'user';
     const notificationContext = {
         user: {
             label: 'Notifikasi',
@@ -483,8 +488,13 @@ export default function AuthenticatedLayout({ children }) {
             ? route('admin.profile')
             : route('profile.edit');
     const matchesPath = (path) => currentPath === path || currentPath.startsWith(`${path}/`);
-    const isActivePath = (paths) => (Array.isArray(paths) ? paths : [paths]).some(matchesPath);
-    const isActiveItem = (item) => isActivePath(item.activePaths || item.href);
+    const isActivePath = (paths, excludePaths = []) => {
+        const list = Array.isArray(paths) ? paths : [paths];
+        const excludes = Array.isArray(excludePaths) ? excludePaths : (excludePaths ? [excludePaths] : []);
+        if (excludes.some(matchesPath)) return false;
+        return list.some(matchesPath);
+    };
+    const isActiveItem = (item) => isActivePath(item.activePaths || item.href, item.excludePaths);
 
     const workspaceTitleRules = [
         ['/admin/bank-soal-konten', 'Pusat Bank Konten & Soal'],
@@ -614,20 +624,26 @@ export default function AuthenticatedLayout({ children }) {
         );
     };
     const isDarkModeActive = shouldUseDarkMode(themeMode);
-    const renderUtilityControls = (compact = false) => (
-        <div className={`flex items-center ${compact ? 'gap-1.5' : 'gap-2'}`}>
-            <button
-                type="button"
-                onClick={toggleThemeMode}
-                aria-label={isDarkModeActive ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'}
-                title={isDarkModeActive ? 'Mode terang' : 'Mode gelap'}
-                className={`${compact ? 'h-10 w-10' : 'h-11 px-3'} inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white text-sm font-black text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:text-brand-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-brand-500/40 dark:hover:text-brand-300`}
-            >
-                {isDarkModeActive ? <LightModeIcon sx={{ fontSize: 19 }} /> : <DarkModeIcon sx={{ fontSize: 19 }} />}
-                {!compact && <span>{isDarkModeActive ? 'Terang' : 'Gelap'}</span>}
-            </button>
-        </div>
-    );
+    const renderUtilityControls = (compact = false) => {
+        if (isAdminSection) {
+            return null;
+        }
+
+        return (
+            <div className={`flex items-center ${compact ? 'gap-1.5' : 'gap-2'}`}>
+                <button
+                    type="button"
+                    onClick={toggleThemeMode}
+                    aria-label={isDarkModeActive ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'}
+                    title={isDarkModeActive ? 'Mode terang' : 'Mode gelap'}
+                    className={`${compact ? 'h-10 w-10' : 'h-11 px-3'} inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white text-sm font-black text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:text-brand-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-brand-500/40 dark:hover:text-brand-300`}
+                >
+                    {isDarkModeActive ? <LightModeIcon sx={{ fontSize: 19 }} /> : <DarkModeIcon sx={{ fontSize: 19 }} />}
+                    {!compact && <span>{isDarkModeActive ? 'Terang' : 'Gelap'}</span>}
+                </button>
+            </div>
+        );
+    };
     const renderProfileMenuPanel = (id, positionClass) => (
         <div
             id={id}
@@ -694,7 +710,7 @@ export default function AuthenticatedLayout({ children }) {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex flex-col lg:flex-row w-full overflow-x-clip transition-colors duration-300">
+        <div className={`min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex flex-col lg:flex-row w-full overflow-x-clip transition-colors duration-300 ${isAdminSection ? 'font-inter antialiased selection:bg-brand-500 selection:text-white' : 'font-sans'}`}>
             {/* ====== HEADER MOBILE ====== */}
             <div className="lg:hidden flex min-h-[64px] items-center justify-between bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 py-2 sticky top-0 z-30 shadow-sm transition-colors duration-300">
                 <div className="flex min-w-0 items-center gap-2.5">
@@ -945,7 +961,7 @@ export default function AuthenticatedLayout({ children }) {
                     </div>
                     {renderUtilityControls(false)}
                 </header>
-                <main className="min-h-screen bg-slate-50 dark:bg-[#0b1121] text-slate-900 dark:text-slate-100 shadow-[-5px_0_30px_-10px_rgba(0,0,0,0.05)] relative z-0 transition-colors duration-300">
+                <main className={`min-h-screen bg-slate-50 dark:bg-[#0b1121] text-slate-900 dark:text-slate-100 shadow-[-5px_0_30px_-10px_rgba(0,0,0,0.05)] relative z-0 transition-colors duration-300 ${isAdminSection ? 'font-inter' : ''}`}>
                     {children}
                 </main>
                 {isUser && (

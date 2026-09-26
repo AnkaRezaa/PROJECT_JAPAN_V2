@@ -52,7 +52,7 @@
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
 
         @if (config('beta.google_tag_manager.enabled'))
             <link rel="preconnect" href="https://www.googletagmanager.com">
@@ -89,6 +89,11 @@
                 'id' => config('beta.google_tag_manager.id'),
             ]);
             (() => {
+                const isAdminPath = window.location.pathname.startsWith('/admin') || window.location.pathname.startsWith('/superadmin');
+                if (isAdminPath) {
+                    document.documentElement.classList.remove('dark');
+                    return;
+                }
                 const mode = localStorage.getItem('theme') || 'system';
                 const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 

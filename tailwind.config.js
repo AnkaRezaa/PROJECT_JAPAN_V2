@@ -80,8 +80,11 @@ export default {
                 focus: 'rgb(var(--toku-focus-rgb) / <alpha-value>)',
             },
             fontFamily: {
-                sans: ['"Noto Sans JP"', '"Inter"', ...defaultTheme.fontFamily.sans],
-                display: ['"Yuji Syuku"', '"Noto Sans JP"', ...defaultTheme.fontFamily.sans],
+                sans: ['"Plus Jakarta Sans"', '"Noto Sans JP"', ...defaultTheme.fontFamily.sans],
+                inter: ['"Inter"', '"Noto Sans JP"', ...defaultTheme.fontFamily.sans],
+                display: ['"Outfit"', '"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
+                japanese: ['"Noto Sans JP"', ...defaultTheme.fontFamily.sans],
+                serifJp: ['"Yuji Syuku"', '"Noto Sans JP"', ...defaultTheme.fontFamily.serif],
             },
         },
     },
