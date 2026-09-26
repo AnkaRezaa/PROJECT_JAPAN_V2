@@ -148,6 +148,7 @@ class ExamPortalDataService
                 'next_page_url' => $results->nextPageUrl(),
                 'prev_page_url' => $results->previousPageUrl(),
                 'total' => $results->total(),
+                'links' => $results->toArray()['links'] ?? [],
             ],
         ];
     }

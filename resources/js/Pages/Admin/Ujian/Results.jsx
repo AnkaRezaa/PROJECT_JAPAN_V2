@@ -1,14 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import BlockRoundedIcon from '@mui/icons-material/BlockRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import AdminDialog from '@/Components/UI/AdminDialog';
 import { AdminExamHeader, AdminExamTabs, AdminPagination, Metric, StatusBadge, apiErrorMessage, fieldClassName } from '@/Components/Features/AdminExam/AdminExamUI';
 
-export default function Results({ results = [], exam_packages = [], pagination = {} }) {
+export default function Results({ results = [], exam_packages = [], pagination = {}, session_filter = null }) {
     const [term, setTerm] = useState('');
-    const [exam, setExam] = useState('all');
+    const [exam, setExam] = useState(session_filter?.exam_title || 'all');
     const [invalidating, setInvalidating] = useState(null);
     const [reason, setReason] = useState('');
     const [busy, setBusy] = useState(false);
@@ -37,6 +37,19 @@ export default function Results({ results = [], exam_packages = [], pagination =
     return <AuthenticatedLayout><Head title="Hasil Ujian" /><div className="min-h-screen bg-slate-50 px-4 py-7 dark:bg-[#0b1121] sm:px-6 lg:px-8"><div className="mx-auto max-w-7xl space-y-6">
         <AdminExamHeader eyebrow="Monitoring peserta" title="Hasil ujian" description="Tinjau hasil per peserta dan paket tanpa mencampurkannya dengan nilai kuis kelas." />
         <AdminExamTabs />
+        {session_filter && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand-200 bg-brand-50/70 p-3 text-xs font-bold text-brand-900 dark:border-brand-900/40 dark:bg-brand-950/40 dark:text-brand-200">
+                <div className="flex items-center gap-2">
+                    <span className="rounded bg-brand-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
+                        Filter Sesi
+                    </span>
+                    <span>Menampilkan rekap khusus sesi: <strong>{session_filter.name}</strong> ({session_filter.exam_title || 'Ujian'})</span>
+                </div>
+                <Link href={route('admin.exams.results')} className="font-black text-brand-700 hover:underline dark:text-brand-300">
+                    Lihat Semua Hasil Sesi &rarr;
+                </Link>
+            </div>
+        )}
         {(message || error) && <div className={`border px-4 py-3 text-sm font-bold ${error ? 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200' : 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200'}`}>{error || message}</div>}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Metric label="Pengerjaan tampil" value={results.length} /><Metric label="Rata-rata nilai" value={`${average}%`} /><Metric label="Lulus" value={results.filter((item) => item.status === 'passed').length} /><Metric label="Dibatalkan" value={results.filter((item) => item.status === 'invalidated').length} /></div>
         <section className="border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"><div className="grid gap-3 border-b border-gray-200 p-4 dark:border-gray-800 md:grid-cols-[1fr_320px]"><label className="relative"><SearchRoundedIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fontSize="small" /><input value={term} onChange={(event) => setTerm(event.target.value)} className={`${fieldClassName} mt-0 pl-10`} placeholder="Cari nama peserta" /></label><select value={exam} onChange={(event) => setExam(event.target.value)} className={`${fieldClassName} mt-0`}><option value="all">Semua paket ujian</option>{exam_packages.map((item) => <option key={item.id} value={item.title}>{item.title}</option>)}</select></div>

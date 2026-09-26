@@ -66,9 +66,27 @@ class AdminExamPortalController extends Controller
         return Inertia::render('Admin/Ujian/Results', $this->portal->adminPortal($request, includeResults: true));
     }
 
-    public function sessionResults(Request $request, ExamSession $session): JsonResponse
+    public function sessionResults(Request $request, ExamSession $session): JsonResponse|Response
     {
-        return response()->json($this->portal->sessionResults($session, $request));
+        $sessionData = $this->portal->sessionResults($session, $request);
+
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
+            return response()->json($sessionData);
+        }
+
+        $session->loadMissing('version.exam');
+        $portalData = $this->portal->adminPortal($request, includeResults: false);
+
+        return Inertia::render('Admin/Ujian/Results', [
+            ...$portalData,
+            'results' => $sessionData['data'],
+            'pagination' => ['results' => $sessionData['pagination']['links'] ?? []],
+            'session_filter' => [
+                'id' => $session->id,
+                'name' => $session->name,
+                'exam_title' => $session->version?->exam?->title,
+            ],
+        ]);
     }
 
     public function preview(Request $request, Exam $exam): Response
