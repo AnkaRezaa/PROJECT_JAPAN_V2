@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
@@ -17,6 +17,16 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
     const [levelFilter, setLevelFilter] = useState(filters.level || 'all');
     const [statusFilter, setStatusFilter] = useState(filters.status || 'all');
     const [bankModal, setBankModal] = useState(null); // null, { mode: 'create' }, { mode: 'edit', bank }
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        const removeStart = router.on('start', () => setIsLoading(true));
+        const removeFinish = router.on('finish', () => setIsLoading(false));
+        return () => {
+            removeStart();
+            removeFinish();
+        };
+    }, []);
 
     const { confirmState, requestConfirm, closeConfirm } = useConfirmAction();
 
@@ -127,8 +137,6 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
                         }
                     />
 
-                    <AdminExamTabs />
-
                     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                         <Metric label="Total Bank Soal" value={banks.total || banks.data.length} detail="Semua koleksi" />
                         <Metric label="Total Wacana / Wrapper" value={totalWrappers} detail="Wacana bacaan & audio" />
@@ -178,96 +186,112 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
                             </select>
                         </div>
 
-                        <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {banks.data.map((bank) => (
-                                <article
-                                    key={bank.id}
-                                    className="group flex flex-col justify-between rounded-lg border border-gray-200 bg-white p-5 shadow-sm transition hover:border-brand-300 hover:shadow dark:border-gray-800 dark:bg-gray-900/60 dark:hover:border-brand-800"
-                                >
-                                    <div>
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="rounded bg-brand-50 px-2 py-0.5 text-xs font-black text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
-                                                {bank.level}
-                                            </span>
-                                            <StatusBadge status={bank.status} />
-                                        </div>
-
-                                        <h3 className="mt-3 text-base font-black text-gray-950 group-hover:text-brand-600 dark:text-white dark:group-hover:text-brand-400">
-                                            <Link href={route('admin.exams.question-banks.show', bank.slug)}>
-                                                {bank.title}
-                                            </Link>
-                                        </h3>
-
-                                        {bank.source && (
-                                            <p className="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                                                Sumber: {bank.source}
-                                            </p>
-                                        )}
-
-                                        <p className="mt-2 line-clamp-2 text-xs leading-5 text-gray-600 dark:text-gray-400">
-                                            {bank.description || 'Tidak ada deskripsi tambahan.'}
-                                        </p>
+                        <div className="relative min-h-[300px]">
+                            {/* Loading Overlay */}
+                            {isLoading && (
+                                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/70 backdrop-blur-[2px] dark:bg-gray-900/70 transition-opacity">
+                                    <div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-3 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                                        <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-brand-600 border-t-transparent dark:border-brand-400" />
+                                        <span className="text-xs font-black text-gray-700 dark:text-gray-200">
+                                            Memuat data bank soal...
+                                        </span>
                                     </div>
+                                </div>
+                            )}
 
-                                    <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-800">
-                                        <div className="flex items-center justify-between text-xs font-bold text-gray-600 dark:text-gray-400">
-                                            <span><strong>{bank.wrappers_count}</strong> wacana</span>
-                                            <span><strong>{bank.questions_count}</strong> butir soal</span>
-                                        </div>
+                            <div className={isLoading ? 'opacity-40 pointer-events-none transition-opacity duration-200' : 'transition-opacity duration-200'}>
+                                <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {banks.data.map((bank) => (
+                                        <article
+                                            key={bank.id}
+                                            className="group flex flex-col justify-between rounded-lg border border-gray-200 bg-white p-5 shadow-sm transition hover:border-brand-300 hover:shadow dark:border-gray-800 dark:bg-gray-900/60 dark:hover:border-brand-800"
+                                        >
+                                            <div>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="rounded bg-brand-50 px-2 py-0.5 text-xs font-black text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+                                                        {bank.level}
+                                                    </span>
+                                                    <StatusBadge status={bank.status} />
+                                                </div>
 
-                                        <div className="mt-4 flex items-center justify-between gap-2">
-                                            <Link
-                                                href={route('admin.exams.question-banks.show', bank.slug)}
-                                                className="inline-flex h-8 items-center gap-1.5 rounded-md bg-brand-50 px-3 text-xs font-black text-brand-700 hover:bg-brand-100 dark:bg-brand-950/50 dark:text-brand-300 dark:hover:bg-brand-900/50"
-                                            >
-                                                <FolderOpenOutlinedIcon sx={{ fontSize: 16 }} /> Kelola Soal
-                                            </Link>
-                                            <div className="flex items-center gap-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openEditModal(bank)}
-                                                    className="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white"
-                                                    title="Edit informasi bank"
-                                                >
-                                                    <EditOutlinedIcon sx={{ fontSize: 17 }} />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleDeleteBank(bank)}
-                                                    className="grid h-8 w-8 place-items-center rounded-md text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                                                    title="Hapus bank soal"
-                                                >
-                                                    <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
-                                                </button>
+                                                <h3 className="mt-3 text-base font-black text-gray-950 group-hover:text-brand-600 dark:text-white dark:group-hover:text-brand-400">
+                                                    <Link href={route('admin.exams.question-banks.show', bank.slug)}>
+                                                        {bank.title}
+                                                    </Link>
+                                                </h3>
+
+                                                {bank.source && (
+                                                    <p className="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                                                        Sumber: {bank.source}
+                                                    </p>
+                                                )}
+
+                                                <p className="mt-2 line-clamp-2 text-xs leading-5 text-gray-600 dark:text-gray-400">
+                                                    {bank.description || 'Tidak ada deskripsi tambahan.'}
+                                                </p>
                                             </div>
-                                        </div>
+
+                                            <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-800">
+                                                <div className="flex items-center justify-between text-xs font-bold tabular-nums text-gray-600 dark:text-gray-400">
+                                                    <span><strong>{bank.wrappers_count}</strong> wacana</span>
+                                                    <span><strong>{bank.questions_count}</strong> butir soal</span>
+                                                </div>
+
+                                                <div className="mt-4 flex items-center justify-between gap-2">
+                                                    <Link
+                                                        href={route('admin.exams.question-banks.show', bank.slug)}
+                                                        className="inline-flex h-8 items-center gap-1.5 rounded-md bg-brand-50 px-3 text-xs font-black text-brand-700 hover:bg-brand-100 dark:bg-brand-950/50 dark:text-brand-300 dark:hover:bg-brand-900/50"
+                                                    >
+                                                        <FolderOpenOutlinedIcon sx={{ fontSize: 16 }} /> Kelola Soal
+                                                    </Link>
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openEditModal(bank)}
+                                                            className="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white"
+                                                            title="Edit informasi bank"
+                                                        >
+                                                            <EditOutlinedIcon sx={{ fontSize: 17 }} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDeleteBank(bank)}
+                                                            className="grid h-8 w-8 place-items-center rounded-md text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                                                            title="Hapus bank soal"
+                                                        >
+                                                            <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </article>
+                                    ))}
+                                </div>
+
+                                {banks.data.length === 0 && (
+                                    <div className="px-4 py-16 text-center">
+                                        <p className="font-bold text-gray-950 dark:text-white">Belum ada bank soal</p>
+                                        <p className="mt-1 text-xs text-gray-500">Mulai dengan membuat bank soal baru atau mengimpor file template XLSX/CSV.</p>
+                                        <button
+                                            type="button"
+                                            onClick={openCreateModal}
+                                            className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-md bg-brand-600 px-4 text-xs font-black text-white hover:bg-brand-700"
+                                        >
+                                            <AddRoundedIcon fontSize="small" /> Buat Bank Soal Pertama
+                                        </button>
                                     </div>
-                                </article>
-                            ))}
-                        </div>
+                                )}
 
-                        {banks.data.length === 0 && (
-                            <div className="px-4 py-16 text-center">
-                                <p className="font-bold text-gray-950 dark:text-white">Belum ada bank soal</p>
-                                <p className="mt-1 text-xs text-gray-500">Mulai dengan membuat bank soal baru atau mengimpor file template XLSX/CSV.</p>
-                                <button
-                                    type="button"
-                                    onClick={openCreateModal}
-                                    className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-md bg-brand-600 px-4 text-xs font-black text-white hover:bg-brand-700"
-                                >
-                                    <AddRoundedIcon fontSize="small" /> Buat Bank Soal Pertama
-                                </button>
+                                <AdminPagination links={banks.links} />
                             </div>
-                        )}
-
-                        <AdminPagination links={banks.links} />
+                        </div>
                     </section>
                 </div>
             </div>
 
             {/* Modal Tambah/Edit Bank Soal */}
             <AdminDialog
-                isOpen={Boolean(bankModal)}
+                open={Boolean(bankModal)}
                 onClose={() => setBankModal(null)}
                 title={bankModal?.mode === 'create' ? 'Buat Bank Soal Baru' : 'Edit Informasi Bank Soal'}
                 subtitle="Bank soal berfungsi sebagai wadah penampung materi ujian dari sumber tertentu."

@@ -5,6 +5,7 @@ import CloseIcon from '@mui/icons-material/Close';
 
 export default function AdminDialog({
     open = false,
+    isOpen,
     onClose,
     eyebrow,
     title,
@@ -13,10 +14,11 @@ export default function AdminDialog({
     footer,
     maxWidth = 'max-w-2xl',
 }) {
-    useScrollLock(open);
+    const isDialogOpen = Boolean(open || isOpen);
+    useScrollLock(isDialogOpen);
 
     useEffect(() => {
-        if (!open) return undefined;
+        if (!isDialogOpen) return undefined;
 
         const closeOnEscape = (event) => {
             if (event.key === 'Escape') onClose?.();
@@ -27,9 +29,9 @@ export default function AdminDialog({
         return () => {
             document.removeEventListener('keydown', closeOnEscape);
         };
-    }, [open, onClose]);
+    }, [isDialogOpen, onClose]);
 
-    if (!open) return null;
+    if (!isDialogOpen) return null;
 
     return createPortal(
         <div className="fixed inset-0 z-[120] flex items-end justify-center bg-gray-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label={title}>
