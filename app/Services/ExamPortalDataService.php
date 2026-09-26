@@ -111,7 +111,7 @@ class ExamPortalDataService
                 'cohort_ids' => $session->cohorts->pluck('id')->values(),
                 'cohort_names' => $session->cohorts->pluck('nama')->values(),
                 'participants' => $session->attempts_count,
-                'preview_url' => route('admin.exams.show', $session->version->exam->slug),
+                'preview_url' => route('admin.exams.preview', $session->version->exam->slug),
             ])->values() ?? collect(),
             'results' => $results?->getCollection()->map(fn ($attempt) => $this->adminResultPayload($attempt))->values() ?? collect(),
             'question_samples' => $this->questionSamples($selectedExam),
