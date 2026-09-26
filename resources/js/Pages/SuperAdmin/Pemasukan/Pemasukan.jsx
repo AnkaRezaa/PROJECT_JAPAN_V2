@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import Card from '@/Components/UI/Card';
 import StatCard from '@/Components/Features/Dashboard/StatCard';
 import ChartCard from '@/Components/Features/Dashboard/ChartCard';
@@ -66,6 +66,7 @@ export default function Pemasukan({
     transactionStatusDistribution = [],
     paymentMethodDistribution = [],
 }) {
+    const { flash = {} } = usePage().props;
     const [showPlanForm, setShowPlanForm] = useState(false);
     const [showTransactionForm, setShowTransactionForm] = useState(false);
     const [showAccessKeyForm, setShowAccessKeyForm] = useState(false);
@@ -73,7 +74,21 @@ export default function Pemasukan({
     const [rejectTarget, setRejectTarget] = useState(null);
     const [approvalNotes, setApprovalNotes] = useState('');
     const [rejectionNotes, setRejectionNotes] = useState('');
+    const [newKeyModalData, setNewKeyModalData] = useState(null);
+    const [copied, setCopied] = useState(false);
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
+
+    useEffect(() => {
+        if (flash.created_access_key) {
+            setNewKeyModalData(flash.created_access_key);
+        }
+    }, [flash.created_access_key]);
+
+    const copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     const planForm = useForm({ ...emptyPlan });
     const transactionForm = useForm({ ...emptyTransaction });
@@ -587,24 +602,62 @@ export default function Pemasukan({
 
             {showAccessKeyForm && (
                 <AdminDialog open onClose={() => { setShowAccessKeyForm(false); accessKeyForm.reset(); }} eyebrow="Akses Manual" title="Buat Access Key" description="Kode dibuat otomatis untuk demo, promo, atau pemberian akses manual." maxWidth="max-w-lg">
-                        <form onSubmit={submitAccessKey} className="space-y-4">
-                            <input value={accessKeyForm.data.name} onChange={(e) => accessKeyForm.setData('name', e.target.value)} placeholder="Nama campaign / kelas" className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
-                            <SearchableSelect value={accessKeyForm.data.payment_plan_id} onChange={(planId) => accessKeyForm.setData('payment_plan_id', planId)} placeholder="Pakai plan Access Key Premium" searchPlaceholder="Cari plan..." allowClear clearLabel="Pakai plan Access Key Premium" options={accessKeyPlans.map((plan) => ({ value: plan.id, label: plan.name, description: plan.scope_label }))} />
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <form onSubmit={submitAccessKey} className="space-y-4">
+                        <div>
+                            <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                Nama Campaign / Keterangan Key <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                value={accessKeyForm.data.name}
+                                onChange={(e) => accessKeyForm.setData('name', e.target.value)}
+                                placeholder="Contoh: Promo Early Bird, Akses Demo Sensei"
+                                className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                            />
+                            {accessKeyForm.errors.name && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.name}</p>}
+                        </div>
+
+                        <div>
+                            <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                Paket Langganan Terkait <span className="text-gray-400 font-normal">(opsional)</span>
+                            </label>
+                            <SearchableSelect
+                                value={accessKeyForm.data.payment_plan_id}
+                                onChange={(planId) => {
+                                    const found = accessKeyPlans.find((plan) => String(plan.id) === String(planId));
+                                    accessKeyForm.setData((prev) => ({
+                                        ...prev,
+                                        payment_plan_id: planId || '',
+                                        program_pembelajaran_id: found ? found.program_pembelajaran_id : prev.program_pembelajaran_id,
+                                        duration_days: found ? (found.duration_days || 30) : prev.duration_days,
+                                    }));
+                                }}
+                                placeholder="Pilih paket langganan (opsional)"
+                                searchPlaceholder="Cari paket langganan..."
+                                allowClear
+                                clearLabel="Gunakan pengaturan manual di bawah"
+                                options={accessKeyPlans.map((plan) => ({ value: plan.id, label: plan.name, description: plan.scope_label }))}
+                            />
+                            {accessKeyForm.errors.payment_plan_id && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.payment_plan_id}</p>}
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                    Cakupan Akses
+                                </label>
                                 <select
                                     value={accessKeyForm.data.scope_type}
-                                    onChange={(e) => {
-                                        accessKeyForm.setData({
-                                            ...accessKeyForm.data,
-                                            scope_type: e.target.value,
-                                            program_pembelajaran_id: accessKeyForm.data.program_pembelajaran_id,
-                                        });
-                                    }}
+                                    onChange={(e) => accessKeyForm.setData('scope_type', e.target.value)}
                                     disabled={Boolean(accessKeyForm.data.payment_plan_id)}
-                                    className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900"
+                                    className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                 >
-                                    <option value="program">Per kelas</option>
+                                    <option value="program">Per Kelas / Program</option>
                                 </select>
+                            </div>
+                            <div>
+                                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                    Pilih Kelas <span className="text-red-500">*</span>
+                                </label>
                                 <SearchableSelect
                                     value={accessKeyForm.data.program_pembelajaran_id}
                                     onChange={(programId) => accessKeyForm.setData('program_pembelajaran_id', programId)}
@@ -613,18 +666,75 @@ export default function Pemasukan({
                                     searchPlaceholder="Cari kelas..."
                                     options={programs.map((program) => ({ value: program.id, label: program.title }))}
                                 />
+                                {accessKeyForm.errors.program_pembelajaran_id && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.program_pembelajaran_id}</p>}
                             </div>
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <input type="number" min="1" max="366" value={accessKeyForm.data.duration_days} onChange={(e) => accessKeyForm.setData('duration_days', e.target.value)} placeholder="Durasi hari" className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
-                                <input type="number" min="1" max="500" value={accessKeyForm.data.max_uses} onChange={(e) => accessKeyForm.setData('max_uses', e.target.value)} placeholder="Maks pemakaian" className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                    Masa Aktif (Hari) <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="366"
+                                    value={accessKeyForm.data.duration_days}
+                                    onChange={(e) => accessKeyForm.setData('duration_days', e.target.value)}
+                                    placeholder="Contoh: 30"
+                                    className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                />
+                                {accessKeyForm.errors.duration_days && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.duration_days}</p>}
                             </div>
-                            <input type="datetime-local" value={accessKeyForm.data.expires_at} onChange={(e) => accessKeyForm.setData('expires_at', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
-                            <textarea value={accessKeyForm.data.notes} onChange={(e) => accessKeyForm.setData('notes', e.target.value)} rows={3} placeholder="Catatan internal" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900" />
-                            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                                <button type="button" onClick={() => setShowAccessKeyForm(false)} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
-                                <button disabled={accessKeyForm.processing} className="min-h-11 w-full rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-black text-gray-950 disabled:opacity-50 sm:w-auto">{accessKeyForm.processing ? 'Membuat...' : 'Buat Key'}</button>
+                            <div>
+                                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                    Maksimal Pemakaian (Siswa) <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="500"
+                                    value={accessKeyForm.data.max_uses}
+                                    onChange={(e) => accessKeyForm.setData('max_uses', e.target.value)}
+                                    placeholder="Contoh: 1"
+                                    className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                />
+                                {accessKeyForm.errors.max_uses && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.max_uses}</p>}
                             </div>
-                        </form>
+                        </div>
+
+                        <div>
+                            <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                Batas Waktu Kedaluwarsa Klaim <span className="text-gray-400 font-normal">(opsional)</span>
+                            </label>
+                            <input
+                                type="datetime-local"
+                                value={accessKeyForm.data.expires_at}
+                                onChange={(e) => accessKeyForm.setData('expires_at', e.target.value)}
+                                className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                            />
+                            {accessKeyForm.errors.expires_at && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.expires_at}</p>}
+                        </div>
+
+                        <div>
+                            <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                Catatan Internal Admin <span className="text-gray-400 font-normal">(opsional)</span>
+                            </label>
+                            <textarea
+                                value={accessKeyForm.data.notes}
+                                onChange={(e) => accessKeyForm.setData('notes', e.target.value)}
+                                rows={2}
+                                placeholder="Tuliskan catatan peruntukan kode akses ini..."
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                            />
+                            {accessKeyForm.errors.notes && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.notes}</p>}
+                        </div>
+
+                        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                            <button type="button" onClick={() => setShowAccessKeyForm(false)} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
+                            <button disabled={accessKeyForm.processing} className="min-h-11 w-full rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-black text-gray-950 disabled:opacity-50 sm:w-auto">{accessKeyForm.processing ? 'Membuat...' : 'Buat Key'}</button>
+                        </div>
+                    </form>
                 </AdminDialog>
             )}
 
@@ -646,6 +756,73 @@ export default function Pemasukan({
                     <textarea value={rejectionNotes} onChange={(e) => setRejectionNotes(e.target.value)} rows={4} placeholder="Alasan penolakan" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900" />
                 </ConfirmActionDialog>
             )}
+            {newKeyModalData && (
+                <AdminDialog
+                    open={Boolean(newKeyModalData)}
+                    onClose={() => setNewKeyModalData(null)}
+                    eyebrow="Access Key Berhasil Dibuat"
+                    title="Kode Akses Baru"
+                    description="Kode akses siap dibagikan kepada pengguna untuk membuka kelas."
+                    maxWidth="max-w-md"
+                >
+                    <div className="space-y-4">
+                        <div className="space-y-2 rounded-xl border border-gray-100 bg-gray-50 p-3.5 text-xs dark:border-gray-800 dark:bg-gray-800/50">
+                            {newKeyModalData.name && (
+                                <div className="flex justify-between">
+                                    <span className="font-medium text-gray-500 dark:text-gray-400">Campaign / Nama:</span>
+                                    <span className="font-bold text-gray-900 dark:text-white">{newKeyModalData.name}</span>
+                                </div>
+                            )}
+                            {newKeyModalData.program && (
+                                <div className="flex justify-between">
+                                    <span className="font-medium text-gray-500 dark:text-gray-400">Kelas / Program:</span>
+                                    <span className="font-bold text-gray-900 dark:text-white">{newKeyModalData.program}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between">
+                                <span className="font-medium text-gray-500 dark:text-gray-400">Masa Aktif:</span>
+                                <span className="font-bold text-gray-900 dark:text-white">{newKeyModalData.duration_days} Hari</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="font-medium text-gray-500 dark:text-gray-400">Maks Pemakaian:</span>
+                                <span className="font-bold text-gray-900 dark:text-white">{newKeyModalData.max_uses} Siswa</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                Kode Akses
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value={newKeyModalData.code || ''}
+                                    className="h-11 flex-1 rounded-xl border border-amber-200 bg-amber-50/50 px-3 font-mono text-base font-black text-amber-900 select-all dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => copyToClipboard(newKeyModalData.code || '')}
+                                    className="h-11 rounded-xl border border-amber-400 bg-amber-500 px-4 text-xs font-black text-white hover:bg-amber-600"
+                                >
+                                    {copied ? 'Tersalin!' : 'Salin'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end pt-3">
+                            <button
+                                type="button"
+                                onClick={() => setNewKeyModalData(null)}
+                                className="w-full rounded-xl bg-gray-900 py-2.5 text-sm font-black text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+                            >
+                                Selesai
+                            </button>
+                        </div>
+                    </div>
+                </AdminDialog>
+            )}
+
             <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
         </AuthenticatedLayout>
     );

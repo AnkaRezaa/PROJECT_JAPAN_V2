@@ -34,10 +34,11 @@ export default function PopupManager({ popups = [] }) {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
 
-    const { data, setData, post, processing, errors, reset } = useForm({ ...emptyPopup });
+    const { data, setData, post, processing, errors, reset, transform } = useForm({ ...emptyPopup });
 
     const openCreate = () => {
         setEditingPopup(null);
+        transform((values) => values);
         reset();
         setImagePreview(null);
         setShowForm(true);
@@ -45,6 +46,7 @@ export default function PopupManager({ popups = [] }) {
 
     const openEdit = (item) => {
         setEditingPopup(item);
+        transform((values) => values);
         setData({
             title: item.title || '',
             description: item.description || '',
@@ -67,6 +69,7 @@ export default function PopupManager({ popups = [] }) {
     const closeForm = () => {
         setShowForm(false);
         setEditingPopup(null);
+        transform((values) => values);
         reset();
         setImagePreview(null);
     };
@@ -88,15 +91,32 @@ export default function PopupManager({ popups = [] }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        transform((values) => ({
+            ...values,
+            starts_at: values.starts_at || null,
+            ends_at: values.ends_at || null,
+            badge: values.badge ? values.badge.trim() : null,
+            cta_label: values.cta_label ? values.cta_label.trim() : null,
+            cta_url: values.cta_url ? values.cta_url.trim() : null,
+            description: values.description ? values.description.trim() : null,
+        }));
+
         if (editingPopup) {
             post(route('superadmin.content.popups.update', editingPopup.id), {
                 preserveScroll: true,
-                onSuccess: () => closeForm(),
+                onSuccess: () => {
+                    transform((values) => values);
+                    closeForm();
+                },
             });
         } else {
             post(route('superadmin.content.popups.store'), {
                 preserveScroll: true,
-                onSuccess: () => closeForm(),
+                onSuccess: () => {
+                    transform((values) => values);
+                    closeForm();
+                },
             });
         }
     };
@@ -271,214 +291,313 @@ export default function PopupManager({ popups = [] }) {
 
             {/* Modal Form Tambah / Edit */}
             {showForm && (
-                <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={closeForm} />
-                    <div className="relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-900">
+                <div className="fixed inset-0 z-[130] flex items-center justify-center p-3 sm:p-4">
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={closeForm} />
+                    <div className="relative z-10 flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-gray-900">
+                        {/* Header Modal */}
                         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-800">
-                            <h3 className="text-lg font-black text-gray-900 dark:text-white">
-                                {editingPopup ? 'Edit Pop-up Broadcast' : 'Buat Pop-up Broadcast Baru'}
-                            </h3>
-                            <button onClick={closeForm} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                            <div>
+                                <h3 className="text-lg font-black text-gray-900 dark:text-white">
+                                    {editingPopup ? 'Edit Pop-up Broadcast' : 'Buat Pop-up Broadcast Baru'}
+                                </h3>
+                                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                    Siarkan banner promosi, diskon, event, atau info pemeliharaan secara terarah.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeForm}
+                                className="rounded-xl p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                            >
                                 <CloseIcon sx={{ fontSize: 20 }} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-4">
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <div className="sm:col-span-2">
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                        Judul Pop-up <span className="text-rose-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={data.title}
-                                        onChange={(e) => setData('title', e.target.value)}
-                                        placeholder="Contoh: Diskon Spesial N5 & N4 Pekan Ini!"
-                                        required
-                                        className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-semibold text-gray-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                    />
-                                    {errors.title && <p className="mt-1 text-xs text-rose-500">{errors.title}</p>}
-                                </div>
+                        {/* Form Content dengan Grid Responsif */}
+                        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                            <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto p-4 sm:p-6 lg:grid-cols-12 lg:gap-6">
+                                {/* Kolom Input (7 cols di desktop) */}
+                                <div className="space-y-5 lg:col-span-7">
+                                    {/* Section 1: Konten Promosi */}
+                                    <div className="space-y-3 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-850/50">
+                                        <h4 className="text-xs font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                                            1. Informasi Pesan & Konten
+                                        </h4>
 
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                        Tipe Pop-up
-                                    </label>
-                                    <select
-                                        value={data.type}
-                                        onChange={(e) => setData('type', e.target.value)}
-                                        className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                    >
-                                        <option value="promo">Promo / Diskon</option>
-                                        <option value="announcement">Pengumuman</option>
-                                        <option value="event">Event Spesial / Live Class</option>
-                                        <option value="maintenance">Maintenance</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                        Badge Label (Opsional)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={data.badge}
-                                        onChange={(e) => setData('badge', e.target.value)}
-                                        placeholder="Contoh: Promo Terbatas, Event Sensei"
-                                        className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                    />
-                                </div>
-
-                                <div className="sm:col-span-2">
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                        Deskripsi Singkat
-                                    </label>
-                                    <textarea
-                                        value={data.description}
-                                        onChange={(e) => setData('description', e.target.value)}
-                                        rows={3}
-                                        placeholder="Tuliskan pesan promo atau pengumuman yang menarik..."
-                                        className="w-full rounded-xl border border-gray-200 p-3 text-sm font-medium text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                    />
-                                    {errors.description && <p className="mt-1 text-xs text-rose-500">{errors.description}</p>}
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                        Teks Tombol CTA
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={data.cta_label}
-                                        onChange={(e) => setData('cta_label', e.target.value)}
-                                        placeholder="Contoh: Lihat Paket Kelas"
-                                        className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                        Link Tujuan CTA
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={data.cta_url}
-                                        onChange={(e) => setData('cta_url', e.target.value)}
-                                        placeholder="Contoh: /pricing atau https://..."
-                                        className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                        Target Halaman
-                                    </label>
-                                    <select
-                                        value={data.target_page}
-                                        onChange={(e) => setData('target_page', e.target.value)}
-                                        className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                    >
-                                        <option value="all">Semua Halaman</option>
-                                        <option value="landing_page">Landing Page</option>
-                                        <option value="dashboard">Dashboard Pengguna</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                        Target Audiens
-                                    </label>
-                                    <select
-                                        value={data.target_audience}
-                                        onChange={(e) => setData('target_audience', e.target.value)}
-                                        className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                    >
-                                        <option value="all">Semua Pengunjung</option>
-                                        <option value="guest">Hanya Pengunjung Belum Login</option>
-                                        <option value="user">Semua Pengguna Login</option>
-                                        <option value="free_user">Hanya Pengguna Free (Belum Berlangganan)</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                        Tanggal Mulai (Opsional)
-                                    </label>
-                                    <input
-                                        type="datetime-local"
-                                        value={data.starts_at}
-                                        onChange={(e) => setData('starts_at', e.target.value)}
-                                        className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                        Tanggal Berakhir (Opsional)
-                                    </label>
-                                    <input
-                                        type="datetime-local"
-                                        value={data.ends_at}
-                                        onChange={(e) => setData('ends_at', e.target.value)}
-                                        className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                    />
-                                </div>
-
-                                {/* Banner Image Upload */}
-                                <div className="sm:col-span-2">
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                        Gambar Banner (Opsional, Rasio 16:9 disarankan)
-                                    </label>
-                                    {imagePreview ? (
-                                        <div className="relative aspect-video w-full max-w-sm overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
-                                            <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
-                                            <button
-                                                type="button"
-                                                onClick={handleRemoveImage}
-                                                className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80"
-                                            >
-                                                <CloseIcon sx={{ fontSize: 16 }} />
-                                            </button>
+                                        <div>
+                                            <label className="mb-1 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                                Judul Pop-up <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={data.title}
+                                                onChange={(e) => setData('title', e.target.value)}
+                                                placeholder="Contoh: Diskon Spesial Paket N5 & N4!"
+                                                required
+                                                className={`h-10 w-full rounded-xl border px-3 text-sm font-semibold text-gray-900 dark:bg-gray-900 dark:text-white ${
+                                                    errors.title ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-200 dark:border-gray-700'
+                                                }`}
+                                            />
+                                            {errors.title && <p className="mt-1 text-xs text-rose-500">{errors.title}</p>}
                                         </div>
-                                    ) : (
-                                        <input
-                                            type="file"
-                                            accept="image/png,image/jpeg,image/webp"
-                                            onChange={handleImageChange}
-                                            className="block w-full text-xs text-gray-500 file:mr-4 file:rounded-xl file:border-0 file:bg-brand-50 file:px-4 file:py-2.5 file:text-xs file:font-black file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-900/30 dark:file:text-brand-300"
-                                        />
-                                    )}
-                                    {errors.image && <p className="mt-1 text-xs text-rose-500">{errors.image}</p>}
+
+                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                            <div>
+                                                <label className="mb-1 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                                    Tipe Konten
+                                                </label>
+                                                <select
+                                                    value={data.type}
+                                                    onChange={(e) => setData('type', e.target.value)}
+                                                    className="h-10 w-full rounded-xl border border-gray-200 px-3 text-xs font-bold text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                >
+                                                    <option value="promo">Promo / Diskon</option>
+                                                    <option value="announcement">Pengumuman</option>
+                                                    <option value="event">Event Spesial / Live</option>
+                                                    <option value="maintenance">Maintenance</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="mb-1 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                                    Badge Tag (Opsional)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={data.badge}
+                                                    onChange={(e) => setData('badge', e.target.value)}
+                                                    placeholder="Contoh: Terbatas, Spesial"
+                                                    className="h-10 w-full rounded-xl border border-gray-200 px-3 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-1 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                                Deskripsi Singkat
+                                            </label>
+                                            <textarea
+                                                value={data.description}
+                                                onChange={(e) => setData('description', e.target.value)}
+                                                rows={2}
+                                                placeholder="Tuliskan keterangan singkat promo atau pengumuman..."
+                                                className="w-full rounded-xl border border-gray-200 p-2.5 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                            />
+                                            {errors.description && <p className="mt-1 text-xs text-rose-500">{errors.description}</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* Section 2: Tombol CTA & Media */}
+                                    <div className="space-y-3 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-850/50">
+                                        <h4 className="text-xs font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                                            2. Tombol Aksi (CTA) & Banner Gambar
+                                        </h4>
+
+                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                            <div>
+                                                <label className="mb-1 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                                    Label Tombol CTA
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={data.cta_label}
+                                                    onChange={(e) => setData('cta_label', e.target.value)}
+                                                    placeholder="Contoh: Lihat Paket Kelas"
+                                                    className="h-10 w-full rounded-xl border border-gray-200 px-3 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="mb-1 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                                    URL Tujuan CTA
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={data.cta_url}
+                                                    onChange={(e) => setData('cta_url', e.target.value)}
+                                                    placeholder="Contoh: /pricing atau https://..."
+                                                    className="h-10 w-full rounded-xl border border-gray-200 px-3 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <div className="mb-1 flex items-center justify-between">
+                                                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                                    Gambar Banner (Opsional, Rekomendasi 16:9)
+                                                </label>
+                                                {imagePreview && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleRemoveImage}
+                                                        className="text-[11px] font-bold text-rose-500 hover:underline"
+                                                    >
+                                                        Hapus Gambar
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <input
+                                                type="file"
+                                                accept="image/png,image/jpeg,image/webp"
+                                                onChange={handleImageChange}
+                                                className="block w-full text-xs text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-xs file:font-bold file:text-brand-700 dark:file:bg-brand-900/30 dark:file:text-brand-300"
+                                            />
+                                            {errors.image && <p className="mt-1 text-xs text-rose-500">{errors.image}</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* Section 3: Target & Penjadwalan */}
+                                    <div className="space-y-3 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-850/50">
+                                        <h4 className="text-xs font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                                            3. Target Penayangan & Jadwal
+                                        </h4>
+
+                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                            <div>
+                                                <label className="mb-1 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                                    Target Halaman
+                                                </label>
+                                                <select
+                                                    value={data.target_page}
+                                                    onChange={(e) => setData('target_page', e.target.value)}
+                                                    className="h-10 w-full rounded-xl border border-gray-200 px-3 text-xs font-bold text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                >
+                                                    <option value="all">Semua Halaman</option>
+                                                    <option value="landing_page">Landing Page (Khusus Depan)</option>
+                                                    <option value="dashboard">Dashboard Pengguna (Khusus Member)</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="mb-1 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                                    Target Audiens
+                                                </label>
+                                                <select
+                                                    value={data.target_audience}
+                                                    onChange={(e) => setData('target_audience', e.target.value)}
+                                                    className="h-10 w-full rounded-xl border border-gray-200 px-3 text-xs font-bold text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                >
+                                                    <option value="all">Semua Pengunjung</option>
+                                                    <option value="guest">Pengunjung Belum Login</option>
+                                                    <option value="user">Semua Pengguna Login</option>
+                                                    <option value="free_user">Pengguna Free (Belum Berlangganan)</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="mb-1 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                                    Mulai Tayang (Opsional)
+                                                </label>
+                                                <input
+                                                    type="datetime-local"
+                                                    value={data.starts_at}
+                                                    onChange={(e) => setData('starts_at', e.target.value)}
+                                                    className="h-10 w-full rounded-xl border border-gray-200 px-3 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                />
+                                                {errors.starts_at && <p className="mt-1 text-xs text-rose-500">{errors.starts_at}</p>}
+                                            </div>
+
+                                            <div>
+                                                <label className="mb-1 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                                    Selesai Tayang (Opsional)
+                                                </label>
+                                                <input
+                                                    type="datetime-local"
+                                                    value={data.ends_at}
+                                                    onChange={(e) => setData('ends_at', e.target.value)}
+                                                    className="h-10 w-full rounded-xl border border-gray-200 px-3 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                />
+                                                {errors.ends_at && <p className="mt-1 text-xs text-rose-500">{errors.ends_at}</p>}
+                                            </div>
+                                        </div>
+
+                                        <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
+                                            <input
+                                                type="checkbox"
+                                                checked={data.is_active}
+                                                onChange={(e) => setData('is_active', e.target.checked)}
+                                                className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                                            />
+                                            <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                                                Aktifkan langsung pop-up ini setelah disimpan
+                                            </span>
+                                        </label>
+                                    </div>
                                 </div>
 
-                                {/* Status Toggle */}
-                                <div className="sm:col-span-2">
-                                    <label className="inline-flex cursor-pointer items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={data.is_active}
-                                            onChange={(e) => setData('is_active', e.target.checked)}
-                                            className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-                                        />
-                                        <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
-                                            Aktifkan Pop-up sekarang
-                                        </span>
-                                    </label>
+                                {/* Kolom Live Preview (5 cols di desktop) */}
+                                <div className="mt-4 lg:col-span-5 lg:mt-0">
+                                    <div className="sticky top-0 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-black uppercase tracking-wider text-gray-400">
+                                                Live Pratinjau Tampilan Pop-up
+                                            </span>
+                                            <span className="rounded bg-sky-50 px-2 py-0.5 text-[10px] font-black text-sky-600 dark:bg-sky-950/40 dark:text-sky-400">
+                                                Visual Siswa
+                                            </span>
+                                        </div>
+
+                                        {/* Mockup Modal Preview */}
+                                        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
+                                            {imagePreview ? (
+                                                <div className="relative aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-900">
+                                                    <img src={imagePreview} alt="Preview banner" className="h-full w-full object-cover" />
+                                                </div>
+                                            ) : (
+                                                <div className="flex aspect-[16/9] w-full items-center justify-center bg-gradient-to-br from-brand-50 to-gray-100 text-brand-300 dark:from-gray-800 dark:to-gray-900 dark:text-gray-600">
+                                                    <CampaignIcon sx={{ fontSize: 44 }} />
+                                                </div>
+                                            )}
+
+                                            <div className="p-4 space-y-2.5">
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    {typeBadge(data.type)}
+                                                    {data.badge && (
+                                                        <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                                                            {data.badge}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <h4 className="text-sm font-black text-gray-900 dark:text-white line-clamp-2">
+                                                    {data.title || 'Judul pop-up akan tampil di sini'}
+                                                </h4>
+
+                                                <p className="text-xs text-gray-500 line-clamp-3 dark:text-gray-400">
+                                                    {data.description || 'Deskripsi pesan promosi atau pengumuman pop-up akan terlihat oleh pengguna sesuai isi form.'}
+                                                </p>
+
+                                                {data.cta_label && (
+                                                    <div className="pt-2">
+                                                        <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-black text-white shadow-sm shadow-brand-500/20">
+                                                            {data.cta_label}
+                                                            <ArrowForwardIcon sx={{ fontSize: 14 }} />
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                <div className="border-t border-gray-100 pt-2 text-[10px] text-gray-400 dark:border-gray-700">
+                                                    Target: <strong>{targetPageLabel(data.target_page)}</strong> • Audiens: <strong>{targetAudienceLabel(data.target_audience)}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4 dark:border-gray-800">
+                            {/* Modal Footer Actions */}
+                            <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-white p-4 dark:border-gray-800 dark:bg-gray-900 sm:px-6">
                                 <button
                                     type="button"
                                     onClick={closeForm}
-                                    className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                                    className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={processing}
-                                    className="rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-black text-white shadow-md shadow-brand-500/20 hover:bg-brand-700 disabled:opacity-50"
+                                    className="rounded-xl bg-brand-600 px-5 py-2 text-xs font-black text-white shadow-md shadow-brand-500/20 hover:bg-brand-700 disabled:opacity-50"
                                 >
                                     {processing ? 'Menyimpan...' : (editingPopup ? 'Perbarui Pop-up' : 'Simpan Pop-up')}
                                 </button>

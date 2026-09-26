@@ -38,16 +38,20 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
                         ->orWhere('email', 'like', "%{$search}%");
                 });
             })
-            ->when($filters['status'] !== 'all', fn ($query) => $query->where('status', $filters['status']))
+            ->when(
+                $filters['status'] !== 'all',
+                fn ($query) => $query->where('status', $filters['status']),
+                fn ($query) => $query->where('status', '!=', 'anonymized')
+            )
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('SuperAdmin/DataUser/DataUser', [
             'stats' => [
-                $this->stat('Total Student', number_format(Pengguna::where('role', 'user')->count()), 'U'),
-                $this->stat('Aktif Mingguan', number_format(Pengguna::where('role', 'user')->whereDate('last_activity_date', '>=', now()->subDays(7)->toDateString())->count()), 'A'),
-                $this->stat('Perlu Review', number_format(Pengguna::where('role', 'user')->whereNull('last_activity_date')->count()), 'R', '0', 'down'),
+                $this->stat('Total Student', number_format(Pengguna::where('role', 'user')->where('status', '!=', 'anonymized')->count()), 'U'),
+                $this->stat('Aktif Mingguan', number_format(Pengguna::where('role', 'user')->where('status', 'active')->whereDate('last_activity_date', '>=', now()->subDays(7)->toDateString())->count()), 'A'),
+                $this->stat('Perlu Review', number_format(Pengguna::where('role', 'user')->where('status', 'active')->whereNull('last_activity_date')->count()), 'R', '0', 'down'),
                 $this->stat('Akun Suspended', number_format(Pengguna::where('role', 'user')->where('status', 'suspended')->count()), 'S', '0', 'down'),
             ],
             'users' => $students->through(fn (Pengguna $user) => [
@@ -56,13 +60,15 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
                 'email' => $user->email,
                 'raw_status' => $user->status,
                 'status' => $this->displayStatus($user->status),
+                'suspended_reason' => $user->suspended_reason,
+                'suspended_at' => optional($user->suspended_at)->format('d M Y H:i'),
                 'xp' => number_format($user->xp),
                 'level' => 'Lv ' . $user->level,
                 'streak' => $user->streak_count . ' hari',
                 'progress' => min(100, (int) round(($user->completed_modules_count / $totalPublishedModules) * 100)) . '%',
-                'can_permanently_delete' => $deletions->canPermanentlyDelete($user, $request->user()),
-                'can_anonymize' => $deletions->canAnonymize($user, $request->user()),
-                'deletion_blockers' => $deletions->blockers($user, $request->user()),
+                'can_permanently_delete' => $user->status !== 'anonymized' && $deletions->canPermanentlyDelete($user, $request->user()),
+                'can_anonymize' => $user->status !== 'anonymized' && $deletions->canAnonymize($user, $request->user()),
+                'deletion_blockers' => $user->status === 'anonymized' ? ['Akun telah dianonimkan.'] : $deletions->blockers($user, $request->user()),
             ]),
             'filters' => $filters,
         ]);
@@ -72,14 +78,19 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
     {
         abort_if($user->role !== 'user', 404);
 
+        if ($user->status === 'anonymized') {
+            return redirect()->back()->with('error', 'Akun yang telah dihapus/dianonimkan tidak dapat diubah statusnya.');
+        }
+
         $validated = $request->validate([
             'status' => ['required', 'in:active,suspended'],
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
         $oldStatus = $user->status ?? 'active';
+        $reason = !empty($validated['reason']) ? trim($validated['reason']) : null;
 
-        $suspensions->changeStatus($user, $validated['status'], $validated['reason'] ?? null, $request->user());
+        $suspensions->changeStatus($user, $validated['status'], $reason, $request->user());
 
         $this->logActivity(
             $request,
@@ -87,10 +98,11 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
             'user',
             $user->id,
             "Mengubah status user {$user->username} dari {$oldStatus} ke {$validated['status']}",
-            ['old_status' => $oldStatus, 'new_status' => $validated['status']]
+            ['old_status' => $oldStatus, 'new_status' => $validated['status'], 'reason' => $reason]
         );
 
-        return redirect()->back()->with('success', 'Status user berhasil diperbarui');
+        $statusText = $validated['status'] === 'suspended' ? 'disuspend' : 'diaktifkan kembali';
+        return redirect()->back()->with('success', "Status akun {$user->username} berhasil {$statusText}.");
     }
 
     public function show(Request $request, Pengguna $user, ChartDataService $chartData)
@@ -176,6 +188,10 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
     {
         abort_if($user->role !== 'user', 404);
 
+        if ($user->status === 'anonymized') {
+            return redirect()->back()->with('error', 'Akun yang telah dihapus/dianonimkan tidak dapat direset passwordnya.');
+        }
+
         $password = Str::password(10, true, true, false, false);
 
         $user->update([
@@ -184,12 +200,25 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
 
         $this->logActivity($request, 'user.password_reset', 'user', $user->id, "Reset password user {$user->username}");
 
-        return redirect()->back()->with('generated_password', $password);
+        return redirect()->back()
+            ->with('generated_password', $password)
+            ->with('password_reset_data', [
+                'id' => $user->id,
+                'username' => $user->username,
+                'email' => $user->email,
+                'password' => $password,
+            ])
+            ->with('success', "Password untuk akun {$user->username} berhasil direset.");
     }
 
     public function destroy(Request $request, Pengguna $user, AccountDeletionService $deletions)
     {
         abort_if($user->role !== 'user', 404);
+
+        if ($user->status === 'anonymized') {
+            return redirect()->back()->with('error', 'Akun ini sudah dalam status terhapus/anonim.');
+        }
+
         $name = $user->username;
         $deletions->permanentlyDelete($user, $request->user());
         $this->logActivity($request, 'user.deleted', 'user', $user->id, "Menghapus permanen user {$name}");
@@ -200,6 +229,11 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
     public function anonymize(Request $request, Pengguna $user, AccountDeletionService $deletions)
     {
         abort_if($user->role !== 'user', 404);
+
+        if ($user->status === 'anonymized') {
+            return redirect()->back()->with('error', 'Akun ini sudah dalam status terhapus/anonim.');
+        }
+
         $name = $user->username;
         $deletions->anonymize($user, $request->user());
         $this->logActivity($request, 'user.anonymized', 'user', $user->id, "Menganonimkan user {$name}");

@@ -126,7 +126,13 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
 
         $this->logActivity($request, 'admin.created', 'user', $admin->id, "Membuat {$admin->role} {$admin->username}");
 
-        return redirect()->back()->with('generated_password', $validated['password'] ? null : $password);
+        return redirect()->back()
+            ->with('admin_created_data', [
+                'username' => $admin->username,
+                'email' => $admin->email,
+                'password' => $password,
+            ])
+            ->with('success', "Admin {$admin->username} berhasil dibuat.");
     }
 
     public function update(Request $request, Pengguna $user)
@@ -210,6 +216,7 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
     {
         abort_if(! in_array($user->role, ['admin', 'superadmin'], true), 404);
         abort_if($request->user()->id === $user->id && $request->input('status') === 'suspended', 422, 'Tidak bisa menonaktifkan akun sendiri.');
+        abort_if($user->status === 'anonymized', 422, 'Akun admin yang telah dihapus/dianonimkan tidak dapat diubah statusnya.');
 
         $validated = $request->validate([
             'status' => ['required', 'in:active,suspended'],
@@ -217,7 +224,8 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
         ]);
 
         $oldStatus = $user->status ?? 'active';
-        $suspensions->changeStatus($user, $validated['status'], $validated['reason'] ?? null, $request->user());
+        $reason = !empty($validated['reason']) ? trim($validated['reason']) : null;
+        $suspensions->changeStatus($user, $validated['status'], $reason, $request->user());
 
         $this->logActivity(
             $request,
@@ -225,7 +233,7 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
             'user',
             $user->id,
             "Mengubah status {$user->role} {$user->username} dari {$oldStatus} ke {$validated['status']}",
-            ['old_status' => $oldStatus, 'new_status' => $validated['status']]
+            ['old_status' => $oldStatus, 'new_status' => $validated['status'], 'reason' => $reason]
         );
 
         return redirect()->back()->with('success', 'Status admin berhasil diperbarui');
@@ -235,21 +243,33 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
     {
         abort_if(! in_array($user->role, ['admin', 'superadmin'], true), 404);
         abort_if($request->user()->is($user), 422, 'Tidak bisa mereset password akun sendiri dari halaman ini.');
+        abort_if($user->status === 'anonymized', 422, 'Akun admin yang telah dihapus/dianonimkan tidak dapat direset passwordnya.');
 
         $password = Str::password(12, true, true, false, false);
 
         $user->update([
             'password' => Hash::make($password),
+            'password_login_enabled' => true,
         ]);
 
         $this->logActivity($request, 'admin.password_reset', 'user', $user->id, "Reset password {$user->role} {$user->username}");
 
-        return redirect()->back()->with('generated_password', $password);
+        return redirect()->back()
+            ->with('generated_password', $password)
+            ->with('password_reset_data', [
+                'id' => $user->id,
+                'username' => $user->username,
+                'email' => $user->email,
+                'password' => $password,
+            ])
+            ->with('success', "Password untuk akun {$user->username} berhasil direset.");
     }
 
     public function destroy(Request $request, Pengguna $user, AccountDeletionService $deletions)
     {
         abort_if(! in_array($user->role, ['admin', 'superadmin'], true), 404);
+        abort_if($user->status === 'anonymized', 422, 'Akun ini sudah dalam status terhapus/anonim.');
+
         $name = $user->username;
         $deletions->permanentlyDelete($user, $request->user());
         $this->logActivity($request, 'admin.deleted', 'user', $user->id, "Menghapus permanen pengelola {$name}");
@@ -260,6 +280,8 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
     public function anonymize(Request $request, Pengguna $user, AccountDeletionService $deletions)
     {
         abort_if(! in_array($user->role, ['admin', 'superadmin'], true), 404);
+        abort_if($user->status === 'anonymized', 422, 'Akun ini sudah dalam status terhapus/anonim.');
+
         $name = $user->username;
         $deletions->anonymize($user, $request->user());
         $this->logActivity($request, 'admin.anonymized', 'user', $user->id, "Menganonimkan pengelola {$name}");

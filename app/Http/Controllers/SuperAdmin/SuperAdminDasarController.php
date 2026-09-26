@@ -18,6 +18,7 @@ abstract class SuperAdminDasarController extends Controller
         return match ($status) {
             'active', null => 'Aktif',
             'suspended' => 'Suspended',
+            'anonymized' => 'Dihapus / Anonim',
             default => ucfirst($status),
         };
     }

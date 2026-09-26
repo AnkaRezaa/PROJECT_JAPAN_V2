@@ -52,8 +52,9 @@ class SesiAutentikasiController extends Controller
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
+            $reasonText = $user->suspended_reason ? " Alasan: {$user->suspended_reason}." : '';
             throw ValidationException::withMessages([
-                'email' => 'Akun Anda telah disuspend.',
+                'email' => "Akun Anda telah ditangguhkan (disuspend).{$reasonText} Silakan hubungi admin jika merasa ini adalah kekeliruan.",
             ]);
         }
 

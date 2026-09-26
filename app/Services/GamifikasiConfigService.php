@@ -9,6 +9,27 @@ class GamifikasiConfigService
 {
     public const DEFAULTS = [
         'quiz_xp' => [
+            'vocabulary' => [
+                'perfect' => 50,
+                'score_80' => 35,
+                'score_60' => 20,
+                'participation' => 10,
+                'streak_bonus' => 5,
+            ],
+            'grammar' => [
+                'perfect' => 60,
+                'score_80' => 45,
+                'score_60' => 25,
+                'participation' => 10,
+                'streak_bonus' => 10,
+            ],
+            'coming_soon' => [
+                'perfect' => 70,
+                'score_80' => 50,
+                'score_60' => 30,
+                'participation' => 15,
+                'streak_bonus' => 15,
+            ],
             'perfect' => 50,
             'score_80' => 35,
             'score_60' => 20,
@@ -23,11 +44,11 @@ class GamifikasiConfigService
             ],
         ],
         'leagues' => [
-            ['name' => 'Bronze', 'min_xp' => 0, 'icon' => 'bronze_kabuto'],
-            ['name' => 'Silver', 'min_xp' => 500, 'icon' => 'silver_shuriken'],
-            ['name' => 'Gold', 'min_xp' => 2000, 'icon' => 'gold_sakura'],
-            ['name' => 'Diamond', 'min_xp' => 5000, 'icon' => 'diamond_torii'],
-            ['name' => 'Amethyst', 'min_xp' => 12000, 'icon' => 'amethyst_scroll'],
+            ['name' => 'Bronze', 'min_xp' => 0, 'icon' => 'bronze_kabuto', 'logo_url' => null],
+            ['name' => 'Silver', 'min_xp' => 500, 'icon' => 'silver_shuriken', 'logo_url' => null],
+            ['name' => 'Gold', 'min_xp' => 2000, 'icon' => 'gold_sakura', 'logo_url' => null],
+            ['name' => 'Diamond', 'min_xp' => 5000, 'icon' => 'diamond_torii', 'logo_url' => null],
+            ['name' => 'Amethyst', 'min_xp' => 12000, 'icon' => 'amethyst_scroll', 'logo_url' => null],
         ],
     ];
 
@@ -42,9 +63,14 @@ class GamifikasiConfigService
         return array_replace_recursive(self::DEFAULTS, $stored);
     }
 
-    public function quizXp(): array
+    public function quizXp(?string $type = null): array
     {
-        return $this->all()['quiz_xp'];
+        $allQuizXp = $this->all()['quiz_xp'];
+        if ($type && isset($allQuizXp[$type])) {
+            return $allQuizXp[$type];
+        }
+
+        return $allQuizXp;
     }
 
     public function streak(): array
@@ -59,13 +85,14 @@ class GamifikasiConfigService
                 'name' => (string) ($league['name'] ?? 'Liga'),
                 'min_xp' => (int) ($league['min_xp'] ?? 0),
                 'icon' => (string) ($league['icon'] ?? 'bronze_kabuto'),
+                'logo_url' => ! empty($league['logo_url']) ? (string) $league['logo_url'] : null,
             ])
             ->sortBy('min_xp')
             ->values()
             ->all();
     }
 
-    public function quizXpForScore(int|float $scoreOrCorrectCount, ?int $totalQuestions = null): int
+    public function quizXpForScore(int|float $scoreOrCorrectCount, ?int $totalQuestions = null, ?string $type = null): int
     {
         if ($totalQuestions !== null) {
             if ($scoreOrCorrectCount <= 0 || $totalQuestions <= 0) {
@@ -81,13 +108,13 @@ class GamifikasiConfigService
                 : (float) $scoreOrCorrectCount;
         }
 
-        $config = $this->quizXp();
+        $config = $this->quizXp($type);
 
         return match (true) {
-            $percentage >= 0.9999 => (int) Arr::get($config, 'perfect', self::DEFAULTS['quiz_xp']['perfect']),
-            $percentage >= 0.8 => (int) Arr::get($config, 'score_80', self::DEFAULTS['quiz_xp']['score_80']),
-            $percentage >= 0.6 => (int) Arr::get($config, 'score_60', self::DEFAULTS['quiz_xp']['score_60']),
-            default => (int) Arr::get($config, 'participation', self::DEFAULTS['quiz_xp']['participation']),
+            $percentage >= 0.9999 => (int) ($config['perfect'] ?? Arr::get($config, 'perfect', self::DEFAULTS['quiz_xp']['perfect'])),
+            $percentage >= 0.8 => (int) ($config['score_80'] ?? Arr::get($config, 'score_80', self::DEFAULTS['quiz_xp']['score_80'])),
+            $percentage >= 0.6 => (int) ($config['score_60'] ?? Arr::get($config, 'score_60', self::DEFAULTS['quiz_xp']['score_60'])),
+            default => (int) ($config['participation'] ?? Arr::get($config, 'participation', self::DEFAULTS['quiz_xp']['participation'])),
         };
     }
 

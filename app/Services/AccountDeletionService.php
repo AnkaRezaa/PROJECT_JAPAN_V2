@@ -66,6 +66,17 @@ class AccountDeletionService
 
         DB::transaction(function () use ($user): void {
             $this->deleteAvatar($user->avatar);
+            $user->progress()->delete();
+            $user->dayProgress()->delete();
+            $user->attempts()->delete();
+            $user->learningFeedback()->delete();
+            $user->productFeedback()->delete();
+            $user->examTargets()->delete();
+            $user->achievements()->detach();
+            $user->kloterBelajar()->detach();
+            $user->activityLogs()->delete();
+            $user->loginHistories()->delete();
+            $user->statusHistories()->delete();
             $user->delete();
         });
     }

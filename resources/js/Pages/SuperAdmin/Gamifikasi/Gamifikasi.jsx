@@ -20,9 +20,32 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditIcon from '@mui/icons-material/Edit';
+import TrackChangesIcon from '@mui/icons-material/TrackChanges';
+import ImageIcon from '@mui/icons-material/Image';
 
 const defaultSettings = {
     quiz_xp: {
+        vocabulary: {
+            perfect: 50,
+            score_80: 35,
+            score_60: 20,
+            participation: 10,
+            streak_bonus: 5,
+        },
+        grammar: {
+            perfect: 60,
+            score_80: 45,
+            score_60: 25,
+            participation: 10,
+            streak_bonus: 10,
+        },
+        coming_soon: {
+            perfect: 70,
+            score_80: 50,
+            score_60: 30,
+            participation: 15,
+            streak_bonus: 15,
+        },
         perfect: 50,
         score_80: 35,
         score_60: 20,
@@ -37,11 +60,11 @@ const defaultSettings = {
         ],
     },
     leagues: [
-        { name: 'Bronze', min_xp: 0, icon: 'bronze_kabuto' },
-        { name: 'Silver', min_xp: 500, icon: 'silver_shuriken' },
-        { name: 'Gold', min_xp: 2000, icon: 'gold_sakura' },
-        { name: 'Diamond', min_xp: 5000, icon: 'diamond_torii' },
-        { name: 'Amethyst', min_xp: 12000, icon: 'amethyst_scroll' },
+        { name: 'Bronze', min_xp: 0, icon: 'bronze_kabuto', logo_url: '' },
+        { name: 'Silver', min_xp: 500, icon: 'silver_shuriken', logo_url: '' },
+        { name: 'Gold', min_xp: 2000, icon: 'gold_sakura', logo_url: '' },
+        { name: 'Diamond', min_xp: 5000, icon: 'diamond_torii', logo_url: '' },
+        { name: 'Amethyst', min_xp: 12000, icon: 'amethyst_scroll', logo_url: '' },
     ],
 };
 
@@ -90,6 +113,36 @@ export default function Gamification({
         quiz_xp: {
             ...defaultSettings.quiz_xp,
             ...(settings.quiz_xp || {}),
+            vocabulary: {
+                ...defaultSettings.quiz_xp.vocabulary,
+                ...(settings.quiz_xp?.vocabulary || {
+                    perfect: settings.quiz_xp?.perfect || 50,
+                    score_80: settings.quiz_xp?.score_80 || 35,
+                    score_60: settings.quiz_xp?.score_60 || 20,
+                    participation: settings.quiz_xp?.participation || 10,
+                    streak_bonus: 5,
+                }),
+            },
+            grammar: {
+                ...defaultSettings.quiz_xp.grammar,
+                ...(settings.quiz_xp?.grammar || {
+                    perfect: 60,
+                    score_80: 45,
+                    score_60: 25,
+                    participation: 10,
+                    streak_bonus: 10,
+                }),
+            },
+            coming_soon: {
+                ...defaultSettings.quiz_xp.coming_soon,
+                ...(settings.quiz_xp?.coming_soon || {
+                    perfect: 70,
+                    score_80: 50,
+                    score_60: 30,
+                    participation: 15,
+                    streak_bonus: 15,
+                }),
+            },
         },
         streak: {
             ...defaultSettings.streak,
@@ -99,6 +152,7 @@ export default function Gamification({
         leagues: (settings.leagues?.length ? settings.leagues : defaultSettings.leagues).map((league) => ({
             ...league,
             icon: resolveLeagueIconKey(league.icon),
+            logo_url: league.logo_url || '',
         })),
     };
 
@@ -106,11 +160,15 @@ export default function Gamification({
     const { confirmState, openConfirm, closeConfirm, setConfirmProcessing } = useConfirmAction();
     const [achievementForm, setAchievementForm] = useState(emptyAchievementForm);
     const [editingAchievementId, setEditingAchievementId] = useState(null);
+    const [activeQuizTab, setActiveQuizTab] = useState('vocabulary');
 
-    const updateQuizXp = (key, value) => {
+    const updateQuizXp = (category, key, value) => {
         setData('quiz_xp', {
             ...data.quiz_xp,
-            [key]: Math.max(0, value || 0),
+            [category]: {
+                ...data.quiz_xp[category],
+                [key]: Math.max(0, value || 0),
+            },
         });
     };
 
@@ -254,6 +312,16 @@ export default function Gamification({
         `Di bawah 60% = ${data.quiz_xp.participation} XP jika ada jawaban benar`,
     ];
 
+    const renderStatIcon = (icon) => {
+        switch (icon) {
+            case 'bolt': return <BoltIcon sx={{ fontSize: 22 }} />;
+            case 'trophy': return <EmojiEventsIcon sx={{ fontSize: 22 }} />;
+            case 'fire': return <LocalFireDepartmentIcon sx={{ fontSize: 22 }} />;
+            case 'target': return <TrackChangesIcon sx={{ fontSize: 22 }} />;
+            default: return <EmojiEventsIcon sx={{ fontSize: 22 }} />;
+        }
+    };
+
     return (
         <AuthenticatedLayout>
             <Head title="Superadmin - Gamification Control" />
@@ -286,7 +354,7 @@ export default function Gamification({
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {stats.map((item) => (
-                        <StatCard key={item.title} {...item} />
+                        <StatCard key={item.title} {...item} icon={renderStatIcon(item.icon)} />
                     ))}
                     {stats.length === 0 && (
                         <Card className="sm:col-span-2 xl:col-span-4">
@@ -349,15 +417,14 @@ export default function Gamification({
                         </div>
 
                         <form onSubmit={saveAchievement} className="mt-5 space-y-4">
-                            <div className="grid grid-cols-[88px_1fr] gap-3">
+                            <div className="grid grid-cols-[140px_1fr] gap-3">
                                 <label className="block">
-                                    <span className="text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">Ikon</span>
+                                    <span className="text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">Ikon / PNG URL</span>
                                     <input
                                         value={achievementForm.icon}
                                         onChange={(event) => setAchievementForm({ ...achievementForm, icon: event.target.value })}
-                                        maxLength={10}
-                                        placeholder="Badge"
-                                        className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-center text-sm font-black text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
+                                        placeholder="URL PNG / icon"
+                                        className="mt-2 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
                                     />
                                 </label>
                                 <label className="block">
@@ -441,8 +508,12 @@ export default function Gamification({
                             {achievements.length === 0 && <p className="p-8 text-center text-sm font-bold text-gray-400">Belum ada lencana.</p>}
                             {achievements.map((achievement) => (
                                 <article key={achievement.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-sm font-black text-brand-600 dark:bg-brand-900/20 dark:text-brand-300">
-                                        {achievement.icon || <EmojiEventsIcon sx={{ fontSize: 20 }} />}
+                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-sm font-black text-brand-600 dark:bg-brand-900/20 dark:text-brand-300 overflow-hidden">
+                                        {achievement.icon && (achievement.icon.startsWith('http') || achievement.icon.startsWith('/') || achievement.icon.includes('.png')) ? (
+                                            <img src={achievement.icon} alt={achievement.name} className="h-full w-full object-contain p-1" />
+                                        ) : (
+                                            <EmojiEventsIcon sx={{ fontSize: 20 }} />
+                                        )}
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <p className="font-black text-gray-900 dark:text-white">{achievement.name}</p>
@@ -474,19 +545,70 @@ export default function Gamification({
                             <div>
                                 <h2 className="flex items-center gap-2 text-lg font-black text-gray-900 dark:text-white">
                                     <BoltIcon sx={{ fontSize: 20 }} />
-                                    XP Kuis
+                                    XP & Streak per Kategori Kuis
                                 </h2>
                                 <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
-                                    Angka ini dipakai saat user menyelesaikan kuis. Logic benar/salah, nyawa, timer, dan repetisi tidak berubah.
+                                    Konfigurasi perolehan XP dan bonus streak dibedakan untuk masing-masing tipe kuis.
                                 </p>
                             </div>
                         </div>
 
-                        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <NumberField label="Skor 100%" value={data.quiz_xp.perfect} onChange={(value) => updateQuizXp('perfect', value)} helper="Reward tertinggi untuk jawaban sempurna." max={10000} />
-                            <NumberField label="Skor 80%+" value={data.quiz_xp.score_80} onChange={(value) => updateQuizXp('score_80', value)} helper="Reward untuk hasil sangat baik." max={10000} />
-                            <NumberField label="Skor 60%+" value={data.quiz_xp.score_60} onChange={(value) => updateQuizXp('score_60', value)} helper="Reward untuk hasil lulus minimum." max={10000} />
-                            <NumberField label="Partisipasi" value={data.quiz_xp.participation} onChange={(value) => updateQuizXp('participation', value)} helper="Dipakai jika ada jawaban benar tapi belum 60%." max={10000} />
+                        {/* Tabs Kategori Kuis */}
+                        <div className="mt-5 flex flex-wrap gap-2 border-b border-gray-100 pb-3 dark:border-gray-800">
+                            {[
+                                { key: 'vocabulary', label: 'Kuis Kosakata' },
+                                { key: 'grammar', label: 'Kuis Tata Bahasa' },
+                                { key: 'coming_soon', label: 'Kuis Baru (Coming Soon)' },
+                            ].map((tab) => (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    onClick={() => setActiveQuizTab(tab.key)}
+                                    className={`rounded-xl px-4 py-2 text-xs font-black transition ${activeQuizTab === tab.key ? 'bg-brand-600 text-white shadow-md shadow-brand-600/20' : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'}`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <NumberField
+                                label="Skor 100%"
+                                value={data.quiz_xp[activeQuizTab]?.perfect ?? 50}
+                                onChange={(value) => updateQuizXp(activeQuizTab, 'perfect', value)}
+                                helper="Reward tertinggi untuk skor sempurna."
+                                max={10000}
+                            />
+                            <NumberField
+                                label="Skor 80%+"
+                                value={data.quiz_xp[activeQuizTab]?.score_80 ?? 35}
+                                onChange={(value) => updateQuizXp(activeQuizTab, 'score_80', value)}
+                                helper="Reward untuk hasil sangat baik."
+                                max={10000}
+                            />
+                            <NumberField
+                                label="Skor 60%+"
+                                value={data.quiz_xp[activeQuizTab]?.score_60 ?? 20}
+                                onChange={(value) => updateQuizXp(activeQuizTab, 'score_60', value)}
+                                helper="Reward untuk hasil lulus minimum."
+                                max={10000}
+                            />
+                            <NumberField
+                                label="Partisipasi"
+                                value={data.quiz_xp[activeQuizTab]?.participation ?? 10}
+                                onChange={(value) => updateQuizXp(activeQuizTab, 'participation', value)}
+                                helper="Diberikan jika ada jawaban benar di bawah 60%."
+                                max={10000}
+                            />
+                            <div className="md:col-span-2">
+                                <NumberField
+                                    label="Bonus Streak Kuis (+XP)"
+                                    value={data.quiz_xp[activeQuizTab]?.streak_bonus ?? 5}
+                                    onChange={(value) => updateQuizXp(activeQuizTab, 'streak_bonus', value)}
+                                    helper="Tambahan XP ekstra per pengerjaan kuis ini saat user memiliki streak aktif."
+                                    max={10000}
+                                />
+                            </div>
                         </div>
 
                         {Object.keys(errors).length > 0 && (
@@ -499,16 +621,16 @@ export default function Gamification({
                     <Card>
                         <h2 className="flex items-center gap-2 text-lg font-black text-gray-900 dark:text-white">
                             <LocalFireDepartmentIcon sx={{ fontSize: 20 }} />
-                            Streak Bonus
+                            Streak Bonus Global
                         </h2>
                         <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Bonus tambahan saat user mencapai hari streak tertentu.
+                            Bonus milestone XP saat user mencapai akumulasi hari streak tertentu.
                         </p>
 
                         <label className="mt-5 flex items-center justify-between rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
                             <span>
                                 <span className="block text-sm font-black text-gray-900 dark:text-white">Aktifkan bonus streak</span>
-                                <span className="mt-1 block text-xs font-semibold text-gray-400">Jika mati, streak tetap tercatat tapi tanpa bonus XP.</span>
+                                <span className="mt-1 block text-xs font-semibold text-gray-400">Jika mati, streak tetap tercatat tapi tanpa bonus milestone XP.</span>
                             </span>
                             <input
                                 type="checkbox"
@@ -550,36 +672,49 @@ export default function Gamification({
                             Perjalanan Liga
                         </h2>
                         <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Threshold XP ini dipakai di profile user untuk menentukan liga saat ini dan progres menuju liga berikutnya.
+                            Threshold XP untuk menentukan liga user. Mendukung icon SVG bawaan atau path/URL file PNG kustom.
                         </p>
 
                         <div className="mt-5 space-y-3">
                             {data.leagues.map((league, index) => (
-                                <div key={`${league.name}-${index}`} className="grid grid-cols-[88px_1fr_160px_120px_auto] items-end gap-3 rounded-2xl border border-gray-100 p-3 dark:border-gray-800">
-                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-rose-700 text-white shadow-lg shadow-brand-500/20">
-                                        <LeagueIcon iconKey={league.icon} className="h-6 w-6" />
+                                <div key={`${league.name}-${index}`} className="grid grid-cols-[60px_1fr_130px_1fr_110px_auto] items-end gap-3 rounded-2xl border border-gray-100 p-3 dark:border-gray-800">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-rose-700 text-white shadow-lg shadow-brand-500/20 overflow-hidden">
+                                        {league.logo_url ? (
+                                            <img src={league.logo_url} alt={league.name} className="h-full w-full object-cover" />
+                                        ) : (
+                                            <LeagueIcon iconKey={league.icon} className="h-6 w-6" />
+                                        )}
                                     </div>
                                     <label className="block">
                                         <span className="text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">Nama Liga</span>
                                         <input
                                             value={league.name || ''}
                                             onChange={(event) => updateLeague(index, 'name', event.target.value)}
-                                            className="mt-2 h-11 w-full rounded-2xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
+                                            className="mt-2 h-11 w-full rounded-2xl border border-gray-200 bg-white px-3 text-sm font-black text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
                                         />
                                     </label>
                                     <label className="block">
-                                        <span className="text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">Icon</span>
+                                        <span className="text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">Icon Preset</span>
                                         <select
                                             value={league.icon || 'bronze_kabuto'}
                                             onChange={(event) => updateLeague(index, 'icon', event.target.value)}
-                                            className="mt-2 h-11 w-full rounded-2xl border border-gray-200 bg-white px-3 text-sm font-black text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
+                                            className="mt-2 h-11 w-full rounded-2xl border border-gray-200 bg-white px-2 text-xs font-bold text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
                                         >
                                             {LEAGUE_ICON_OPTIONS.map((option) => (
                                                 <option key={option.key} value={option.key}>{option.label}</option>
                                             ))}
                                         </select>
                                     </label>
-                                    <NumberField label="Minimal XP" value={league.min_xp} onChange={(value) => updateLeague(index, 'min_xp', value)} max={10000000} />
+                                    <label className="block">
+                                        <span className="text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">Logo PNG (URL/Path)</span>
+                                        <input
+                                            placeholder="/images/... atau URL"
+                                            value={league.logo_url || ''}
+                                            onChange={(event) => updateLeague(index, 'logo_url', event.target.value)}
+                                            className="mt-2 h-11 w-full rounded-2xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-brand-100 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30"
+                                        />
+                                    </label>
+                                    <NumberField label="Min XP" value={league.min_xp} onChange={(value) => updateLeague(index, 'min_xp', value)} max={10000000} />
                                     <button
                                         type="button"
                                         onClick={() => removeLeague(index)}
@@ -603,17 +738,26 @@ export default function Gamification({
 
                     <Card>
                         <h2 className="text-lg font-black text-gray-900 dark:text-white">Top Learners</h2>
-                        <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">Diambil dari XP user aktif.</p>
+                        <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">Peringkat 5 teratas berdasarkan perolehan XP.</p>
                         <div className="mt-5 space-y-3">
                             {leaderboard.map((item) => (
                                 <div key={item.rank} className="flex items-center justify-between rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 font-black text-brand-600 dark:bg-brand-900/20 dark:text-brand-400">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-50 font-black text-brand-600 dark:bg-brand-900/20 dark:text-brand-400">
                                             {item.rank}
+                                        </div>
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
+                                            {item.avatar ? (
+                                                <img src={item.avatar} alt={item.name} className="h-full w-full object-cover" />
+                                            ) : (
+                                                <span className="text-sm font-black text-gray-600 dark:text-gray-300">
+                                                    {item.name?.charAt(0)?.toUpperCase() || 'U'}
+                                                </span>
+                                            )}
                                         </div>
                                         <div>
                                             <p className="text-sm font-black text-gray-900 dark:text-white">{item.name}</p>
-                                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.streak}</p>
+                                            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{item.email ? `${item.email} · ` : ''}{item.streak}</p>
                                         </div>
                                     </div>
                                     <span className="text-sm font-black text-gray-900 dark:text-white">{item.xp}</span>
@@ -633,43 +777,78 @@ export default function Gamification({
                             Aturan Aktif
                         </h2>
                         <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Ringkasan config yang akan dipakai backend setelah disimpan.
+                            Matriks ringkas aturan gamifikasi yang akan aktif saat disimpan.
                         </p>
 
                         <div className="mt-5 space-y-4">
-                            <div className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
-                                <h3 className="text-sm font-black text-gray-900 dark:text-white">XP Kuis</h3>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    {ruleValues.map((value) => (
-                                        <span key={value} className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-black text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                                            {value}
-                                        </span>
-                                    ))}
-                                </div>
+                            {/* Matrix XP Kuis */}
+                            <div className="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-800">
+                                <table className="w-full text-left text-xs">
+                                    <thead className="bg-gray-50 text-[10px] font-black uppercase tracking-wider text-gray-400 dark:bg-gray-800/60 dark:text-gray-500">
+                                        <tr>
+                                            <th className="px-3 py-2.5">Kuis</th>
+                                            <th className="px-3 py-2.5">100%</th>
+                                            <th className="px-3 py-2.5">80%+</th>
+                                            <th className="px-3 py-2.5">60%+</th>
+                                            <th className="px-3 py-2.5">Partisipasi</th>
+                                            <th className="px-3 py-2.5">Bonus Streak</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 text-gray-700 dark:divide-gray-800 dark:text-gray-300">
+                                        <tr>
+                                            <td className="px-3 py-2 font-bold text-gray-900 dark:text-white">Kosakata</td>
+                                            <td className="px-3 py-2 text-emerald-600 font-bold">+{data.quiz_xp.vocabulary?.perfect ?? 50}</td>
+                                            <td className="px-3 py-2">+{data.quiz_xp.vocabulary?.score_80 ?? 35}</td>
+                                            <td className="px-3 py-2">+{data.quiz_xp.vocabulary?.score_60 ?? 20}</td>
+                                            <td className="px-3 py-2 text-gray-400">+{data.quiz_xp.vocabulary?.participation ?? 10}</td>
+                                            <td className="px-3 py-2 font-bold text-amber-600">+{data.quiz_xp.vocabulary?.streak_bonus ?? 5}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="px-3 py-2 font-bold text-gray-900 dark:text-white">Tata Bahasa</td>
+                                            <td className="px-3 py-2 text-emerald-600 font-bold">+{data.quiz_xp.grammar?.perfect ?? 60}</td>
+                                            <td className="px-3 py-2">+{data.quiz_xp.grammar?.score_80 ?? 45}</td>
+                                            <td className="px-3 py-2">+{data.quiz_xp.grammar?.score_60 ?? 25}</td>
+                                            <td className="px-3 py-2 text-gray-400">+{data.quiz_xp.grammar?.participation ?? 10}</td>
+                                            <td className="px-3 py-2 font-bold text-amber-600">+{data.quiz_xp.grammar?.streak_bonus ?? 10}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="px-3 py-2 font-bold text-gray-900 dark:text-white">Kuis Baru</td>
+                                            <td className="px-3 py-2 text-emerald-600 font-bold">+{data.quiz_xp.coming_soon?.perfect ?? 70}</td>
+                                            <td className="px-3 py-2">+{data.quiz_xp.coming_soon?.score_80 ?? 50}</td>
+                                            <td className="px-3 py-2">+{data.quiz_xp.coming_soon?.score_60 ?? 30}</td>
+                                            <td className="px-3 py-2 text-gray-400">+{data.quiz_xp.coming_soon?.participation ?? 15}</td>
+                                            <td className="px-3 py-2 font-bold text-amber-600">+{data.quiz_xp.coming_soon?.streak_bonus ?? 15}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
 
                             <div className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
-                                <h3 className="text-sm font-black text-gray-900 dark:text-white">Streak</h3>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-black text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                                        {data.streak.enabled ? 'Bonus aktif' : 'Bonus nonaktif'}
+                                <h3 className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Streak Milestones</h3>
+                                <div className="mt-2.5 flex flex-wrap gap-2">
+                                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${data.streak.enabled ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800'}`}>
+                                        {data.streak.enabled ? 'Aktif' : 'Non-aktif'}
                                     </span>
                                     {data.streak.milestones.map((milestone, index) => (
                                         <span key={`${milestone.days}-${index}-summary`} className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-black text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                                            {milestone.days} hari = {milestone.xp} XP
+                                            {milestone.days} hari: +{milestone.xp} XP
                                         </span>
                                     ))}
                                 </div>
                             </div>
 
                             <div className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
-                                <h3 className="text-sm font-black text-gray-900 dark:text-white">Liga</h3>
-                                <div className="mt-3 flex flex-wrap gap-2">
+                                <h3 className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Tingkatan Liga</h3>
+                                <div className="mt-2.5 flex flex-wrap gap-2">
                                     {[...data.leagues]
                                         .sort((a, b) => Number(a.min_xp || 0) - Number(b.min_xp || 0))
                                         .map((league, index) => (
                                             <span key={`${league.name}-${index}-summary`} className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-black text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                                                <LeagueIcon iconKey={league.icon} className="h-3.5 w-3.5" />
+                                                {league.logo_url ? (
+                                                    <img src={league.logo_url} alt={league.name} className="h-3.5 w-3.5 rounded object-cover" />
+                                                ) : (
+                                                    <LeagueIcon iconKey={league.icon} className="h-3.5 w-3.5" />
+                                                )}
                                                 {league.name}: {Number(league.min_xp || 0).toLocaleString()} XP
                                             </span>
                                         ))}

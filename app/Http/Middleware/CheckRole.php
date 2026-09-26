@@ -19,6 +19,17 @@ class CheckRole
             abort(403, 'Unauthorized action.');
         }
 
+        if ($request->user()->status === 'suspended') {
+            $reason = $request->user()->suspended_reason ? " Alasan: {$request->user()->suspended_reason}." : '';
+            auth()->guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'email' => "Akun Anda telah ditangguhkan (disuspend).{$reason} Silakan hubungi admin jika merasa ini adalah kekeliruan.",
+            ]);
+        }
+
         return $next($request);
     }
 }

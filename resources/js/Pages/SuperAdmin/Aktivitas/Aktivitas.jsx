@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import Card from '@/Components/UI/Card';
 import StatCard from '@/Components/Features/Dashboard/StatCard';
+import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 
 function toneClasses(tone) {
     const styles = {
@@ -255,6 +256,7 @@ export default function Activity({
     feedbackStats = {},
     monitoringLinks = {},
 }) {
+    const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
     const filterForm = useForm({
         date_from: filters.date_from || '',
         date_to: filters.date_to || '',
@@ -286,7 +288,7 @@ export default function Activity({
             <Head title="Superadmin - Aktivitas" />
 
             <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
                         <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-600 dark:text-brand-400">Superadmin</p>
                         <h1 className="text-2xl font-black text-gray-900 dark:text-white">Aktivitas Platform</h1>
@@ -294,9 +296,22 @@ export default function Activity({
                             Audit trail, login history, dan aktivitas sensitif admin maupun superadmin.
                         </p>
                     </div>
-                    <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
-                        Data dipaginasi agar query tetap ringan
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => openConfirm({
+                            variant: 'danger',
+                            title: 'Bersihkan Riwayat Log Lama?',
+                            message: 'Seluruh riwayat aktivitas audit dan riwayat login yang lebih tua dari 30 hari akan dihapus permanen untuk mengoptimalkan ruang penyimpanan.',
+                            confirmLabel: 'Bersihkan Log > 30 Hari',
+                            onConfirm: () => router.post(route('superadmin.activity.clean-history'), {}, {
+                                preserveScroll: true,
+                                onFinish: closeConfirm,
+                            }),
+                        })}
+                        className="inline-flex items-center gap-2 self-start rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-black text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300 md:self-auto"
+                    >
+                        <span>Bersihkan Log (&gt; 30 Hari)</span>
+                    </button>
                 </div>
 
                 <div className="inline-flex w-full gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-900 sm:w-auto">
@@ -377,7 +392,7 @@ export default function Activity({
                     <Card padding={false}>
                         <div className="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
                             <h2 className="text-lg font-black text-gray-900 dark:text-white">Timeline Aktivitas</h2>
-                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">15 item per halaman dari activity_logs.</p>
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Daftar rekam jejak aktivitas sistem dan pengguna.</p>
                         </div>
                         <div className="space-y-4 p-6">
                             {timelineItems.map((item) => (
@@ -423,7 +438,7 @@ export default function Activity({
                 <Card padding={false}>
                     <div className="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
                         <h2 className="text-lg font-black text-gray-900 dark:text-white">Login History</h2>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">10 item per halaman dari login_histories.</p>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Daftar riwayat sesi masuk akun pengguna dan pengelola.</p>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-[760px] w-full text-sm">
@@ -462,6 +477,7 @@ export default function Activity({
                 </Card>
                 </>}
             </div>
+            <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
         </AuthenticatedLayout>
     );
 }

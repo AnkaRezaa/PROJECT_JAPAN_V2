@@ -427,17 +427,22 @@ class SuperAdminPembayaranController extends SuperAdminDasarController
             'payment_plan_id' => ['nullable', 'exists:payment_plans,id'],
             'duration_days' => ['required', 'integer', 'min:1', 'max:366'],
             'max_uses' => ['required', 'integer', 'min:1', 'max:500'],
-            'scope_type' => ['required', Rule::in([AksesLanggananService::SCOPE_PROGRAM])],
-            'program_pembelajaran_id' => ['required', 'exists:program_pembelajaran,id'],
+            'scope_type' => ['nullable', Rule::in([AksesLanggananService::SCOPE_PROGRAM])],
+            'program_pembelajaran_id' => ['nullable', 'exists:program_pembelajaran,id'],
             'expires_at' => ['nullable', 'date', 'after:now'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $program = ProgramPembelajaran::findOrFail($validated['program_pembelajaran_id']);
-        $plan = ! empty($validated['payment_plan_id'])
-            ? PaketPembayaran::findOrFail($validated['payment_plan_id'])
-            : app(AksesLanggananService::class)->accessKeyPlanForProgram($program);
-        $scope = app(AksesLanggananService::class)->scopeFromPlan($plan);
+        if (! empty($validated['payment_plan_id'])) {
+            $plan = PaketPembayaran::with('programPembelajaran')->findOrFail($validated['payment_plan_id']);
+            $program = $plan->programPembelajaran ?: ProgramPembelajaran::findOrFail($plan->program_pembelajaran_id);
+            $scope = app(AksesLanggananService::class)->scopeFromPlan($plan);
+        } else {
+            abort_unless(! empty($validated['program_pembelajaran_id']), 422, 'Pilih kelas atau paket langganan.');
+            $program = ProgramPembelajaran::findOrFail($validated['program_pembelajaran_id']);
+            $plan = app(AksesLanggananService::class)->accessKeyPlanForProgram($program);
+            $scope = app(AksesLanggananService::class)->scopeFromPlan($plan);
+        }
 
         abort_unless(
             $scope['scope_type'] === AksesLanggananService::SCOPE_PROGRAM
@@ -462,7 +467,16 @@ class SuperAdminPembayaranController extends SuperAdminDasarController
 
         $this->logActivity($request, 'access_key.created', 'access_key', $accessKey->id, "Membuat access key {$accessKey->code}");
 
-        return redirect()->back()->with('success', 'Access key berhasil dibuat');
+        return redirect()->back()
+            ->with('created_access_key', [
+                'id' => $accessKey->id,
+                'code' => $accessKey->code,
+                'name' => $accessKey->name ?: $plan->name,
+                'program' => $program->title,
+                'duration_days' => $accessKey->duration_days,
+                'max_uses' => $accessKey->max_uses,
+            ])
+            ->with('success', "Access key {$accessKey->code} berhasil dibuat.");
     }
 
     public function revokeAccessKey(Request $request, KodeAkses $accessKey)

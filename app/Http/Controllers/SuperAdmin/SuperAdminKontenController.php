@@ -363,6 +363,7 @@ class SuperAdminKontenController extends SuperAdminDasarController
             'excerpt' => $news->excerpt,
             'body' => $news->body,
             'reading_blocks' => $news->reading_blocks ?? [],
+            'reading_blocks_count' => count($news->reading_blocks ?? []),
             'raw_status' => $news->status,
             'raw_audience' => $news->audience,
             'category' => $news->category,
@@ -371,7 +372,10 @@ class SuperAdminKontenController extends SuperAdminDasarController
             'cover_url' => $news->thumbnailUrl(),
             'cover_image_alt' => $news->cover_image_alt,
             'cover_image_caption' => $news->cover_image_caption,
+            'author_name' => $news->creator?->username ?? 'SuperAdmin',
             'published_at' => optional($news->published_at)->format('Y-m-d\TH:i'),
+            'published_at_formatted' => $news->published_at ? $news->published_at->format('d M Y, H:i') : null,
+            'created_at_formatted' => $news->created_at ? $news->created_at->format('d M Y, H:i') : null,
             'scheduled_at' => optional($news->scheduled_at)->format('Y-m-d\TH:i'),
             'starts_at' => optional($news->starts_at)->format('Y-m-d\TH:i'),
             'ends_at' => optional($news->ends_at)->format('Y-m-d\TH:i'),
@@ -393,6 +397,15 @@ class SuperAdminKontenController extends SuperAdminDasarController
 
     public function storePopup(Request $request)
     {
+        $request->merge([
+            'starts_at' => $request->filled('starts_at') ? $request->input('starts_at') : null,
+            'ends_at' => $request->filled('ends_at') ? $request->input('ends_at') : null,
+            'badge' => $request->filled('badge') ? trim((string) $request->input('badge')) : null,
+            'cta_label' => $request->filled('cta_label') ? trim((string) $request->input('cta_label')) : null,
+            'cta_url' => $request->filled('cta_url') ? trim((string) $request->input('cta_url')) : null,
+            'description' => $request->filled('description') ? trim((string) $request->input('description')) : null,
+        ]);
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -404,8 +417,16 @@ class SuperAdminKontenController extends SuperAdminDasarController
             'target_audience' => ['required', 'in:all,guest,user,free_user'],
             'is_active' => ['boolean'],
             'starts_at' => ['nullable', 'date'],
-            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'ends_at' => ['nullable', 'date', Rule::when($request->filled('starts_at'), ['after_or_equal:starts_at'])],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        ], [
+            'title.required' => 'Judul pop-up iklan wajib diisi.',
+            'type.required' => 'Tipe pop-up wajib dipilih.',
+            'target_page.required' => 'Target halaman wajib dipilih.',
+            'target_audience.required' => 'Target audiens wajib dipilih.',
+            'ends_at.after_or_equal' => 'Tanggal berakhir harus setelah atau sama dengan tanggal mulai.',
+            'image.image' => 'File harus berupa gambar.',
+            'image.max' => 'Ukuran gambar maksimal 4 MB.',
         ]);
 
         $imagePath = null;
@@ -417,16 +438,16 @@ class SuperAdminKontenController extends SuperAdminDasarController
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'type' => $validated['type'],
-            'badge' => $validated['badge'] ?? null,
-            'cta_label' => $validated['cta_label'] ?? null,
-            'cta_url' => $validated['cta_url'] ?? null,
+            'badge' => ! empty($validated['badge']) ? $validated['badge'] : null,
+            'cta_label' => ! empty($validated['cta_label']) ? $validated['cta_label'] : null,
+            'cta_url' => ! empty($validated['cta_url']) ? $validated['cta_url'] : null,
             'target_page' => $validated['target_page'],
             'target_audience' => $validated['target_audience'],
             'is_active' => $request->boolean('is_active', true),
-            'starts_at' => $validated['starts_at'] ?? null,
-            'ends_at' => $validated['ends_at'] ?? null,
+            'starts_at' => ! empty($validated['starts_at']) ? $validated['starts_at'] : null,
+            'ends_at' => ! empty($validated['ends_at']) ? $validated['ends_at'] : null,
             'image_path' => $imagePath,
-            'created_by' => $request->user()->id,
+            'created_by' => $request->user()?->id,
         ]);
 
         $this->logActivity($request, 'popup.created', 'popup', $popup->id, "Membuat popup {$popup->title}");
@@ -436,6 +457,15 @@ class SuperAdminKontenController extends SuperAdminDasarController
 
     public function updatePopup(Request $request, BroadcastPopup $popup)
     {
+        $request->merge([
+            'starts_at' => $request->filled('starts_at') ? $request->input('starts_at') : null,
+            'ends_at' => $request->filled('ends_at') ? $request->input('ends_at') : null,
+            'badge' => $request->filled('badge') ? trim((string) $request->input('badge')) : null,
+            'cta_label' => $request->filled('cta_label') ? trim((string) $request->input('cta_label')) : null,
+            'cta_url' => $request->filled('cta_url') ? trim((string) $request->input('cta_url')) : null,
+            'description' => $request->filled('description') ? trim((string) $request->input('description')) : null,
+        ]);
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -447,9 +477,17 @@ class SuperAdminKontenController extends SuperAdminDasarController
             'target_audience' => ['required', 'in:all,guest,user,free_user'],
             'is_active' => ['boolean'],
             'starts_at' => ['nullable', 'date'],
-            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'ends_at' => ['nullable', 'date', Rule::when($request->filled('starts_at'), ['after_or_equal:starts_at'])],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'remove_image' => ['nullable', 'boolean'],
+        ], [
+            'title.required' => 'Judul pop-up iklan wajib diisi.',
+            'type.required' => 'Tipe pop-up wajib dipilih.',
+            'target_page.required' => 'Target halaman wajib dipilih.',
+            'target_audience.required' => 'Target audiens wajib dipilih.',
+            'ends_at.after_or_equal' => 'Tanggal berakhir harus setelah atau sama dengan tanggal mulai.',
+            'image.image' => 'File harus berupa gambar.',
+            'image.max' => 'Ukuran gambar maksimal 4 MB.',
         ]);
 
         $imagePath = $popup->image_path;
@@ -469,14 +507,14 @@ class SuperAdminKontenController extends SuperAdminDasarController
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'type' => $validated['type'],
-            'badge' => $validated['badge'] ?? null,
-            'cta_label' => $validated['cta_label'] ?? null,
-            'cta_url' => $validated['cta_url'] ?? null,
+            'badge' => ! empty($validated['badge']) ? $validated['badge'] : null,
+            'cta_label' => ! empty($validated['cta_label']) ? $validated['cta_label'] : null,
+            'cta_url' => ! empty($validated['cta_url']) ? $validated['cta_url'] : null,
             'target_page' => $validated['target_page'],
             'target_audience' => $validated['target_audience'],
             'is_active' => $request->boolean('is_active', true),
-            'starts_at' => $validated['starts_at'] ?? null,
-            'ends_at' => $validated['ends_at'] ?? null,
+            'starts_at' => ! empty($validated['starts_at']) ? $validated['starts_at'] : null,
+            'ends_at' => ! empty($validated['ends_at']) ? $validated['ends_at'] : null,
             'image_path' => $imagePath,
         ]);
 

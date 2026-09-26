@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\Pengguna;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -40,6 +42,25 @@ class LoginRequest extends FormRequest
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
+
+        $user = Pengguna::where('email', $this->input('email'))->first();
+
+        if ($user && $user->status === 'suspended' && Hash::check($this->input('password'), $user->password)) {
+            RateLimiter::hit($this->throttleKey());
+
+            $reason = $user->suspended_reason ? " Alasan: {$user->suspended_reason}." : '';
+            throw ValidationException::withMessages([
+                'email' => "Akun Anda telah ditangguhkan (disuspend).{$reason} Silakan hubungi admin untuk bantuan lebih lanjut.",
+            ]);
+        }
+
+        if ($user && $user->status === 'anonymized') {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'Akun ini telah dihapus/dianonimkan dan tidak dapat digunakan lagi.',
+            ]);
+        }
 
         if (! Auth::attempt([
             ...$this->only('email', 'password'),

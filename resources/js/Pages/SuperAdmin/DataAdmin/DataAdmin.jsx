@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import Card from '@/Components/UI/Card';
@@ -34,6 +34,11 @@ export default function DataAdmin({
     const [reason, setReason] = useState('');
     const [editTarget, setEditTarget] = useState(null);
     const [kloterSearch, setKloterSearch] = useState('');
+    const [isNavigating, setIsNavigating] = useState(false);
+    const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
+    const [showActivities, setShowActivities] = useState(false);
+    const [resetModalData, setResetModalData] = useState(null);
+    const [copied, setCopied] = useState(false);
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
     const { data, setData, post, processing, errors, reset } = useForm({ ...emptyAdmin });
     const filterForm = useForm({
@@ -43,6 +48,31 @@ export default function DataAdmin({
         scope: filters.scope || 'all',
     });
     const editForm = useForm({ username: '', status: 'active', password: '', kloter_ids: [] });
+
+    useEffect(() => {
+        const unbindStart = router.on('start', () => setIsNavigating(true));
+        const unbindFinish = router.on('finish', () => setIsNavigating(false));
+        return () => {
+            unbindStart();
+            unbindFinish();
+        };
+    }, []);
+
+    useEffect(() => {
+        if (flash.password_reset_data) {
+            setResetModalData(flash.password_reset_data);
+        } else if (flash.admin_created_data && flash.admin_created_data.password) {
+            setResetModalData(flash.admin_created_data);
+        } else if (flash.generated_password) {
+            setResetModalData({ password: flash.generated_password });
+        }
+    }, [flash.password_reset_data, flash.admin_created_data, flash.generated_password]);
+
+    const copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     const items = admins?.data || [];
 
@@ -59,16 +89,18 @@ export default function DataAdmin({
 
     const submitStatus = () => {
         const nextStatus = statusTarget.raw_status === 'suspended' ? 'active' : 'suspended';
+        setIsSubmittingStatus(true);
 
         router.patch(route('superadmin.admins.status', statusTarget.id), {
             status: nextStatus,
-            reason,
+            reason: reason?.trim() || undefined,
         }, {
             preserveScroll: true,
             onSuccess: () => {
                 setStatusTarget(null);
                 setReason('');
             },
+            onFinish: () => setIsSubmittingStatus(false),
         });
     };
 
@@ -76,12 +108,13 @@ export default function DataAdmin({
         openConfirm({
             variant: 'warning',
             title: 'Reset Password Admin?',
-            message: 'Password lama tidak bisa dipakai lagi setelah reset. Password baru akan muncul di notifikasi halaman.',
+            message: 'Sistem akan membuat password baru acak 12 karakter yang aman secara otomatis. Password baru akan langsung ditampilkan di layar agar dapat Anda salin dan serahkan kepada pengelola admin.',
             details: [
                 { label: 'Admin', value: admin.name },
                 { label: 'Email', value: admin.email },
             ],
-            confirmLabel: 'Reset Password',
+            confirmLabel: 'Ya, Reset Password',
+            cancelLabel: 'Batal',
             onConfirm: () => router.post(route('superadmin.admins.reset-password', admin.id), {}, {
                 preserveScroll: true,
                 onFinish: closeConfirm,
@@ -184,16 +217,24 @@ export default function DataAdmin({
                             Pengawasan dan kontrol akses admin dengan search, filter, dan pembuatan akun baru.
                         </p>
                     </div>
-                    <button onClick={() => setShowForm(true)} className="rounded-xl bg-brand-600 px-5 py-3 text-sm font-black text-white shadow-md shadow-brand-500/20 hover:bg-brand-700">
-                        Tambah Admin
-                    </button>
-                </div>
-
-                {flash.generated_password && (
-                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-400">
-                        Password baru: <span className="font-black">{flash.generated_password}</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setShowActivities((prev) => !prev)}
+                            className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition ${
+                                showActivities
+                                    ? 'border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-900/20 dark:text-brand-300'
+                                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
+                            }`}
+                        >
+                            <span className="h-2 w-2 rounded-full bg-brand-500" />
+                            {showActivities ? 'Sembunyikan Log' : `Log Aktivitas (${activities.length})`}
+                        </button>
+                        <button onClick={() => setShowForm(true)} className="rounded-xl bg-brand-600 px-5 py-3 text-sm font-black text-white shadow-md shadow-brand-500/20 hover:bg-brand-700">
+                            Tambah Admin
+                        </button>
                     </div>
-                )}
+                </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {stats.map((item) => <StatCard key={item.title} {...item} />)}
@@ -226,98 +267,135 @@ export default function DataAdmin({
                     </form>
                 </Card>
 
-                <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-                    <Card>
-                        <h2 className="text-lg font-black text-gray-900 dark:text-white">Roster Admin</h2>
-                        <div className="mt-5 space-y-4">
-                            {items.length === 0 && (
-                                <p className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 px-4 py-10 text-center text-sm font-bold text-gray-400">Belum ada admin.</p>
-                            )}
-                            {items.map((item) => (
-                                <div key={item.id} className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
-                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                        <div>
-                                            <h3 className="text-sm font-black text-gray-900 dark:text-white">{item.name}</h3>
-                                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{item.email}</p>
-                                        </div>
-                                        <span className={`rounded-full px-3 py-1 text-xs font-black ${item.raw_status === 'suspended' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'}`}>
-                                            {item.status}
-                                        </span>
-                                    </div>
-                                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                                        <div className="flex flex-wrap gap-2">
-                                            <span className="rounded-full bg-brand-50 dark:bg-brand-900/20 px-3 py-1 text-xs font-black text-brand-600 dark:text-brand-400">{item.role}</span>
-                                            <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-sky-700 dark:bg-sky-900/20 dark:text-sky-300">{item.scope}</span>
-                                            <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-bold text-gray-500 dark:text-gray-400">Update terakhir {item.updated}</span>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            <button onClick={() => openEdit(item)} className="rounded-lg border border-sky-100 px-3 py-2 text-xs font-black text-sky-700 hover:bg-sky-50 dark:border-sky-900/40 dark:text-sky-300 dark:hover:bg-sky-950/30">
-                                                Edit
-                                            </button>
-                                            {item.raw_role === 'admin' && (
-                                                <select
-                                                    value={item.raw_scope || 'global'}
-                                                    onChange={(event) => updateScope(item, event.target.value)}
-                                                    className="h-9 rounded-lg border border-sky-200 bg-white px-2 text-xs font-black text-sky-700 dark:border-sky-900/40 dark:bg-gray-900 dark:text-sky-300"
-                                                    aria-label={`Cakupan ${item.name}`}
-                                                >
-                                                    <option value="global">Global</option>
-                                                    <option value="kloter">Mentor Kelas</option>
-                                                </select>
-                                            )}
-                                            {!item.is_self && (
-                                                <>
-                                                    <button onClick={() => setStatusTarget(item)} className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs font-black text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
-                                                        {item.raw_status === 'suspended' ? 'Aktifkan' : 'Tangguhkan'}
-                                                    </button>
-                                                    <button onClick={() => resetPassword(item)} className="rounded-lg border border-brand-100 dark:border-brand-900/30 px-3 py-2 text-xs font-black text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20">
-                                                        Reset Password
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeAdmin(item)}
-                                                        disabled={!item.can_permanently_delete && !item.can_anonymize}
-                                                        title={(item.deletion_blockers || []).join(' ') || 'Hapus atau anonimkan akun'}
-                                                        className="rounded-lg bg-brand-600 px-3 py-2 text-xs font-black text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 dark:disabled:bg-gray-800"
-                                                    >
-                                                        Hapus
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        {admins?.links && admins.links.length > 3 && (
-                            <div className="mt-6 flex flex-wrap justify-center gap-2">
-                                {admins.links.map((link, index) => (
-                                    <Link
-                                        key={`${link.label}-${index}`}
-                                        href={link.url || '#'}
-                                        dangerouslySetInnerHTML={{ __html: link.label }}
-                                        className={`rounded-xl px-4 py-2 text-sm font-bold ${link.active ? 'bg-brand-600 text-white' : 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </Card>
-
-                    <div className="space-y-6">
+                <div className="space-y-6">
+                    {showActivities && (
                         <Card>
-                            <h2 className="text-lg font-black text-gray-900 dark:text-white">Aktivitas Terkini</h2>
-                            <div className="mt-4 space-y-3">
+                            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full bg-brand-500" />
+                                    <h2 className="text-base font-black text-gray-900 dark:text-white">Aktivitas Terkini Admin</h2>
+                                </div>
+                                <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs font-bold text-gray-500">
+                                    {activities.length} aktivitas tercatat
+                                </span>
+                            </div>
+                            <div className="mt-3 max-h-52 space-y-2 overflow-y-auto pr-1">
                                 {activities.length === 0 && (
-                                    <p className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4 text-sm font-medium text-gray-400">Belum ada aktivitas admin.</p>
+                                    <p className="py-6 text-center text-sm font-medium text-gray-400">Belum ada aktivitas admin baru-baru ini.</p>
                                 )}
-                                {activities.map((item) => (
-                                    <div key={item} className="rounded-2xl border border-brand-100 dark:border-brand-900/30 bg-brand-50 dark:bg-brand-900/20 px-4 py-3 text-sm font-medium text-brand-700 dark:text-brand-400">
-                                        {item}
+                                {activities.map((item, idx) => (
+                                    <div key={idx} className="flex items-center gap-2 rounded-xl border border-gray-100 dark:border-gray-800/80 bg-gray-50/50 dark:bg-gray-800/30 px-3.5 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                        <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
+                                        <span className="min-w-0 flex-1 truncate">{item}</span>
                                     </div>
                                 ))}
                             </div>
                         </Card>
-                    </div>
+                    )}
+
+                    <Card>
+                        <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4">
+                            <div>
+                                <h2 className="text-lg font-black text-gray-900 dark:text-white">Roster Admin</h2>
+                                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Daftar akun pengelola operasional dan hak akses sistem.</p>
+                            </div>
+                            {isNavigating && (
+                                <div className="flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-bold text-brand-600 dark:bg-brand-900/20 dark:text-brand-400">
+                                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                                    <span>Memuat...</span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="relative mt-5">
+                            {isNavigating && (
+                                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/60 backdrop-blur-[1px] dark:bg-gray-900/60">
+                                    <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-5 py-3 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+                                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                                        <span className="text-sm font-bold text-gray-800 dark:text-gray-200">Memperbarui data admin...</span>
+                                    </div>
+                                </div>
+                            )}
+                            <div className={`space-y-4 transition-opacity duration-200 ${isNavigating ? 'pointer-events-none opacity-30' : 'opacity-100'}`}>
+                                {items.length === 0 && (
+                                    <p className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 px-4 py-10 text-center text-sm font-bold text-gray-400">Belum ada admin.</p>
+                                )}
+                                {items.map((item) => (
+                                    <div key={item.id} className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4 transition hover:border-gray-200 dark:hover:border-gray-700">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                            <div>
+                                                <h3 className="text-sm font-black text-gray-900 dark:text-white">{item.name}</h3>
+                                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{item.email}</p>
+                                            </div>
+                                            <span className={`rounded-full px-3 py-1 text-xs font-black ${item.raw_status === 'suspended' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'}`}>
+                                                {item.status}
+                                            </span>
+                                        </div>
+                                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                                            <div className="flex flex-wrap gap-2">
+                                                <span className="rounded-full bg-brand-50 dark:bg-brand-900/20 px-3 py-1 text-xs font-black text-brand-600 dark:text-brand-400">{item.role}</span>
+                                                <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-sky-700 dark:bg-sky-900/20 dark:text-sky-300">{item.scope}</span>
+                                                <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-bold text-gray-500 dark:text-gray-400">Update terakhir {item.updated}</span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button onClick={() => openEdit(item)} className="rounded-lg border border-sky-100 px-3 py-2 text-xs font-black text-sky-700 hover:bg-sky-50 dark:border-sky-900/40 dark:text-sky-300 dark:hover:bg-sky-950/30">
+                                                    Edit
+                                                </button>
+                                                {item.raw_role === 'admin' && (
+                                                    <select
+                                                        value={item.raw_scope || 'global'}
+                                                        onChange={(event) => updateScope(item, event.target.value)}
+                                                        className="h-9 rounded-lg border border-sky-200 bg-white px-2 text-xs font-black text-sky-700 dark:border-sky-900/40 dark:bg-gray-900 dark:text-sky-300"
+                                                        aria-label={`Cakupan ${item.name}`}
+                                                    >
+                                                        <option value="global">Global</option>
+                                                        <option value="kloter">Mentor Kelas</option>
+                                                    </select>
+                                                )}
+                                                {!item.is_self && (
+                                                    <>
+                                                        <button onClick={() => setStatusTarget(item)} className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs font-black text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                            {item.raw_status === 'suspended' ? 'Aktifkan' : 'Tangguhkan'}
+                                                        </button>
+                                                        <button onClick={() => resetPassword(item)} className="rounded-lg border border-brand-100 dark:border-brand-900/30 px-3 py-2 text-xs font-black text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20">
+                                                            Reset Password
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeAdmin(item)}
+                                                            disabled={!item.can_permanently_delete && !item.can_anonymize}
+                                                            title={(item.deletion_blockers || []).join(' ') || 'Hapus atau anonimkan akun'}
+                                                            className="rounded-lg bg-brand-600 px-3 py-2 text-xs font-black text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 dark:disabled:bg-gray-800"
+                                                        >
+                                                            Hapus
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        {admins?.links && admins.links.length > 3 && (
+                            <div className="mt-6 flex flex-col items-center justify-between gap-4 border-t border-gray-100 pt-4 sm:flex-row dark:border-gray-800">
+                                <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                                    Menampilkan {admins.from || 1} - {admins.to || items.length} dari {admins.total || items.length} admin
+                                </p>
+                                <div className="flex flex-wrap justify-center gap-2">
+                                    {admins.links.map((link, index) => (
+                                        <Link
+                                            key={`${link.label}-${index}`}
+                                            href={link.url || '#'}
+                                            preserveScroll
+                                            preserveState
+                                            dangerouslySetInnerHTML={{ __html: link.label }}
+                                            className={`rounded-xl px-4 py-2 text-sm font-bold transition ${link.active ? 'bg-brand-600 text-white shadow-sm' : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'} ${!link.url ? 'pointer-events-none opacity-40' : ''}`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </Card>
                 </div>
             </div>
 
@@ -445,8 +523,81 @@ export default function DataAdmin({
                     setReason('');
                 }}
             >
-                <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} placeholder="Alasan opsional" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                {statusTarget?.raw_status !== 'suspended' && (
+                    <div className="mt-3 space-y-1.5 text-left">
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                            Alasan Penangguhan Akun <span className="font-normal text-gray-400">(opsional namun disarankan)</span>
+                        </label>
+                        <textarea
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            rows={3}
+                            placeholder="Contoh: Mutasi staf, pelanggaran wewenang, dll."
+                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                        />
+                    </div>
+                )}
             </ConfirmActionDialog>
+
+            {resetModalData && (
+                <AdminDialog
+                    open={Boolean(resetModalData)}
+                    onClose={() => setResetModalData(null)}
+                    eyebrow="Kredensial Baru"
+                    title="Password Berhasil Diperbarui"
+                    description="Password baru telah tersimpan di sistem. Salin password di bawah ini dan berikan kepada admin terkait."
+                    maxWidth="max-w-md"
+                >
+                    <div className="space-y-4">
+                        <div className="space-y-2 rounded-xl border border-gray-100 bg-gray-50 p-3.5 text-xs dark:border-gray-800 dark:bg-gray-800/50">
+                            {resetModalData.username && (
+                                <div className="flex justify-between">
+                                    <span className="font-medium text-gray-500 dark:text-gray-400">Username:</span>
+                                    <span className="font-bold text-gray-900 dark:text-white">{resetModalData.username}</span>
+                                </div>
+                            )}
+                            {resetModalData.email && (
+                                <div className="flex justify-between">
+                                    <span className="font-medium text-gray-500 dark:text-gray-400">Email:</span>
+                                    <span className="font-bold text-gray-900 dark:text-white">{resetModalData.email}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                Password Sementara
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value={resetModalData.password || ''}
+                                    className="h-11 flex-1 rounded-xl border border-emerald-200 bg-emerald-50/50 px-3 font-mono text-sm font-black text-emerald-800 select-all dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => copyToClipboard(resetModalData.password || '')}
+                                    className="h-11 rounded-xl border border-emerald-300 bg-emerald-600 px-4 text-xs font-black text-white hover:bg-emerald-700"
+                                >
+                                    {copied ? 'Tersalin!' : 'Salin'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end pt-3">
+                            <button
+                                type="button"
+                                onClick={() => setResetModalData(null)}
+                                className="w-full rounded-xl bg-gray-900 py-2.5 text-sm font-black text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+                            >
+                                Selesai
+                            </button>
+                        </div>
+                    </div>
+                </AdminDialog>
+            )}
+
             <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
         </AuthenticatedLayout>
     );

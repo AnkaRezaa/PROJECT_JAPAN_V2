@@ -370,4 +370,22 @@ class SuperAdminAktivitasController extends SuperAdminDasarController
 
         return $events;
     }
+
+    public function cleanHistory(Request $request): RedirectResponse
+    {
+        $cutoff = now()->subDays(30);
+
+        $activityCount = LogAktivitas::where('created_at', '<', $cutoff)->delete();
+        $loginCount = RiwayatLogin::where('logged_in_at', '<', $cutoff)->delete();
+
+        $this->logActivity(
+            $request,
+            'activity.cleaned',
+            'log_aktivitas',
+            null,
+            "Membersihkan riwayat log lebih tua dari 30 hari ({$activityCount} log aktivitas, {$loginCount} riwayat login)."
+        );
+
+        return redirect()->back()->with('success', "Riwayat lama berhasil dibersihkan ({$activityCount} aktivitas dan {$loginCount} log login dihapus).");
+    }
 }

@@ -25,7 +25,7 @@ const emptyKloter = {
 const emptyAccessKey = {
     name: '',
     duration_days: 30,
-    max_uses: 2,
+    max_uses: 1,
     expires_at: '',
     notes: '',
 };
@@ -70,7 +70,7 @@ export default function Kloter({
         const keyword = assignSearch.trim().toLowerCase();
 
         return assignableUsers
-            .filter((user) => !keyword || user.label.toLowerCase().includes(keyword))
+            .filter((user) => !keyword || (user.email || '').toLowerCase().includes(keyword))
             .slice(0, 20);
     }, [assignSearch, assignableUsers]);
     const selectedAssignableUser = assignableUsers.find((user) => String(user.id) === String(assignForm.data.user_id));
@@ -319,7 +319,7 @@ export default function Kloter({
                                             {isKloterFull ? 'Kloter Penuh' : 'Tambah User'}
                                         </button>
                                         <button onClick={() => setShowAccessKeyForm(true)} className="min-h-10 w-full rounded-xl border border-amber-100 bg-amber-50 px-4 py-2 text-xs font-black text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300 sm:w-auto">Generate Key</button>
-                                        {selectedKloter.status !== 'archived' && (
+                                        {selectedKloter.status !== 'archived' ? (
                                             <button
                                                 onClick={() => openConfirm({
                                                     variant: 'warning',
@@ -338,6 +338,26 @@ export default function Kloter({
                                                 className="min-h-10 w-full rounded-xl border border-brand-100 px-4 py-2 text-xs font-black text-brand-600 dark:border-brand-900/40 dark:text-brand-400 sm:w-auto"
                                             >
                                                 Arsipkan
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => openConfirm({
+                                                    variant: 'success',
+                                                    title: 'Aktifkan Kembali Kloter?',
+                                                    message: 'Kloter yang diarsipkan akan kembali aktif dan dapat menerima anggota atau digunakan dalam operasional.',
+                                                    confirmLabel: 'Iya, Aktifkan Kembali',
+                                                    details: [
+                                                        { label: 'Kloter', value: selectedKloter.nama },
+                                                        { label: 'Kapasitas', value: selectedKloter.kapasitas_label || '-' },
+                                                    ],
+                                                    onConfirm: () => router.patch(route('superadmin.kloters.unarchive', selectedKloter.id), {}, {
+                                                        preserveScroll: true,
+                                                        onFinish: closeConfirm,
+                                                    }),
+                                                })}
+                                                className="min-h-10 w-full rounded-xl border border-emerald-500 bg-emerald-600 px-4 py-2 text-xs font-black text-white shadow-sm shadow-emerald-500/20 hover:bg-emerald-700 dark:border-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 sm:w-auto"
+                                            >
+                                                Unarsip Kloter
                                             </button>
                                         )}
                                     </div>
@@ -570,15 +590,16 @@ export default function Kloter({
             {showAssignForm && selectedKloter && (
                 <Modal title="Tambah User ke Kloter" onClose={() => setShowAssignForm(false)}>
                     <form onSubmit={submitAssign} className="space-y-4">
-                        <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-bold text-sky-800 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-200">
-                            Kapasitas kloter: {selectedKloter.kapasitas_label || `${selectedKloter.anggota_aktif_count || 0}/-`}. Dropdown dibatasi 20 hasil teratas agar tetap ringan; gunakan search untuk mempersempit pilihan.
+                        <div className="flex items-center justify-between rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-bold text-sky-800 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-200">
+                            <span>Kapasitas Kloter Saat Ini</span>
+                            <span className="rounded-full bg-white px-3 py-1 font-black text-sky-900 shadow-sm dark:bg-gray-800 dark:text-sky-200">{selectedKloter.kapasitas_label || `${selectedKloter.anggota_aktif_count || 0}/-`}</span>
                         </div>
                         {isKloterFull && (
                             <div className="rounded-2xl border border-brand-100 bg-brand-50 p-4 text-sm font-bold text-brand-700 dark:border-brand-900/40 dark:bg-brand-900/20 dark:text-brand-300">
                                 Kloter ini sudah penuh. Naikkan kapasitas atau keluarkan anggota sebelum menambah user.
                             </div>
                         )}
-                        <Field label="Pilih user" help={`${filteredAssignableUsers.length} hasil ditampilkan dari ${assignableUsers.length} user yang bisa ditambahkan. Ketik nama atau email di dalam dropdown.`}>
+                        <Field label="Pilih user" help="Cari siswa berdasarkan email.">
                             <div className="relative">
                                 <button
                                     type="button"
@@ -587,7 +608,7 @@ export default function Kloter({
                                     className="flex h-11 w-full items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900"
                                 >
                                     <span className={selectedAssignableUser ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-400'}>
-                                        {selectedAssignableUser?.label || 'Pilih user'}
+                                        {selectedAssignableUser?.email ? `${selectedAssignableUser.email} (${selectedAssignableUser.username})` : 'Pilih user berdasarkan email'}
                                     </span>
                                     <span className="text-xs font-black text-gray-400">{assignDropdownOpen ? 'Tutup' : 'Cari'}</span>
                                 </button>
@@ -598,7 +619,7 @@ export default function Kloter({
                                             <input
                                                 value={assignSearch}
                                                 onChange={(event) => setAssignSearch(event.target.value)}
-                                                placeholder="Cari nama atau email..."
+                                                placeholder="Ketik email siswa..."
                                                 autoFocus
                                                 className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-semibold text-gray-900 outline-none focus:border-sky-300 focus:bg-white dark:border-gray-700 dark:bg-gray-950 dark:text-white"
                                             />
@@ -616,9 +637,10 @@ export default function Kloter({
                                                         setAssignDropdownOpen(false);
                                                         setAssignSearch('');
                                                     }}
-                                                    className={`w-full rounded-xl px-3 py-2.5 text-left text-sm font-bold transition hover:bg-sky-50 hover:text-sky-700 dark:hover:bg-sky-900/20 dark:hover:text-sky-200 ${String(assignForm.data.user_id) === String(user.id) ? 'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-200' : 'text-gray-700 dark:text-gray-200'}`}
+                                                    className={`w-full rounded-xl px-3 py-2.5 text-left transition hover:bg-sky-50 hover:text-sky-700 dark:hover:bg-sky-900/20 dark:hover:text-sky-200 ${String(assignForm.data.user_id) === String(user.id) ? 'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-200' : 'text-gray-700 dark:text-gray-200'}`}
                                                 >
-                                                    {user.label}
+                                                    <span className="block truncate text-sm font-bold text-gray-900 dark:text-white">{user.email}</span>
+                                                    <span className="block truncate text-xs text-gray-400">{user.username}</span>
                                                 </button>
                                             ))}
                                         </div>
@@ -647,7 +669,7 @@ export default function Kloter({
                             <Field label="Durasi akses" help="Berapa hari subscription aktif setelah user redeem.">
                                 <input type="number" min="1" max="366" value={keyForm.data.duration_days} onChange={(event) => keyForm.setData('duration_days', event.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
                             </Field>
-                            <Field label="Maks pemakaian" help="Batas jumlah user yang boleh memakai kode ini. Default client: 2 user.">
+                            <Field label="Maks pemakaian" help="Batas maksimal jumlah pengguna yang dapat mengklaim kode ini.">
                                 <input type="number" min="1" max="500" value={keyForm.data.max_uses} onChange={(event) => keyForm.setData('max_uses', event.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
                             </Field>
                         </div>
@@ -658,7 +680,7 @@ export default function Kloter({
                             <textarea value={keyForm.data.notes} onChange={(event) => keyForm.setData('notes', event.target.value)} rows={3} placeholder="Catatan internal" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900" />
                         </Field>
                         <p className="rounded-xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
-                            Default max pemakaian 2 user sesuai arahan client. Kode ini membuka kelas dan memasukkan user ke kloter.
+                            Kode akses ini otomatis membuka kelas dan mendaftarkan pengguna langsung ke kloter {selectedKloter.nama}.
                         </p>
                         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                             <button type="button" onClick={() => setShowAccessKeyForm(false)} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>

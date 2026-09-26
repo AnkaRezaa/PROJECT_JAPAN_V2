@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import Card from '@/Components/UI/Card';
 import StatCard from '@/Components/Features/Dashboard/StatCard';
 import ChartCard from '@/Components/Features/Dashboard/ChartCard';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import NewsEditor from '@/Components/Features/Editor/NewsEditor';
 import ArticleBody from '@/Components/Features/News/ArticleBody';
-import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
+import JapaneseReading, { kanaToRomaji } from '@/Components/Features/Learning/JapaneseReading';
 import PopupManager from '@/Components/Features/Marketing/PopupManager';
 import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartEmpty, ChartTooltip, ChartTooltipContent } from '@/Components/UI/Chart';
@@ -50,6 +50,10 @@ export default function Konten({
     filters = {},
     contentStatusByType = [],
 }) {
+    const pageProps = usePage().props;
+    const flash = pageProps.flash || {};
+    const [toast, setToast] = useState(null);
+
     const [activeTab, setActiveTab] = useState('news');
     const [editingNews, setEditingNews] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -63,7 +67,7 @@ export default function Konten({
 
     const items = news?.data || [];
 
-    const { data, setData, post, processing, errors, reset, transform } = useForm({ ...emptyNews });
+    const { data, setData, post, processing, errors, reset, transform, setError } = useForm({ ...emptyNews });
     const filterForm = useForm({
         search: filters.search || '',
         status: filters.status || 'all',
@@ -72,6 +76,19 @@ export default function Konten({
     });
 
     const selectedNewsAttachments = useMemo(() => editingNews?.attachments || [], [editingNews]);
+
+    useEffect(() => {
+        if (flash.success) {
+            setToast({ type: 'success', message: flash.success });
+            const timer = setTimeout(() => setToast(null), 5000);
+            return () => clearTimeout(timer);
+        }
+        if (flash.error) {
+            setToast({ type: 'error', message: flash.error });
+            const timer = setTimeout(() => setToast(null), 7000);
+            return () => clearTimeout(timer);
+        }
+    }, [flash]);
 
     useEffect(() => {
         return () => {
@@ -162,6 +179,20 @@ export default function Konten({
     const submitNews = (e) => {
         e.preventDefault();
 
+        if (!data.title || !data.title.trim()) {
+            setError('title', 'Judul berita wajib diisi.');
+            setToast({ type: 'error', message: 'Validasi gagal: Judul berita wajib diisi.' });
+            const modalBody = document.getElementById('news-form-scrollable');
+            if (modalBody) modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        if (data.status === 'scheduled' && !data.scheduled_at) {
+            setError('scheduled_at', 'Waktu jadwal terbit wajib diisi untuk status Terjadwal.');
+            setToast({ type: 'error', message: 'Validasi gagal: Tentukan waktu jadwal terbit.' });
+            return;
+        }
+
         const cleanReadingBlocks = (data.reading_blocks || []).filter(
             (b) => (b.japanese && b.japanese.trim()) || (b.reading && b.reading.trim())
         );
@@ -185,8 +216,18 @@ export default function Konten({
             onSuccess: () => {
                 transform((values) => values);
                 closeForm();
+                setToast({
+                    type: 'success',
+                    message: editingNews
+                        ? 'Berhasil! Data news telah diperbarui dan tersimpan di database.'
+                        : 'Berhasil! News baru telah disimpan dan berhasil terkirim ke sistem.',
+                });
             },
-            onError: () => {
+            onError: (errs) => {
+                setToast({
+                    type: 'error',
+                    message: `Gagal mengirim data! Terdapat ${Object.keys(errs).length} field yang belum valid. Mohon periksa kembali.`,
+                });
                 const modalBody = document.getElementById('news-form-scrollable');
                 if (modalBody) modalBody.scrollTo({ top: 0, behavior: 'smooth' });
             },
@@ -274,6 +315,32 @@ export default function Konten({
             <Head title="Superadmin - Konten" />
 
             <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+                {toast && (
+                    <div
+                        className={`flex items-center justify-between gap-3 rounded-2xl border px-5 py-4 shadow-md transition-all ${
+                            toast.type === 'success'
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                : 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300'
+                        }`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black text-white ${
+                                toast.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
+                            }`}>
+                                {toast.type === 'success' ? '✓' : '!'}
+                            </span>
+                            <p className="text-sm font-bold">{toast.message}</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setToast(null)}
+                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        >
+                            Tutup
+                        </button>
+                    </div>
+                )}
+
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
                         <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-600 dark:text-brand-400">Superadmin</p>
@@ -406,31 +473,55 @@ export default function Konten({
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                        <div className="min-w-0">
-                                            <h3 className="text-sm font-black text-gray-900 dark:text-white">{item.title}</h3>
-                                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{item.excerpt || item.audience}</p>
-                                        </div>
-                                        <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ${statusClass(item.status)}`}>
-                                            {item.status}
-                                        </span>
+                                                <div className="min-w-0">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <h3 className="text-base font-black text-gray-900 dark:text-white">{item.title}</h3>
+                                                        {item.is_pinned && (
+                                                            <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                                                                Pinned
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="mt-1 text-xs text-gray-500 line-clamp-2 dark:text-gray-400">
+                                                        {item.excerpt || 'Tidak ada ringkasan teks berita.'}
+                                                    </p>
+                                                </div>
+                                                <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ${statusClass(item.status)}`}>
+                                                    {item.status}
+                                                </span>
                                             </div>
-                                            <div className="mt-3 flex flex-wrap gap-2">
-                                                <span className="rounded-full bg-brand-50 px-3 py-1 text-[11px] font-bold text-brand-700 dark:bg-brand-900/20 dark:text-brand-300">{item.category?.replaceAll('-', ' ')}</span>
-                                                <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-[11px] font-bold text-gray-600 dark:text-gray-400">{item.audience}</span>
-                                                <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-[11px] font-bold text-gray-600 dark:text-gray-400">{item.attachments.length} attachment</span>
+
+                                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                <span className="rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-700 dark:bg-brand-900/20 dark:text-brand-300">
+                                                    🏷️ {item.category?.replaceAll('-', ' ')}
+                                                </span>
+                                                <span className="rounded-md bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-700 dark:bg-sky-900/20 dark:text-sky-300">
+                                                    👥 {item.raw_audience === 'students' ? 'Target: Siswa' : item.raw_audience === 'admins' ? 'Target: Admin' : 'Target: Semua User'}
+                                                </span>
+                                                <span className="rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 dark:bg-purple-900/20 dark:text-purple-300">
+                                                    🔤 {item.reading_blocks_count ?? item.reading_blocks?.length ?? 0} Bantuan Baca Kana
+                                                </span>
+                                                <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                                                    📎 {item.attachments.length} attachment
+                                                </span>
                                             </div>
-                                            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                                <p className="text-xs font-bold uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">{item.schedule}</p>
+
+                                            <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-3 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-gray-400 dark:text-gray-500">
+                                                    <span>✍️ Oleh: <strong className="font-bold text-gray-700 dark:text-gray-300">{item.author_name}</strong></span>
+                                                    <span>•</span>
+                                                    <span>📅 {item.published_at_formatted ? `Terbit: ${item.published_at_formatted}` : item.created_at_formatted ? `Dibuat: ${item.created_at_formatted}` : item.schedule}</span>
+                                                </div>
                                                 <div className="flex flex-wrap gap-2">
                                                     <button
                                                         onClick={() => openEdit(item)}
-                                                        className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs font-black text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                                                        className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-black text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                                                     >
                                                         Edit
                                                     </button>
                                                     <button
                                                         onClick={() => setDeleteTarget(item)}
-                                                        className="rounded-lg border border-brand-100 dark:border-brand-900/30 px-3 py-2 text-xs font-black text-brand-600 dark:text-brand-400 transition-colors hover:bg-brand-50 dark:hover:bg-brand-900/20"
+                                                        className="rounded-lg border border-brand-100 dark:border-brand-900/30 px-3 py-1.5 text-xs font-black text-brand-600 dark:text-brand-400 transition-colors hover:bg-brand-50 dark:hover:bg-brand-900/20"
                                                     >
                                                         Hapus
                                                     </button>
@@ -566,7 +657,9 @@ export default function Konten({
                                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                             <div>
                                                 <h4 className="text-sm font-black text-gray-900 dark:text-white">Bantuan Baca Jepang</h4>
-                                                <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">Tambahkan reading kana dan terjemahan per bagian. Bagian yang kosong akan dibersihkan otomatis.</p>
+                                                <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
+                                                    ✨ <strong>Romaji Otomatis</strong>: Ketika user mengaktifkan Romaji di pengaturan akun mereka, sistem akan otomatis menghasilkan Romaji dari Reading kana. Admin <strong>tidak perlu mengetik romaji manual</strong>. Cukup input teks Jepang dan Reading Kana.
+                                                </p>
                                             </div>
                                             <button type="button" onClick={addReadingBlock} className="shrink-0 rounded-xl bg-sky-600 px-4 py-2.5 text-xs font-black text-white hover:bg-sky-700">Tambah Bagian</button>
                                         </div>
@@ -594,13 +687,21 @@ export default function Konten({
                                                                 {japError && <p className="text-xs font-bold text-red-500">{japError}</p>}
                                                             </label>
                                                             <label className="space-y-1.5">
-                                                                <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
-                                                                    Reading kana <span className="text-red-500">*</span>
-                                                                </span>
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
+                                                                        Reading kana <span className="text-red-500">*</span>
+                                                                    </span>
+                                                                    {block.reading && (
+                                                                        <span className="rounded bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">
+                                                                            Romaji Otomatis: {kanaToRomaji(block.reading)}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                                 <textarea
                                                                     rows={2}
                                                                     value={block.reading}
                                                                     onChange={(event) => updateReadingBlock(index, 'reading', event.target.value)}
+                                                                    placeholder="Ketik kana (hiragana/katakana)..."
                                                                     className={`w-full rounded-xl border bg-white px-3 py-2 text-sm dark:bg-gray-950 dark:text-white ${
                                                                         readError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
                                                                     }`}

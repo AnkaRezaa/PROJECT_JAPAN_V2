@@ -104,11 +104,11 @@ class XpService
     }
 
     /**
-     * Calculate quiz XP based on score percentage
+     * Calculate quiz XP based on score percentage and quiz type (vocabulary, grammar, coming_soon)
      */
-    public function calculateQuizXP(float $scorePercentage): int
+    public function calculateQuizXP(float $scorePercentage, ?string $quizType = 'vocabulary'): int
     {
-        $config = app(GamifikasiConfigService::class)->quizXp();
+        $config = app(GamifikasiConfigService::class)->quizXp($quizType);
 
         if ($scorePercentage >= 100) {
             return (int) ($config['perfect'] ?? 50);
@@ -120,6 +120,6 @@ class XpService
             return (int) ($config['score_60'] ?? 20);
         }
 
-        return 0;
+        return (int) ($config['participation'] ?? 0);
     }
 }

@@ -41,14 +41,16 @@ class SuperAdminGamifikasiController extends SuperAdminDasarController
 
         return Inertia::render('SuperAdmin/Gamifikasi/Gamifikasi', [
             'stats' => [
-                $this->stat('XP Terdistribusi', number_format((int) LogReward::sum('xp_amount')), '⚡'),
-                $this->stat('Pencapaian Unlock', number_format(DB::table('user_achievements')->count()), '🏆'),
-                $this->stat('Rata-rata Streak', number_format((float) Pengguna::where('role', 'user')->avg('streak_count'), 1), '🔥'),
-                $this->stat('Reward Logs', number_format(LogReward::count()), '🎯'),
+                $this->stat('XP Terdistribusi', number_format((int) LogReward::sum('xp_amount')), 'bolt'),
+                $this->stat('Pencapaian Unlock', number_format(DB::table('user_achievements')->count()), 'trophy'),
+                $this->stat('Rata-rata Streak', number_format((float) Pengguna::where('role', 'user')->avg('streak_count'), 1), 'fire'),
+                $this->stat('Reward Logs', number_format(LogReward::count()), 'target'),
             ],
             'leaderboard' => $topUsers->map(fn (Pengguna $user, int $index) => [
                 'rank' => $index + 1,
                 'name' => $user->username,
+                'email' => $user->email,
+                'avatar' => $user->avatar ? (str_starts_with($user->avatar, 'http') ? $user->avatar : asset('storage/' . $user->avatar)) : null,
                 'xp' => number_format($user->xp) . ' XP',
                 'streak' => $user->streak_count . ' hari',
             ]),
@@ -80,10 +82,28 @@ class SuperAdminGamifikasiController extends SuperAdminDasarController
     public function updateSettings(Request $request, GamifikasiConfigService $gamifikasiConfig)
     {
         $validated = $request->validate([
-            'quiz_xp.perfect' => ['required', 'integer', 'min:0', 'max:10000'],
-            'quiz_xp.score_80' => ['required', 'integer', 'min:0', 'max:10000'],
-            'quiz_xp.score_60' => ['required', 'integer', 'min:0', 'max:10000'],
-            'quiz_xp.participation' => ['required', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.vocabulary.perfect' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.vocabulary.score_80' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.vocabulary.score_60' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.vocabulary.participation' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.vocabulary.streak_bonus' => ['nullable', 'integer', 'min:0', 'max:10000'],
+
+            'quiz_xp.grammar.perfect' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.grammar.score_80' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.grammar.score_60' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.grammar.participation' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.grammar.streak_bonus' => ['nullable', 'integer', 'min:0', 'max:10000'],
+
+            'quiz_xp.coming_soon.perfect' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.coming_soon.score_80' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.coming_soon.score_60' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.coming_soon.participation' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.coming_soon.streak_bonus' => ['nullable', 'integer', 'min:0', 'max:10000'],
+
+            'quiz_xp.perfect' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.score_80' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.score_60' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'quiz_xp.participation' => ['nullable', 'integer', 'min:0', 'max:10000'],
             'streak.enabled' => ['required', 'boolean'],
             'streak.milestones' => ['required', 'array', 'max:10'],
             'streak.milestones.*.days' => ['required', 'integer', 'min:1', 'max:3650'],
@@ -92,6 +112,7 @@ class SuperAdminGamifikasiController extends SuperAdminDasarController
             'leagues.*.name' => ['required', 'string', 'max:50'],
             'leagues.*.min_xp' => ['required', 'integer', 'min:0', 'max:10000000'],
             'leagues.*.icon' => ['nullable', 'string', 'max:50'],
+            'leagues.*.logo_url' => ['nullable', 'string', 'max:500'],
         ]);
 
         $validated['streak']['milestones'] = collect($validated['streak']['milestones'])
@@ -109,6 +130,7 @@ class SuperAdminGamifikasiController extends SuperAdminDasarController
                 'name' => trim($league['name']),
                 'min_xp' => (int) $league['min_xp'],
                 'icon' => trim((string) ($league['icon'] ?? '')) ?: 'bronze_kabuto',
+                'logo_url' => trim((string) ($league['logo_url'] ?? '')) ?: null,
             ])
             ->unique('min_xp')
             ->sortBy('min_xp')
@@ -206,7 +228,7 @@ class SuperAdminGamifikasiController extends SuperAdminDasarController
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'icon' => ['nullable', 'string', 'max:10'],
+            'icon' => ['nullable', 'string', 'max:500'],
             'xp_reward' => ['required', 'integer', 'min:0'],
             'condition_type' => ['required', 'in:lessons_completed,quiz_perfect,streak_days'],
             'condition_value' => ['required', 'integer', 'min:1'],

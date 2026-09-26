@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -12,13 +13,89 @@ class SuperAdminSistemController extends SuperAdminDasarController
 
     public function __invoke()
     {
-        return Inertia::render('SuperAdmin/Sistem/Sistem', [
-            'stats' => [
-                $this->stat('Status App', 'Stabil', 'OK'),
-                $this->stat('Queue', number_format(DB::table('jobs')->count()) . ' job', 'Q', '0', 'down'),
-                $this->stat('Tema Global', ucfirst($this->themeSettings()['activeTheme']), 'T'),
-                $this->stat('Filesystem', config('filesystems.default'), 'FS'),
+        $dbConnected = false;
+        $dbLatency = 0;
+        try {
+            $start = microtime(true);
+            DB::select('SELECT 1');
+            $dbLatency = round((microtime(true) - $start) * 1000, 1);
+            $dbConnected = true;
+        } catch (\Throwable $e) {
+            $dbConnected = false;
+        }
+
+        $pendingJobs = DB::table('jobs')->count();
+        $failedJobs = DB::table('failed_jobs')->count();
+        $storageLinked = file_exists(public_path('storage'));
+
+        $systemDiagnostics = [
+            'app_env' => config('app.env'),
+            'app_debug' => config('app.debug'),
+            'app_url' => config('app.url'),
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version(),
+            'os' => PHP_OS_FAMILY . ' (' . php_uname('s') . ')',
+            'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'PHP CLI / Web Server',
+            'memory_limit' => ini_get('memory_limit'),
+            'max_execution_time' => ini_get('max_execution_time') . 's',
+            'database' => [
+                'connection' => config('database.default'),
+                'connected' => $dbConnected,
+                'latency' => $dbLatency . ' ms',
             ],
+            'queue' => [
+                'driver' => config('queue.default'),
+                'pending_jobs' => $pendingJobs,
+                'failed_jobs' => $failedJobs,
+            ],
+            'cache' => [
+                'driver' => config('cache.default'),
+            ],
+            'storage' => [
+                'driver' => config('filesystems.default'),
+                'symlink_exists' => $storageLinked,
+            ],
+            'timezone' => config('app.timezone'),
+            'server_time' => now()->format('d M Y H:i:s T'),
+        ];
+
+        return Inertia::render('SuperAdmin/Sistem/Sistem', [
+            'telemetry' => [
+                [
+                    'label' => 'Status Aplikasi',
+                    'value' => 'Stabil (HTTP 200)',
+                    'subvalue' => strtoupper((string) config('app.env')) . ' · PHP ' . PHP_VERSION,
+                    'status' => 'healthy',
+                    'badge' => 'ONLINE',
+                    'key' => 'app',
+                ],
+                [
+                    'label' => 'Database Engine',
+                    'value' => $dbConnected ? 'Terkoneksi' : 'Terputus',
+                    'subvalue' => strtoupper((string) config('database.default')) . ($dbConnected ? ' · ' . $dbLatency . ' ms' : ''),
+                    'status' => $dbConnected ? 'healthy' : 'danger',
+                    'badge' => $dbConnected ? $dbLatency . ' ms' : 'DISCONNECTED',
+                    'key' => 'db',
+                ],
+                [
+                    'label' => 'Antrean Queue',
+                    'value' => $pendingJobs . ' Job Pending',
+                    'subvalue' => $failedJobs . ' Gagal · Driver ' . config('queue.default'),
+                    'status' => $failedJobs > 0 ? 'warning' : 'healthy',
+                    'badge' => $pendingJobs > 0 ? $pendingJobs . ' PENDING' : 'IDLE',
+                    'key' => 'queue',
+                ],
+                [
+                    'label' => 'Storage & Media',
+                    'value' => $storageLinked ? 'Public Linked' : 'Symlink Unlinked',
+                    'subvalue' => 'Driver ' . config('filesystems.default') . ($storageLinked ? ' · OK' : ' · Putus'),
+                    'status' => $storageLinked ? 'healthy' : 'warning',
+                    'badge' => $storageLinked ? 'MOUNTED' : 'UNLINKED',
+                    'key' => 'storage',
+                ],
+            ],
+            'diagnostics' => $systemDiagnostics,
+            'stats' => [],
             'themeSettings' => $this->themeSettings(),
             'analyticsStatus' => [
                 'gtm' => [
@@ -31,6 +108,49 @@ class SuperAdminSistemController extends SuperAdminDasarController
                 ],
             ],
         ]);
+    }
+
+    public function runMaintenance(Request $request)
+    {
+        $validated = $request->validate([
+            'action' => ['required', 'string', 'in:optimize_clear,view_clear,storage_link,cache_clear'],
+        ]);
+
+        $action = $validated['action'];
+        $message = '';
+
+        try {
+            switch ($action) {
+                case 'optimize_clear':
+                    Artisan::call('optimize:clear');
+                    $message = 'Cache config, route, dan views aplikasi berhasil dibersihkan (optimize:clear).';
+                    break;
+                case 'view_clear':
+                    Artisan::call('view:clear');
+                    $message = 'Cache compiled Blade views berhasil dibersihkan (view:clear).';
+                    break;
+                case 'cache_clear':
+                    Artisan::call('cache:clear');
+                    $message = 'Application cache store berhasil dibersihkan (cache:clear).';
+                    break;
+                case 'storage_link':
+                    Artisan::call('storage:link');
+                    $message = 'Symlink storage public berhasil diperiksa/dibuat (storage:link).';
+                    break;
+            }
+
+            $this->logActivity(
+                $request,
+                'run_maintenance_' . $action,
+                'system',
+                null,
+                $message
+            );
+
+            return back()->with('success', $message);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal menjalankan pemeliharaan: ' . $e->getMessage());
+        }
     }
 
     public function updateTheme(Request $request)

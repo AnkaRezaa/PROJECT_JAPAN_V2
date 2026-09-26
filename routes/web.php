@@ -154,10 +154,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/kloters/{kloter}', [SuperAdminKloterController::class, 'update'])->name('kloters.update');
         Route::delete('/kloters/{kloter}', [SuperAdminKloterController::class, 'destroy'])->name('kloters.destroy');
         Route::patch('/kloters/{kloter}/archive', [SuperAdminKloterController::class, 'archive'])->name('kloters.archive');
+        Route::patch('/kloters/{kloter}/unarchive', [SuperAdminKloterController::class, 'unarchive'])->name('kloters.unarchive');
         Route::post('/kloters/{kloter}/users', [SuperAdminKloterController::class, 'assignUser'])->name('kloters.users.store');
         Route::delete('/kloters/{kloter}/users/{user}', [SuperAdminKloterController::class, 'removeUser'])->name('kloters.users.destroy');
         Route::post('/kloters/{kloter}/access-keys', [SuperAdminKloterController::class, 'generateAccessKey'])->name('kloters.access-keys.store');
         Route::get('/activity', SuperAdminAktivitasController::class)->name('activity');
+        Route::post('/activity/clean-history', [SuperAdminAktivitasController::class, 'cleanHistory'])->name('activity.clean-history');
         Route::patch('/activity/feedback/{feedback}', [SuperAdminAktivitasController::class, 'updateFeedback'])->name('activity.feedback.update');
         Route::get('/activity/feedback-export', [SuperAdminAktivitasController::class, 'exportFeedback'])->name('activity.feedback.export');
         Route::get('/activity/feedback-export-xlsx', [SuperAdminAktivitasController::class, 'exportFeedbackXlsx'])->name('activity.feedback.export-xlsx');
@@ -173,6 +175,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/system', SuperAdminSistemController::class)->name('system');
         Route::post('/system/theme', [SuperAdminSistemController::class, 'updateTheme'])->name('system.theme.update');
         Route::delete('/system/theme', [SuperAdminSistemController::class, 'resetTheme'])->name('system.theme.reset');
+        Route::post('/system/maintenance', [SuperAdminSistemController::class, 'runMaintenance'])->name('system.maintenance');
         Route::get('/profile', [HalamanController::class, 'superAdminProfile'])->name('profile');
     });
 

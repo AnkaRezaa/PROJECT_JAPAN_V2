@@ -109,9 +109,9 @@ class SuperAdminKloterController extends SuperAdminDasarController
                 ->map(fn (Pengguna $admin) => ['id' => $admin->id, 'label' => "{$admin->username} ({$admin->email})"]),
             'users' => Pengguna::where('role', 'user')
                 ->where('status', 'active')
-                ->orderBy('username')
+                ->orderBy('email')
                 ->get(['id', 'username', 'email'])
-                ->map(fn (Pengguna $user) => ['id' => $user->id, 'label' => "{$user->username} ({$user->email})"]),
+                ->map(fn (Pengguna $user) => ['id' => $user->id, 'label' => "{$user->email} ({$user->username})", 'email' => $user->email, 'username' => $user->username]),
             'filters' => $filters,
         ]);
     }
@@ -163,6 +163,15 @@ class SuperAdminKloterController extends SuperAdminDasarController
         $this->logActivity($request, 'kloter.archived', 'kloter_belajar', $kloter->id, "Mengarsipkan kloter {$kloter->nama}");
 
         return redirect()->route('superadmin.kloters')->with('success', 'Kloter berhasil diarsipkan.');
+    }
+
+    public function unarchive(Request $request, KloterBelajar $kloter)
+    {
+        $kloter->update(['status' => 'active']);
+
+        $this->logActivity($request, 'kloter.unarchived', 'kloter_belajar', $kloter->id, "Mengaktifkan kembali kloter {$kloter->nama} dari arsip");
+
+        return redirect()->route('superadmin.kloters', ['selected' => $kloter->id])->with('success', 'Kloter berhasil diaktifkan kembali dari arsip.');
     }
 
     public function destroy(Request $request, KloterBelajar $kloter)

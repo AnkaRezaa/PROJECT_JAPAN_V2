@@ -63,6 +63,7 @@ class HandleInertiaRequests extends Middleware
                 'warning' => fn () => $request->session()->get('warning'),
                 'info' => fn () => $request->session()->get('info'),
                 'generated_password' => fn () => $request->session()->get('generated_password'),
+                'password_reset_data' => fn () => $request->session()->get('password_reset_data'),
                 'newAchievements' => fn () => $request->session()->get('newAchievements'),
             ],
         ];
