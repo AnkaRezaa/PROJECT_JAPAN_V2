@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
@@ -40,6 +40,16 @@ export default function PusatBankSoalKonten({
     const [search, setSearch] = useState(filters.search || '');
     const [selectedLevel, setSelectedLevel] = useState(filters.level || 'all');
     const [selectedStatus, setSelectedStatus] = useState(filters.status || 'all');
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        const removeStart = router.on('start', () => setIsLoading(true));
+        const removeFinish = router.on('finish', () => setIsLoading(false));
+        return () => {
+            removeStart();
+            removeFinish();
+        };
+    }, []);
 
     const [formModalOpen, setFormModalOpen] = useState(false);
     const [editingPattern, setEditingPattern] = useState(null);
@@ -421,8 +431,19 @@ export default function PusatBankSoalKonten({
                 </div>
 
                 {/* Grammar Patterns Table */}
-                <div className="overflow-hidden rounded-3xl border border-gray-200/90 bg-white shadow-xs dark:border-gray-800 dark:bg-gray-900">
-                    <div className="overflow-x-auto">
+                <div className="relative overflow-hidden rounded-3xl border border-gray-200/90 bg-white shadow-xs dark:border-gray-800 dark:bg-gray-900">
+                    {/* Loading Overlay */}
+                    {isLoading && (
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/70 backdrop-blur-[2px] dark:bg-gray-900/70 transition-opacity">
+                            <div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-3 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                                <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-brand-600 border-t-transparent dark:border-brand-400" />
+                                <span className="text-xs font-black text-gray-700 dark:text-gray-200">
+                                    Memuat data pola grammar...
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                    <div className={`overflow-x-auto transition-opacity duration-200 ${isLoading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
                         <table className="w-full text-left text-sm">
                             <thead className="border-b border-gray-200 bg-gray-50/75 text-[11px] font-black uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:bg-gray-950/50 dark:text-gray-400">
                                 <tr>
@@ -471,7 +492,7 @@ export default function PusatBankSoalKonten({
                                             </td>
                                             <td className="px-5 py-4">
                                                 <div className="min-w-40">
-                                                    <p lang="ja" className="text-base font-black text-gray-950 dark:text-white">
+                                                    <p lang="ja" className="font-japanese text-base font-black text-gray-950 dark:text-white">
                                                         {item.pattern}
                                                     </p>
                                                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
@@ -490,12 +511,12 @@ export default function PusatBankSoalKonten({
                                                 </p>
                                             </td>
                                             <td className="whitespace-nowrap px-5 py-4 text-center">
-                                                <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-black text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                                <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-black tabular-nums text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                                                     {Array.isArray(item.examples) ? item.examples.length : 0} contoh
                                                 </span>
                                             </td>
                                             <td className="whitespace-nowrap px-5 py-4 text-center">
-                                                <span className="inline-flex rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-black text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+                                                <span className="inline-flex rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-black tabular-nums text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
                                                     {item.lessons_count ?? 0} Day
                                                 </span>
                                             </td>
@@ -575,9 +596,9 @@ export default function PusatBankSoalKonten({
 
             {/* MODAL FORM TAMBAH / EDIT POLA GRAMMAR */}
             {formModalOpen && (
-                <div className="fixed inset-0 z-[150] flex items-center justify-center overflow-y-auto bg-gray-950/60 p-4 backdrop-blur-xs">
-                    <div className="my-8 flex max-h-[90vh] w-full max-w-2xl flex-col rounded-3xl bg-white shadow-2xl dark:bg-gray-900">
-                        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-800">
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-6 md:p-8 overflow-y-auto bg-gray-950/60 backdrop-blur-xs">
+                    <div className="relative my-auto flex max-h-[calc(100dvh-2.5rem)] sm:max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl dark:bg-gray-900">
+                        <div className="shrink-0 flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-800">
                             <div>
                                 <p className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">
                                     {editingPattern ? 'Perbarui Pola' : 'Pola Baru'}
@@ -595,7 +616,8 @@ export default function PusatBankSoalKonten({
                             </button>
                         </div>
 
-                        <form onSubmit={submitForm} className="flex flex-1 flex-col overflow-y-auto p-6 space-y-4">
+                        <form onSubmit={submitForm} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
                             <div className="grid gap-4 sm:grid-cols-3">
                                 <div>
                                     <label className="mb-1 block text-xs font-black text-gray-700 dark:text-gray-300">Level JLPT</label>
@@ -729,8 +751,9 @@ export default function PusatBankSoalKonten({
                                     </div>
                                 ))}
                             </div>
+                            </div>
 
-                            <div className="flex items-center justify-end gap-2.5 border-t border-gray-100 pt-4 dark:border-gray-800">
+                            <div className="shrink-0 flex items-center justify-end gap-2.5 border-t border-gray-100 px-6 py-3.5 bg-gray-50/50 dark:border-gray-800 dark:bg-gray-950/40">
                                 <button
                                     type="button"
                                     onClick={() => setFormModalOpen(false)}
@@ -753,9 +776,9 @@ export default function PusatBankSoalKonten({
 
             {/* MODAL TUGASKAN KE MODUL DAY */}
             {assignModalOpen && assignTarget && (
-                <div className="fixed inset-0 z-[150] flex items-center justify-center overflow-y-auto bg-gray-950/60 p-4 backdrop-blur-xs">
-                    <div className="my-8 flex max-h-[90vh] w-full max-w-lg flex-col rounded-3xl bg-white shadow-2xl dark:bg-gray-900">
-                        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-800">
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-6 md:p-8 overflow-y-auto bg-gray-950/60 backdrop-blur-xs">
+                    <div className="relative my-auto flex max-h-[calc(100dvh-2.5rem)] sm:max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl dark:bg-gray-900">
+                        <div className="shrink-0 flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-800">
                             <div>
                                 <p className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">Tugaskan ke Modul</p>
                                 <div className="flex items-center gap-2">
