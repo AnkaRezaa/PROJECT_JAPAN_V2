@@ -14,6 +14,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import SchoolIcon from '@mui/icons-material/School';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 import StyleIcon from '@mui/icons-material/Style';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import GuestFooter from '@/Components/Layout/GuestFooter';
 import GuestNavbar from '@/Components/Layout/GuestNavbar';
 import FallEffect from '@/Components/theme/FallEffect';
@@ -33,26 +35,38 @@ const roadmapNodeColors = [
 
 const weeklyResources = [
     {
-        title: 'PPT Kelas',
-        description: 'Presentasi pendukung dari pengajar untuk mengikuti fokus modul.',
+        title: 'PPT & Materi Kelas',
+        description: 'Presentasi pendukung pengajar untuk memahami materi dan pola kalimat baru.',
         icon: SlideshowIcon,
         tone: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
     },
     {
-        title: 'Kosakata',
-        description: 'Kumpulan kata sesuai fokus kelas untuk dipelajari dalam konteks.',
+        title: 'Bank Kosakata',
+        description: 'Daftar kata tematik audio native untuk memperkaya kosakata dan kanji.',
         icon: LocalLibraryIcon,
         tone: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
     },
     {
-        title: 'Flashcard',
-        description: 'Latihan pengulangan singkat untuk memperkuat ingatan.',
+        title: 'Flashcard SRS',
+        description: 'Latihan pengulangan cerdas dengan evaluasi ingatan mandiri.',
         icon: StyleIcon,
         tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
     },
     {
-        title: 'Kuis',
-        description: 'Evaluasi pemahaman dan sumber XP untuk progres belajar.',
+        title: 'Drill Grammar 3-Stage',
+        description: 'Latihan tata bahasa bertahap: transformasi bentuk, susun kata, dan pilihan konteks.',
+        icon: AutoAwesomeIcon,
+        tone: 'bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300',
+    },
+    {
+        title: 'Simulasi Dokkai Eviden',
+        description: 'Latihan pemahaman wacana Jepang dengan penelusuran bukti teks dan bedah pengecoh.',
+        icon: MenuBookIcon,
+        tone: 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300',
+    },
+    {
+        title: 'Kuis & Evaluasi XP',
+        description: 'Uji pemahaman modul mingguan sekaligus mengumpulkan XP progres belajar.',
         icon: QuizIcon,
         tone: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
     },
@@ -152,9 +166,11 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
 
     return (
         <>
-            <FallEffect />
+            <div className="hidden sm:block">
+                <FallEffect />
+            </div>
             <SeoHead seo={seo} />
-            <GuestNavbar heroTone="dark" />
+            <GuestNavbar />
 
             <main className="overflow-hidden bg-[#f7f8f8] text-slate-900 dark:bg-slate-950 dark:text-white">
                 <section className="relative min-h-[620px] overflow-hidden bg-slate-950">
@@ -403,7 +419,13 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                                         <div className="mt-5 flex items-center gap-2 text-xs font-bold text-rose-100"><PlayCircleIcon sx={{ fontSize: 17 }} /> Roadmap tersedia</div>
                                     </div>
                                     <div className="space-y-2">
-                                        {[['PPT Kelas', SlideshowIcon], ['Kosakata', LocalLibraryIcon], ['Flashcard', StyleIcon], ['Kuis', QuizIcon]].map(([label, Icon]) => (
+                                        {[
+                                            ['PPT Kelas', SlideshowIcon],
+                                            ['Bank Kosakata', LocalLibraryIcon],
+                                            ['Drill Grammar', AutoAwesomeIcon],
+                                            ['Simulasi Dokkai', MenuBookIcon],
+                                            ['Kuis & XP', QuizIcon],
+                                        ].map(([label, Icon]) => (
                                             <div key={label} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2.5">
                                                 <span className="flex items-center gap-2 text-xs font-bold text-slate-100"><Icon sx={{ fontSize: 16 }} />{label}</span>
                                                 <CheckCircleIcon sx={{ fontSize: 16 }} className="text-emerald-400" />

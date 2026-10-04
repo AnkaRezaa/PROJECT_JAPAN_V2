@@ -12,6 +12,7 @@ import Footer from '@/Components/Layout/GuestFooter';
 import GuestNavbar from '@/Components/Layout/GuestNavbar';
 import FallEffect from '@/Components/theme/FallEffect';
 import SeoHead from '@/Components/SEO/SeoHead';
+import heroStaticImage from '@/../Images/Mount-Fuji-New.jpg';
 
 const faqs = [
   {
@@ -186,22 +187,45 @@ export default function Pricing({ programs = [], seo = {} }) {
 
   return (
     <>
-      <FallEffect />
+      <div className="hidden sm:block">
+        <FallEffect />
+      </div>
       <SeoHead seo={seo} />
       <GuestNavbar />
 
       <main className="overflow-hidden bg-white">
-        <section className="relative border-b border-gray-100 bg-[#F7FAF8] px-5 py-16 sm:px-8 sm:py-20 lg:px-20 lg:py-24">
+        <section className="relative isolate overflow-hidden border-b border-gray-100 bg-[#F7FAF8] px-5 py-16 sm:px-8 sm:py-20 lg:px-20 lg:py-24">
+          <img
+            src={heroStaticImage}
+            alt="Pemandangan Gunung Fuji Jepang"
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-[50%_35%] sm:object-center opacity-45"
+          />
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-white/85 via-white/55 to-white/95" />
+          <div className="pointer-events-none absolute -right-24 -top-24 -z-10 h-96 w-96 rounded-full bg-emerald-200/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -left-24 -z-10 h-96 w-96 rounded-full bg-brand-200/20 blur-3xl" />
+
           <div className="relative mx-auto max-w-4xl text-center">
-            <p className="flex items-center justify-center gap-2 text-xs font-black uppercase text-brand-700"><ToriiIcon className="h-4 w-4" /> Kelas TOKU-UP</p>
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand-200/80 bg-white/90 px-3.5 py-1 text-xs font-bold text-brand-700 shadow-sm backdrop-blur-sm">
+              <ToriiIcon className="h-3.5 w-3.5" />
+              <span>Pilihan Kelas & Program Belajar</span>
+            </div>
             <h1 className="mx-auto mt-4 max-w-3xl break-words text-[2rem] font-black leading-tight text-ink-900 sm:text-4xl lg:text-5xl">Pilih kelas dan cara belajar yang sesuai.</h1>
-            <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-ink-600 sm:text-base">Bandingkan materi, masa akses, Kelas Mandiri, dan Kelas Mentor sebelum menentukan pilihan.</p>
-            <div className="mx-auto mt-8 grid min-w-0 max-w-xl grid-cols-3 divide-x divide-gray-200 border-y border-gray-200 py-4 text-left">
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-ink-600 sm:text-base">Bandingkan kurikulum, masa akses, Kelas Mandiri, dan Kelas Mentor sebelum menentukan pilihan belajar terbaik Anda.</p>
+            
+            <div className="mx-auto mt-9 grid min-w-0 max-w-xl grid-cols-3 gap-2.5 sm:gap-4">
               {[
-                ['Kelas', programs.length],
-                ['Model belajar', '2 pilihan'],
-                ['Preview', 'Tersedia'],
-              ].map(([label, value]) => <div key={label} className="min-w-0 px-1 text-center sm:px-3"><p className="break-words text-[9px] font-bold uppercase text-ink-600 sm:text-[10px]">{label}</p><p className="mt-1 break-words text-xs font-black text-ink-900 sm:text-base">{value}</p></div>)}
+                { label: 'Kelas Tersedia', value: `${programs.length} Program`, icon: <SchoolIcon sx={{ fontSize: 18 }} className="text-brand-700" /> },
+                { label: 'Model Belajar', value: '2 Pilihan', icon: <GroupsIcon sx={{ fontSize: 18 }} className="text-emerald-700" /> },
+                { label: 'Coba Materi', value: 'Preview Gratis', icon: <CheckIcon sx={{ fontSize: 18 }} className="text-achievement-700" /> },
+              ].map(({ label, value, icon }) => (
+                <div key={label} className="flex flex-col items-center justify-center rounded-2xl border border-white/90 bg-white/80 p-3 shadow-sm backdrop-blur-sm transition-all hover:border-brand-200 hover:shadow-md sm:p-4">
+                  <div className="mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50/80 sm:h-8 sm:w-8">
+                    {icon}
+                  </div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-ink-500 sm:text-[11px]">{label}</p>
+                  <p className="mt-0.5 text-xs font-black text-ink-900 sm:text-sm">{value}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>

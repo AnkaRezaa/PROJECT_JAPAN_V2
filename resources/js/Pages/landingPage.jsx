@@ -13,7 +13,7 @@ import PlayCircleIcon from '@mui/icons-material/PlayCircle';
 import VideogameAssetIcon from '@mui/icons-material/VideogameAsset';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import StarIcon from '@mui/icons-material/Star';
-import { DarumaIcon, SakuraIcon, ScrollIcon, SeigaihaBand, ToriiIcon } from '@/Components/JapaneseIcons';
+import { DarumaIcon, SakuraIcon, ScrollIcon, ToriiIcon } from '@/Components/JapaneseIcons';
 import Button from '@/Components/UI/Button';
 import GuestNavbar from '@/Components/Layout/GuestNavbar';
 import Footer from '@/Components/Layout/GuestFooter';
@@ -217,7 +217,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
             alt="Pemandangan Gunung Fuji dan pagoda Jepang"
             className="absolute inset-0 -z-20 h-full w-full object-cover object-[42%_center] sm:object-center"
           />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-white/95 via-white/85 to-white/45" />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-white/70 via-white/35 to-transparent" />
 
           <div className="mx-auto grid min-w-0 max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
             <div className="relative z-10 min-w-0 max-w-2xl">
@@ -235,7 +235,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
               </p>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <Button size="md" href="/register" className="!h-10 !min-h-[40px] !w-full !shrink-0 !whitespace-nowrap !rounded-xl !bg-[#30C060] !px-5 !text-sm !font-bold !text-[#24303B] !shadow-[0_8px_18px_rgba(48,192,96,0.2)] hover:!translate-y-0 hover:!bg-[#15803D] hover:!text-white sm:!w-auto">
+                <Button size="md" href="/register" className="!h-10 !min-h-[40px] !w-full !shrink-0 !whitespace-nowrap !rounded-xl !bg-[#15803D] !px-5 !text-sm !font-bold !text-white !shadow-[0_6px_16px_rgba(21,128,61,0.25)] hover:!translate-y-0 hover:!bg-[#166534] sm:!w-auto">
                   Mulai Belajar Gratis <ArrowForwardIcon aria-hidden="true" sx={{ fontSize: 18 }} />
                 </Button>
               </div>
@@ -339,9 +339,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
         </section>
 
 
-        <SeigaihaBand />
-
-        <motion.section {...reveal} id="demo-belajar" className="scroll-mt-24 bg-[#102D29] px-4 py-12 text-white sm:px-6 lg:px-8 lg:py-16">
+        <motion.section {...reveal} id="demo-belajar" className="scroll-mt-24 bg-[#0F171B] px-4 py-16 text-white sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-6xl">
             <div className="mb-10 grid gap-4 lg:grid-cols-[0.75fr_1.25fr] lg:items-end">
               <div>
@@ -448,10 +446,8 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
           </div>
         </motion.section>
 
-        <SeigaihaBand />
-
         {/* Section Testimoni Siswa */}
-        <motion.section {...reveal} className="bg-[#F7FAF8] px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+        <motion.section {...reveal} className="bg-[#F7FAF8] px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-6xl">
             <div className="mx-auto max-w-2xl text-center">
               <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-3 py-1 text-xs font-bold text-brand-700 shadow-sm">
@@ -500,9 +496,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
           </div>
         </motion.section>
 
-        <SeigaihaBand />
-
-        <motion.section {...reveal} className="bg-[#0F171B] px-4 py-12 text-white sm:px-6 lg:px-8 lg:py-16">
+        <motion.section {...reveal} className="bg-[#0F171B] px-4 py-16 text-white sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-6xl">
             <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div>
@@ -523,12 +517,12 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
                   key={`${plan.programId}-${plan.id}`}
                   className={`relative rounded-2xl border p-6 transition-all duration-300 ${
                     index === 0
-                      ? 'border-brand-300/60 bg-[#183B37] shadow-lg shadow-black/20'
+                      ? 'border-emerald-500/50 bg-[#122B27] shadow-xl shadow-black/30'
                       : 'border-white/10 bg-white/[0.045] hover:border-white/25'
                   }`}
                 >
                   {index === 0 && (
-                    <span className="absolute right-5 top-5 rounded-full border border-brand-300/40 bg-brand-300/15 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-300">
+                    <span className="absolute right-5 top-5 rounded-full border border-emerald-400/40 bg-emerald-400/15 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
                       Pilihan Favorit
                     </span>
                   )}
@@ -560,7 +554,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
               <p className="max-w-xl text-xs leading-relaxed text-white/70">
                 Bandingkan materi, tipe pendampingan, dan masa akses sebelum menentukan kelas.
               </p>
-              <Button href="/pricing" className="!h-10 !min-h-[40px] !rounded-xl !bg-[#D9FFB8] !px-5 !text-xs !font-bold !text-ink-950 hover:!bg-white shadow-sm">
+              <Button href="/pricing" className="!h-10 !min-h-[40px] !rounded-xl !bg-[#15803D] !px-5 !text-xs !font-bold !text-white hover:!bg-[#166534] shadow-sm">
                 Lihat kelas dan harga <ArrowForwardIcon aria-hidden="true" sx={{ fontSize: 16 }} />
               </Button>
             </div>
