@@ -64,6 +64,7 @@ Route::get('/kelas/{programSlug}', [HalamanController::class, 'publicClass'])->n
 Route::get('/privacy-policy', [HalamanController::class, 'privacyPolicy'])->name('privacy-policy');
 Route::get('/terms', [HalamanController::class, 'terms'])->name('terms');
 Route::get('/cookie-policy', [HalamanController::class, 'cookiePolicy'])->name('cookie-policy');
+Route::get('/dokkai/preview', [DokkaiController::class, 'show'])->name('dokkai.preview');
 Route::get('/support/chat', [SupportChatController::class, 'state'])->middleware('throttle:support-chat-read')->name('support.chat.state');
 Route::post('/support/chat', [SupportChatController::class, 'start'])->middleware('throttle:support-chat-start')->name('support.chat.start');
 Route::post('/support/chat/messages', [SupportChatController::class, 'send'])->middleware('throttle:support-chat-send')->name('support.chat.send');

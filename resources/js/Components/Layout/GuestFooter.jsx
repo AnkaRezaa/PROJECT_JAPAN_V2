@@ -12,13 +12,13 @@ const IconGlobe = () => (
 const footerLinks = {
     Produk: [
         { href: '/roadmap', label: 'Roadmap JLPT N3' },
-        { href: '/user/kelas', label: 'Flashcard Kosakata' },
-        { href: '/user/quizzes', label: 'Arena Kuis' },
+        { href: '/#demo-belajar', label: 'Flashcard Kosakata' },
+        { href: '/dokkai/preview', label: 'Simulasi Kuis Dokkai' },
         { href: '/pricing', label: 'Harga Premium' },
     ],
     Perusahaan: [
         { href: '/about', label: 'Tentang Kami' },
-        { href: '/user/news', label: 'Blog & Berita' },
+        { href: '/#fitur', label: 'Fitur Belajar' },
         { href: '/privacy-policy', label: 'Kebijakan Privasi' },
         { href: '/terms', label: 'Syarat & Ketentuan' },
     ],

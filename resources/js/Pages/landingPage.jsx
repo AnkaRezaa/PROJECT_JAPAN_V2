@@ -26,56 +26,53 @@ const sampleFlashcards = [
   {
     kanji: '挑戦',
     furigana: 'ちょうせん',
-    romaji: 'chousen',
-    meaning: 'Tantangan / Mencoba hal baru',
-    sentence: '新しい目標に挑戦する。',
-    sentenceMeaning: 'Menantang diri untuk target baru.',
+    meaning: 'Tantangan / Menantang diri',
+    sentence: '新しい目標に果敢に挑戦する。',
+    sentenceMeaning: 'Berani menantang diri untuk meraih target baru.',
     level: 'JLPT N3',
   },
   {
     kanji: '継続',
     furigana: 'けいぞく',
-    romaji: 'keizoku',
     meaning: 'Keberlanjutan / Konsistensi',
-    sentence: '毎日の勉強を継続する。',
-    sentenceMeaning: 'Melanjutkan belajar setiap hari secara konsisten.',
+    sentence: '毎日の学習を継続することが合格の鍵だ。',
+    sentenceMeaning: 'Melanjutkan belajar setiap hari adalah kunci kelulusan.',
     level: 'JLPT N3',
   },
   {
-    kanji: '合格',
-    furigana: 'ごうかく',
-    romaji: 'goukaku',
-    meaning: 'Lulus / Sukses Ujian',
-    sentence: 'JLPT N3の試験に合格した。',
-    sentenceMeaning: 'Berhasil lulus ujian JLPT N3.',
-    level: 'JLPT N3',
+    kanji: '把握',
+    furigana: 'はあく',
+    meaning: 'Memahami secara mendalam',
+    sentence: '文章の論理構成を正確に把握する。',
+    sentenceMeaning: 'Memahami struktur logika wacana secara akurat.',
+    level: 'JLPT N2',
   },
 ];
 
 const testimonials = [
   {
     name: 'Dimas Pratama',
-    tag: 'Lolos JLPT N3',
-    batch: 'Alumni Kloter N3',
-    comment: 'Roadmap mingguan sangat membantu membagi waktu antara kerja shift dan belajar kanji tanpa merasa overwhelmed. Urutan materi dari PPT ke kuis sangat runtut.',
+    tag: 'Lolos JLPT N3 (Skor 142/180)',
+    batch: 'Alumni Kloter N3 Reguler',
+    comment: 'Fitur bedah eviden di kuis Dokkai benar-benar penyelamat. Di ujian JLPT asli saya tidak lagi menebak-nebak karena sudah terbiasa mencari kalimat kunci pembuktian di teks.',
     rating: 5,
     avatar: 'D',
     avatarTone: 'bg-brand-100 text-brand-700',
   },
   {
     name: 'Siti Nurhaliza',
-    tag: 'Persiapan Tokutei Ginou',
-    batch: 'Peserta Mandiri',
-    comment: 'Fitur flashcard dan kuis repetisinya bikin kosakata dan pola kalimat nempel lebih cepat di ingatan dibanding sekadar menghafal buku catatan.',
+    tag: 'Lolos Tokutei Ginou Kaigo',
+    batch: 'Peserta Intensif Kerja Jepang',
+    comment: 'Alur 3-stage kuis grammar sangat efektif. Dari yang awalnya bingung perubahan bentuk te dan nai, pas latihan susun kalimat langsung paham pola percakapan kerja di panti.',
     rating: 5,
     avatar: 'S',
     avatarTone: 'bg-learning-100 text-learning-700',
   },
   {
     name: 'Rian Ardiansyah',
-    tag: 'Target JLPT N2',
-    batch: 'Alumni N3',
-    comment: 'Penyusunan materi dari pengajar, audio pelafalan, sampai evaluasi kuis dalam satu alur membuat saya selalu tahu langkah konkret apa yang harus dikerjakan.',
+    tag: 'Target JLPT N2 (Alumni N3)',
+    batch: 'Alumni Kloter N3',
+    comment: 'Roadmap per minggu membuat ritme belajar kerja shift jadi teratur. Kosakata yang dipelajari di flashcard pagi hari langsung nyambung ke latihan wacana malamnya.',
     rating: 5,
     avatar: 'R',
     avatarTone: 'bg-achievement-100 text-achievement-700',
@@ -85,54 +82,54 @@ const testimonials = [
 const learningSteps = [
   {
     number: '01',
-    title: 'Pilih kelas',
-    description: 'Mulai dari kelas yang sesuai dengan target dan cara belajar Anda.',
+    title: 'Pilih Target Kelas',
+    description: 'Tentukan target akselerasi: Ujian Resmi JLPT (N5–N2) atau Bekerja di Jepang (Tokutei Ginou).',
     icon: <AssignmentIcon sx={{ fontSize: 20 }} />,
   },
   {
     number: '02',
-    title: 'Ikuti roadmap',
-    description: 'PPT, kosakata, flashcard, dan kuis tersusun dalam satu perjalanan.',
+    title: 'Grammar 3-Stage',
+    description: 'Kuasai pola kalimat bertahap: Konjugasi bentuk kata, susun kalimat (★), dan pilihan konteks nyata.',
     icon: <ListAltIcon sx={{ fontSize: 20 }} />,
   },
   {
     number: '03',
-    title: 'Ulangi yang belum kuat',
-    description: 'Materi yang perlu diperkuat kembali muncul melalui repetisi belajar.',
+    title: 'Dokkai Berbasis Eviden',
+    description: 'Latihan membaca wacana otentik dengan pelacakan kalimat bukti jawaban dan bedah opsi pengecoh.',
     icon: <BoltIcon sx={{ fontSize: 20 }} />,
   },
   {
     number: '04',
-    title: 'Lihat perkembangan',
-    description: 'Progress, XP, streak, dan aktivitas tersimpan dalam satu akun.',
+    title: 'Repetisi Cerdas (SRS)',
+    description: 'Sistem Spaced Repetition secara otomatis mengulang materi yang lemah hingga tuntas terekam memori.',
     icon: <EmojiEventsIcon sx={{ fontSize: 20 }} />,
   },
 ];
 
 const roadmapWeeks = [
-  { week: 'W1', title: 'Fondasi N3', detail: 'Pengenalan kelas, kosakata dasar, dan kuis pembuka.', state: 'Preview tersedia', tone: 'brand' },
-  { week: 'W2', title: 'Grammar & Kotoba', detail: 'Pola kalimat dan repetisi kosakata harian.', state: 'Materi lanjutan', tone: 'blue' },
-  { week: 'W3', title: 'Kanji & Bacaan', detail: 'Kanji, contoh kalimat, dan latihan membaca.', state: 'Materi lanjutan', tone: 'amber' },
-  { week: 'W4', title: 'Review & Kuis', detail: 'Review terarah dan evaluasi progress.', state: 'Evaluasi', tone: 'ink' },
+  { week: 'W1', title: 'Fondasi Tata Bahasa & Kanji', detail: '35 Kanji penting, pembentukan pola kalimat dasar, dan kuis diagnostik.', state: 'Preview tersedia', tone: 'brand' },
+  { week: 'W2', title: 'Grammar 3-Stage & Partikel', detail: 'Drill konjugasi kata kerja, partikel jebakan, dan latihan susun kalimat.', state: 'Materi lanjutan', tone: 'blue' },
+  { week: 'W3', title: 'Wacana Dokkai & Kosakata', detail: 'Bedah wacana bertema sosial-budaya, pelacakan eviden, dan glosarium audio.', state: 'Materi lanjutan', tone: 'amber' },
+  { week: 'W4', title: 'Simulasi Ujian CBT & Review', detail: 'Tryout berbatas waktu standar JLPT, analisis passing score, dan pemantapan.', state: 'Evaluasi', tone: 'ink' },
 ];
 
 const benefits = [
   {
     icon: <VideogameAssetIcon sx={{ fontSize: 22 }} />,
-    title: 'Latihan yang terasa progresif',
-    description: 'Kuis, XP, streak, dan badge memberi penanda perkembangan tanpa mengganggu fokus belajar.',
+    title: 'Latihan Terstruktur & Taktil',
+    description: 'Gamifikasi XP, streak harian, dan kuis adaptif menjaga konsistensi belajar harian tanpa rasa bosan.',
     tone: 'bg-brand-50 text-brand-700',
   },
   {
     icon: <HeadsetIcon sx={{ fontSize: 22 }} />,
-    title: 'Materi saling terhubung',
-    description: 'Kosakata, audio, flashcard, presentasi, dan kuis tetap berada dalam konteks minggu yang sama.',
+    title: 'Materi Saling Terintegrasi',
+    description: 'Kosakata di flashcard langsung diuji dalam wacana Dokkai dan kuis kalimat pada minggu yang sama.',
     tone: 'bg-learning-50 text-learning-700',
   },
   {
     icon: <AutoAwesomeIcon sx={{ fontSize: 22 }} />,
-    title: 'Urutan belajar lebih jelas',
-    description: 'Roadmap menunjukkan apa yang sudah selesai, sedang dipelajari, dan perlu dikerjakan berikutnya.',
+    title: 'Diawasi Kurikulum Sensei Native',
+    description: 'Standar materi mengacu pada kaidah JF Standard dan pengalaman nyata pengajar bersertifikasi.',
     tone: 'bg-achievement-50 text-achievement-700',
   },
 ];
@@ -207,7 +204,9 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
 
   return (
     <>
-      <FallEffect />
+      <div className="hidden sm:block">
+        <FallEffect />
+      </div>
       <SeoHead seo={seo} />
       <GuestNavbar />
 
@@ -224,36 +223,32 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
             <div className="relative z-10 min-w-0 max-w-2xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/[0.85] px-3 py-1 shadow-sm backdrop-blur-sm">
                 <span className="h-2 w-2 rounded-full bg-brand-600 motion-safe:animate-pulse" />
-                <span className="text-xs font-bold uppercase text-brand-700">Roadmap belajar bahasa Jepang</span>
+                <span className="text-xs font-bold uppercase text-brand-700">Roadmap Belajar Bahasa Jepang N5 – N2</span>
               </div>
 
               <h1 className="mb-4 break-words text-2xl font-extrabold leading-tight text-ink-900 sm:text-4xl lg:text-[2.75rem]">
-                Belajar Bahasa Jepang
-                <span className="mt-1 block text-[#15803D]">Lebih Terarah</span>
+                Kuasai Bahasa Jepang
+                <span className="mt-1 block text-[#15803D]">Metode Terpadu & Terarah</span>
               </h1>
               <p className="max-w-xl text-sm leading-relaxed text-ink-700 sm:text-base">
-                Ikuti roadmap mingguan yang menghubungkan materi, flashcard, kuis, dan presentasi dalam satu progres belajar.
+                Kurikulum terstruktur mingguan: Drill Grammar 3-Stage, Simulasi Dokkai Berbasis Eviden, dan Bank Kosakata Audio Native.
               </p>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Button size="md" href="/register" className="!h-10 !min-h-[40px] !w-full !shrink-0 !whitespace-nowrap !rounded-xl !bg-[#30C060] !px-5 !text-sm !font-bold !text-[#24303B] !shadow-[0_8px_18px_rgba(48,192,96,0.2)] hover:!translate-y-0 hover:!bg-[#15803D] hover:!text-white sm:!w-auto">
                   Mulai Belajar Gratis <ArrowForwardIcon aria-hidden="true" sx={{ fontSize: 18 }} />
                 </Button>
-                <Button size="md" variant="outline" type="button" onClick={scrollToDemo} className="!h-10 !min-h-[40px] !w-full !shrink-0 !whitespace-nowrap !rounded-xl !border-[#2D3742]/25 !bg-white/90 !px-5 !text-sm !font-bold !text-[#2D3742] hover:!translate-y-0 hover:!border-[#2D3742]/40 hover:!bg-white sm:!w-auto">
-                  <PlayCircleIcon sx={{ fontSize: 20 }} />
-                  Lihat Demo
-                </Button>
               </div>
 
               <div className="mt-7 flex min-w-0 max-w-md items-start gap-4 border-t border-ink-900/10 pt-4 text-sm text-ink-700 sm:items-center">
                 <div className="flex -space-x-2" aria-hidden="true">
-                  {['あ', '漢', '語'].map((label, index) => (
+                  {['N5', 'N3', 'N2'].map((label, index) => (
                     <span key={label} className={`flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-xs font-black ${index === 0 ? 'bg-brand-100 text-brand-700' : index === 1 ? 'bg-learning-100 text-learning-700' : 'bg-achievement-100 text-achievement-700'}`}>
                       {label}
                     </span>
                   ))}
                 </div>
-                <span className="min-w-0 break-words text-xs sm:text-sm">Bergabunglah dengan <strong className="font-bold text-ink-900">3,200+ pembelajar</strong> komunitas TOKU-UP</span>
+                <span className="min-w-0 break-words text-xs sm:text-sm">Bergabunglah dengan <strong className="font-bold text-ink-900">3.200+ pembelajar</strong> persiapan ujian JLPT & karier di Jepang</span>
               </div>
 
               <div className="mt-5 hidden items-center gap-4 text-[11px] font-bold text-ink-600 sm:flex">
@@ -285,7 +280,6 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
                 <div className="my-3 rounded-xl border border-brand-100 bg-[#F7FAF8] p-4 text-center">
                   <p className="text-xs font-bold text-brand-700">{currentCard.furigana}</p>
                   <p className="my-1 font-sans text-4xl font-black text-ink-900">{currentCard.kanji}</p>
-                  <p className="text-[11px] font-mono font-medium text-ink-500">[{currentCard.romaji}]</p>
                   <p className="mt-2 text-xs font-bold text-ink-800">{currentCard.meaning}</p>
                   
                   <div className="mt-3 rounded-lg border border-white bg-white/90 p-2.5 text-left text-xs shadow-sm">
@@ -334,10 +328,10 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
               </div>
 
               <div className="absolute -bottom-6 -left-3 hidden items-center gap-2.5 rounded-xl border border-brand-200 bg-white/95 px-3.5 py-2.5 shadow-lg backdrop-blur-sm sm:flex">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-xs font-black text-brand-700">N3</div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-xs font-black text-brand-700">N2</div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-wider text-ink-500">Standar Kurikulum</p>
-                  <p className="text-xs font-black text-ink-900">JLPT N5 – N3 Terpadu</p>
+                  <p className="text-xs font-black text-ink-900">JLPT N5 – N2 Terpadu</p>
                 </div>
               </div>
             </motion.div>
@@ -421,7 +415,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
           <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-14">
             <div className="relative border border-[var(--toku-border)] bg-[#F7FAF8] p-4 sm:p-6">
               <div className="flex items-start justify-between gap-4 border-b border-gray-200 pb-4">
-                <div><p className="text-xs font-bold uppercase text-learning-700">Progress minggu ini</p><h3 className="mt-1 text-xl font-bold text-ink-900">Tetap fokus pada langkah berikutnya.</h3></div>
+                <div><p className="text-xs font-bold uppercase text-learning-700">Simulasi Tampilan Dashboard Siswa</p><h3 className="mt-1 text-xl font-bold text-ink-900">Tetap fokus pada langkah berikutnya.</h3></div>
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-100 text-brand-700"><BoltIcon sx={{ fontSize: 20 }} /></div>
               </div>
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -434,7 +428,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
                 ))}
               </div>
               <div className="mt-6 border border-gray-200 bg-white p-3">
-                <div className="flex items-center justify-between text-xs"><span className="font-bold text-ink-900">Minggu 1 - Fondasi N3</span><span className="font-bold text-brand-700">67%</span></div>
+                <div className="flex items-center justify-between text-xs"><span className="font-bold text-ink-900">Minggu 1 - Fondasi N3 & N2</span><span className="font-bold text-brand-700">67%</span></div>
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100"><div className="h-full w-2/3 rounded-full bg-brand-600" /></div>
               </div>
             </div>

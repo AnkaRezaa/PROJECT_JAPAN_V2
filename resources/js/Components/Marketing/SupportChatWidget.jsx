@@ -86,8 +86,8 @@ export default function SupportChatWidget() {
         }
     };
 
-    const directWhatsAppUrl = whatsappUrl && form.topic
-        ? `${whatsappUrl}?text=${encodeURIComponent(`Halo, saya ingin bertanya tentang ${form.topic}.`)}`
+    const directWhatsAppUrl = whatsappUrl
+        ? `${whatsappUrl}?text=${encodeURIComponent(form.topic ? `Halo, saya ingin bertanya tentang ${form.topic}.` : 'Halo admin TOKU-UP, saya ingin konsultasi mengenai program belajar.')}`
         : null;
 
     return (
