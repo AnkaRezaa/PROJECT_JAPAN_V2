@@ -182,7 +182,12 @@ class AdminModulController extends Controller
                         ->withCount('flashcards'),
                     'quizzes' => fn ($resourceQuery) => $resourceQuery
                         ->select(['id', 'module_id', 'module_day_id', 'type', 'passing_score', 'status'])
-                        ->with(['grammarLesson:id,quiz_id,pattern,title'])
+                        ->with([
+                            'grammarLesson:id,quiz_id,pattern,title',
+                            'dokkaiPassage' => fn ($passageQuery) => $passageQuery
+                                ->select(['id', 'quiz_id', 'title', 'jlpt_level'])
+                                ->withCount('questions'),
+                        ])
                         ->withCount('questions'),
                     'presentationDecks' => fn ($resourceQuery) => $resourceQuery
                         ->select(['id', 'module_id', 'module_day_id', 'title', 'status'])
@@ -193,7 +198,7 @@ class AdminModulController extends Controller
             ->withCount([
                 'days',
                 'flashcardSets',
-                'quizzes as standard_quizzes_count' => fn ($quizQuery) => $quizQuery->where('type', '!=', 'grammar'),
+                'quizzes as standard_quizzes_count' => fn ($quizQuery) => $quizQuery->whereNotIn('type', ['grammar', 'dokkai']),
                 'presentationDecks',
             ])
             ->orderBy('program_pembelajaran_id')
@@ -256,7 +261,7 @@ class AdminModulController extends Controller
                         'status' => $set->status,
                         'item_count' => $set->flashcards_count,
                     ]),
-                    'quizzes' => $day->quizzes->where('type', '!=', 'grammar')->map(fn ($quiz) => [
+                    'quizzes' => $day->quizzes->whereNotIn('type', ['grammar', 'dokkai'])->map(fn ($quiz) => [
                         'id' => $quiz->id,
                         'title' => 'Kuis #'.$quiz->id,
                         'type' => $quiz->type,
@@ -271,6 +276,14 @@ class AdminModulController extends Controller
                         'pattern' => $quiz->grammarLesson?->pattern,
                         'title' => $quiz->grammarLesson?->title,
                         'item_count' => $quiz->questions_count,
+                    ])->values(),
+                    'dokkai_lesson_count' => $day->quizzes->where('type', 'dokkai')->count(),
+                    'dokkai_quizzes' => $day->quizzes->where('type', 'dokkai')->map(fn ($quiz) => [
+                        'id' => $quiz->id,
+                        'status' => $quiz->status,
+                        'title' => $quiz->dokkaiPassage?->title,
+                        'jlpt_level' => $quiz->dokkaiPassage?->jlpt_level,
+                        'item_count' => $quiz->dokkaiPassage?->questions_count ?? 0,
                     ])->values(),
                     'presentation_decks' => $day->presentationDecks->map(fn ($deck) => [
                         'id' => $deck->id,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { AnimatePresence, MotionConfig, motion, useDragControls } from 'framer-motion';
@@ -8,8 +8,12 @@ import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmAc
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
 import { useScrollLock } from '@/lib/scrollLock';
 import GrammarQuizPreviewDialog from '@/Components/Features/GrammarQuiz/GrammarQuizPreviewDialog';
+import Popper from '@mui/material/Popper';
+
+const DokkaiQuizRunner = lazy(() => import('@/Components/Features/DokkaiQuiz/DokkaiQuizRunner'));
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -19,6 +23,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditCalendarIcon from '@mui/icons-material/EditCalendar';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import FindInPageIcon from '@mui/icons-material/FindInPage';
 import GroupsIcon from '@mui/icons-material/Groups';
 import LockIcon from '@mui/icons-material/Lock';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
@@ -524,9 +529,10 @@ function quizItem(day, available) {
         detail: null,
         status: !available || checkpoint.locked
             ? 'locked'
-            : day.status === 'done'
+            : checkpoint.progress_status === 'passed'
                 ? 'done'
                 : 'active',
+        progressStatus: checkpoint.progress_status,
         lockReason: checkpoint.lock_reason || day.quiz_locked_reason || day.lock_reason,
         href: day.quiz_url,
     };
@@ -689,7 +695,7 @@ function PathNode({ item, selected, onDayToggle }) {
         return (
             <button
                 type="button"
-                onClick={() => !locked && onDayToggle(item.dayId)}
+                onClick={(event) => !locked && onDayToggle(item.dayId, event.currentTarget)}
                 disabled={locked}
                 aria-expanded={selected}
                 aria-controls={`day-materials-${item.dayId}`}
@@ -810,7 +816,7 @@ function PathNodeLabel({ item, onDayToggle, selected }) {
         return (
             <button
                 type="button"
-                onClick={() => !locked && onDayToggle?.(item.dayId)}
+                onClick={(event) => !locked && onDayToggle?.(item.dayId, event.currentTarget)}
                 disabled={locked}
                 aria-expanded={selected}
                 aria-controls={`day-materials-${item.dayId}`}
@@ -841,18 +847,27 @@ function PathNodeLabel({ item, onDayToggle, selected }) {
     );
 }
 
-function DayDetailContent({ day, onClose, mobile = false, dragControls = null, onOpenGrammarQuiz = null }) {
+function DayDetailContent({ day, onClose, mobile = false, dragControls = null, onOpenGrammarQuiz = null, dokkaiPreview = null, onRetryDokkai = null, onOpenDokkai = null }) {
     const items = dayChildItems(day);
+    const dokkaiQuiz = dokkaiPreview?.payload?.quiz;
     const completed = day.status === 'done';
     const [loadingGrammarId, setLoadingGrammarId] = useState(null);
+    const [grammarErrorId, setGrammarErrorId] = useState(null);
+    const recommendedId = ['active', 'done'].includes(day.status)
+        ? items.find((item) => item.status === 'active' && item.progressStatus !== 'passed')?.key
+            || (day.grammar_lessons || []).find((lesson) => lesson.progress_status !== 'passed')?.id
+        : null;
     const openGrammar = async (quizId) => {
         setLoadingGrammarId(quizId);
+        setGrammarErrorId(null);
         try {
             const { data } = await window.axios.get(`/user/grammar-quizzes/${quizId}`);
             if (onOpenGrammarQuiz) {
                 onClose();
                 onOpenGrammarQuiz(data.lesson);
             }
+        } catch {
+            setGrammarErrorId(quizId);
         } finally {
             setLoadingGrammarId(null);
         }
@@ -906,7 +921,7 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null, o
                         {day.title || `Hari ${day.day_number}`}
                     </h3>
                     {day.description && (
-                        <p className="mt-0.5 line-clamp-1 sm:line-clamp-2 text-xs font-medium leading-4 sm:leading-5 text-gray-600 dark:text-gray-300">
+                        <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-4 sm:leading-5 text-gray-600 dark:text-gray-300" title={day.description}>
                             {day.description}
                         </p>
                     )}
@@ -924,51 +939,49 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null, o
             <div className={`space-y-2 sm:space-y-2.5 bg-[#f8faf8] p-2.5 min-[380px]:p-3 sm:p-4 dark:bg-gray-900 overscroll-contain ${mobile ? 'max-h-[58dvh] overflow-y-auto' : ''}`}>
                 {items.map((item, index) => {
                     const locked = ['locked', 'unavailable'].includes(item.status);
+                    const passed = item.progressStatus === 'passed';
+                    const recommended = recommendedId === item.key;
                     const row = (
                         <>
                             <span className={`flex h-9 w-9 min-[380px]:h-10 min-[380px]:w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl ${
                                 locked
                                     ? 'bg-gray-100 text-gray-400 dark:bg-gray-700'
-                                    : completed
+                                    : passed
                                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                                         : 'bg-[#f1e4ff] text-[#7c3aed] dark:bg-violet-950/60 dark:text-violet-300'
                             }`}>
-                                <QuizIcon sx={{ fontSize: { xs: 19, sm: 22 } }} />
+                                <QuizIcon sx={{ fontSize: { xs: 22, sm: 24 } }} />
                             </span>
                             <span className="min-w-0 flex-1">
-                                <span className="flex items-center justify-between gap-1.5">
-                                    <span className="truncate text-xs min-[380px]:text-[13px] sm:text-[14px] font-extrabold leading-tight text-[#2d3742] dark:text-white">
-                                        {item.status === 'done' ? 'Ulangi Kuis Kosakata' : 'Kuis Kosakata & Repetisi'}
+                                <span className="flex flex-wrap items-center gap-1.5">
+                                    <span className="rounded-full bg-violet-200 px-2 py-0.5 text-[10px] font-bold text-violet-950 dark:bg-violet-800 dark:text-violet-50">Kosakata</span>
+                                    <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                        {locked ? item.status === 'unavailable' ? 'Belum tersedia' : 'Terkunci' : passed ? 'Selesai' : item.progressStatus === 'needs_retry' ? 'Coba lagi' : 'Belum dimulai'}
                                     </span>
-                                    {!locked && (
-                                        <span className={`shrink-0 rounded-full px-1.5 sm:px-2 py-0.5 text-[9px] min-[380px]:text-[10px] font-bold ${
-                                            completed
-                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                                : 'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300'
-                                        }`}>
-                                            {completed ? 'Selesai' : 'Kosakata'}
-                                        </span>
-                                    )}
                                 </span>
+                                <span className="mt-1 block line-clamp-2 break-words text-xs font-extrabold leading-tight text-[#2d3742] dark:text-white min-[380px]:text-[13px] sm:text-sm" title={passed ? 'Ulangi Kuis Kosakata' : 'Kuis Kosakata & Repetisi'}>
+                                    {passed ? 'Ulangi Kuis Kosakata' : 'Kuis Kosakata & Repetisi'}
+                                </span>
+                                {recommended && <span className="mt-0.5 block text-[10px] font-bold text-violet-800 dark:text-violet-200">Lanjutkan berikutnya</span>}
                                 {!locked && (
-                                    <span className="mt-0.5 block truncate text-[10px] min-[380px]:text-xs font-medium leading-4 text-gray-600 dark:text-gray-300">
-                                        {completed ? 'Flashcard kosakata, kanji, dan repetisi harian.' : 'Hafalan flashcard dan latihan kosakata harian.'}
+                                    <span className="mt-0.5 block line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 text-gray-600 dark:text-gray-300">
+                                        {passed ? 'Flashcard kosakata, kanji, dan repetisi harian.' : 'Hafalan flashcard dan latihan kosakata harian.'}
                                     </span>
                                 )}
                                 {locked && (
-                                    <span className="mt-0.5 block truncate text-[10px] min-[380px]:text-xs font-medium leading-4 text-gray-500 dark:text-gray-400">
+                                    <span className="mt-0.5 block line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 text-gray-500 dark:text-gray-400">
                                         {item.lockReason || 'Materi belum tersedia.'}
                                     </span>
                                 )}
                             </span>
-                            <span className={`flex h-7 w-7 min-[380px]:h-8 min-[380px]:w-8 shrink-0 items-center justify-center rounded-full ${
+                            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
                                 locked
                                     ? 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'
-                                    : 'bg-violet-100 text-violet-700 transition group-hover:bg-violet-200 dark:bg-violet-950/60 dark:text-violet-300'
+                                    : 'bg-violet-100 text-violet-900 transition group-hover:bg-violet-200 dark:bg-violet-900 dark:text-violet-100'
                             }`}>
                                 {locked
-                                    ? <LockIcon sx={{ fontSize: 16 }} />
-                                    : <ChevronRightIcon sx={{ fontSize: 18 }} />}
+                                    ? <LockIcon sx={{ fontSize: 20 }} />
+                                    : <ChevronRightIcon sx={{ fontSize: 24 }} />}
                             </span>
                         </>
                     );
@@ -996,7 +1009,8 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null, o
 
                 {(day.grammar_lessons || []).map((lesson, index) => {
                     const isLoading = loadingGrammarId === lesson.id;
-                    const isLessonDone = Boolean(lesson.done);
+                    const isLessonDone = lesson.progress_status === 'passed';
+                    const recommended = recommendedId === lesson.id;
 
                     return (
                         <motion.button
@@ -1017,58 +1031,95 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null, o
                                 )}
                             </span>
                             <span className="min-w-0 flex-1">
-                                <span className="flex items-center justify-between gap-1.5">
-                                    <span className="truncate text-xs min-[380px]:text-[13px] sm:text-[14px] font-extrabold leading-tight text-[#2d3742] dark:text-white">
-                                        Kuis Grammar · {lesson.pattern}
-                                    </span>
-                                    <span className={`shrink-0 rounded-full px-1.5 sm:px-2 py-0.5 text-[9px] min-[380px]:text-[10px] font-bold ${
-                                        isLessonDone
-                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                            : 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
-                                    }`}>
-                                        {isLessonDone ? 'Selesai' : 'Grammar'}
-                                    </span>
+                                <span className="flex flex-wrap items-center gap-1.5">
+                                    <span className="rounded-full bg-sky-200 px-2 py-0.5 text-[10px] font-bold text-sky-950 dark:bg-sky-800 dark:text-sky-50">Grammar</span>
+                                    <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">{isLessonDone ? 'Selesai' : lesson.progress_status === 'needs_retry' ? 'Coba lagi' : 'Belum dimulai'}</span>
                                 </span>
-                                <span className="mt-0.5 block truncate text-[10px] min-[380px]:text-xs font-medium leading-4 text-gray-600 dark:text-gray-300">
+                                <span className="mt-1 block line-clamp-2 break-words text-xs font-extrabold leading-tight text-[#2d3742] dark:text-white min-[380px]:text-[13px] sm:text-sm" title={`Kuis Grammar · ${lesson.pattern}`}>
+                                    Kuis Grammar · {lesson.pattern}
+                                </span>
+                                {recommended && <span className="mt-0.5 block text-[10px] font-bold text-sky-800 dark:text-sky-200">Lanjutkan berikutnya</span>}
+                                <span className="mt-0.5 block line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 text-gray-600 dark:text-gray-300" title={lesson.title || undefined}>
                                     {isLoading ? 'Memuat kuis grammar...' : (lesson.title || 'Latihan pola kalimat & pemahaman konteks.')}
                                 </span>
+                                {grammarErrorId === lesson.id && <span className="mt-1 block text-[10px] font-bold text-red-700 dark:text-red-300">Gagal memuat kuis. Ketuk lagi untuk mencoba.</span>}
                             </span>
-                            <span className="flex h-7 w-7 min-[380px]:h-8 min-[380px]:w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 transition group-hover:bg-sky-200 dark:bg-sky-950/60 dark:text-sky-300">
-                                <ChevronRightIcon sx={{ fontSize: 18 }} />
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-900 transition group-hover:bg-sky-200 dark:bg-sky-900 dark:text-sky-100">
+                                <ChevronRightIcon sx={{ fontSize: 24 }} />
                             </span>
                         </motion.button>
                     );
                 })}
+
+                {day.dokkai_lessons && day.dokkai_lessons.map((dokkai, dokkaiIdx) => {
+                    const isDone = dokkai.done;
+                    return (
+                        <motion.button
+                            key={`dokkai-${dokkai.id}`}
+                            type="button"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: (items.length + (day.grammar_lessons?.length || 0) + dokkaiIdx) * 0.06 }}
+                            onClick={() => onOpenDokkai?.(dokkai.id)}
+                            className="group flex min-h-[76px] w-full items-center gap-2.5 rounded-xl border border-emerald-200 bg-white p-2.5 text-left shadow-[0_3px_0_#a7f3d0] transition hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-[0_4px_0_#6ee7b7] active:translate-y-0.5 active:scale-[0.98] active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200/70 dark:border-emerald-800 dark:bg-gray-800 dark:hover:bg-emerald-950/20 sm:gap-3 sm:px-4 sm:py-3"
+                        >
+                            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${
+                                isDone ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100'
+                            }`}>
+                                {isDone ? <CheckCircleIcon sx={{ fontSize: 24 }} /> : <FindInPageIcon sx={{ fontSize: 24 }} />}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="flex flex-wrap items-center gap-1.5">
+                                    <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-950 dark:bg-emerald-800 dark:text-emerald-50">Dokkai</span>
+                                    {dokkai.jlpt_level && <span className="rounded-full border border-gray-300 px-2 py-0.5 text-[10px] font-bold text-gray-700 dark:border-gray-600 dark:text-gray-200">{dokkai.jlpt_level}</span>}
+                                    {isDone && <span className="rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-[10px] font-black dark:bg-emerald-950 dark:text-emerald-300">Selesai ({dokkai.best_score}%)</span>}
+                                </span>
+                                <span className="mt-1 block line-clamp-2 break-words text-xs font-extrabold leading-tight text-[#2d3742] dark:text-white min-[380px]:text-[13px] sm:text-sm" title={dokkai.title}>
+                                    {dokkai.title}
+                                </span>
+                                {dokkai.sub_title && (
+                                    <span className="mt-0.5 block line-clamp-2 text-[10px] font-medium leading-4 text-gray-600 dark:text-gray-300 min-[380px]:text-xs" title={dokkai.sub_title}>
+                                        {dokkai.sub_title}
+                                    </span>
+                                )}
+                                <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-semibold text-emerald-800 dark:text-emerald-200">
+                                    {Number(dokkai.estimated_reading_time) > 0 && <span className="inline-flex items-center gap-1"><AccessTimeIcon sx={{ fontSize: 14 }} />{dokkai.estimated_reading_time} menit baca</span>}
+                                    <span className="font-bold text-amber-600 dark:text-amber-400">+{dokkai.xp_reward || 80} XP</span>
+                                </span>
+                            </span>
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-900 transition group-hover:bg-emerald-200 dark:bg-emerald-900 dark:text-emerald-100">
+                                <ChevronRightIcon sx={{ fontSize: 24 }} />
+                            </span>
+                        </motion.button>
+                    );
+                })}
+
             </div>
         </div>
     );
 }
 
-function DesktopDayPopover({ day, x, onClose, onOpenGrammarQuiz }) {
-    const openToRight = x <= 50;
-
+function DesktopDayPopover({ day, anchorEl, onClose, onOpenGrammarQuiz, onOpenDokkai }) {
     return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.9, x: openToRight ? -12 : 12 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.92, x: openToRight ? -12 : 12 }}
-            transition={{ type: 'spring', stiffness: 330, damping: 27 }}
-            className="absolute top-0 z-50 hidden w-[360px] sm:block lg:w-[420px]"
-            style={openToRight
-                ? { left: `calc(${x}% + 54px)` }
-                : { right: `calc(${100 - x}% + 54px)` }}
+        <Popper
+            open={Boolean(anchorEl)}
+            anchorEl={anchorEl}
+            placement="right-start"
+            modifiers={[
+                { name: 'offset', options: { offset: [0, 14] } },
+                { name: 'flip', options: { fallbackPlacements: ['left-start', 'bottom'] } },
+                { name: 'preventOverflow', options: { padding: 12 } },
+            ]}
+            sx={{ zIndex: 1400 }}
         >
-            <span className={`absolute top-9 h-4 w-4 rotate-45 border bg-[#f1fbe9] dark:bg-gray-900 ${
-                openToRight
-                    ? '-left-2 border-b-0 border-l border-r-0 border-t border-[#d7edc8] dark:border-gray-700'
-                    : '-right-2 border-b border-l-0 border-r border-t-0 border-[#d7edc8] dark:border-gray-700'
-            }`} />
-            <DayDetailContent day={day} onClose={onClose} onOpenGrammarQuiz={onOpenGrammarQuiz} />
-        </motion.div>
+            <div className="hidden w-[min(420px,calc(100vw-24px))] max-h-[80dvh] overflow-y-auto sm:block">
+                <DayDetailContent day={day} onClose={onClose} onOpenGrammarQuiz={onOpenGrammarQuiz} onOpenDokkai={onOpenDokkai} />
+            </div>
+        </Popper>
     );
 }
 
-function MobileDaySheet({ day, onClose, onOpenGrammarQuiz }) {
+function MobileDaySheet({ day, onClose, onOpenGrammarQuiz, onOpenDokkai }) {
     const dragControls = useDragControls();
 
     useScrollLock(true);
@@ -1086,7 +1137,7 @@ function MobileDaySheet({ day, onClose, onOpenGrammarQuiz }) {
                 type="button"
                 aria-label="Tutup detail Hari"
                 onClick={onClose}
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                className="fixed inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity"
             />
             <motion.div
                 initial={{ y: '100%' }}
@@ -1103,9 +1154,12 @@ function MobileDaySheet({ day, onClose, onOpenGrammarQuiz }) {
                         onClose();
                     }
                 }}
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Materi Hari ${day.day_number}`}
                 className="relative z-10 w-full max-h-[85dvh] flex flex-col"
             >
-                <DayDetailContent day={day} onClose={onClose} mobile dragControls={dragControls} onOpenGrammarQuiz={onOpenGrammarQuiz} />
+                <DayDetailContent day={day} onClose={onClose} mobile dragControls={dragControls} onOpenGrammarQuiz={onOpenGrammarQuiz} onOpenDokkai={onOpenDokkai} />
             </motion.div>
         </motion.div>,
         document.body,
@@ -1189,7 +1243,7 @@ function PathConnector({ items }) {
     );
 }
 
-function DuolingoPath({ week, selectedDayId, onDayToggle, onOpenGrammarQuiz }) {
+function DuolingoPath({ week, selectedDayId, dayAnchorEl, onDayToggle, onOpenGrammarQuiz, onOpenDokkai }) {
     const items = weeklyMainItems(week);
     const selectedDay = items.find((item) => item.dayId === selectedDayId) || null;
 
@@ -1214,7 +1268,7 @@ function DuolingoPath({ week, selectedDayId, onDayToggle, onOpenGrammarQuiz }) {
                     type="button"
                     aria-label="Tutup detail Hari"
                     onClick={() => onDayToggle(selectedDay.dayId)}
-                    className="fixed inset-0 z-30 hidden bg-transparent sm:block"
+                    className="fixed inset-0 z-30 hidden bg-gray-950/15 backdrop-blur-[2px] dark:bg-black/35 sm:block"
                 />
             )}
 
@@ -1239,20 +1293,19 @@ function DuolingoPath({ week, selectedDayId, onDayToggle, onOpenGrammarQuiz }) {
                             <PathNodeLabel item={item} onDayToggle={onDayToggle} selected={selected} />
                         </motion.div>
 
-                        <AnimatePresence initial={false}>
-                            {item.kind === 'day' && selected && (
-                                <DesktopDayPopover
-                                    key={`popover-${item.dayId}`}
-                                    day={item.day}
-                                    x={x}
-                                    onClose={() => onDayToggle(item.dayId)}
-                                    onOpenGrammarQuiz={onOpenGrammarQuiz}
-                                />
-                            )}
-                        </AnimatePresence>
                     </div>
                 );
             })}
+
+            {selectedDay && dayAnchorEl && (
+                <DesktopDayPopover
+                    day={selectedDay.day}
+                    anchorEl={dayAnchorEl}
+                    onClose={() => onDayToggle(selectedDay.dayId)}
+                    onOpenGrammarQuiz={onOpenGrammarQuiz}
+                    onOpenDokkai={onOpenDokkai}
+                />
+            )}
 
             <AnimatePresence initial={false}>
                 {selectedDay && (
@@ -1261,6 +1314,7 @@ function DuolingoPath({ week, selectedDayId, onDayToggle, onOpenGrammarQuiz }) {
                         day={selectedDay.day}
                         onClose={() => onDayToggle(selectedDay.dayId)}
                         onOpenGrammarQuiz={onOpenGrammarQuiz}
+                        onOpenDokkai={onOpenDokkai}
                     />
                 )}
             </AnimatePresence>
@@ -1271,7 +1325,10 @@ function DuolingoPath({ week, selectedDayId, onDayToggle, onOpenGrammarQuiz }) {
 function WeekRoadmapSection({ week, expanded, onToggle }) {
     const days = week.days || [];
     const [selectedDayId, setSelectedDayId] = useState(null);
+    const [dayAnchorEl, setDayAnchorEl] = useState(null);
     const [activeGrammarQuiz, setActiveGrammarQuiz] = useState(null);
+    const [activeDokkaiQuiz, setActiveDokkaiQuiz] = useState(null);
+    const [loadingDokkaiId, setLoadingDokkaiId] = useState(null);
     const locked = ['locked', 'unavailable'].includes(week.status);
     const canExpand = !locked || Boolean(week.live_session);
     const completedDays = days.filter((day) => day.status === 'done').length;
@@ -1279,13 +1336,34 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
 
     useEffect(() => {
         setSelectedDayId(null);
+        setDayAnchorEl(null);
     }, [week.id]);
 
-    const toggleDay = (dayId) => {
+    const handleOpenDokkai = async (quizId) => {
+        try {
+            setLoadingDokkaiId(quizId);
+            const endpoint = typeof route !== 'undefined'
+                ? route('user.dokkai-quizzes.payload', { quiz: quizId })
+                : `/user/dokkai-quizzes/${quizId}`;
+            const { data } = await window.axios.get(endpoint);
+            setSelectedDayId(null);
+            setDayAnchorEl(null);
+            setActiveDokkaiQuiz(data);
+        } catch (err) {
+            console.error('Gagal memuat materi Dokkai:', err);
+        } finally {
+            setLoadingDokkaiId(null);
+        }
+    };
+
+    useScrollLock(Boolean(activeDokkaiQuiz));
+
+    const toggleDay = (dayId, anchorEl = null) => {
         const isClosing = selectedDayId === dayId;
 
         playSoundEffect(isClosing ? 'close' : 'open');
         setSelectedDayId(isClosing ? null : dayId);
+        setDayAnchorEl(isClosing ? null : anchorEl);
     };
 
     return (
@@ -1296,6 +1374,10 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
                     if (!canExpand) return;
 
                     playSoundEffect(expanded ? 'close' : 'open');
+                    if (expanded) {
+                        setSelectedDayId(null);
+                        setDayAnchorEl(null);
+                    }
                     onToggle();
                 }}
                 disabled={!canExpand}
@@ -1374,8 +1456,10 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
                             <DuolingoPath
                                 week={week}
                                 selectedDayId={selectedDayId}
+                                dayAnchorEl={dayAnchorEl}
                                 onDayToggle={toggleDay}
                                 onOpenGrammarQuiz={setActiveGrammarQuiz}
+                                onOpenDokkai={handleOpenDokkai}
                             />
 
                         </div>
@@ -1389,6 +1473,40 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
                 persist
                 onClose={() => setActiveGrammarQuiz(null)}
             />
+
+            {activeDokkaiQuiz && typeof document !== 'undefined' && createPortal(
+                <div role="dialog" aria-modal="true" aria-label="Kuis Dokkai" className="fixed inset-0 z-[10000] flex flex-col overflow-y-auto overscroll-contain bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white">
+                    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm font-semibold">Memuat wacana Dokkai...</div>}>
+                        <DokkaiQuizRunner
+                            quiz={activeDokkaiQuiz.quiz}
+                            paragraphs={activeDokkaiQuiz.paragraphs}
+                            vocabularies={activeDokkaiQuiz.vocabularies}
+                            questions={activeDokkaiQuiz.questions}
+                            onClose={() => {
+                                setActiveDokkaiQuiz(null);
+                                router.reload({ only: ['weeks', 'auth', 'progress'] });
+                            }}
+                            onSubmitAttempt={async (attemptPayload) => {
+                                const quizId = attemptPayload?.quiz_id || activeDokkaiQuiz?.quiz?.id;
+                                const endpoint = typeof route !== 'undefined'
+                                    ? route('user.dokkai-quizzes.submit', { quiz: quizId })
+                                    : `/user/dokkai-quizzes/${quizId}/submit`;
+
+                                const axiosClient = (typeof window !== 'undefined' && window.axios) ? window.axios : (await import('axios')).default;
+                                const { data } = await axiosClient.post(endpoint, {
+                                    answers: attemptPayload.answers || {},
+                                    submission_token: attemptPayload.submission_token,
+                                });
+
+                                return data;
+                            }}
+                            persist={true}
+                        />
+                    </Suspense>
+                </div>,
+                document.body,
+            )}
+
         </section>
     );
 }

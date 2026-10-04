@@ -2,10 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
+import AdminDialog from '@/Components/UI/AdminDialog';
+import FormField, { formInputClass } from '@/Components/UI/FormField';
 import LearningResourceCreateDialog from '@/Components/Features/Admin/LearningResourceCreateDialog';
 import ModuleDayDialog from '@/Components/Features/Admin/ModuleDayDialog';
 import SearchableSelect from '@/Components/UI/SearchableSelect';
 import BuilderKuisGrammar from '@/Components/Features/GrammarQuiz/BuilderKuisGrammar';
+import BuilderKuisDokkai from '@/Components/Features/DokkaiQuiz/Admin/BuilderKuisDokkai';
 
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -204,6 +207,58 @@ function GrammarPracticeRow({ module, day, onOpen, focused = false }) {
     );
 }
 
+function DokkaiPracticeRow({ module, day, onOpen, focused = false }) {
+    const dokkaiQuizzes = day.dokkai_quizzes || [];
+    const lessonCount = day.dokkai_lesson_count || dokkaiQuizzes.length;
+    const questionCount = dokkaiQuizzes.reduce(
+        (total, quiz) => total + Number(quiz.item_count || 0),
+        0,
+    );
+    const primaryQuiz = dokkaiQuizzes[0] || null;
+    const hasDokkai = lessonCount > 0 || Boolean(primaryQuiz);
+    const isPublished = primaryQuiz?.status === 'published';
+    const publishedCount = dokkaiQuizzes.filter((item) => item.status === 'published').length;
+
+    return (
+        <div
+            data-content-focus={focused ? 'dokkai' : undefined}
+            className={`rounded-xl border p-3 transition ${
+                focused
+                    ? 'border-indigo-400 ring-2 ring-indigo-100 dark:ring-indigo-900/30'
+                    : 'border-gray-200 dark:border-gray-800'
+            }`}
+        >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">
+                    <MenuBookIcon sx={{ fontSize: 19 }} />
+                </span>
+                <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-black text-gray-900 dark:text-white">Wacana Dokkai</span>
+                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                        {lessonCount} wacana bacaan / {questionCount} soal • {publishedCount} terbit
+                    </span>
+                </span>
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        onClick={() => onOpen({ module, day })}
+                        className="inline-flex h-9 items-center rounded-lg bg-gray-900 px-3 text-xs font-black text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+                    >
+                        Buka Builder
+                    </button>
+                </div>
+            </div>
+            <p className="mt-2 border-t border-gray-100 pt-2 text-xs font-semibold text-gray-400 dark:border-gray-800">
+                {!hasDokkai
+                    ? 'Belum ada wacana & kuis Dokkai untuk Hari ini.'
+                    : (primaryQuiz?.title)
+                        ? `${primaryQuiz.jlpt_level ? `[${primaryQuiz.jlpt_level}] ` : ''}${primaryQuiz.title} (${isPublished ? 'Terbit' : 'Draf'})`
+                        : `Wacana Dokkai aktif (${isPublished ? 'Terbit' : 'Draf'})`}
+            </p>
+        </div>
+    );
+}
+
 function WeeklyPresentationRow({ module, focused = false }) {
     const presentations = Array.isArray(module.weekly_presentations)
         ? module.weekly_presentations
@@ -265,6 +320,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
     const [dayDialog, setDayDialog] = useState(null);
     const [resourceDialog, setResourceDialog] = useState(null);
     const [grammarBuilder, setGrammarBuilder] = useState(null);
+    const [dokkaiBuilder, setDokkaiBuilder] = useState(null);
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
 
     const selectedProgram = programs.find((program) => String(program.id) === String(selectedProgramId));
@@ -401,6 +457,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
             + (day.flashcard_sets?.length || 0)
             + (day.quizzes?.length || 0)
             + Number(day.grammar_lesson_count || 0)
+            + Number(day.dokkai_lesson_count || 0)
             + (day.presentation_decks?.length || 0);
 
         if (contentCount > 0) {
@@ -527,7 +584,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                         : `${module.days_count || 0} Hari / ${module.flashcard_count || 0} kartu / ${module.quiz_count || 0} kuis / ${module.presentation_count || 0} presentasi`;
 
                                 return (
-                                    <article key={module.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                                    <article key={module.id} className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
                                         <div className="flex items-center gap-3 p-3 sm:p-4">
                                             <button
                                                 type="button"
@@ -568,9 +625,9 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                              <div className="border-t border-gray-100 bg-gray-50/70 p-3 dark:border-gray-800 dark:bg-gray-950/40 sm:p-4">
                                                  {isRoadmapFocus && (
                                                      <>
-                                                 <div className="mb-3 flex items-center justify-between gap-3">
+                                                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                                                     <p className="text-xs font-black uppercase tracking-[0.18em] text-gray-400">Susunan Hari</p>
-                                                    <div className="flex gap-2">
+                                                    <div className="flex flex-wrap gap-2">
                                                         <button type="button" onClick={() => openEditModule(module)} className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs font-black text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 sm:hidden">Edit Minggu</button>
                                                         <button type="button" onClick={() => deleteModule(module)} title="Hapus Minggu" className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 bg-white text-red-600 dark:border-red-900/40 dark:bg-gray-900 sm:hidden">
                                                             <DeleteOutlineIcon sx={{ fontSize: 16 }} />
@@ -649,6 +706,12 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                                             onOpen={setGrammarBuilder}
                                                                             focused={focus === 'flashcard'}
                                                                         />
+                                                                        <DokkaiPracticeRow
+                                                                            module={module}
+                                                                            day={day}
+                                                                            onOpen={setDokkaiBuilder}
+                                                                            focused={focus === 'flashcard'}
+                                                                        />
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -700,6 +763,9 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                                  />
                                                                   <div className="mt-2">
                                                                       <GrammarPracticeRow module={module} day={day} onOpen={setGrammarBuilder} focused />
+                                                                   </div>
+                                                                   <div className="mt-2">
+                                                                       <DokkaiPracticeRow module={module} day={day} onOpen={setDokkaiBuilder} focused />
                                                                   </div>
                                                              </div>
                                                          ))}
@@ -761,53 +827,130 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                 </main>
             </div>
 
-            {showModuleDialog && (
-                <div className="fixed inset-0 z-[90] overflow-y-auto bg-gray-950/60 p-3 backdrop-blur-sm sm:p-5">
-                    <div className="mx-auto my-4 w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-900 sm:my-8">
-                        <div className="border-b border-gray-100 p-5 dark:border-gray-800">
-                            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-orange-600">{selectedProgram?.title || 'Kelas'}</p>
-                            <h2 className="mt-1 text-xl font-black text-gray-900 dark:text-white">{editingModule ? 'Edit Minggu' : 'Tambah Minggu'}</h2>
-                        </div>
-                        <form onSubmit={submitModule} className="space-y-4 p-5">
-                            <div className="grid gap-4 sm:grid-cols-[140px_minmax(0,1fr)]">
-                                <label>
-                                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Urutan</span>
-                                    <input type="number" min="1" value={moduleForm.data.week_number} onChange={(event) => moduleForm.setData('week_number', event.target.value)} className={inputClass} required />
-                                </label>
-                                <label>
-                                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Judul Minggu</span>
-                                <input value={moduleForm.data.title} onChange={(event) => moduleForm.setData('title', event.target.value)} className={inputClass} placeholder="Contoh: Dasar Percakapan" required />
-                                </label>
-                            </div>
-                            <label className="block">
-                                <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Deskripsi</span>
-                                <textarea value={moduleForm.data.description} onChange={(event) => moduleForm.setData('description', event.target.value)} className={`${inputClass} min-h-24`} />
-                            </label>
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <label>
-                                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Level</span>
-                                    <select value={moduleForm.data.level_id} onChange={(event) => moduleForm.setData('level_id', event.target.value)} className={inputClass} required>
-                                        <option value="">Pilih level</option>
-                                        {levels.map((level) => <option key={level.id} value={level.id}>{level.level_name}</option>)}
-                                    </select>
-                                </label>
-                                <label>
-                                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Status</span>
-                                    <select value={moduleForm.data.status} onChange={(event) => moduleForm.setData('status', event.target.value)} className={inputClass}>
-                                        <option value="draft">Draf</option>
-                                        <option value="published">Terbit</option>
-                                    </select>
-                                </label>
-                            </div>
-                            {Object.values(moduleForm.errors).length > 0 && <p className="rounded-xl bg-brand-50 px-4 py-3 text-sm font-bold text-brand-700">{Object.values(moduleForm.errors)[0]}</p>}
-                            <div className="grid grid-cols-2 gap-3">
-                                <button type="button" onClick={() => setShowModuleDialog(false)} className="h-11 rounded-xl border border-gray-200 text-sm font-black text-gray-600 dark:border-gray-700 dark:text-gray-300">Batal</button>
-                                <button disabled={moduleForm.processing} className="h-11 rounded-xl bg-orange-600 text-sm font-black text-white disabled:opacity-50">{moduleForm.processing ? 'Menyimpan...' : 'Simpan Minggu'}</button>
-                            </div>
-                        </form>
+            <AdminDialog
+                open={showModuleDialog}
+                onClose={() => setShowModuleDialog(false)}
+                eyebrow={selectedProgram?.title || 'Kelas'}
+                title={editingModule ? 'Edit Minggu' : 'Tambah Minggu'}
+                description="Susun modul mingguan untuk alur belajar dan roadmap kelas."
+                maxWidth="max-w-xl"
+            >
+                <form onSubmit={submitModule} className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-[140px_minmax(0,1fr)]">
+                        <FormField
+                            label="Urutan"
+                            required
+                            error={moduleForm.errors.week_number}
+                            tooltip="Nomor urut minggu dalam kurikulum kelas."
+                        >
+                            <input
+                                type="number"
+                                min="1"
+                                value={moduleForm.data.week_number}
+                                onChange={(event) => {
+                                    moduleForm.setData('week_number', event.target.value);
+                                    if (moduleForm.errors.week_number) moduleForm.clearErrors('week_number');
+                                }}
+                                className={formInputClass(moduleForm.errors.week_number)}
+                                required
+                            />
+                        </FormField>
+                        <FormField
+                            label="Judul Minggu"
+                            required
+                            error={moduleForm.errors.title}
+                            tooltip="Topik atau tema utama yang dipelajari pada minggu ini."
+                        >
+                            <input
+                                value={moduleForm.data.title}
+                                onChange={(event) => {
+                                    moduleForm.setData('title', event.target.value);
+                                    if (moduleForm.errors.title) moduleForm.clearErrors('title');
+                                }}
+                                className={formInputClass(moduleForm.errors.title)}
+                                placeholder="Contoh: Dasar Percakapan"
+                                required
+                            />
+                        </FormField>
                     </div>
-                </div>
-            )}
+
+                    <FormField
+                        label="Deskripsi"
+                        error={moduleForm.errors.description}
+                        tooltip="Target capaian belajar dan ringkasan kemampuan minggu ini."
+                    >
+                        <textarea
+                            value={moduleForm.data.description}
+                            onChange={(event) => {
+                                moduleForm.setData('description', event.target.value);
+                                if (moduleForm.errors.description) moduleForm.clearErrors('description');
+                            }}
+                            className={`${formInputClass(moduleForm.errors.description)} min-h-24`}
+                            placeholder="Target capaian belajar minggu ini"
+                        />
+                    </FormField>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                            label="Level"
+                            required
+                            error={moduleForm.errors.level_id}
+                            tooltip="Tingkat kemahiran modul mingguan."
+                        >
+                            <select
+                                value={moduleForm.data.level_id}
+                                onChange={(event) => {
+                                    moduleForm.setData('level_id', event.target.value);
+                                    if (moduleForm.errors.level_id) moduleForm.clearErrors('level_id');
+                                }}
+                                className={formInputClass(moduleForm.errors.level_id)}
+                                required
+                            >
+                                <option value="">Pilih level</option>
+                                {levels.map((level) => (
+                                    <option key={level.id} value={level.id}>{level.level_name}</option>
+                                ))}
+                            </select>
+                        </FormField>
+
+                        <FormField
+                            label="Status"
+                            required
+                            error={moduleForm.errors.status}
+                            tooltip="Terbit agar dapat diakses siswa atau Draf untuk proses persiapan."
+                        >
+                            <select
+                                value={moduleForm.data.status}
+                                onChange={(event) => {
+                                    moduleForm.setData('status', event.target.value);
+                                    if (moduleForm.errors.status) moduleForm.clearErrors('status');
+                                }}
+                                className={formInputClass(moduleForm.errors.status)}
+                            >
+                                <option value="draft">Draf</option>
+                                <option value="published">Terbit</option>
+                            </select>
+                        </FormField>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-3">
+                        <button
+                            type="button"
+                            onClick={() => setShowModuleDialog(false)}
+                            className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={moduleForm.processing}
+                            className="rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-black text-white shadow-md shadow-orange-500/20 transition-colors hover:bg-orange-700 disabled:opacity-50"
+                        >
+                            {moduleForm.processing ? 'Menyimpan...' : 'Simpan Minggu'}
+                        </button>
+                    </div>
+                </form>
+            </AdminDialog>
 
             <ModuleDayDialog
                 open={Boolean(dayDialog)}
@@ -836,6 +979,16 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                 day={grammarBuilder?.day}
                 onClose={() => {
                     setGrammarBuilder(null);
+                    router.reload({ only: ['modules'] });
+                }}
+            />
+
+            <BuilderKuisDokkai
+                open={Boolean(dokkaiBuilder)}
+                module={dokkaiBuilder?.module}
+                day={dokkaiBuilder?.day}
+                onClose={() => {
+                    setDokkaiBuilder(null);
                     router.reload({ only: ['modules'] });
                 }}
             />
