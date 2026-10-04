@@ -5,33 +5,12 @@ namespace App\Services;
 use App\Models\GrammarBank;
 use App\Models\Kosakata;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class KuisGrammarGeneratorService
 {
     private const COMMON_PARTICLE_DISTRACTORS = [
         'まで', 'のに', 'から', 'より', 'だけ', 'しか', 'には', 'でも', 'ほど', 'ばかり', 'こそ', 'へ', 'で'
-    ];
-
-    /**
-     * Core universal verbs for dynamic conjugation with readings and meanings.
-     */
-    private const CORE_VERBS = [
-        ['base' => '勉強する', 'reading' => 'べんきょうする', 'meaning' => 'belajar', 'type' => 'suru'],
-        ['base' => '練習する', 'reading' => 'れんしゅうする', 'meaning' => 'berlatih', 'type' => 'suru'],
-        ['base' => '食べる', 'reading' => 'たべる', 'meaning' => 'makan', 'type' => 'ichidan'],
-        ['base' => '見る', 'reading' => 'みる', 'meaning' => 'melihat', 'type' => 'ichidan'],
-        ['base' => '起きる', 'reading' => 'おきる', 'meaning' => 'bangun', 'type' => 'ichidan'],
-        ['base' => '教える', 'reading' => 'おしえる', 'meaning' => 'mengajar', 'type' => 'ichidan'],
-        ['base' => '行く', 'reading' => 'いく', 'meaning' => 'pergi', 'type' => 'godan_iku'],
-        ['base' => '聞く', 'reading' => 'きく', 'meaning' => 'mendengar', 'type' => 'godan_ku'],
-        ['base' => '書く', 'reading' => 'かく', 'meaning' => 'menulis', 'type' => 'godan_ku'],
-        ['base' => '話す', 'reading' => 'はなす', 'meaning' => 'berbicara', 'type' => 'godan_su'],
-        ['base' => '待つ', 'reading' => 'まつ', 'meaning' => 'menunggu', 'type' => 'godan_tsu'],
-        ['base' => '飲む', 'reading' => 'のむ', 'meaning' => 'minum', 'type' => 'godan_mu'],
-        ['base' => '読む', 'reading' => 'よむ', 'meaning' => 'membaca', 'type' => 'godan_mu'],
-        ['base' => '買う', 'reading' => 'かう', 'meaning' => 'membeli', 'type' => 'godan_u'],
-        ['base' => '使う', 'reading' => 'つかう', 'meaning' => 'menggunakan', 'type' => 'godan_u'],
-        ['base' => '帰る', 'reading' => 'かえる', 'meaning' => 'pulang', 'type' => 'godan_ru'],
     ];
 
     /**
@@ -53,9 +32,10 @@ class KuisGrammarGeneratorService
         $useDistractors = $settings['useDistractors'] ?? true;
         $difficulty = $settings['difficulty'] ?? 'mixed';
         $autoMeaning = $settings['autoMeaning'] ?? true;
+        $targetForm = $settings['target_form'] ?? 'auto';
 
         return [
-            'transformation' => $this->generateStage1Transformation($pattern, $formula, $examples, (int) ($counts['transformation'] ?? 5), $difficulty, $level),
+            'transformation' => $this->generateStage1Transformation($pattern, $formula, $examples, (int) ($counts['transformation'] ?? 5), $difficulty, $level, $targetForm),
             'sentence_builder' => $this->generateStage2SentenceBuilder($examples, $pattern, (int) ($counts['sentence_builder'] ?? 5), $useDistractors, $difficulty, $level),
             'context_choice' => $this->generateStage3ContextChoice($examples, $pattern, $level, (int) ($counts['context_choice'] ?? 5), $difficulty, $autoMeaning),
         ];
@@ -71,16 +51,37 @@ class KuisGrammarGeneratorService
         array $examples,
         int $targetCount = 5,
         string $difficulty = 'mixed',
-        string $level = 'N3'
+        string $level = 'N3',
+        string $targetFormOverride = 'auto'
     ): array {
         $questions = [];
         $cleanExamples = array_values(array_filter($examples, fn ($ex) => !empty(trim($ex['japanese'] ?? ''))));
 
-        $detection = $this->detectRequiredConjugation($pattern, $formula);
+        $detection = $this->detectRequiredConjugation($pattern, $formula, $targetFormOverride);
         $targetForm = $detection['form'];
         $suffix = $detection['suffix'];
 
         $verbsPool = $this->resolveVerbsPool($level, $cleanExamples);
+        if (empty($verbsPool)) {
+            foreach ($cleanExamples as $ex) {
+                if (!empty($ex['japanese'])) {
+                    $firstWord = explode(' ', trim(str_replace('|', ' ', $ex['japanese'])))[0] ?? '';
+                    if ($firstWord !== '') {
+                        $verbsPool[] = [
+                            'base' => $firstWord,
+                            'reading' => $ex['reading'] ?? '',
+                            'meaning' => $ex['translation'] ?? '',
+                        ];
+                    }
+                }
+            }
+        }
+
+        if (empty($verbsPool)) {
+            throw ValidationException::withMessages([
+                'lesson.examples' => 'Tambahkan contoh kalimat pada materi atau pastikan bank kosakata memiliki data untuk menghasilkan soal transformasi.',
+            ]);
+        }
         shuffle($verbsPool);
 
         for ($i = 0; $i < $targetCount; $i++) {
@@ -162,21 +163,7 @@ class KuisGrammarGeneratorService
             $rawJapanese = $item['japanese'] ?? '';
             $translation = $item['translation'] ?? '';
 
-            if (str_contains($rawJapanese, '|')) {
-                $rawTokens = array_values(array_filter(array_map('trim', explode('|', $rawJapanese))));
-            } else {
-                $words = preg_split('/\s+/u', trim($rawJapanese));
-                if (count($words) >= 3) {
-                    $rawTokens = $words;
-                } else {
-                    $len = mb_strlen($rawJapanese);
-                    $step = max(2, (int) ceil($len / 4));
-                    $rawTokens = [];
-                    for ($offset = 0; $offset < $len; $offset += $step) {
-                        $rawTokens[] = mb_substr($rawJapanese, $offset, $step);
-                    }
-                }
-            }
+            $rawTokens = $this->smartSegmentJapaneseSentence($rawJapanese);
 
             $tokens = [];
             $correctOrder = [];
@@ -255,7 +242,7 @@ class KuisGrammarGeneratorService
                 $correctAnswer = $pattern;
             }
 
-            // Distractor selection
+            // Distractor selection: Bank DB -> Synthesized -> Fallbacks
             shuffle($bankDistractors);
             $distractors = [];
             foreach ($bankDistractors as $cand) {
@@ -267,8 +254,41 @@ class KuisGrammarGeneratorService
                 }
             }
 
-            while (count($distractors) < 3) {
-                $distractors[] = "文法パターン例文 " . (count($distractors) + 1);
+            if (count($distractors) < 3) {
+                $synthetic = $this->synthesizeGrammaticalDistractors($correctAnswer, $pattern);
+                foreach ($synthetic as $synth) {
+                    if ($synth !== $correctAnswer && !in_array($synth, $distractors, true)) {
+                        $distractors[] = $synth;
+                    }
+                    if (count($distractors) >= 3) {
+                        break;
+                    }
+                }
+            }
+
+            if (count($distractors) < 3) {
+                try {
+                    $extraExamples = Kosakata::query()
+                        ->whereNotNull('example_sentence')
+                        ->where('example_sentence', '!=', '')
+                        ->inRandomOrder()
+                        ->take(10)
+                        ->pluck('example_sentence')
+                        ->toArray();
+
+                    shuffle($extraExamples);
+                    foreach ($extraExamples as $ex) {
+                        $cleaned = str_replace('|', '', trim($ex));
+                        if ($cleaned !== '' && $cleaned !== $correctAnswer && !in_array($cleaned, $distractors, true)) {
+                            $distractors[] = $cleaned;
+                        }
+                        if (count($distractors) >= 3) {
+                            break;
+                        }
+                    }
+                } catch (\Throwable) {
+                    // Database query error handled silently
+                }
             }
 
             $choices = array_merge([$correctAnswer], array_slice($distractors, 0, 3));
@@ -302,8 +322,10 @@ class KuisGrammarGeneratorService
         $useDistractors = $settings['useDistractors'] ?? true;
         $autoMeaning = $settings['autoMeaning'] ?? true;
 
+        $targetForm = $settings['target_form'] ?? 'auto';
+
         if ($stage === 'transformation') {
-            $list = $this->generateStage1Transformation($pattern, $formula, $examples, 1, $difficulty, $level);
+            $list = $this->generateStage1Transformation($pattern, $formula, $examples, 1, $difficulty, $level, $targetForm);
             $q = $list[0] ?? [];
             $q['id'] = 'gen-trans-' . ($index + 1) . '-' . time();
             return $q;
@@ -325,8 +347,22 @@ class KuisGrammarGeneratorService
     /**
      * Detects what verb/adjective form the pattern attaches to.
      */
-    private function detectRequiredConjugation(string $pattern, string $formula): array
+    private function detectRequiredConjugation(string $pattern, string $formula, string $targetFormOverride = 'auto'): array
     {
+        if ($targetFormOverride !== 'auto' && !empty($targetFormOverride)) {
+            $suffix = preg_replace('/^[〜~]/u', '', $pattern);
+            if ($targetFormOverride === 'te') {
+                $suffix = preg_replace('/^[〜~]?[てで]/u', '', $pattern);
+            } elseif ($targetFormOverride === 'ta') {
+                $suffix = preg_replace('/^[〜~]?[ただ]/u', '', $pattern);
+            } elseif ($targetFormOverride === 'ba') {
+                $suffix = preg_replace('/^[〜~]?[ば]/u', '', $pattern);
+            } elseif ($targetFormOverride === 'nai') {
+                $suffix = preg_replace('/^[〜~]?(ない|なければ)/u', '', $pattern);
+            }
+            return ['form' => $targetFormOverride, 'suffix' => trim($suffix)];
+        }
+
         $combined = $pattern . ' ' . $formula;
 
         // Check for Te-form
@@ -547,6 +583,15 @@ class KuisGrammarGeneratorService
                 ->take(15)
                 ->get();
 
+            if ($dbVerbs->isEmpty()) {
+                $dbVerbs = Kosakata::query()
+                    ->whereNotNull('word')
+                    ->whereNotNull('reading')
+                    ->inRandomOrder()
+                    ->take(15)
+                    ->get();
+            }
+
             foreach ($dbVerbs as $item) {
                 $pool[] = [
                     'base' => $item->word,
@@ -555,12 +600,7 @@ class KuisGrammarGeneratorService
                 ];
             }
         } catch (\Throwable) {
-            // DB fallback handled below
-        }
-
-        // 2. Merge with core verbs
-        if (count($pool) < 5) {
-            $pool = array_merge($pool, self::CORE_VERBS);
+            // Handled
         }
 
         return $pool;
@@ -674,6 +714,113 @@ class KuisGrammarGeneratorService
 
         return array_values(array_unique(array_filter($distractors)));
     }
+
+    /**
+     * Segments Japanese sentence using natural particle boundaries instead of blind substring slicing.
+     */
+    private function smartSegmentJapaneseSentence(string $sentence): array
+    {
+        $clean = trim($sentence);
+        if (empty($clean)) {
+            return [];
+        }
+
+        // 1. Explicit pipe delimiters (|)
+        if (str_contains($clean, '|')) {
+            $parts = array_values(array_filter(array_map('trim', explode('|', $clean))));
+            if (!empty($parts)) {
+                return $parts;
+            }
+        }
+
+        // 2. Whitespace separated
+        $parts = preg_split('/\s+/u', $clean, -1, PREG_SPLIT_NO_EMPTY);
+        if (count($parts) >= 3) {
+            return array_values($parts);
+        }
+
+        // 3. Natural Japanese particle lookbehind segmentation
+        // Split after particles/punctuations: は, が, を, に, で, へ, と, から, まで, より, も, 、
+        $segments = preg_split('/(?<=[はがをにでへとからもより、。])(?=[^\s])/u', $clean, -1, PREG_SPLIT_NO_EMPTY);
+        if (count($segments) >= 2) {
+            $finalTokens = [];
+            foreach ($segments as $seg) {
+                $seg = trim($seg);
+                if (mb_strlen($seg) > 8) {
+                    $half = (int) ceil(mb_strlen($seg) / 2);
+                    $finalTokens[] = mb_substr($seg, 0, $half);
+                    $finalTokens[] = mb_substr($seg, $half);
+                } else {
+                    $finalTokens[] = $seg;
+                }
+            }
+            if (count($finalTokens) >= 2) {
+                return array_values(array_filter($finalTokens));
+            }
+        }
+
+        // 4. Fallback: split into balanced chunks (minimum 2 chars)
+        $len = mb_strlen($clean);
+        $step = max(2, (int) ceil($len / 3));
+        $tokens = [];
+        for ($offset = 0; $offset < $len; $offset += $step) {
+            $tokens[] = mb_substr($clean, $offset, $step);
+        }
+        return array_values(array_filter($tokens));
+    }
+
+    /**
+     * Synthesizes grammatical distractors by mutating particles and predicate inflections.
+     */
+    private function synthesizeGrammaticalDistractors(string $correctSentence, string $pattern): array
+    {
+        $distractors = [];
+
+        // 1. Swap particles
+        $particleSwaps = [
+            'に' => 'で',
+            'で' => 'に',
+            'を' => 'が',
+            'が' => 'を',
+            'は' => 'も',
+            'から' => 'まで',
+        ];
+
+        foreach ($particleSwaps as $from => $to) {
+            if (str_contains($correctSentence, $from)) {
+                $mutated = preg_replace('/' . preg_quote($from, '/') . '/u', $to, $correctSentence, 1);
+                if ($mutated !== $correctSentence && !in_array($mutated, $distractors, true)) {
+                    $distractors[] = $mutated;
+                }
+            }
+            if (count($distractors) >= 2) {
+                break;
+            }
+        }
+
+        // 2. Invert predicate / politeness endings
+        $predicateSwaps = [
+            'ます。' => 'ません。',
+            'ません。' => 'ました。',
+            'です。' => 'でした。',
+            'でした。' => 'ではありません。',
+            'ない。' => 'ある。',
+            'た。' => 'なかった。',
+        ];
+
+        foreach ($predicateSwaps as $from => $to) {
+            if (str_ends_with($correctSentence, $from)) {
+                $mutated = mb_substr($correctSentence, 0, -mb_strlen($from)) . $to;
+                if ($mutated !== $correctSentence && !in_array($mutated, $distractors, true)) {
+                    $distractors[] = $mutated;
+                }
+                break;
+            }
+        }
+
+        return $distractors;
+    }
+
 
     /**
      * Normalizes JLPT level string (e.g. "JLPT N3" -> "N3").

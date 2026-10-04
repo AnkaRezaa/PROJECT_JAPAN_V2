@@ -3,12 +3,17 @@ import { createPortal } from 'react-dom';
 import { useScrollLock } from '@/lib/scrollLock';
 import GrammarQuizPreviewDialog from './GrammarQuizPreviewDialog';
 import GrammarBulkImportDialog from './GrammarBulkImportDialog';
+import Field from '@/Components/UI/QuizField';
 
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import BoltIcon from '@mui/icons-material/Bolt';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
@@ -18,6 +23,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import SearchIcon from '@mui/icons-material/Search';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const inputClass = 'w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:focus:ring-emerald-900/30';
@@ -27,95 +33,7 @@ const stageMeta = {
     context_choice: { label: 'Context Choice', description: 'Pilih sesuai konteks' },
 };
 
-const samplePresets = [
-    {
-        key: 'n3-ba-hodo',
-        label: '〜ば〜ほど (N3)',
-        level: 'JLPT N3',
-        pattern: '〜ば〜ほど',
-        title: 'Semakin..., semakin...',
-        intro: {
-            meaning: 'Semakin kondisi A terjadi, semakin meningkat kondisi B',
-            formula: 'V-ば + V-辞書形 + ほど',
-            explanation: 'Menunjukkan hubungan dua hal yang berbanding lurus dan berubah seimbang.',
-            examples: [
-                {
-                    japanese: '勉強すれば | するほど | 日本語が | 上手になります',
-                    reading: 'べんきょうすればするほど、にほんごがじょうずになります',
-                    translation: 'Semakin banyak belajar, semakin mahir bahasa Jepang.',
-                },
-                {
-                    japanese: '練習すれば | するほど | 慣れてきます',
-                    reading: 'れんしゅうすればするほど、なれてきます',
-                    translation: 'Semakin sering latihan, semakin terbiasa.',
-                },
-                {
-                    japanese: '考えれば | 考えるほど | 分からなくなります',
-                    reading: 'かんがえればかんがえるほど、わからなくなります',
-                    translation: 'Semakin dipikirkan, semakin tidak mengerti.',
-                },
-            ],
-        },
-    },
-    {
-        key: 'n5-te-wa-ikenai',
-        label: '〜てはいけない (N5)',
-        level: 'JLPT N5',
-        pattern: '〜てはいけない',
-        title: 'Tidak boleh...',
-        intro: {
-            meaning: 'Larangan melakukan suatu perbuatan',
-            formula: 'V-て + はいけない',
-            explanation: 'Pola dasar untuk menyatakan larangan atau aturan formal.',
-            examples: [
-                {
-                    japanese: 'ここで | タバコを | 吸って | はいけません',
-                    reading: 'ここでたばこをすってはいけません',
-                    translation: 'Tidak boleh merokok di sini.',
-                },
-                {
-                    japanese: '教室で | 大声を | 出して | はいけません',
-                    reading: 'きょうしつでおおごえをだしてはいけません',
-                    translation: 'Tidak boleh bersuara keras di ruang kelas.',
-                },
-                {
-                    japanese: 'テスト中 | 辞書を | 見て | はいけません',
-                    reading: 'てすとちゅうじしょをみてはいけません',
-                    translation: 'Tidak boleh melihat kamus saat ujian.',
-                },
-            ],
-        },
-    },
-    {
-        key: 'n3-you-ni',
-        label: '〜ように (N3)',
-        level: 'JLPT N3',
-        pattern: '〜ように',
-        title: 'Supaya / Agar...',
-        intro: {
-            meaning: 'Melakukan usaha agar tujuan atau keadaan tertentu tercapai',
-            formula: 'V-辞書形 / V-ない形 + ように',
-            explanation: 'Digunakan dengan kata kerja non-volisional untuk menyatakan tujuan.',
-            examples: [
-                {
-                    japanese: '忘れない | ように | メモを | 取ります',
-                    reading: 'わすれないようにめもをとります',
-                    translation: 'Mencatat agar tidak lupa.',
-                },
-                {
-                    japanese: '聞こえる | ように | 大きい声で | 話してください',
-                    reading: 'きこえるようにおおきいこえではなしてください',
-                    translation: 'Tolong bicara dengan suara keras agar terdengar.',
-                },
-                {
-                    japanese: '試験に | 合格できる | ように | 毎日勉強します',
-                    reading: 'しけんにごうかくできるようにまいにちべんきょうします',
-                    translation: 'Belajar setiap hari agar bisa lulus ujian.',
-                },
-            ],
-        },
-    },
-];
+
 
 function makeDraft(day, defaultLevel = 'JLPT N5') {
     return {
@@ -192,17 +110,177 @@ function makeQuestion(type, index) {
     };
 }
 
-function Field({ label, hint, children }) {
-    return (
-        <label className="block">
-            <span className="mb-1.5 block text-xs font-black text-gray-600 dark:text-gray-300">{label}</span>
-            {children}
-            {hint && <span className="mt-1.5 block text-[11px] font-medium leading-4 text-gray-400">{hint}</span>}
-        </label>
+
+function GrammarBankPickerDialog({ open, onClose, onSelect, initialLevel = 'all' }) {
+    const [search, setSearch] = useState('');
+    const [level, setLevel] = useState(initialLevel);
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (!open) return;
+        let active = true;
+        setLoading(true);
+        setError('');
+
+        const params = new URLSearchParams();
+        if (search.trim()) params.append('search', search.trim());
+        if (level && level !== 'all') params.append('level', level);
+
+        window.axios.get(`/admin/grammar-banks/picker?${params.toString()}`)
+            .then(({ data }) => {
+                if (!active) return;
+                setItems(data.data || []);
+            })
+            .catch(() => {
+                if (!active) return;
+                setError('Gagal memuat bank grammar.');
+            })
+            .finally(() => {
+                if (active) setLoading(false);
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [open, search, level]);
+
+    if (!open) return null;
+
+    const levels = ['all', 'N5', 'N4', 'N3', 'N2', 'N1'];
+
+    return createPortal(
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="grammar-bank-picker-title"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs"
+        >
+            <div className="relative flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-gray-800">
+                    <div className="flex items-center gap-2">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                            <MenuBookIcon sx={{ fontSize: 18 }} />
+                        </span>
+                        <div>
+                            <h3 id="grammar-bank-picker-title" className="text-sm font-black text-gray-900 dark:text-white">
+                                Pilih dari Bank Grammar
+                            </h3>
+                            <p className="text-[11px] text-gray-400">
+                                Muat pola grammar terverifikasi langsung ke materi lesson & generator.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                    >
+                        <CloseIcon sx={{ fontSize: 18 }} />
+                    </button>
+                </div>
+
+                {/* Filter and Search */}
+                <div className="space-y-2.5 border-b border-gray-100 p-4 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950/20">
+                    <div className="relative">
+                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                            <SearchIcon sx={{ fontSize: 18 }} />
+                        </span>
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Cari pola grammar, arti, atau judul..."
+                            className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3.5 py-2 text-xs font-semibold text-gray-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                        />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] font-bold text-gray-500 mr-1">Level:</span>
+                        {levels.map((lvl) => (
+                            <button
+                                key={lvl}
+                                type="button"
+                                onClick={() => setLevel(lvl)}
+                                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
+                                    level === lvl
+                                        ? 'bg-emerald-600 text-white shadow-2xs'
+                                        : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                                }`}
+                            >
+                                {lvl === 'all' ? 'Semua' : lvl}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* List Content */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
+                    {loading && (
+                        <div className="py-12 text-center text-xs font-semibold text-gray-400">
+                            Memuat daftar Bank Grammar...
+                        </div>
+                    )}
+
+                    {!loading && error && (
+                        <div className="py-8 text-center text-xs font-bold text-rose-500">
+                            {error}
+                        </div>
+                    )}
+
+                    {!loading && !error && items.length === 0 && (
+                        <div className="py-12 text-center text-xs text-gray-400">
+                            Pola grammar tidak ditemukan.
+                        </div>
+                    )}
+
+                    {!loading && items.map((item) => (
+                        <div
+                            key={item.id}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3.5 transition hover:border-emerald-300 hover:shadow-xs dark:border-gray-800 dark:bg-gray-950"
+                        >
+                            <div className="min-w-0 space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                        JLPT {item.jlpt_level}
+                                    </span>
+                                    <span className="font-japanese text-sm font-black text-gray-900 dark:text-white">
+                                        {item.pattern}
+                                    </span>
+                                </div>
+                                <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                    {item.title}
+                                </p>
+                                <p className="text-[11px] text-gray-500 line-clamp-1">
+                                    {item.meaning}
+                                </p>
+                                {item.formula && (
+                                    <p className="text-[10px] font-japanese text-emerald-700 dark:text-emerald-400 line-clamp-1">
+                                        Rumus: {item.formula}
+                                    </p>
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onSelect(item);
+                                    onClose();
+                                }}
+                                className="shrink-0 flex items-center justify-center gap-1 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-black text-white hover:bg-emerald-700 transition shadow-2xs"
+                            >
+                                Gunakan Pola
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>,
+        document.body,
     );
 }
 
-function IntroEditor({ draft, onChange }) {
+function IntroEditor({ draft, onChange, onOpenBankPicker, fieldErrors = {}, onClearError }) {
     const updateIntro = (field, value) => onChange({ ...draft, intro: { ...draft.intro, [field]: value } });
     const updateExample = (index, field, value) => updateIntro('examples', draft.intro.examples.map((item, itemIndex) => (
         itemIndex === index ? { ...item, [field]: value } : item
@@ -215,31 +293,26 @@ function IntroEditor({ draft, onChange }) {
     return (
         <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-2.5 text-xs dark:border-emerald-900/40 dark:bg-emerald-950/20">
-                <span className="font-black text-emerald-800 dark:text-emerald-300">
-                    ⚡ Muat Contoh Siap Pakai:
-                </span>
-                <div className="flex flex-wrap items-center gap-1.5">
-                    {samplePresets.map((preset) => (
+                <div className="flex items-center gap-2">
+                    <span className="font-black text-emerald-800 dark:text-emerald-300">
+                        ⚡ Sumber Materi:
+                    </span>
+                    {onOpenBankPicker && (
                         <button
-                            key={preset.key}
                             type="button"
-                            onClick={() => onChange({
-                                ...draft,
-                                level: preset.level,
-                                pattern: preset.pattern,
-                                title: preset.title,
-                                intro: clone(preset.intro),
-                            })}
-                            className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-black text-emerald-700 shadow-2xs transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-gray-900 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+                            onClick={onOpenBankPicker}
+                            className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-black text-white shadow-2xs transition hover:bg-emerald-700"
                         >
-                            {preset.label}
+                            <MenuBookIcon sx={{ fontSize: 13 }} />
+                            Pilih dari Bank Grammar
                         </button>
-                    ))}
+                    )}
                 </div>
+
             </div>
 
             <div>
-                <span className="mb-1.5 block text-xs font-black text-gray-600 dark:text-gray-300">Level JLPT</span>
+                <span className="mb-1.5 block text-xs font-black text-gray-600 dark:text-gray-300">Level JLPT <span className="text-rose-500 font-black">*</span></span>
                 <div className="flex flex-wrap gap-1.5">
                     {levels.map((lvl) => (
                         <button
@@ -259,24 +332,79 @@ function IntroEditor({ draft, onChange }) {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Pola Grammar">
-                    <input className={`${inputClass} font-japanese`} value={draft.pattern} onChange={(event) => onChange({ ...draft, pattern: event.target.value })} placeholder="Contoh: ～ば～ほど" />
+                <Field
+                    label="Pola Grammar"
+                    required
+                    error={fieldErrors['lesson.pattern'] || fieldErrors.pattern}
+                    tooltip="Pola tata bahasa utama yang dipelajari, misal: 〜ば〜ほど atau 〜てはいけない."
+                >
+                    <input
+                        className={`${inputClass} font-japanese ${(fieldErrors['lesson.pattern'] || fieldErrors.pattern) ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100' : ''}`}
+                        value={draft.pattern}
+                        onChange={(event) => {
+                            onChange({ ...draft, pattern: event.target.value });
+                            onClearError?.('pattern', 'lesson.pattern');
+                        }}
+                        placeholder="Contoh: ～ば～ほど"
+                    />
                 </Field>
-                <Field label="Arti Pola">
-                    <input className={inputClass} value={draft.intro.meaning} onChange={(event) => updateIntro('meaning', event.target.value)} placeholder="Contoh: Semakin..., semakin..." />
+                <Field
+                    label="Arti Pola"
+                    required
+                    error={fieldErrors['lesson.meaning'] || fieldErrors.meaning}
+                    tooltip="Makna atau arti umum dari pola ini dalam bahasa Indonesia, misal: Semakin..., semakin..."
+                >
+                    <input
+                        className={`${inputClass} ${(fieldErrors['lesson.meaning'] || fieldErrors.meaning) ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100' : ''}`}
+                        value={draft.intro.meaning}
+                        onChange={(event) => {
+                            updateIntro('meaning', event.target.value);
+                            onClearError?.('meaning', 'lesson.meaning');
+                        }}
+                        placeholder="Contoh: Semakin..., semakin..."
+                    />
                 </Field>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Judul Materi">
-                    <input className={inputClass} value={draft.title} onChange={(event) => onChange({ ...draft, title: event.target.value })} placeholder="Judul ringkas materi" />
+                <Field
+                    label="Judul Materi"
+                    required
+                    error={fieldErrors['lesson.title'] || fieldErrors.title}
+                    tooltip="Judul ringkas materi pelajaran yang ditampilkan pada kartu awal lesson siswa."
+                >
+                    <input
+                        className={`${inputClass} ${(fieldErrors['lesson.title'] || fieldErrors.title) ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100' : ''}`}
+                        value={draft.title}
+                        onChange={(event) => {
+                            onChange({ ...draft, title: event.target.value });
+                            onClearError?.('title', 'lesson.title');
+                        }}
+                        placeholder="Judul ringkas materi"
+                    />
                 </Field>
-                <Field label="Rumus Pola">
-                    <input className={`${inputClass} font-japanese`} value={draft.intro.formula} onChange={(event) => updateIntro('formula', event.target.value)} placeholder="Contoh: V-ば + V-辞書形 + ほど" />
+                <Field
+                    label="Rumus Pola"
+                    required
+                    error={fieldErrors['lesson.formula'] || fieldErrors.formula}
+                    tooltip="Aturan pembentukan kalimat, misal: V-ば + V-辞書形 + ほど atau V-て + はいけない."
+                >
+                    <input
+                        className={`${inputClass} font-japanese ${(fieldErrors['lesson.formula'] || fieldErrors.formula) ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100' : ''}`}
+                        value={draft.intro.formula}
+                        onChange={(event) => {
+                            updateIntro('formula', event.target.value);
+                            onClearError?.('formula', 'lesson.formula');
+                        }}
+                        placeholder="Contoh: V-ば + V-辞書形 + ほど"
+                    />
                 </Field>
             </div>
 
-            <Field label="Penjelasan Singkat">
+            <Field
+                label="Penjelasan Singkat"
+                tooltip="Penjelasan kontekstual mengenai nuansa dan situasi penggunaan pola ini."
+            >
                 <textarea className={`${inputClass} min-h-20 resize-y`} value={draft.intro.explanation} onChange={(event) => updateIntro('explanation', event.target.value)} placeholder="Penjelasan nuansa dan cara penggunaan..." />
             </Field>
 
@@ -300,14 +428,43 @@ function IntroEditor({ draft, onChange }) {
                                 </button>
                             </div>
                             <div className="grid gap-2 sm:grid-cols-3">
-                                <Field label="Kalimat Jepang">
-                                    <input className={`${inputClass} !py-2 text-xs font-japanese`} value={example.japanese} onChange={(event) => updateExample(index, 'japanese', event.target.value)} placeholder="日本語例文" />
+                                <Field
+                                    label="Kalimat Jepang"
+                                    required
+                                    error={fieldErrors[`lesson.examples.${index}.japanese`]}
+                                    tooltip="Kalimat bahasa Jepang lengkap. Beri tanda | untuk memotong kata jika ingin dijadikan bahan soal susun kalimat (Sentence Builder)."
+                                >
+                                    <input
+                                        className={`${inputClass} !py-2 text-xs font-japanese ${fieldErrors[`lesson.examples.${index}.japanese`] ? 'border-rose-400 focus:border-rose-500' : ''}`}
+                                        value={example.japanese}
+                                        onChange={(event) => {
+                                            updateExample(index, 'japanese', event.target.value);
+                                            onClearError?.(`lesson.examples.${index}.japanese`);
+                                        }}
+                                        placeholder="日本語例文"
+                                    />
                                 </Field>
-                                <Field label="Cara Baca">
+                                <Field
+                                    label="Cara Baca"
+                                    tooltip="Cara baca kalimat (hiragana atau romaji) untuk mempermudah siswa."
+                                >
                                     <input className={`${inputClass} !py-2 text-xs`} value={example.reading} onChange={(event) => updateExample(index, 'reading', event.target.value)} placeholder="yomikata" />
                                 </Field>
-                                <Field label="Arti Indonesia">
-                                    <input className={`${inputClass} !py-2 text-xs`} value={example.translation} onChange={(event) => updateExample(index, 'translation', event.target.value)} placeholder="Terjemahan..." />
+                                <Field
+                                    label="Arti Indonesia"
+                                    required
+                                    error={fieldErrors[`lesson.examples.${index}.translation`]}
+                                    tooltip="Terjemahan wajar kalimat contoh ke dalam bahasa Indonesia."
+                                >
+                                    <input
+                                        className={`${inputClass} !py-2 text-xs ${fieldErrors[`lesson.examples.${index}.translation`] ? 'border-rose-400 focus:border-rose-500' : ''}`}
+                                        value={example.translation}
+                                        onChange={(event) => {
+                                            updateExample(index, 'translation', event.target.value);
+                                            onClearError?.(`lesson.examples.${index}.translation`);
+                                        }}
+                                        placeholder="Terjemahan..."
+                                    />
                                 </Field>
                             </div>
                         </div>
@@ -347,7 +504,10 @@ function GenerationSettings({ settings, onChange, onGenerate, isGenerating = fal
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Tingkat Kesulitan">
+                <Field
+                    label="Tingkat Kesulitan"
+                    tooltip="Kombinasi kompleksitas kosakata dan pola pengecoh yang dihasilkan."
+                >
                     <select
                         className={inputClass}
                         value={settings.difficulty}
@@ -359,26 +519,48 @@ function GenerationSettings({ settings, onChange, onGenerate, isGenerating = fal
                         <option value="hard">Sulit (Hard)</option>
                     </select>
                 </Field>
-                <div className="space-y-2 pt-1">
-                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={settings.useDistractors}
-                            onChange={(event) => onChange({ ...settings, useDistractors: event.target.checked })}
-                            className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                        />
-                        <span>Pengecoh (Distractors)</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={settings.autoMeaning}
-                            onChange={(event) => onChange({ ...settings, autoMeaning: event.target.checked })}
-                            className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                        />
-                        <span>Auto-arti Indonesia</span>
-                    </label>
-                </div>
+                <Field
+                    label="Target Konjugasi (Stage 1)"
+                    tooltip="Pilih bentuk kata kerja target untuk soal transformasi. Pilih 'Otomatis' untuk deteksi dari rumus/pola."
+                >
+                    <select
+                        className={inputClass}
+                        value={settings.target_form || 'auto'}
+                        onChange={(event) => onChange({ ...settings, target_form: event.target.value })}
+                    >
+                        <option value="auto">Otomatis (Deteksi dari Pola/Rumus)</option>
+                        <option value="te">Bentuk ~て (Te-form)</option>
+                        <option value="ta">Bentuk ~た (Ta-form / Lampau)</option>
+                        <option value="nai">Bentuk ~ない (Nai-form / Negatif)</option>
+                        <option value="ba">Bentuk ~ば (Ba-form / Pengandaian)</option>
+                        <option value="stem">Bentuk ~ます / Stem</option>
+                        <option value="dict">Bentuk Kamus / Kamus (Jishokei)</option>
+                        <option value="potential">Bentuk Kesanggupan (Potential)</option>
+                        <option value="passive">Bentuk Pasif (Ukemi)</option>
+                        <option value="causative">Bentuk Kausatif (Shieki)</option>
+                    </select>
+                </Field>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-6 rounded-xl border border-gray-200 bg-gray-50/70 p-3 dark:border-gray-800 dark:bg-gray-950/40">
+                <label className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={settings.useDistractors}
+                        onChange={(event) => onChange({ ...settings, useDistractors: event.target.checked })}
+                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span>Pengecoh Partikel (Distractors)</span>
+                </label>
+                <label className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={settings.autoMeaning}
+                        onChange={(event) => onChange({ ...settings, autoMeaning: event.target.checked })}
+                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span>Auto-arti Indonesia</span>
+                </label>
             </div>
 
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-[11px] leading-relaxed text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-200">
@@ -426,21 +608,82 @@ function ChoiceEditor({ question, onChange }) {
         onChange({ ...question, choices, correctAnswer: question.correctAnswer === previous ? value : question.correctAnswer });
     };
 
+    const setCorrectAnswer = (value) => {
+        onChange({ ...question, correctAnswer: value });
+    };
+
     return (
         <div className="space-y-4">
-            <Field label="Instruksi"><input className={inputClass} value={question.prompt} onChange={(event) => onChange({ ...question, prompt: event.target.value })} /></Field>
+            <Field label="Instruksi" required tooltip="Teks panduan atau instruksi pengerjaan yang muncul di atas soal bagi siswa."><input className={inputClass} value={question.prompt} onChange={(event) => onChange({ ...question, prompt: event.target.value })} /></Field>
             {question.type === 'transformation' ? (
                 <div className="grid gap-3 sm:grid-cols-3">
-                    <Field label="Kata Jepang"><input className={`${inputClass} font-japanese`} value={question.japanese || ''} onChange={(event) => onChange({ ...question, japanese: event.target.value })} /></Field>
-                    <Field label="Cara baca"><input className={inputClass} value={question.reading || ''} onChange={(event) => onChange({ ...question, reading: event.target.value })} /></Field>
-                    <Field label="Arti"><input className={inputClass} value={question.translation || ''} onChange={(event) => onChange({ ...question, translation: event.target.value })} /></Field>
+                    <Field label="Kata Jepang" required tooltip="Kata kerja atau kosakata dasar yang perlu diubah bentuknya oleh siswa."><input className={`${inputClass} font-japanese`} value={question.japanese || ''} onChange={(event) => onChange({ ...question, japanese: event.target.value })} /></Field>
+                    <Field label="Cara baca" tooltip="Cara baca kanji dalam hiragana."><input className={inputClass} value={question.reading || ''} onChange={(event) => onChange({ ...question, reading: event.target.value })} /></Field>
+                    <Field label="Arti" required tooltip="Arti kata dasar dalam bahasa Indonesia."><input className={inputClass} value={question.translation || ''} onChange={(event) => onChange({ ...question, translation: event.target.value })} /></Field>
                 </div>
-            ) : <Field label="Situasi"><textarea className={`${inputClass} min-h-20`} value={question.context || ''} onChange={(event) => onChange({ ...question, context: event.target.value })} /></Field>}
-            <div className="grid gap-3 sm:grid-cols-2">
-                {question.choices.map((choice, index) => <Field key={index} label={`Pilihan ${String.fromCharCode(65 + index)}`}><input className={`${inputClass} font-japanese`} value={choice} onChange={(event) => updateChoice(index, event.target.value)} /></Field>)}
+            ) : <Field label="Situasi" required tooltip="Skenario atau kalimat pengantar konteks situasi yang menjadi pokok soal."><textarea className={`${inputClass} min-h-20`} value={question.context || ''} onChange={(event) => onChange({ ...question, context: event.target.value })} /></Field>}
+            <div>
+                <div className="mb-2 flex items-center justify-between">
+                    <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Pilihan Jawaban <span className="text-rose-500 font-black">*</span> (Klik bulatan untuk memilih kunci jawaban)
+                    </span>
+                    {question.correctAnswer && (
+                        <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                            Kunci: {question.correctAnswer}
+                        </span>
+                    )}
+                </div>
+                <div className="space-y-2.5">
+                    {question.choices.map((choice, index) => {
+                        const optLetter = String.fromCharCode(65 + index);
+                        const isCorrect = Boolean(question.correctAnswer && question.correctAnswer === choice && choice.trim() !== '');
+
+                        return (
+                            <div
+                                key={index}
+                                className={`flex items-center gap-3 rounded-xl border p-2.5 transition-all ${
+                                    isCorrect
+                                        ? 'border-emerald-500 bg-emerald-50/70 ring-2 ring-emerald-500 dark:bg-emerald-950/20'
+                                        : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-950'
+                                }`}
+                            >
+                                <button
+                                    type="button"
+                                    title={`Jadikan Pilihan ${optLetter} sebagai Kunci Jawaban`}
+                                    onClick={() => setCorrectAnswer(choice)}
+                                    className="shrink-0 flex items-center justify-center p-0.5 rounded-full text-emerald-600 hover:scale-105 transition"
+                                >
+                                    {isCorrect ? (
+                                        <CheckCircleIcon sx={{ fontSize: 24 }} className="text-emerald-600" />
+                                    ) : (
+                                        <RadioButtonUncheckedIcon sx={{ fontSize: 24 }} className="text-gray-300 hover:text-emerald-500" />
+                                    )}
+                                </button>
+                                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-black ${
+                                    isCorrect
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                                }`}>
+                                    {optLetter}
+                                </span>
+                                <input
+                                    className="flex-1 border-0 bg-transparent text-sm font-japanese font-bold text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0 dark:text-white"
+                                    value={choice}
+                                    onChange={(event) => updateChoice(index, event.target.value)}
+                                    placeholder={`Ketik pilihan ${optLetter}...`}
+                                />
+                                {isCorrect && (
+                                    <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                                        Kunci Benar
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
-            <Field label="Jawaban benar"><select className={`${inputClass} font-japanese`} value={question.correctAnswer} onChange={(event) => onChange({ ...question, correctAnswer: event.target.value })}><option value="">Pilih jawaban</option>{question.choices.filter(Boolean).map((choice, index) => <option key={`${choice}-${index}`} value={choice}>{choice}</option>)}</select></Field>
-            <Field label="Feedback jawaban"><textarea className={`${inputClass} min-h-20`} value={question.explanation} onChange={(event) => onChange({ ...question, explanation: event.target.value })} /></Field>
+
+            <Field label="Feedback jawaban" required tooltip="Penjelasan materi yang muncul setelah siswa menjawab (alasan kenapa jawaban tersebut benar/salah)."><textarea className={`${inputClass} min-h-20`} value={question.explanation} onChange={(event) => onChange({ ...question, explanation: event.target.value })} /></Field>
         </div>
     );
 }
@@ -523,10 +766,10 @@ function SentenceBuilderEditor({ question, onChange }) {
                 </div>
             </div>
 
-            <Field label="Instruksi"><input className={inputClass} value={question.prompt} onChange={(event) => onChange({ ...question, prompt: event.target.value })} /></Field>
-            <Field label="Arti atau konteks"><input className={inputClass} value={question.context || ''} onChange={(event) => onChange({ ...question, context: event.target.value })} /></Field>
+            <Field label="Instruksi" required tooltip="Teks panduan pengerjaan yang muncul di atas soal susun kalimat untuk siswa."><input className={inputClass} value={question.prompt} onChange={(event) => onChange({ ...question, prompt: event.target.value })} /></Field>
+            <Field label="Arti atau konteks" required tooltip="Arti kalimat utuh atau petunjuk situasi dalam bahasa Indonesia."><input className={inputClass} value={question.context || ''} onChange={(event) => onChange({ ...question, context: event.target.value })} /></Field>
             <div>
-                <div className="flex items-center justify-between"><span className="text-xs font-black text-gray-600 dark:text-gray-300">Potongan kalimat (Token)</span><button type="button" onClick={addToken} className="flex h-8 items-center gap-1 rounded-lg border border-emerald-200 px-2 text-[11px] font-black text-emerald-700 dark:border-emerald-900 dark:text-emerald-300"><AddIcon sx={{ fontSize: 14 }} />Tambah Manual</button></div>
+                <div className="flex items-center justify-between"><span className="text-xs font-black text-gray-600 dark:text-gray-300">Potongan kalimat (Token) <span className="text-rose-500 font-black">*</span></span><button type="button" onClick={addToken} className="flex h-8 items-center gap-1 rounded-lg border border-emerald-200 px-2 text-[11px] font-black text-emerald-700 dark:border-emerald-900 dark:text-emerald-300"><AddIcon sx={{ fontSize: 14 }} />Tambah Manual</button></div>
                 <div className="mt-2 space-y-2">
                     {question.tokens.map((token, index) => (
                         <div key={token.id} className="grid gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2 sm:grid-cols-[1fr_1fr_auto_auto] dark:border-gray-800 dark:bg-gray-950/40">
@@ -538,7 +781,7 @@ function SentenceBuilderEditor({ question, onChange }) {
                     ))}
                 </div>
             </div>
-            <Field label="Feedback jawaban"><textarea className={`${inputClass} min-h-20`} value={question.explanation} onChange={(event) => onChange({ ...question, explanation: event.target.value })} /></Field>
+            <Field label="Feedback jawaban" required tooltip="Penjelasan materi yang muncul setelah siswa menjawab."><textarea className={`${inputClass} min-h-20`} value={question.explanation} onChange={(event) => onChange({ ...question, explanation: event.target.value })} /></Field>
         </div>
     );
 }
@@ -557,13 +800,13 @@ function ReviewQuestions({
     saving = false,
 }) {
     const [internalStageId, setInternalStageId] = useState(activeStageId);
-    const [editingIndex, setEditingIndex] = useState(null);
+    const [activeIndex, setActiveIndex] = useState(0);
 
     const currentStageId = onStageChange ? activeStageId : internalStageId;
     const handleSetStageId = (newStageId) => {
         if (onStageChange) onStageChange(newStageId);
         setInternalStageId(newStageId);
-        setEditingIndex(null);
+        setActiveIndex(0);
     };
 
     const stageIndex = draft.stages.findIndex((stage) => stage.id === currentStageId);
@@ -572,48 +815,62 @@ function ReviewQuestions({
         ...draft,
         stages: draft.stages.map((item, index) => (index === stageIndex ? { ...item, questions } : item)),
     });
-    const editQuestion = editingIndex === null ? null : stage.questions[editingIndex];
-    const updateQuestion = (question) => updateQuestions(
-        stage.questions.map((item, index) => (index === editingIndex ? question : item))
-    );
+    const activeQuestion = stage.questions[activeIndex] || stage.questions[0] || null;
+
+    useEffect(() => {
+        if (activeIndex > stage.questions.length - 1) {
+            setActiveIndex(Math.max(0, stage.questions.length - 1));
+        }
+    }, [activeIndex, stage.questions.length]);
+    const updateActiveQuestion = (updatedQ) => {
+        const nextQuestions = stage.questions.map((q, idx) => (idx === activeIndex ? updatedQ : q));
+        updateQuestions(nextQuestions);
+    };
     const duplicate = (index) => {
         const questions = [...stage.questions];
         questions.splice(index + 1, 0, { ...clone(stage.questions[index]), id: `draft-${currentStageId}-${Date.now()}` });
         updateQuestions(questions);
+        setActiveIndex(index + 1);
     };
     const remove = (index) => {
         if (stage.questions.length <= 1) return;
         updateQuestions(stage.questions.filter((_, itemIndex) => itemIndex !== index));
+        setActiveIndex((prev) => Math.max(0, Math.min(prev, stage.questions.length - 2)));
     };
 
     const addManualQuestion = () => {
         const newQ = makeQuestion(currentStageId, stage.questions.length);
         updateQuestions([...stage.questions, newQ]);
-        setEditingIndex(stage.questions.length);
+        setActiveIndex(stage.questions.length);
     };
 
     return (
-        <div>
+        <div className="space-y-4">
             {/* Top Toolbar */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
                 {/* Stage Tabs */}
                 <div className="flex gap-2 overflow-x-auto">
                     {draft.stages.map((item) => {
                         const isActive = currentStageId === item.id;
+                        const readyCount = item.questions.filter(questionReady).length;
                         return (
                             <button
                                 key={item.id}
                                 type="button"
                                 onClick={() => handleSetStageId(item.id)}
-                                className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black transition ${
+                                className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-black transition ${
                                     isActive
-                                        ? 'bg-emerald-600 text-white shadow-sm'
-                                        : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                                        ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600/30'
+                                        : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300'
                                 }`}
                             >
                                 <span>{stageMeta[item.id]?.label || item.id}</span>
-                                <span className={`rounded-full px-1.5 py-0.2 text-[10px] ${isActive ? 'bg-emerald-800 text-emerald-100' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
-                                    {item.questions.length}
+                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                    isActive
+                                        ? 'bg-emerald-800 text-emerald-100'
+                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                                }`}>
+                                    {readyCount}/{item.questions.length}
                                 </span>
                             </button>
                         );
@@ -624,9 +881,17 @@ function ReviewQuestions({
                 <div className="flex flex-wrap items-center gap-2">
                     <button
                         type="button"
+                        onClick={addManualQuestion}
+                        className="flex h-9 items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 text-xs font-black text-white hover:bg-emerald-700 transition shadow-sm"
+                    >
+                        <AddIcon sx={{ fontSize: 16 }} />
+                        Tambah Soal Manual
+                    </button>
+                    <button
+                        type="button"
                         disabled={isGenerating}
                         onClick={onRegenerateAll}
-                        className="flex h-8 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-black text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                        className="flex h-9 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-black text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
                     >
                         <RefreshIcon sx={{ fontSize: 15 }} className={isGenerating ? 'animate-spin' : ''} />
                         Regenerate Semua
@@ -634,7 +899,7 @@ function ReviewQuestions({
                     <button
                         type="button"
                         onClick={onPreview}
-                        className="flex h-8 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-black text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
+                        className="flex h-9 items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
                     >
                         <VisibilityIcon sx={{ fontSize: 15 }} />
                         Preview Siswa
@@ -644,10 +909,10 @@ function ReviewQuestions({
                             type="button"
                             disabled={saving}
                             onClick={onTogglePublish}
-                            className={`flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-black transition disabled:opacity-50 ${
+                            className={`flex h-9 items-center gap-1 rounded-xl px-3 text-xs font-black transition disabled:opacity-50 ${
                                 draft.status === 'published'
                                     ? 'border border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200'
-                                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                    : 'bg-gray-900 text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900'
                             }`}
                         >
                             {draft.status === 'published' ? 'Jadikan Draf' : '🚀 Publish Lesson'}
@@ -656,124 +921,186 @@ function ReviewQuestions({
                 </div>
             </div>
 
-            {/* Questions Table */}
-            <div className="mt-3 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
-                <div className="hidden grid-cols-[48px_minmax(0,1.2fr)_minmax(0,1.2fr)_100px_130px] gap-3 bg-gray-50 px-4 py-3 text-[10px] font-black uppercase text-gray-400 sm:grid dark:bg-gray-950/50">
-                    <span>No.</span>
-                    <span>Prompt / Instruksi</span>
-                    <span>Konteks / Jawaban</span>
-                    <span>Status</span>
-                    <span className="text-right">Aksi</span>
-                </div>
-                <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {stage.questions.map((question, index) => {
-                        const ready = questionReady(question);
-                        const isThisRegenerating = regeneratingKey === `${currentStageId}-${index}`;
-
-                        return (
-                            <div key={question.id || index} className="grid gap-2 px-4 py-3 sm:grid-cols-[48px_minmax(0,1.2fr)_minmax(0,1.2fr)_100px_130px] sm:items-center">
-                                <span className="text-xs font-black text-gray-400">{String(index + 1).padStart(2, '0')}</span>
-                                <div className="min-w-0">
-                                    <p className="truncate text-xs font-black text-gray-900 dark:text-white">
-                                        {question.prompt || 'Pertanyaan belum diisi'}
-                                    </p>
-                                    <span className="text-[10px] font-medium text-gray-400">
-                                        {question.type === 'sentence_builder' ? `${question.tokens?.length || 0} tokens` : `${question.choices?.filter(Boolean).length || 0} opsi`}
-                                    </span>
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="truncate text-xs font-japanese font-bold text-gray-800 dark:text-gray-200">
-                                        {question.type === 'sentence_builder'
-                                            ? question.tokens?.filter((t) => !t.distractor).map((t) => t.text).join('') || question.context
-                                            : question.correctAnswer || question.japanese || question.context || '-'}
-                                    </p>
-                                    {question.explanation && (
-                                        <p className="truncate text-[10px] text-gray-400">
-                                            {question.explanation}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black ${ready ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'}`}>
-                                        {ready ? <CheckCircleOutlinedIcon sx={{ fontSize: 12 }} /> : <ErrorOutlineRoundedIcon sx={{ fontSize: 12 }} />}
-                                        {ready ? 'Siap' : 'Belum'}
-                                    </span>
-                                </div>
-                                <div className="flex justify-end gap-1">
-                                    <button
-                                        type="button"
-                                        title="Edit soal"
-                                        onClick={() => setEditingIndex(index)}
-                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
-                                    >
-                                        <EditOutlinedIcon sx={{ fontSize: 15 }} />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        title="Variasi / Regenerasi soal ini"
-                                        disabled={Boolean(regeneratingKey)}
-                                        onClick={() => onRegenerateSingle(currentStageId, index)}
-                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-50 disabled:opacity-40 dark:hover:bg-emerald-950/30"
-                                    >
-                                        <RefreshIcon sx={{ fontSize: 15 }} className={isThisRegenerating ? 'animate-spin' : ''} />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        title="Duplikat soal"
-                                        onClick={() => duplicate(index)}
-                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
-                                    >
-                                        <ContentCopyIcon sx={{ fontSize: 15 }} />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        title="Hapus soal"
-                                        disabled={stage.questions.length <= 1}
-                                        onClick={() => remove(index)}
-                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 disabled:opacity-30 dark:hover:bg-rose-950/30"
-                                    >
-                                        <DeleteOutlineIcon sx={{ fontSize: 15 }} />
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* Bottom Add Question Button */}
-            <div className="mt-3 flex justify-between items-center">
-                <span className="text-xs text-gray-500">
-                    Total: <strong className="text-gray-900 dark:text-white">{stage.questions.length}</strong> butir soal pada stage ini.
-                </span>
-                <button
-                    type="button"
-                    onClick={addManualQuestion}
-                    className="flex h-8 items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 text-xs font-black text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
-                >
-                    <AddIcon sx={{ fontSize: 15 }} />
-                    Tambah Soal Manual
-                </button>
-            </div>
-
-            {/* Slide-over editor */}
-            {editQuestion && (
-                <div className="fixed inset-0 z-[155] flex justify-end bg-gray-950/45" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditingIndex(null); }}>
-                    <div className="flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl dark:bg-gray-900">
-                        <div className="flex items-center gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-                            <div className="min-w-0 flex-1">
-                                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-600">{stageMeta[currentStageId]?.label || currentStageId}</p>
-                                <h3 className="text-base font-black text-gray-900 dark:text-white">Edit soal {editingIndex + 1}</h3>
-                            </div>
-                            <button type="button" title="Tutup editor" onClick={() => setEditingIndex(null)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
-                                <CloseIcon sx={{ fontSize: 19 }} />
-                            </button>
+            {/* Workspace 2-Kolom Bergaya Builder Kosakata */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
+                {/* Kolom Kiri: Sidebar Daftar Soal (4 cols) */}
+                <div className="lg:col-span-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                        <div>
+                            <h3 className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                Daftar Soal ({stageMeta[currentStageId]?.label})
+                            </h3>
+                            <p className="text-[11px] text-gray-400">
+                                {stage.questions.length} butir · {stage.questions.filter(questionReady).length} siap
+                            </p>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-5">{currentStageId === 'sentence_builder' ? <SentenceBuilderEditor question={editQuestion} onChange={updateQuestion} /> : <ChoiceEditor question={editQuestion} onChange={updateQuestion} />}</div>
-                        <div className="border-t border-gray-200 p-4 text-right dark:border-gray-800"><button type="button" onClick={() => setEditingIndex(null)} className="h-10 rounded-xl bg-gray-900 px-5 text-xs font-black text-white dark:bg-white dark:text-gray-900">Selesai Edit</button></div>
+                        <button
+                            type="button"
+                            onClick={addManualQuestion}
+                            className="flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-700 hover:bg-emerald-100 transition dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
+                        >
+                            <AddIcon sx={{ fontSize: 15 }} />
+                            Tambah
+                        </button>
+                    </div>
+
+                    {/* List Items */}
+                    <div className="mt-3 max-h-[620px] space-y-2 overflow-y-auto pr-1">
+                        {stage.questions.map((question, index) => {
+                            const isSelected = index === activeIndex;
+                            const ready = questionReady(question);
+
+                            return (
+                                <div
+                                    key={question.id || index}
+                                    onClick={() => setActiveIndex(index)}
+                                    className={`group relative cursor-pointer rounded-xl border p-3 transition-all ${
+                                        isSelected
+                                            ? 'border-emerald-500 bg-emerald-50/70 ring-2 ring-emerald-500/20 dark:border-emerald-500 dark:bg-emerald-950/40'
+                                            : 'border-gray-200 bg-gray-50/50 hover:border-gray-300 hover:bg-white dark:border-gray-800 dark:bg-gray-950/40 dark:hover:bg-gray-900'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-xs font-black ${
+                                                isSelected
+                                                    ? 'bg-emerald-600 text-white'
+                                                    : 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                                            }`}>
+                                                {index + 1}
+                                            </span>
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                                                Q{index + 1}
+                                            </span>
+                                        </div>
+                                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                            ready
+                                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                                        }`}>
+                                            {ready ? <CheckCircleOutlinedIcon sx={{ fontSize: 11 }} /> : <ErrorOutlineRoundedIcon sx={{ fontSize: 11 }} />}
+                                            {ready ? 'Siap' : 'Belum'}
+                                        </span>
+                                    </div>
+
+                                    <p className="mt-2 line-clamp-2 text-xs font-bold text-gray-900 dark:text-white">
+                                        {question.prompt || <span className="italic text-gray-400">Prompt belum diisi</span>}
+                                    </p>
+
+                                    <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500">
+                                        <span className="truncate max-w-[130px] font-japanese font-semibold">
+                                            {question.type === 'sentence_builder'
+                                                ? `${question.tokens?.length || 0} potongan token`
+                                                : (question.correctAnswer ? `Kunci: ${question.correctAnswer}` : 'Kunci belum dipilih')}
+                                        </span>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                                            <button
+                                                type="button"
+                                                title="Duplikat Soal"
+                                                onClick={(e) => { e.stopPropagation(); duplicate(index); }}
+                                                className="p-1 text-gray-400 hover:text-emerald-600 rounded transition"
+                                            >
+                                                <ContentCopyIcon sx={{ fontSize: 14 }} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                title="Hapus Soal"
+                                                disabled={stage.questions.length <= 1}
+                                                onClick={(e) => { e.stopPropagation(); remove(index); }}
+                                                className="p-1 text-gray-400 hover:text-rose-600 disabled:opacity-20 rounded transition"
+                                            >
+                                                <DeleteOutlineIcon sx={{ fontSize: 14 }} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
-            )}
+
+                {/* Kolom Kanan: Form Editor In-Place Soal Aktif (8 cols) */}
+                <div className="lg:col-span-8 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                    {activeQuestion ? (
+                        <div className="space-y-4">
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3 dark:border-gray-800">
+                                <div className="flex items-center gap-2.5">
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-xs font-black text-white shadow-sm">
+                                        {activeIndex + 1}
+                                    </span>
+                                    <div>
+                                        <h3 className="text-sm font-black text-gray-900 dark:text-white">
+                                            Editor Soal #{activeIndex + 1}
+                                        </h3>
+                                        <p className="text-[11px] text-gray-400">
+                                            {stageMeta[currentStageId]?.label} · {stageMeta[currentStageId]?.description}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        title="Regenerasi variasi soal ini dengan AI"
+                                        disabled={Boolean(regeneratingKey)}
+                                        onClick={() => onRegenerateSingle(currentStageId, activeIndex)}
+                                        className="flex h-8 items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-black text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                    >
+                                        <RefreshIcon sx={{ fontSize: 14 }} className={regeneratingKey === `${currentStageId}-${activeIndex}` ? 'animate-spin' : ''} />
+                                        Variasi AI
+                                    </button>
+                                    <button
+                                        type="button"
+                                        title="Duplikat soal ini"
+                                        onClick={() => duplicate(activeIndex)}
+                                        className="flex h-8 items-center gap-1 rounded-xl border border-gray-200 bg-white px-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                                    >
+                                        <ContentCopyIcon sx={{ fontSize: 14 }} />
+                                        Duplikat
+                                    </button>
+                                    <button
+                                        type="button"
+                                        title="Hapus soal ini"
+                                        disabled={stage.questions.length <= 1}
+                                        onClick={() => remove(activeIndex)}
+                                        className="flex h-8 items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-30 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300"
+                                    >
+                                        <DeleteOutlineIcon sx={{ fontSize: 14 }} />
+                                        Hapus
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Form Input Komponen */}
+                            {currentStageId === 'sentence_builder' ? (
+                                <SentenceBuilderEditor question={activeQuestion} onChange={updateActiveQuestion} />
+                            ) : (
+                                <ChoiceEditor question={activeQuestion} onChange={updateActiveQuestion} />
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-400 dark:bg-gray-800">
+                                <FormatListBulletedIcon sx={{ fontSize: 28 }} />
+                            </div>
+                            <h4 className="mt-3 text-sm font-black text-gray-900 dark:text-white">
+                                Belum ada soal pada stage ini
+                            </h4>
+                            <p className="mt-1 text-xs text-gray-500 max-w-sm">
+                                Tambahkan butir soal baru secara manual atau generate paket soal lengkap menggunakan Smart Generator.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={addManualQuestion}
+                                className="mt-4 flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white hover:bg-emerald-700 transition shadow-sm"
+                            >
+                                <AddIcon sx={{ fontSize: 16 }} />
+                                Tambah Soal Manual Sekarang
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
@@ -781,13 +1108,16 @@ function ReviewQuestions({
 export default function BuilderKuisGrammar({ open, day, module, onClose }) {
     const defaultLevel = module?.program?.level?.name || 'JLPT N5';
     const [draft, setDraft] = useState(() => makeDraft(day, defaultLevel));
+    const [activeMainTab, setActiveMainTab] = useState('questions');
     const [activeStageId, setActiveStageId] = useState('transformation');
     const [settings, setSettings] = useState({
         counts: { transformation: 5, sentence_builder: 5, context_choice: 5 },
         difficulty: 'mixed',
+        target_form: 'auto',
         useDistractors: true,
         autoMeaning: true,
     });
+    const [showBankPicker, setShowBankPicker] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [showBulkImport, setShowBulkImport] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -797,6 +1127,15 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
     const [lessons, setLessons] = useState([]);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
+
+    const clearFieldError = (...keys) => {
+        setFieldErrors((prev) => {
+            const next = { ...prev };
+            keys.forEach((k) => delete next[k]);
+            return next;
+        });
+    };
 
     useEffect(() => {
         if (!open) return undefined;
@@ -804,6 +1143,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
         setDraft(makeDraft(day, defaultLevel));
         setLessons([]);
         setError('');
+        setFieldErrors({});
         setGeneratorSuccess('');
         window.axios.get(`/admin/module-days/${day.id}/grammar-quizzes`)
             .then(({ data }) => {
@@ -849,31 +1189,38 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
 
     const saveDraft = async () => {
         setError('');
+        setFieldErrors({});
         setGeneratorSuccess('');
 
+        const errs = {};
         if (!draft.pattern?.trim()) {
-            setError('Pola Grammar wajib diisi terlebih dahulu sebelum menyimpan draf.');
-            return;
+            errs['lesson.pattern'] = 'Pola Grammar wajib diisi.';
         }
         if (!draft.title?.trim()) {
-            setError('Judul materi grammar wajib diisi.');
-            return;
+            errs['lesson.title'] = 'Judul materi grammar wajib diisi.';
         }
         if (!draft.intro?.meaning?.trim()) {
-            setError('Arti pola grammar wajib diisi.');
-            return;
+            errs['lesson.meaning'] = 'Arti pola grammar wajib diisi.';
         }
         if (!draft.intro?.formula?.trim()) {
-            setError('Rumus pola grammar wajib diisi.');
+            errs['lesson.formula'] = 'Rumus pola grammar wajib diisi.';
+        }
+        (draft.intro?.examples || []).forEach((ex, idx) => {
+            if (!ex.japanese?.trim()) {
+                errs[`lesson.examples.${idx}.japanese`] = 'Kalimat Jepang wajib diisi.';
+            }
+            if (!ex.translation?.trim()) {
+                errs[`lesson.examples.${idx}.translation`] = 'Arti kalimat wajib diisi.';
+            }
+        });
+
+        if (Object.keys(errs).length > 0) {
+            setFieldErrors(errs);
+            setError('Harap lengkapi semua field materi yang bertanda bintang (*).');
+            setActiveMainTab('intro');
             return;
         }
-        const hasEmptyExample = (draft.intro?.examples || []).some(
-            (ex) => !ex.japanese?.trim() || !ex.translation?.trim()
-        );
-        if (hasEmptyExample) {
-            setError('Setiap contoh kalimat wajib memiliki Kalimat Jepang dan Arti Indonesia.');
-            return;
-        }
+
         const totalQuestions = draft.stages.reduce((acc, stg) => acc + (stg.questions?.length || 0), 0);
         if (totalQuestions === 0) {
             setError('Belum ada soal pada draf kuis. Klik "✨ Generate Lesson / Soal Otomatis" atau tambahkan soal manual terlebih dahulu.');
@@ -887,6 +1234,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                 : await window.axios.post(`/admin/module-days/${day.id}/grammar-quizzes`, requestPayload());
             const saved = response.data.lesson;
             setDraft(saved);
+            setFieldErrors({});
             setLessons((current) => [...current.filter((lesson) => lesson.id !== saved.id), saved]);
             setSavedAt(new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(new Date()));
             setGeneratorSuccess('Draf Grammar berhasil disimpan.');
@@ -895,6 +1243,11 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
             const errors = requestError.response?.data?.errors;
             const message = requestError.response?.data?.message;
             if (errors) {
+                const formatted = {};
+                for (const [key, msgs] of Object.entries(errors)) {
+                    formatted[key] = Array.isArray(msgs) ? msgs[0] : msgs;
+                }
+                setFieldErrors(formatted);
                 const firstErr = Object.values(errors).flat()[0];
                 const cleanErr = firstErr
                     .replace(/lesson\.pattern/gi, 'Pola Grammar')
@@ -906,6 +1259,9 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                     .replace(/lesson\.examples\.\d+\.translation/gi, 'Arti pada contoh')
                     .replace(/stages\.\d+\.questions/gi, 'Daftar soal stage');
                 setError(cleanErr);
+                if (Object.keys(formatted).some((k) => k.startsWith('lesson.'))) {
+                    setActiveMainTab('intro');
+                }
             } else {
                 setError(message || 'Draf Grammar gagal disimpan.');
             }
@@ -958,6 +1314,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                 settings: {
                     counts: settings.counts,
                     difficulty: settings.difficulty,
+                    target_form: settings.target_form || 'auto',
                     useDistractors: settings.useDistractors,
                     autoMeaning: settings.autoMeaning,
                 },
@@ -1015,6 +1372,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                 settings: {
                     counts: settings.counts,
                     difficulty: settings.difficulty,
+                    target_form: settings.target_form || 'auto',
                     useDistractors: settings.useDistractors,
                     autoMeaning: settings.autoMeaning,
                 },
@@ -1068,7 +1426,59 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                 </div>
             </header>
 
-            {/* Unified Workspace 1-Screen Grid */}
+            {/* Top Navigation Tabs */}
+            <div className="shrink-0 border-b border-gray-200 bg-white px-3 dark:border-gray-800 dark:bg-gray-900 sm:px-5">
+                <div className="mx-auto flex max-w-7xl gap-3 sm:gap-6 overflow-x-auto">
+                    <button
+                        type="button"
+                        onClick={() => setActiveMainTab('questions')}
+                        className={`flex items-center gap-2 border-b-2 py-3 text-xs font-black transition ${
+                            activeMainTab === 'questions'
+                                ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+                        }`}
+                    >
+                        <FormatListBulletedIcon sx={{ fontSize: 18 }} />
+                        <span>Editor Soal Manual</span>
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                            {totals.ready}/{totals.total} Siap
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setActiveMainTab('intro')}
+                        className={`flex items-center gap-2 border-b-2 py-3 text-xs font-black transition ${
+                            activeMainTab === 'intro'
+                                ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+                        }`}
+                    >
+                        <MenuBookIcon sx={{ fontSize: 18 }} />
+                        <span>Materi & Pola Grammar</span>
+                        {draft.pattern && (
+                            <span className="truncate max-w-[140px] rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-japanese font-bold text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                {draft.pattern}
+                            </span>
+                        )}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setActiveMainTab('generator')}
+                        className={`flex items-center gap-2 border-b-2 py-3 text-xs font-black transition ${
+                            activeMainTab === 'generator'
+                                ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+                        }`}
+                    >
+                        <AutoAwesomeIcon sx={{ fontSize: 18 }} />
+                        <span>Smart Generator (AI)</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* Workspace Content */}
             <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6">
                 <div className="mx-auto max-w-7xl space-y-6">
                     {error && (
@@ -1089,75 +1499,125 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                         </div>
                     )}
 
-                    {/* Row 1: Cards 1 & 2 */}
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-                        {/* Card 1: Grammar Input */}
-                        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-7">
+                    {/* Tab 1: Editor Soal Manual (Workspace 2 Kolom) */}
+                    {activeMainTab === 'questions' && (
+                        <div className="space-y-4">
+                            {!draft.pattern && (
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                                    <span>
+                                        💡 Pola grammar belum diisi. Anda dapat mengedit butir soal langsung di bawah, atau melengkapi materi di tab <strong>Materi & Pola Grammar</strong>.
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveMainTab('intro')}
+                                        className="shrink-0 font-bold underline hover:text-amber-950 dark:text-amber-300"
+                                    >
+                                        Lengkapi Materi →
+                                    </button>
+                                </div>
+                            )}
+
+                            <ReviewQuestions
+                                draft={draft}
+                                onChange={setDraft}
+                                activeStageId={activeStageId}
+                                onStageChange={setActiveStageId}
+                                onRegenerateSingle={handleRegenerateSingle}
+                                regeneratingKey={regeneratingKey}
+                                onRegenerateAll={generateDraft}
+                                isGenerating={isGenerating}
+                                onPreview={() => setShowPreview(true)}
+                                onTogglePublish={() => setStatus(draft.status === 'published' ? 'draft' : 'published')}
+                                saving={saving}
+                            />
+                        </div>
+                    )}
+
+                    {/* Tab 2: Materi & Pola Grammar */}
+                    {activeMainTab === 'intro' && (
+                        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                             <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
                                 <div className="flex items-center gap-2">
                                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">1</span>
-                                    <h2 className="text-base font-black text-gray-900 dark:text-white">Grammar Input</h2>
+                                    <h2 className="text-base font-black text-gray-900 dark:text-white">Materi & Pola Grammar</h2>
                                 </div>
                                 <span className="text-xs font-medium text-gray-400">Pola, rumus & contoh kalimat</span>
                             </div>
                             <IntroEditor
                                 draft={draft}
                                 onChange={setDraft}
+                                onOpenBankPicker={() => setShowBankPicker(true)}
+                                fieldErrors={fieldErrors}
+                                onClearError={clearFieldError}
                             />
+                            <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4 dark:border-gray-800">
+                                <span className="text-xs text-gray-500">Materi ini menjadi panduan pembuatan soal & ringkasan untuk siswa.</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveMainTab('questions')}
+                                    className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-black text-white hover:bg-emerald-700 transition"
+                                >
+                                    Lanjut ke Editor Soal →
+                                </button>
+                            </div>
                         </div>
+                    )}
 
-                        {/* Card 2: Generation Settings */}
-                        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-5">
+                    {/* Tab 3: Smart Generator AI */}
+                    {activeMainTab === 'generator' && (
+                        <div className="mx-auto max-w-3xl rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                             <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
                                 <div className="flex items-center gap-2">
-                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">2</span>
-                                    <h2 className="text-base font-black text-gray-900 dark:text-white">Generation Settings</h2>
+                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">⚡</span>
+                                    <h2 className="text-base font-black text-gray-900 dark:text-white">Pengaturan Smart Generator AI</h2>
                                 </div>
                                 <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-black text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">Smart Engine</span>
                             </div>
                             <GenerationSettings
                                 settings={settings}
                                 onChange={setSettings}
-                                onGenerate={generateDraft}
+                                onGenerate={async () => {
+                                    await generateDraft();
+                                    setActiveMainTab('questions');
+                                }}
                                 isGenerating={isGenerating}
                                 onSaveDraft={saveDraft}
                                 saving={saving}
                             />
                         </div>
-                    </div>
-
-                    {/* Row 2: Card 3 - Generated Questions */}
-                    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                        <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                            <div className="flex items-center gap-2">
-                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">3</span>
-                                <h2 className="text-base font-black text-gray-900 dark:text-white">Generated Questions</h2>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-gray-500">
-                                    {totals.ready}/{totals.total} soal siap
-                                </span>
-                            </div>
-                        </div>
-                        <ReviewQuestions
-                            draft={draft}
-                            onChange={setDraft}
-                            activeStageId={activeStageId}
-                            onStageChange={setActiveStageId}
-                            onRegenerateSingle={handleRegenerateSingle}
-                            regeneratingKey={regeneratingKey}
-                            onRegenerateAll={generateDraft}
-                            isGenerating={isGenerating}
-                            onPreview={() => setShowPreview(true)}
-                            onTogglePublish={() => setStatus(draft.status === 'published' ? 'draft' : 'published')}
-                            saving={saving}
-                        />
-                    </div>
+                    )}
                 </div>
             </main>
 
             <GrammarQuizPreviewDialog open={showPreview} quiz={draft} onClose={() => setShowPreview(false)} />
             <GrammarBulkImportDialog open={showBulkImport} program={module?.program} onClose={() => setShowBulkImport(false)} />
+            <GrammarBankPickerDialog
+                open={showBankPicker}
+                initialLevel={draft.level ? draft.level.replace('JLPT ', '').trim() : 'all'}
+                onClose={() => setShowBankPicker(false)}
+                onSelect={(item) => {
+                    setDraft((curr) => ({
+                        ...curr,
+                        level: item.jlpt_level ? `JLPT ${item.jlpt_level}` : curr.level,
+                        pattern: item.pattern || curr.pattern,
+                        title: item.title || curr.title,
+                        intro: {
+                            ...curr.intro,
+                            meaning: item.meaning || curr.intro.meaning,
+                            formula: item.formula || curr.intro.formula,
+                            explanation: item.explanation || curr.intro.explanation,
+                            examples: Array.isArray(item.examples) && item.examples.length > 0
+                                ? item.examples.map((ex) => ({
+                                    japanese: ex.japanese || '',
+                                    reading: ex.reading || '',
+                                    translation: ex.translation || '',
+                                }))
+                                : curr.intro.examples,
+                        },
+                    }));
+                    setGeneratorSuccess(`Pola "${item.pattern}" berhasil dimuat dari Bank Grammar.`);
+                }}
+            />
         </div>,
         document.body,
     );

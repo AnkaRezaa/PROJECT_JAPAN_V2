@@ -135,6 +135,7 @@ class AdminGrammarQuizController extends Controller
             'settings.useDistractors' => ['nullable', 'boolean'],
             'settings.difficulty' => ['nullable', 'string', 'in:easy,medium,hard,mixed'],
             'settings.autoMeaning' => ['nullable', 'boolean'],
+            'settings.target_form' => ['nullable', 'string', 'in:auto,te,ba,nai,ta,dict,stem,potential,passive,causative'],
         ], [
             'lesson.pattern.required' => 'Pola Grammar wajib diisi terlebih dahulu sebelum membuat soal.',
         ], [
@@ -189,6 +190,7 @@ class AdminGrammarQuizController extends Controller
             'lesson.level' => ['nullable', 'string', 'max:30'],
             'lesson.examples' => ['nullable', 'array', 'max:20'],
             'settings' => ['nullable', 'array'],
+            'settings.target_form' => ['nullable', 'string', 'in:auto,te,ba,nai,ta,dict,stem,potential,passive,causative'],
         ]);
 
         $question = $generator->regenerateSingleQuestion(

@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
-import JapaneseSpeechButton from '@/Components/UI/JapaneseSpeechButton';
+import JapaneseSpeechButton, { isStreamableAudio } from '@/Components/UI/JapaneseSpeechButton';
+import QuizSoundToggle, { japaneseSpeechText, useQuizSoundPreference } from '@/Components/UI/QuizNarration';
+import { QuizActionButton, QuizErrorMessage, QuizOptionButton, QuizSurface } from '@/Components/UI/QuizUI';
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 
@@ -25,98 +27,126 @@ const arraysEqual = (left, right) => (
     left.length === right.length && left.every((value, index) => value === right[index])
 );
 
-function ProgressHeader({ quiz, stageIndex, questionIndex, totalAnswered, totalQuestions, onClose, persist }) {
+function ProgressHeader({ quiz, stageIndex, questionIndex, totalAnswered, totalQuestions, onClose, persist, soundEnabled, onToggleSound }) {
     const progress = totalQuestions > 0 ? Math.round((totalAnswered / totalQuestions) * 100) : 0;
+    const currentStage = quiz?.stages?.[stageIndex] || quiz?.stages?.[0];
 
     return (
-        <header className="shrink-0 border-b border-gray-200 bg-white/95 px-3 py-3 backdrop-blur dark:border-gray-800 dark:bg-gray-950/95 sm:px-6">
+        <header className="shrink-0 border-b border-gray-200 bg-white px-3 py-3 shadow-xs dark:border-gray-800 dark:bg-gray-900 sm:px-6">
             <div className="mx-auto flex max-w-4xl items-center gap-3">
-                <button type="button" onClick={onClose} aria-label="Tutup pratinjau Grammar" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white">
-                    <CloseIcon sx={{ fontSize: 22 }} />
+                <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label={persist ? 'Keluar dari kuis Grammar' : 'Tutup pratinjau Grammar'}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+                >
+                    <CloseIcon sx={{ fontSize: 20 }} />
                 </button>
                 <div className="min-w-0 flex-1">
-                    <div className="mb-1.5 flex items-center justify-between gap-3 text-[11px] font-extrabold text-gray-500 dark:text-gray-400">
-                        <span className="truncate">{quiz.pattern} · Tahap {stageIndex + 1}/3</span>
-                        <span>{questionIndex + 1}/{quiz.stages[stageIndex]?.questions.length || 1}</span>
+                    <div className="mb-1.5 flex items-center justify-between gap-3 text-[11px] font-black text-gray-700 dark:text-gray-300">
+                        <span className="truncate">{[quiz?.pattern, currentStage?.label].filter(Boolean).join(' · ')}</span>
+                        <span>{questionIndex + 1}/{currentStage?.questions?.length ?? 0}</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
-                        <div className="h-full rounded-full bg-brand-500 transition-[width] duration-300" style={{ width: `${progress}%` }} />
+                    <div className="h-2.5 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
+                        <div className="h-full rounded-full bg-emerald-500 transition-[width] duration-300" style={{ width: `${progress}%` }} />
                     </div>
                 </div>
-                <span className="hidden rounded-xl bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 sm:inline-flex">
-                    {persist ? 'Lesson' : 'Preview'}
-                </span>
+                <QuizSoundToggle enabled={soundEnabled} onToggle={onToggleSound} />
             </div>
         </header>
     );
 }
 
 function IntroScreen({ quiz, onStart, onClose }) {
+    const examples = quiz?.intro?.examples || [];
+
     return (
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
             <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-4 py-5 sm:px-7 sm:py-8">
                 <div className="flex items-center justify-between gap-3">
-                    <button type="button" onClick={onClose} className="inline-flex h-10 items-center gap-2 rounded-xl px-2 text-sm font-extrabold text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white">
+                    <button type="button" onClick={onClose} className="inline-flex h-10 items-center gap-2 rounded-xl px-2 text-sm font-extrabold text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white">
                         <ArrowBackIcon sx={{ fontSize: 19 }} /> Kembali
                     </button>
-                    <span className="rounded-full bg-violet-50 px-3 py-1.5 text-[11px] font-black uppercase text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">Grammar · {quiz.level}</span>
+                    {quiz?.level && <span className="rounded-full bg-violet-100 px-3 py-1.5 text-[11px] font-black uppercase text-violet-800 dark:bg-violet-950/60 dark:text-violet-300">{quiz.level}</span>}
                 </div>
 
-                <div className="mt-6 grid flex-1 gap-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-center">
-                    <section>
-                        <p className="text-xs font-black uppercase text-brand-700 dark:text-brand-300">Pola hari ini</p>
-                        <h1 lang="ja" className="mt-2 text-4xl font-black tracking-normal text-[#2d3742] dark:text-white sm:text-5xl">{quiz.pattern}</h1>
-                        <h2 className="mt-3 text-xl font-black text-gray-900 dark:text-white">{quiz.title}</h2>
-                        <p className="mt-2 max-w-xl text-sm font-medium leading-6 text-gray-600 dark:text-gray-300">{quiz.intro.explanation}</p>
+                <div className="mt-6 grid flex-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-center">
+                    <QuizSurface as="section" className="p-5 sm:p-6">
+                        {quiz?.pattern && <><p className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Pola hari ini</p><h1 lang="ja" className="mt-2 text-3xl font-black font-japanese tracking-normal text-gray-950 dark:text-white sm:text-4xl">{quiz.pattern}</h1></>}
+                        {quiz?.title && <h2 className="mt-2 text-lg font-black text-gray-800 dark:text-gray-100">{quiz.title}</h2>}
+                        {quiz?.intro?.explanation && (
+                            <p className="mt-2 max-w-xl text-sm font-medium leading-6 text-gray-600 dark:text-gray-300">{quiz.intro.explanation}</p>
+                        )}
 
-                        <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50/70 p-4 dark:border-violet-900/60 dark:bg-violet-950/25">
-                            <p className="text-[11px] font-black uppercase text-violet-600 dark:text-violet-300">Rumus</p>
-                            <p lang="ja" className="mt-2 text-lg font-black text-gray-900 dark:text-white">{quiz.intro.formula}</p>
-                            <p className="mt-2 text-sm font-bold text-violet-700 dark:text-violet-200">{quiz.intro.meaning}</p>
-                        </div>
-                    </section>
+                        {(quiz?.intro?.formula || quiz?.intro?.meaning) && (
+                            <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50/80 p-4 dark:border-violet-900/60 dark:bg-violet-950/30">
+                                {quiz.intro.formula && <><p className="text-[11px] font-black uppercase tracking-wider text-violet-700 dark:text-violet-300">Rumus Pola</p><p lang="ja" className="mt-2 text-base font-black font-japanese text-gray-900 dark:text-white">{quiz.intro.formula}</p></>}
+                                {quiz.intro.meaning && <p className="mt-2 text-sm font-bold text-violet-900 dark:text-violet-200">{quiz.intro.meaning}</p>}
+                            </div>
+                        )}
+                    </QuizSurface>
 
-                    <aside className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:p-5">
+                    <QuizSurface as="aside" className="p-5">
                         <div className="flex items-center gap-2 text-sm font-black text-gray-900 dark:text-white">
-                            <AutoStoriesIcon className="text-brand-600" sx={{ fontSize: 20 }} /> Contoh
+                            <AutoStoriesIcon className="text-emerald-600 dark:text-emerald-400" sx={{ fontSize: 20 }} /> Contoh Kalimat
                         </div>
-                        <div className="mt-3 space-y-3">
-                            {quiz.intro.examples.map((example) => (
-                                <div key={example.japanese} className="flex items-start justify-between gap-2 rounded-xl bg-gray-50 p-3 dark:bg-gray-800/70">
-                                    <JapaneseReading {...example} className="text-sm font-extrabold leading-6 text-gray-900 dark:text-white" />
-                                    <JapaneseSpeechButton text={example.japanese} size="small" className="mt-0.5 shrink-0" />
-                                </div>
-                            ))}
+                        <div className="mt-3 space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                            {examples.length > 0 ? (
+                                examples.map((example, idx) => (
+                                    <div key={idx} className="flex items-start justify-between gap-2 rounded-xl border border-gray-100 bg-gray-50/80 p-3 dark:border-gray-800 dark:bg-gray-800/60">
+                                        <JapaneseReading {...example} className="text-sm font-extrabold leading-6 text-gray-900 dark:text-white" />
+                                        {example.japanese && (
+                                            <JapaneseSpeechButton text={example.japanese} size="small" className="mt-0.5 shrink-0 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" />
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="py-4 text-center text-xs text-gray-400">Belum ada contoh kalimat</p>
+                            )}
                         </div>
-                    </aside>
+                    </QuizSurface>
                 </div>
 
-                <button type="button" onClick={onStart} className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 text-sm font-black text-white shadow-[0_4px_0_#15803d] transition hover:bg-brand-700 active:translate-y-1 active:shadow-none sm:ml-auto sm:w-auto sm:min-w-52">
-                    Mulai Lesson <ArrowForwardIcon sx={{ fontSize: 19 }} />
-                </button>
+                <div className="mt-6 flex justify-end">
+                    <QuizActionButton
+                        onClick={onStart}
+                        className="flex min-h-12 w-full items-center gap-2 sm:w-auto"
+                    >
+                        Mulai Lesson <ArrowForwardIcon sx={{ fontSize: 19 }} />
+                    </QuizActionButton>
+                </div>
             </div>
         </div>
     );
 }
 
-function ChoiceQuestion({ question, answer, disabled, onAnswer }) {
+function ChoiceQuestion({ question, answer, feedback, disabled, onAnswer }) {
     return (
         <div className="grid gap-2.5">
             {question.choices.map((choice, index) => {
                 const isSelected = answer === choice;
+                const isWrong = isSelected && feedback?.correct === false;
+                const optionState = !isSelected ? 'idle' : !feedback ? 'selected' : isWrong ? 'wrong' : 'correct';
+                const letter = String.fromCharCode(65 + index);
                 return (
-                    <button
-                        key={choice}
-                        type="button"
+                    <QuizOptionButton
+                        key={index}
+                        state={optionState}
                         disabled={disabled}
                         onClick={() => onAnswer(choice)}
-                        className={`flex min-h-12 w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 disabled:cursor-default ${isSelected ? 'border-brand-500 bg-brand-50 text-brand-900 ring-1 ring-brand-400 dark:bg-green-950/35 dark:text-green-100' : 'border-gray-200 bg-white text-gray-800 hover:border-brand-300 hover:bg-brand-50/40 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:border-green-800'}`}
+                        className="flex items-center gap-3 text-left text-sm"
                     >
-                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-xs font-black transition ${isSelected ? 'border-brand-500 bg-brand-500 text-white' : 'border-current/20'}`}>
-                            {String.fromCharCode(65 + index)}
+                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-xs font-black transition ${
+                            isWrong
+                                ? 'border-rose-700 bg-rose-700 !text-white shadow-sm'
+                                : isSelected
+                                ? 'border-emerald-700 bg-emerald-700 !text-white shadow-sm'
+                                : 'border-gray-300 bg-gray-100 text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                        }`}>
+                            {letter}
                         </span>
-                        <span lang="ja" className="leading-6">{choice}</span>
-                    </button>
+                        <span lang="ja" className="min-w-0 leading-6 font-japanese font-bold">{choice}</span>
+                    </QuizOptionButton>
                 );
             })}
         </div>
@@ -125,14 +155,16 @@ function ChoiceQuestion({ question, answer, disabled, onAnswer }) {
 
 function SentenceBuilderQuestion({ question, selectedIds, disabled, onChange }) {
     const selected = Array.isArray(selectedIds) ? selectedIds : [];
-    const selectedTokens = selected.map((id) => question.tokens.find((token) => token.id === id)).filter(Boolean);
-    const availableTokens = question.tokens.filter((token) => !selected.includes(token.id));
+    const selectedTokens = selected.map((id) => question.tokens?.find((token) => token.id === id)).filter(Boolean);
+    const availableTokens = (question.tokens || []).filter((token) => !selected.includes(token.id));
 
     return (
-        <div>
-            <div className="min-h-20 rounded-2xl border-2 border-dashed border-sky-200 bg-sky-50/50 p-3 dark:border-sky-900/70 dark:bg-sky-950/20">
+        <div className="space-y-3">
+            <div className="min-h-24 rounded-2xl border-2 border-dashed border-sky-300 bg-sky-50/60 p-3.5 dark:border-sky-800 dark:bg-sky-950/25">
                 {selectedTokens.length === 0 ? (
-                    <p className="flex min-h-14 items-center justify-center text-center text-xs font-bold text-gray-400">Ketuk potongan kata di bawah untuk menyusun kalimat.</p>
+                    <p className="flex min-h-16 items-center justify-center text-center text-xs font-bold text-gray-400 dark:text-gray-500">
+                        Ketuk potongan kata di bawah untuk menyusun kalimat.
+                    </p>
                 ) : (
                     <div className="flex flex-wrap gap-2">
                         {selectedTokens.map((token, index) => (
@@ -142,10 +174,17 @@ function SentenceBuilderQuestion({ question, selectedIds, disabled, onChange }) 
                                 disabled={disabled}
                                 onClick={() => onChange(selected.filter((id) => id !== token.id))}
                                 aria-label={`Lepas ${token.text}`}
-                                className="flex items-center gap-1.5 rounded-xl border border-sky-300 bg-white px-3 py-2 text-sm font-black text-gray-900 shadow-[0_2px_0_#bae6fd] transition hover:border-rose-300 hover:bg-rose-50 dark:border-sky-800 dark:bg-gray-900 dark:text-white dark:hover:bg-rose-950/30"
+                                className="flex items-center gap-1.5 rounded-xl border border-sky-300 bg-white px-3 py-2 text-sm font-black text-gray-900 shadow-[0_2px_0_#bae6fd] transition hover:border-rose-300 hover:bg-rose-50 dark:border-sky-700 dark:bg-gray-900 dark:text-white dark:hover:bg-rose-950/30"
                             >
-                                <span className="text-[10px] font-bold text-sky-600 dark:text-sky-300">{index + 1}</span>
-                                <JapaneseReading japanese={token.text} reading={token.reading} className="items-center text-sm font-black" />
+                                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sky-100 text-[10px] font-black text-sky-700 dark:bg-sky-900 dark:text-sky-300">
+                                    {index + 1}
+                                </span>
+                                <JapaneseReading
+                                    japanese={token.text}
+                                    reading={token.reading}
+                                    forcePreferences={{ showRomaji: false, showTranslation: false }}
+                                    className="items-center text-sm font-black text-gray-900 dark:text-white"
+                                />
                             </button>
                         ))}
                     </div>
@@ -153,27 +192,32 @@ function SentenceBuilderQuestion({ question, selectedIds, disabled, onChange }) 
             </div>
 
             {selectedTokens.length > 0 && !disabled && (
-                <div className="mt-2 flex justify-end">
+                <div className="flex justify-end">
                     <button
                         type="button"
                         onClick={() => onChange([])}
-                        className="text-xs font-bold text-gray-400 hover:text-rose-500 transition dark:hover:text-rose-400"
+                        className="text-xs font-bold text-gray-400 hover:text-rose-600 transition dark:hover:text-rose-400"
                     >
                         Kosongkan susunan
                     </button>
                 </div>
             )}
 
-            <div className="mt-4 flex min-h-16 flex-wrap content-start justify-center gap-2">
+            <div className="flex min-h-16 flex-wrap content-start justify-center gap-2 pt-1">
                 {availableTokens.map((token) => (
                     <button
                         key={token.id}
                         type="button"
                         disabled={disabled}
                         onClick={() => onChange([...selected, token.id])}
-                        className="h-fit rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-black text-gray-800 shadow-[0_2px_0_#d1d5db] transition hover:-translate-y-0.5 hover:border-sky-400 active:translate-y-0.5 active:shadow-none dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                        className="h-fit rounded-xl border border-gray-300 bg-white px-3.5 py-2 text-sm font-black text-gray-900 shadow-[0_2px_0_#d1d5db] transition hover:-translate-y-0.5 hover:border-sky-400 hover:bg-sky-50/40 active:translate-y-0.5 active:shadow-none dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:hover:border-sky-600"
                     >
-                        <JapaneseReading japanese={token.text} reading={token.reading} className="items-center" />
+                        <JapaneseReading
+                            japanese={token.text}
+                            reading={token.reading}
+                            forcePreferences={{ showRomaji: false, showTranslation: false }}
+                            className="items-center text-gray-900 dark:text-white font-japanese"
+                        />
                     </button>
                 ))}
             </div>
@@ -181,22 +225,28 @@ function SentenceBuilderQuestion({ question, selectedIds, disabled, onChange }) 
     );
 }
 
-function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, onContinue }) {
-    const meta = STAGE_META[stage.id];
-    const canCheck = question.type === 'sentence_builder' ? answer.length > 0 : Boolean(answer);
+function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, onContinue, processing, soundEnabled, narrationRevision, persist }) {
+    const meta = STAGE_META[stage?.id] || STAGE_META.transformation;
+    const canCheck = question?.type === 'sentence_builder' ? answer.length > 0 : Boolean(answer);
+    const narrationText = japaneseSpeechText(question?.japanese || question?.prompt);
+    const narrationAudioUrl = isStreamableAudio(question?.audio_url) ? question.audio_url : null;
+    const narrationKey = `grammar-question-${stage?.id}-${question?.id || question?.prompt}-${narrationRevision}`;
 
     const targetSentence = useMemo(() => {
+        if (!question) return '';
         if (question.type === 'sentence_builder') {
-            return question.correctOrder?.map((id) => question.tokens?.find((t) => t.id === id)?.text).filter(Boolean).join('') || '';
+            const tokenIds = question.correctOrder || (feedback?.correct ? answer : []);
+            return tokenIds.map((id) => question.tokens?.find((t) => t.id === id)?.text).filter(Boolean).join('');
         }
-        return question.correctAnswer || question.japanese || '';
-    }, [question]);
+        return question.correctAnswer || (feedback?.correct ? answer : '');
+    }, [answer, feedback?.correct, question]);
 
-    const targetTranslation = question.translation || question.context || '';
+    const targetTranslation = question?.translation || '';
 
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (processing) return;
 
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -208,7 +258,7 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
                 return;
             }
 
-            if (!feedback && question.type !== 'sentence_builder' && Array.isArray(question.choices)) {
+            if (!feedback && question?.type !== 'sentence_builder' && Array.isArray(question?.choices)) {
                 const key = e.key.toUpperCase();
                 let index = -1;
                 if (key === 'A' || key === '1') index = 0;
@@ -225,13 +275,30 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [canCheck, feedback, onAnswer, onCheck, onContinue, question]);
+    }, [canCheck, feedback, onAnswer, onCheck, onContinue, processing, question]);
+
+    if (!question) {
+        return (
+            <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-gray-500">
+                Memuat butir pertanyaan...
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            <JapaneseSpeechButton
+                text={narrationText}
+                audioUrl={narrationAudioUrl}
+                autoPlay={Boolean(narrationText || narrationAudioUrl)}
+                autoPlayEnabled={soundEnabled}
+                playbackKey={narrationKey}
+                renderButton={false}
+                usePreloadedAudio
+            />
             <AnimatePresence mode="wait">
                 <motion.main
-                    key={question.id || `${stage.id}-${question.prompt}`}
+                    key={question.id || `${stage?.id}-${question.prompt}`}
                     initial={{ opacity: 0, x: 16 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -16 }}
@@ -239,67 +306,86 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
                     className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-4 sm:px-6 sm:py-5"
                 >
                     <div className={`mb-4 inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-black uppercase ${meta.soft} ${meta.text}`}>
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full text-white" style={{ backgroundColor: meta.color }}>{meta.short}</span>
-                        {stage.label}
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full text-gray-950" style={{ backgroundColor: meta.color }}>{meta.short}</span>
+                        {stage?.label}
                     </div>
-                    <h1 className="text-xl font-black leading-7 text-gray-900 dark:text-white sm:text-2xl">{stage.instruction}</h1>
-                    <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">{question.prompt}</p>
+                    {stage?.instruction && <h1 className="text-xl font-black leading-7 text-gray-950 dark:text-white sm:text-2xl">{stage.instruction}</h1>}
+                    <p className="mt-1 text-sm font-medium text-gray-600 dark:text-gray-400">{question.prompt}</p>
 
                     {(question.japanese || question.context) && (
-                        <section className="my-3 rounded-2xl border border-gray-200 bg-white p-3.5 text-center shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:my-4 sm:p-5">
+                        <QuizSurface className="my-3 p-4 text-center sm:my-4 sm:p-5">
                             {question.japanese ? (
                                 <div className="flex items-center justify-center gap-2">
-                                    <JapaneseReading japanese={question.japanese} reading={question.reading} translation={question.translation} className="items-center text-2xl font-black text-gray-900 dark:text-white" />
-                                    <JapaneseSpeechButton text={question.japanese} size="small" className="shrink-0" />
+                                    <JapaneseReading
+                                        japanese={question.japanese}
+                                        reading={question.reading}
+                                        translation={question.translation}
+                                        className="items-center text-2xl font-black font-japanese text-gray-950 dark:text-white"
+                                    />
+                                    <JapaneseSpeechButton text={question.japanese} audioUrl={narrationAudioUrl} playbackKey={narrationKey} size="small" className="shrink-0 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" />
                                 </div>
                             ) : (
                                 <>
-                                    <p className="text-[10px] font-black uppercase text-gray-400">Situasi</p>
+                                    <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">Situasi</p>
                                     <p className="mt-2 text-sm font-bold leading-6 text-gray-800 dark:text-gray-100">{question.context}</p>
                                 </>
                             )}
-                        </section>
+                        </QuizSurface>
                     )}
 
                     <div className="pb-3">
                         {question.type === 'sentence_builder' ? (
-                            <SentenceBuilderQuestion question={question} selectedIds={answer} disabled={Boolean(feedback)} onChange={onAnswer} />
+                            <SentenceBuilderQuestion question={question} selectedIds={answer} disabled={Boolean(feedback) || processing} onChange={onAnswer} />
                         ) : (
-                            <ChoiceQuestion question={question} answer={answer} disabled={Boolean(feedback)} onAnswer={onAnswer} />
+                            <ChoiceQuestion question={question} answer={answer} feedback={feedback} disabled={Boolean(feedback) || processing} onAnswer={onAnswer} />
                         )}
                     </div>
                 </motion.main>
             </AnimatePresence>
 
-            <footer className={`sticky bottom-0 shrink-0 border-t px-4 py-3 sm:px-6 ${feedback?.correct ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/90' : feedback ? 'border-rose-200 bg-rose-50 dark:border-rose-900 dark:bg-rose-950/90' : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950'}`}>
+            <footer className={`sticky bottom-0 shrink-0 border-t px-4 py-3 sm:px-6 ${
+                feedback?.correct
+                    ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950'
+                    : feedback
+                        ? 'border-rose-200 bg-rose-50 dark:border-rose-900/60 dark:bg-rose-950'
+                        : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950'
+            }`}>
                 <div className="mx-auto flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     {feedback ? (
                         <div className="min-w-0 flex-1" aria-live="polite">
-                            <p className={`flex items-center gap-2 text-sm font-black ${feedback.correct ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>
+                            <p className={`flex items-center gap-2 text-sm font-black ${feedback.correct ? 'text-emerald-800 dark:text-emerald-300' : 'text-rose-800 dark:text-rose-300'}`}>
                                 {feedback.correct ? <CheckCircleIcon sx={{ fontSize: 20 }} /> : <LightbulbOutlinedIcon sx={{ fontSize: 20 }} />}
                                 {feedback.correct ? 'Benar!' : 'Belum tepat'}
                             </p>
-                            {targetSentence && (
-                                <div className="my-1.5 flex items-center justify-between gap-2 rounded-lg bg-white/70 p-2.5 shadow-xs dark:bg-black/25">
+                            {!persist && targetSentence && (
+                                <div className="my-1.5 flex items-center justify-between gap-2 rounded-xl border border-gray-200/80 bg-white p-3 shadow-xs dark:border-gray-800 dark:bg-black/30">
                                     <div className="min-w-0">
-                                        <p lang="ja" className="text-xs font-black text-gray-900 dark:text-white">
+                                        <p lang="ja" className="text-sm font-black font-japanese text-gray-900 dark:text-white">
                                             {targetSentence}
                                         </p>
                                         {targetTranslation && (
-                                            <p className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
+                                            <p className="text-xs font-medium text-gray-600 dark:text-gray-300">
                                                 {targetTranslation}
                                             </p>
                                         )}
                                     </div>
-                                    <JapaneseSpeechButton text={targetSentence} size="small" className="shrink-0" />
+                                    <JapaneseSpeechButton text={targetSentence} size="small" className="shrink-0 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" />
                                 </div>
                             )}
-                            <p className="mt-1 text-xs font-semibold leading-5 text-gray-600 dark:text-gray-300">{question.explanation}</p>
+                            {question.explanation && (
+                                <p className="mt-1 text-xs font-semibold leading-5 text-gray-600 dark:text-gray-300">{question.explanation}</p>
+                            )}
                         </div>
-                    ) : <p className="text-xs font-bold text-gray-500 dark:text-gray-400">Pilih atau susun jawaban, lalu periksa hasilnya.</p>}
-                    <button type="button" disabled={!feedback && !canCheck} onClick={feedback ? onContinue : onCheck} className="min-h-11 shrink-0 rounded-xl bg-brand-600 px-6 text-sm font-black text-white shadow-[0_3px_0_#15803d] transition hover:bg-brand-700 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none dark:disabled:bg-gray-700">
-                        {feedback ? (feedback.correct ? 'Lanjut' : 'Coba Lagi') : 'Periksa'}
-                    </button>
+                    ) : (
+                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400">Pilih atau susun jawaban, lalu periksa hasilnya.</p>
+                    )}
+                    <QuizActionButton
+                        disabled={processing || (!feedback && !canCheck)}
+                        onClick={feedback ? onContinue : onCheck}
+                        className="shrink-0"
+                    >
+                        {processing ? 'Memproses...' : feedback ? (feedback.correct ? 'Lanjut' : 'Coba Lagi') : 'Periksa'}
+                    </QuizActionButton>
                 </div>
             </footer>
         </div>
@@ -318,21 +404,21 @@ function ResultScreen({ quiz, result, correctQuestionIds, onRestart, onClose, pe
                 <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-amber-100 text-amber-600 shadow-[0_5px_0_#fbbf24] dark:bg-amber-950/50 dark:text-amber-300">
                     <EmojiEventsIcon sx={{ fontSize: 44 }} />
                 </span>
-                <p className="mt-6 text-xs font-black uppercase text-brand-700 dark:text-brand-300">Lesson Complete</p>
-                <h1 className="mt-2 text-3xl font-black text-gray-900 dark:text-white">{quiz.pattern} selesai!</h1>
-                <p className="mt-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                    {persist ? 'Hasil, XP, dan progres lesson sudah tersimpan.' : 'Hasil pratinjau ini tidak disimpan.'}
+                <p className="mt-6 text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Lesson Selesai</p>
+                <h1 className="mt-2 text-3xl font-black font-japanese text-gray-950 dark:text-white">{quiz?.pattern ? `${quiz.pattern} selesai!` : 'Lesson selesai!'}</h1>
+                <p className="mt-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {persist ? 'Hasil, XP, dan progres lesson sudah tersimpan.' : 'Hasil pratinjau ini hanya untuk evaluasi admin.'}
                 </p>
 
-                <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
+                <div className={`mt-6 grid gap-2 sm:gap-3 ${persist ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     {[
                         ['Akurasi', `${accuracy}%`],
                         ['Benar', result.correct],
-                        [persist ? 'XP diperoleh' : 'XP preview', `+${result.xp}`],
+                        ...(persist ? [['XP diperoleh', `+${result.xp}`]] : []),
                     ].map(([label, value]) => (
-                        <div key={label} className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900 sm:p-4">
+                        <div key={label} className="rounded-2xl border border-gray-200 bg-white p-3 shadow-xs dark:border-gray-800 dark:bg-gray-900 sm:p-4">
                             <p className="text-xl font-black text-gray-900 dark:text-white sm:text-2xl">{value}</p>
-                            <p className="mt-1 text-[10px] font-black uppercase text-gray-400">{label}</p>
+                            <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</p>
                         </div>
                     ))}
                 </div>
@@ -341,31 +427,31 @@ function ResultScreen({ quiz, result, correctQuestionIds, onRestart, onClose, pe
                     <button
                         type="button"
                         onClick={() => setShowReview((prev) => !prev)}
-                        className="flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white p-3.5 font-black text-gray-800 shadow-sm transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+                        className="flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white p-3.5 font-black text-gray-800 shadow-sm transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
                     >
                         <span className="flex items-center gap-2 text-xs font-black uppercase sm:text-sm">
-                            <AutoStoriesIcon sx={{ fontSize: 18 }} className="text-brand-600" />
-                            Tinjau Rincian Soal ({quiz.stages.reduce((acc, s) => acc + s.questions.length, 0)} Soal)
+                            <AutoStoriesIcon sx={{ fontSize: 18 }} className="text-emerald-600 dark:text-emerald-400" />
+                            Tinjau Rincian Soal ({quiz?.stages?.reduce((acc, s) => acc + (s.questions?.length || 0), 0) || 0} Soal)
                         </span>
                         <ChevronRightIcon sx={{ fontSize: 20 }} className={`transition-transform duration-200 ${showReview ? 'rotate-90' : ''}`} />
                     </button>
                     {showReview && (
                         <div className="mt-3 max-h-64 space-y-2.5 overflow-y-auto pr-1">
-                            {quiz.stages.map((stg) => (
+                            {quiz?.stages?.map((stg) => (
                                 <div key={stg.id} className="space-y-2">
-                                    <p className="text-[11px] font-black uppercase text-gray-400 dark:text-gray-500">{stg.label}</p>
-                                    {stg.questions.map((q, idx) => {
+                                    <p className="text-[11px] font-black uppercase tracking-wider text-gray-500">{stg.label}</p>
+                                    {(stg.questions || []).map((q, idx) => {
                                         const isCorrect = correctQuestionIds ? correctQuestionIds.has(q.id) : true;
                                         const target = q.type === 'sentence_builder'
                                             ? q.correctOrder?.map((id) => q.tokens?.find((t) => t.id === id)?.text).filter(Boolean).join('')
-                                            : (q.correctAnswer || q.japanese || '');
+                                            : q.correctAnswer;
                                         return (
-                                            <div key={q.id || idx} className="rounded-xl border border-gray-100 bg-white p-3 shadow-xs dark:border-gray-800 dark:bg-gray-900">
+                                            <div key={q.id || idx} className="rounded-xl border border-gray-200 bg-white p-3.5 shadow-xs dark:border-gray-800 dark:bg-gray-900">
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div className="min-w-0">
-                                                        <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{q.prompt}</p>
+                                                        <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{q.prompt}</p>
                                                         {target && (
-                                                            <p lang="ja" className="mt-1 text-sm font-black text-gray-900 dark:text-white">
+                                                            <p lang="ja" className="mt-1 text-sm font-black font-japanese text-gray-900 dark:text-white">
                                                                 {target}
                                                             </p>
                                                         )}
@@ -375,7 +461,7 @@ function ResultScreen({ quiz, result, correctQuestionIds, onRestart, onClose, pe
                                                             </p>
                                                         )}
                                                     </div>
-                                                    <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-extrabold ${isCorrect ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'}`}>
+                                                    <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-extrabold ${isCorrect ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'}`}>
                                                         {isCorrect ? 'Lancar' : 'Perlu Latihan'}
                                                     </span>
                                                 </div>
@@ -392,9 +478,9 @@ function ResultScreen({ quiz, result, correctQuestionIds, onRestart, onClose, pe
                     <button type="button" onClick={onRestart} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-5 text-sm font-black text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
                         <RefreshIcon sx={{ fontSize: 19 }} /> Ulangi Lesson
                     </button>
-                    <button type="button" onClick={onClose} className="min-h-12 rounded-xl bg-brand-600 px-5 text-sm font-black text-white shadow-[0_4px_0_#15803d] transition hover:bg-brand-700 active:translate-y-1 active:shadow-none">
-                        Kembali ke Roadmap
-                    </button>
+                    <QuizActionButton onClick={onClose} className="min-h-12">
+                        {persist ? 'Kembali ke Roadmap' : 'Tutup Pratinjau'}
+                    </QuizActionButton>
                 </div>
             </div>
         </div>
@@ -411,12 +497,15 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
     const [session, setSession] = useState(null);
     const [processing, setProcessing] = useState(false);
     const [requestError, setRequestError] = useState('');
+    const [soundEnabled, setSoundEnabled] = useQuizSoundPreference();
+    const [narrationRevision, setNarrationRevision] = useState(0);
     const correctQuestionIds = useRef(new Set());
     const firstAttemptedIds = useRef(new Set());
-    const totalQuestions = useMemo(() => quiz.stages.reduce((total, stage) => total + stage.questions.length, 0), [quiz.stages]);
-    const stage = quiz.stages[stageIndex];
-    const question = stage?.questions[questionIndex];
-    const answeredBeforeCurrent = quiz.stages.slice(0, stageIndex).reduce((total, item) => total + item.questions.length, 0) + questionIndex;
+    const stages = quiz?.stages || [];
+    const totalQuestions = useMemo(() => stages.reduce((total, s) => total + (s?.questions?.length || 0), 0), [stages]);
+    const stage = stages[stageIndex];
+    const question = stage?.questions?.[questionIndex];
+    const answeredBeforeCurrent = stages.slice(0, stageIndex).reduce((total, item) => total + (item?.questions?.length || 0), 0) + questionIndex;
 
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
     const hasPushedStateRef = useRef(false);
@@ -447,8 +536,8 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
             cancelLabel: 'Lanjutkan kuis',
             confirmLabel: 'Keluar sesi',
             details: [
-                { label: 'Pola Grammar', value: quiz?.pattern || 'Kuis Grammar' },
-                { label: 'Progres', value: screen === 'intro' ? 'Belum dimulai' : `Tahap ${stageIndex + 1} dari ${quiz?.stages?.length || 3}` },
+                ...(quiz?.pattern ? [{ label: 'Pola Grammar', value: quiz.pattern }] : []),
+                { label: 'Progres', value: screen === 'intro' ? 'Belum dimulai' : `Tahap ${stageIndex + 1} dari ${stages.length}` },
             ],
             onCancel: () => {
                 closeConfirm();
@@ -462,7 +551,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
                 onClose();
             },
         });
-    }, [closeConfirm, onClose, openConfirm, quiz?.pattern, quiz?.stages?.length, screen, stageIndex]);
+    }, [closeConfirm, onClose, openConfirm, quiz?.pattern, screen, stageIndex, stages.length]);
 
     useEffect(() => {
         const onKeyDown = (event) => {
@@ -550,7 +639,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
         setResult((current) => ({
             correct: current.correct + (firstCorrect ? 1 : 0),
             total: current.total + (recorded ? 1 : 0),
-            xp: current.xp + (firstCorrect ? (quiz.xpPerCorrectAnswer || 0) : 0),
+            xp: current.xp,
         }));
         setFeedback({ correct });
         playSoundEffect(correct ? 'correct' : 'incorrect');
@@ -561,6 +650,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
         if (feedback && !feedback.correct) {
             setAnswer(question.type === 'sentence_builder' ? [] : '');
             setFeedback(null);
+            setNarrationRevision((revision) => revision + 1);
             return;
         }
 
@@ -605,6 +695,21 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
         setScreen('intro');
     };
 
+    if (totalQuestions === 0) {
+        return (
+            <div className="flex h-full min-h-0 flex-col items-center justify-center bg-[#f7faf8] px-4 text-center dark:bg-gray-950">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300">
+                    <AutoStoriesIcon sx={{ fontSize: 32 }} />
+                </div>
+                <h2 className="mt-4 text-lg font-black text-gray-950 dark:text-white">{persist ? 'Kuis Belum Tersedia' : 'Belum Ada Soal pada Draf'}</h2>
+                <p className="mt-1 max-w-sm text-xs font-medium text-gray-500 dark:text-gray-400">{persist ? 'Soal untuk kuis ini belum tersedia.' : 'Draf lesson ini belum memiliki butir soal. Silakan tambahkan soal manual atau generate otomatis terlebih dahulu di builder.'}</p>
+                <QuizActionButton onClick={onClose} className="mt-5 flex items-center gap-2 text-xs">
+                    <ArrowBackIcon sx={{ fontSize: 16 }} /> {persist ? 'Kembali ke Roadmap' : 'Kembali ke Builder'}
+                </QuizActionButton>
+            </div>
+        );
+    }
+
     return (
         <div className="flex h-full min-h-0 flex-col bg-[#f7faf8] text-gray-900 dark:bg-gray-950 dark:text-white">
             {screen === 'intro' ? (
@@ -613,11 +718,11 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
                 <ResultScreen quiz={quiz} result={result} correctQuestionIds={correctQuestionIds.current} onRestart={restart} onClose={onClose} persist={persist} />
             ) : (
                 <>
-                    <ProgressHeader quiz={quiz} stageIndex={stageIndex} questionIndex={questionIndex} totalAnswered={answeredBeforeCurrent + (feedback ? 1 : 0)} totalQuestions={totalQuestions} onClose={handleRequestExit} persist={persist} />
-                    <QuestionScreen stage={stage} question={question} answer={answer} feedback={feedback} onAnswer={setAnswer} onCheck={checkAnswer} onContinue={continueLesson} />
+                    <ProgressHeader quiz={quiz} stageIndex={stageIndex} questionIndex={questionIndex} totalAnswered={answeredBeforeCurrent + (feedback ? 1 : 0)} totalQuestions={totalQuestions} onClose={handleRequestExit} persist={persist} soundEnabled={soundEnabled} onToggleSound={() => setSoundEnabled((value) => !value)} />
+                    <QuestionScreen stage={stage} question={question} answer={answer} feedback={feedback} onAnswer={setAnswer} onCheck={checkAnswer} onContinue={continueLesson} processing={processing} soundEnabled={soundEnabled} narrationRevision={narrationRevision} persist={persist} />
                 </>
             )}
-            {(processing || requestError) && <div className="fixed bottom-20 left-1/2 z-[170] -translate-x-1/2 rounded-xl bg-gray-900 px-4 py-2 text-xs font-bold text-white shadow-lg">{processing ? 'Memproses...' : requestError}</div>}
+            <QuizErrorMessage className="fixed bottom-20 left-1/2 z-[170] w-[min(90vw,28rem)] -translate-x-1/2 shadow-lg">{requestError}</QuizErrorMessage>
             <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
         </div>
     );
