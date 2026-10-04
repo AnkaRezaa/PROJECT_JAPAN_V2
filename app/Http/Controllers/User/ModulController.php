@@ -77,6 +77,7 @@ class ModulController extends Controller
                             ->withCount('questions')
                             ->with([
                                 'grammarLesson:id,quiz_id,lesson_key,pattern,title',
+                                'dokkaiPassage:id,quiz_id,title,sub_title,jlpt_level,theme_category,estimated_reading_time,xp_reward',
                                 'attempts' => fn ($attemptQuery) => $attemptQuery
                                     ->where('user_id', $user->id)
                                     ->where('status', 'completed')
@@ -145,7 +146,7 @@ class ModulController extends Controller
             $hasVocabulary = $vocabularyCount > 0;
             $hasDayContent = $modul->days->contains(fn (HariModul $day) => (
                 $day->flashcardSets->isNotEmpty()
-                || $day->quizzes->isNotEmpty()
+                || $day->quizzes->contains(fn (Kuis $quiz) => $quiz->type !== 'dokkai')
                 || $day->presentationDecks->isNotEmpty()
                 || $day->vocabulary->isNotEmpty()
             ));
@@ -192,20 +193,51 @@ class ModulController extends Controller
                     ->flatMap->flashcards
                     ->filter(fn ($card) => $card->reviews->isNotEmpty())
                     ->count();
-                $questionCount = $day->quizzes->sum('questions_count');
+                $questionCount = $day->quizzes->where('type', '!=', 'dokkai')->sum('questions_count');
                 $grammarLessons = $day->quizzes
                     ->where('type', 'grammar')
                     ->filter(fn (Kuis $quiz) => $quiz->questions_count > 0 && $quiz->grammarLesson)
-                    ->map(fn (Kuis $quiz) => [
-                        'id' => $quiz->id,
-                        'pattern' => $quiz->grammarLesson->pattern,
-                        'title' => $quiz->grammarLesson->title,
-                        'passing_score' => (int) ($quiz->passing_score ?? 70),
-                        'best_score' => $quiz->attempts->max('score'),
-                        'done' => $quiz->attempts->max('score') !== null
-                            && (int) $quiz->attempts->max('score') >= (int) ($quiz->passing_score ?? 70),
-                    ])
+                    ->map(function (Kuis $quiz) {
+                        $bestScore = $quiz->attempts->max('score');
+                        $passingScore = (int) ($quiz->passing_score ?? 70);
+                        $progressStatus = $this->quizProgressStatus($bestScore, $passingScore);
+
+                        return [
+                            'id' => $quiz->id,
+                            'pattern' => $quiz->grammarLesson->pattern,
+                            'title' => $quiz->grammarLesson->title,
+                            'passing_score' => $passingScore,
+                            'best_score' => $bestScore,
+                            'progress_status' => $progressStatus,
+                            'done' => $progressStatus === 'passed',
+                        ];
+                    })
                     ->values();
+                $dokkaiLessons = $day->quizzes
+                    ->where('type', 'dokkai')
+                    ->filter(fn (Kuis $quiz) => (bool) $quiz->dokkaiPassage)
+                    ->map(function (Kuis $quiz) {
+                        $passage = $quiz->dokkaiPassage;
+                        $bestScore = $quiz->attempts->max('score');
+                        $passingScore = (int) ($quiz->passing_score ?? 70);
+                        $progressStatus = $this->quizProgressStatus($bestScore, $passingScore);
+
+                        return [
+                            'id' => $quiz->id,
+                            'title' => $passage->title,
+                            'sub_title' => $passage->sub_title,
+                            'jlpt_level' => $passage->jlpt_level,
+                            'theme_category' => $passage->theme_category,
+                            'estimated_reading_time' => (int) ($passage->estimated_reading_time ?? 5),
+                            'xp_reward' => (int) ($passage->xp_reward ?? 80),
+                            'passing_score' => $passingScore,
+                            'best_score' => $bestScore,
+                            'progress_status' => $progressStatus,
+                            'done' => $progressStatus === 'passed',
+                        ];
+                    })
+                    ->values();
+                $checkpointBestScore = $day->quizzes->firstWhere('id', $checkpointQuiz?->id)?->attempts->max('score');
                 $hasContent = $presentationCount > 0 || $flashcardCount > 0 || $questionCount > 0 || $day->vocabulary->isNotEmpty();
                 $completionMethod = $checkpointQuiz ? 'checkpoint' : ($flashcardCount > 0 ? 'flashcard' : null);
                 $isReady = $hasContent && $completionMethod;
@@ -267,15 +299,14 @@ class ModulController extends Controller
                     ],
                     'questions_count' => $questionCount,
                     'grammar_lessons' => $grammarLessons,
+                    'dokkai_lessons' => $dokkaiLessons,
                     'checkpoint_summary' => $checkpointQuiz ? [
                         'id' => $checkpointQuiz->id,
                         'questions_count' => $checkpointQuiz->questions->count(),
                         'passing_score' => (int) ($checkpointQuiz->passing_score ?? 70),
                         'time_limit' => (int) ($checkpointQuiz->time_limit ?? 0),
-                        'best_score' => PengerjaanKuis::query()
-                            ->where('user_id', $user->id)
-                            ->where('quiz_id', $checkpointQuiz->id)
-                            ->max('score'),
+                        'best_score' => $checkpointBestScore,
+                        'progress_status' => $this->quizProgressStatus($checkpointBestScore, (int) ($checkpointQuiz->passing_score ?? 70)),
                         'locked' => ! $quizAccess['allowed'],
                         'lock_reason' => $quizAccess['allowed'] ? null : $quizAccess['message'],
                     ] : null,
@@ -833,6 +864,15 @@ class ModulController extends Controller
         abort_unless($moduleIds->contains($moduleId), 403, 'Selesaikan Minggu sebelumnya terlebih dahulu.');
 
         return $moduleId;
+    }
+
+    private function quizProgressStatus($bestScore, int $passingScore): string
+    {
+        if ($bestScore === null) {
+            return 'not_started';
+        }
+
+        return (int) $bestScore >= $passingScore ? 'passed' : 'needs_retry';
     }
 
     private function vocabularyQueryForModules($moduleIds)

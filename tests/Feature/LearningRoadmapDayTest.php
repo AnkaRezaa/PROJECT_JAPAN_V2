@@ -10,6 +10,7 @@ use App\Models\LogReward;
 use App\Models\Progres;
 use App\Models\Modul;
 use App\Models\PengerjaanKuis;
+use App\Models\PelajaranGrammar;
 use App\Models\Pengguna;
 use App\Models\ProgramPembelajaran;
 use App\Models\ReviewFlashcard;
@@ -863,6 +864,80 @@ it('returns Week and Day hierarchy to the user roadmap', function () {
             ->has('program.payment_plans')
             ->has('program.available_kloters')
             ->where('program.has_class_access', false));
+});
+
+it('reports each Day quiz progress from completed attempts without embedding the Dokkai demo', function () {
+    $fixture = createDayRoadmapFixture();
+    $user = Pengguna::factory()->create(['role' => 'user']);
+    $checkpoint = Kuis::create([
+        'module_id' => $fixture['module']->id,
+        'module_day_id' => $fixture['dayOne']->id,
+        'type' => 'multiple_choice',
+        'passing_score' => 70,
+        'status' => 'published',
+    ]);
+    $grammar = Kuis::create([
+        'module_id' => $fixture['module']->id,
+        'module_day_id' => $fixture['dayOne']->id,
+        'type' => 'grammar',
+        'passing_score' => 70,
+        'status' => 'published',
+    ]);
+    PelajaranGrammar::create([
+        'quiz_id' => $grammar->id,
+        'lesson_key' => 'roadmap-test',
+        'pattern' => '〜ば〜ほど',
+        'title' => 'Semakin, semakin',
+        'meaning' => 'Semakin, semakin',
+        'formula' => 'Vば + Vる + ほど',
+    ]);
+    foreach ([$checkpoint, $grammar] as $quiz) {
+        Soal::create([
+            'quiz_id' => $quiz->id,
+            'type' => 'multiple_choice',
+            'question_text' => 'Pilih jawaban',
+            'correct_answer' => 'benar',
+            'options' => ['benar', 'salah'],
+            'order' => 1,
+        ]);
+    }
+    $fixture['dayOne']->update(['checkpoint_quiz_id' => $checkpoint->id]);
+
+    $assertProgress = function (string $status) use ($fixture, $user) {
+        $this->actingAs($user)
+            ->get(route('user.modul.program', $fixture['program']->slug))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('User/Modul/DaftarModul')
+                ->where('weeks.0.days.0.checkpoint_summary.progress_status', $status)
+                ->where('weeks.0.days.0.grammar_lessons.0.progress_status', $status)
+                ->missing('weeks.0.days.0.dokkai_quizzes'));
+    };
+
+    $assertProgress('not_started');
+    foreach ([$checkpoint, $grammar] as $quiz) {
+        PengerjaanKuis::create(['user_id' => $user->id, 'quiz_id' => $quiz->id, 'status' => 'completed', 'score' => 50]);
+    }
+    $assertProgress('needs_retry');
+    foreach ([$checkpoint, $grammar] as $quiz) {
+        PengerjaanKuis::create(['user_id' => $user->id, 'quiz_id' => $quiz->id, 'status' => 'completed', 'score' => 80]);
+    }
+    $assertProgress('passed');
+});
+
+it('provides Dokkai preview metadata without creating an attempt', function () {
+    $user = Pengguna::factory()->create(['role' => 'user']);
+
+    $this->actingAs($user)
+        ->getJson(route('user.dokkai-quizzes.payload', ['quiz' => 'preview']))
+        ->assertOk()
+        ->assertJsonStructure([
+            'quiz' => ['title', 'jlpt_level', 'estimated_reading_time'],
+            'paragraphs',
+            'questions',
+        ]);
+
+    expect(PengerjaanKuis::where('user_id', $user->id)->count())->toBe(0);
 });
 
 it('returns a selected class as an admin Week and Day workspace', function () {

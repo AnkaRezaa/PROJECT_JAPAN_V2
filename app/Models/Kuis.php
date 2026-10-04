@@ -33,9 +33,19 @@ class Kuis extends Model
         return $this->type === 'grammar';
     }
 
+    public function isDokkai(): bool
+    {
+        return $this->type === 'dokkai';
+    }
+
     public function grammarLesson(): HasOne
     {
         return $this->hasOne(PelajaranGrammar::class, 'quiz_id');
+    }
+
+    public function dokkaiPassage(): HasOne
+    {
+        return $this->hasOne(DokkaiPassage::class, 'quiz_id');
     }
 
     public function module(): BelongsTo

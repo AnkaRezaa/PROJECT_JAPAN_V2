@@ -11,6 +11,7 @@ use App\Models\Transaksi;
 use App\Services\AksesLanggananService;
 use App\Services\KloterBelajarService;
 use Database\Seeders\DemoDataSeeder;
+use Database\Seeders\PenggunaSeeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
@@ -570,7 +571,7 @@ it('seeds global and kloter admins and assigns demo cohorts to the kloter admin'
         ->and($kloterAdmin->admin_scope)->toBe(Pengguna::ADMIN_SCOPE_KLOTER)
         ->and($globalAdmin->hasVerifiedEmail())->toBeTrue()
         ->and($kloterAdmin->hasVerifiedEmail())->toBeTrue()
-        ->and(Hash::check('TOKU-UP#2026', $globalAdmin->password))->toBeTrue()
+        ->and(Hash::check(PenggunaSeeder::DEMO_PASSWORD, $globalAdmin->password))->toBeTrue()
         ->and(Pengguna::where('email', 'admin.kloter@toku-up.com')->count())->toBe(1);
 
     expect(KloterBelajar::where('admin_id', $kloterAdmin->id)->count())->toBe(1)

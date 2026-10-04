@@ -12,6 +12,10 @@ class PenggunaSeeder extends Seeder
 
     public function run(): void
     {
+        if (app()->environment('production')) {
+            throw new \RuntimeException('PenggunaSeeder creates demo credentials and cannot run in production.');
+        }
+
         $this->seedAccount('admin@toku-up.com', [
             'username' => 'Admin Global TOKU-UP',
             'email_verified_at' => now(),
@@ -44,6 +48,7 @@ class PenggunaSeeder extends Seeder
             'email_verified_at' => now(),
             'password_login_enabled' => true,
             'role' => 'user',
+            'admin_scope' => null,
             'subscription_status' => 'premium',
             'status' => 'active',
             'xp' => 0,
@@ -57,6 +62,7 @@ class PenggunaSeeder extends Seeder
             'email_verified_at' => now(),
             'password_login_enabled' => true,
             'role' => 'user',
+            'admin_scope' => null,
             'subscription_status' => 'premium',
             'status' => 'active',
             'xp' => 0,

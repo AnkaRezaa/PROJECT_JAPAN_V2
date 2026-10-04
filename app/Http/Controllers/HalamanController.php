@@ -7,6 +7,7 @@ use App\Models\BroadcastPopup;
 use App\Models\DeckPresentasi;
 use App\Models\HariModul;
 use App\Models\Kosakata;
+use App\Models\Kuis;
 use App\Models\Modul;
 use App\Models\PaketPembayaran;
 use App\Models\ProgramPembelajaran;
@@ -256,7 +257,7 @@ class HalamanController extends Controller
     {
         return Inertia::render('Legal/LegalPage', [
             'title' => 'Kebijakan Privasi',
-            'updatedAt' => '18 Juli 2026',
+            'updatedAt' => '27 September 2026',
             'intro' => 'Dokumen operasional awal ini menjelaskan bagaimana TOKU-UP mengelola data akun dan aktivitas belajar pengguna.',
             'sections' => [
                 [
@@ -266,6 +267,10 @@ class HalamanController extends Controller
                 [
                     'heading' => 'Penggunaan Data',
                     'body' => 'Data digunakan untuk autentikasi, membuka akses kelas, mencatat progress, mengirim notifikasi penting, memproses pembayaran, dan meningkatkan pengalaman belajar.',
+                ],
+                [
+                    'heading' => 'Percakapan Bantuan',
+                    'body' => 'Saat menggunakan chat bantuan di website, nama, email, topik, dan isi pesan disimpan agar tim dapat menanggapi pertanyaan. Percakapan yang selesai dihapus setelah 90 hari, sedangkan percakapan terbuka yang tidak aktif dihapus setelah 180 hari. Jika memilih WhatsApp, percakapan dibuka langsung ke nomor admin dan tidak tersimpan di Inbox Bantuan website.',
                 ],
                 [
                     'heading' => 'Keamanan',
@@ -320,12 +325,16 @@ class HalamanController extends Controller
     {
         return Inertia::render('Legal/LegalPage', [
             'title' => 'Kebijakan Cookies',
-            'updatedAt' => '18 Juli 2026',
+            'updatedAt' => '27 September 2026',
             'intro' => 'Dokumen operasional awal ini menjelaskan penggunaan cookie dan penyimpanan lokal untuk menjaga sesi dan preferensi pengguna.',
             'sections' => [
                 [
                     'heading' => 'Cookie Sesi',
                     'body' => 'TOKU-UP menggunakan cookie sesi untuk login, keamanan CSRF, dan menjaga pengguna tetap berada pada sesi yang valid.',
+                ],
+                [
+                    'heading' => 'Cookie Chat Bantuan',
+                    'body' => 'Setelah mengirim pesan bantuan, browser menyimpan token percakapan selama 7 hari agar pengunjung dapat membaca balasan pada perangkat yang sama. Token tidak berisi nama, email, atau isi pesan.',
                 ],
                 [
                     'heading' => 'Preferensi Tampilan',
@@ -472,6 +481,7 @@ class HalamanController extends Controller
                             ->count('vocabulary_bank.id'),
                         'flashcards' => $modules->sum('flashcard_sets_count'),
                         'quizzes' => $modules->sum('quizzes_count'),
+                        'dokkai' => Kuis::whereIn('module_id', $moduleIds)->where('type', 'dokkai')->where('status', 'published')->count(),
                     ],
                 ];
             });

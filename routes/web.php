@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminBerandaController;
 use App\Http\Controllers\Admin\AdminExamPortalController;
 use App\Http\Controllers\Admin\AdminExamQuestionBankController;
 use App\Http\Controllers\Admin\AdminFlashcardController;
+use App\Http\Controllers\Admin\AdminDokkaiController;
 use App\Http\Controllers\Admin\AdminGrammarBankController;
 use App\Http\Controllers\Admin\AdminGrammarQuizController;
 use App\Http\Controllers\Admin\AdminHariModulController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\PembayaranMidtransController;
 use App\Http\Controllers\PengarahDashboardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SupportChatController;
 use App\Http\Controllers\SuperAdmin\SuperAdminAktivitasController;
 use App\Http\Controllers\SuperAdmin\SuperAdminBerandaController;
 use App\Http\Controllers\SuperAdmin\SuperAdminGamifikasiController;
@@ -30,9 +32,11 @@ use App\Http\Controllers\SuperAdmin\SuperAdminPembayaranController;
 use App\Http\Controllers\SuperAdmin\SuperAdminPengelolaAdminController;
 use App\Http\Controllers\SuperAdmin\SuperAdminPenggunaController;
 use App\Http\Controllers\SuperAdmin\SuperAdminSistemController;
+use App\Http\Controllers\SuperAdmin\SuperAdminSupportChatController;
 use App\Http\Controllers\UmpanBalikProdukController;
 use App\Http\Controllers\User\BerandaController as UserDashboardController;
 use App\Http\Controllers\User\BeritaController;
+use App\Http\Controllers\User\DokkaiController;
 use App\Http\Controllers\User\ExamPortalController;
 use App\Http\Controllers\User\FlashcardController;
 use App\Http\Controllers\User\GrammarQuizController;
@@ -60,6 +64,11 @@ Route::get('/kelas/{programSlug}', [HalamanController::class, 'publicClass'])->n
 Route::get('/privacy-policy', [HalamanController::class, 'privacyPolicy'])->name('privacy-policy');
 Route::get('/terms', [HalamanController::class, 'terms'])->name('terms');
 Route::get('/cookie-policy', [HalamanController::class, 'cookiePolicy'])->name('cookie-policy');
+Route::get('/support/chat', [SupportChatController::class, 'state'])->middleware('throttle:support-chat-read')->name('support.chat.state');
+Route::post('/support/chat', [SupportChatController::class, 'start'])->middleware('throttle:support-chat-start')->name('support.chat.start');
+Route::post('/support/chat/messages', [SupportChatController::class, 'send'])->middleware('throttle:support-chat-send')->name('support.chat.send');
+Route::post('/support/chat/read', [SupportChatController::class, 'read'])->middleware('throttle:support-chat-read')->name('support.chat.read');
+Route::post('/support/chat/broadcast-auth', [SupportChatController::class, 'authorizeChannel'])->middleware('throttle:support-chat-read')->name('support.chat.broadcast-auth');
 Route::get('/robots.txt', [HalamanController::class, 'robots'])->name('robots');
 Route::get('/sitemap.xml', [HalamanController::class, 'sitemap'])->name('sitemap');
 Route::get('/exams', function (Request $request) {
@@ -72,6 +81,8 @@ Route::get('/exams', function (Request $request) {
         default => redirect()->route('user.exams.index'),
     };
 })->name('exams');
+
+Route::get('/dokkai/preview', [DokkaiController::class, 'show'])->name('dokkai.preview');
 
 // Authenticated Routes
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -159,6 +170,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/kloters/{kloter}/users/{user}', [SuperAdminKloterController::class, 'removeUser'])->name('kloters.users.destroy');
         Route::post('/kloters/{kloter}/access-keys', [SuperAdminKloterController::class, 'generateAccessKey'])->name('kloters.access-keys.store');
         Route::get('/activity', SuperAdminAktivitasController::class)->name('activity');
+        Route::get('/support', [SuperAdminSupportChatController::class, 'index'])->name('support');
+        Route::get('/support/{chat}', [SuperAdminSupportChatController::class, 'show'])->name('support.show');
+        Route::post('/support/presence', [SuperAdminSupportChatController::class, 'presence'])->name('support.presence');
+        Route::post('/support/{chat}/reply', [SuperAdminSupportChatController::class, 'reply'])->middleware('throttle:support-chat-send')->name('support.reply');
+        Route::patch('/support/{chat}/status', [SuperAdminSupportChatController::class, 'status'])->name('support.status');
+        Route::put('/support/whatsapp/settings', [SuperAdminSupportChatController::class, 'saveWhatsApp'])->name('support.whatsapp.settings');
+        Route::put('/support/quick-answers', [SuperAdminSupportChatController::class, 'saveQuickAnswers'])->name('support.quick-answers');
         Route::post('/activity/clean-history', [SuperAdminAktivitasController::class, 'cleanHistory'])->name('activity.clean-history');
         Route::patch('/activity/feedback/{feedback}', [SuperAdminAktivitasController::class, 'updateFeedback'])->name('activity.feedback.update');
         Route::get('/activity/feedback-export', [SuperAdminAktivitasController::class, 'exportFeedback'])->name('activity.feedback.export');
@@ -190,8 +208,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/exams/{exam}', [AdminExamPortalController::class, 'update'])->name('exams.update');
         Route::post('/exams/{exam}/versions', [AdminExamPortalController::class, 'createVersion'])->name('exams.versions.store');
         Route::patch('/exam-versions/{version}', [AdminExamPortalController::class, 'updateVersion'])->name('exam-versions.update');
-        Route::put('/exam-versions/{version}/sections', [AdminExamPortalController::class, 'syncSections'])->name('exam-versions.sections.sync');
-        Route::put('/exam-sections/{section}/questions', [AdminExamPortalController::class, 'syncQuestions'])->name('exam-sections.questions.sync');
+        Route::put('/exam-versions/{version}/sections', [AdminExamPortalController::class, 'syncSections'])->middleware('throttle:admin-builder')->name('exam-versions.sections.sync');
+        Route::put('/exam-sections/{section}/questions', [AdminExamPortalController::class, 'syncQuestions'])->middleware('throttle:admin-builder')->name('exam-sections.questions.sync');
         Route::post('/exam-versions/{version}/validate', [AdminExamPortalController::class, 'validateVersion'])->name('exam-versions.validate');
         Route::post('/exam-versions/{version}/publish', [AdminExamPortalController::class, 'publish'])->middleware('throttle:exam-admin')->name('exam-versions.publish');
         Route::get('/exam-versions/template/xlsx', [AdminExamPortalController::class, 'template'])->name('exam-versions.template');
@@ -248,10 +266,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/flashcards/{flashcardSet}', [AdminFlashcardController::class, 'update'])->name('flashcards.update');
         Route::delete('/flashcards/{flashcardSet}', [AdminFlashcardController::class, 'destroy'])->name('flashcards.destroy');
         Route::get('/flashcards/{flashcardSet}/builder', [AdminFlashcardController::class, 'builder'])->name('flashcards.builder');
-        Route::post('/flashcards/{flashcardSet}/builder', [AdminFlashcardController::class, 'updateCards'])->name('flashcards.builder.update');
+        Route::post('/flashcards/{flashcardSet}/builder', [AdminFlashcardController::class, 'updateCards'])->middleware('throttle:admin-builder')->name('flashcards.builder.update');
         Route::get('/flashcards/{flashcardSet}/template/{format?}', [AdminFlashcardController::class, 'downloadImportTemplate'])->name('flashcards.template');
         Route::post('/flashcards/{flashcardSet}/import', [AdminFlashcardController::class, 'importCards'])->middleware('throttle:admin-imports')->name('flashcards.import');
-        Route::post('/flashcards/{flashcardSet}/generate-quiz', [AdminFlashcardController::class, 'generateQuiz'])->name('flashcards.generate-quiz');
+        Route::post('/flashcards/{flashcardSet}/generate-quiz', [AdminFlashcardController::class, 'generateQuiz'])->middleware('throttle:admin-generator')->name('flashcards.generate-quiz');
         Route::get('/presentations', static fn () => redirect()->route('admin.programs.index'))->name('presentations.index');
         Route::post('/presentations', [AdminPresentasiController::class, 'store'])->name('presentations.store');
         Route::put('/presentations/{presentationDeck}', [AdminPresentasiController::class, 'update'])->name('presentations.update');
@@ -259,7 +277,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/modules/{module}/presentations/builder', [AdminPresentasiController::class, 'workspace'])->name('modules.presentations.builder');
         Route::patch('/modules/{module}/presentations/reorder', [AdminPresentasiController::class, 'reorder'])->name('modules.presentations.reorder');
         Route::get('/presentations/{presentationDeck}/builder', [AdminPresentasiController::class, 'builder'])->name('presentations.builder');
-        Route::post('/presentations/{presentationDeck}/builder', [AdminPresentasiController::class, 'updateSlides'])->name('presentations.builder.update');
+        Route::post('/presentations/{presentationDeck}/builder', [AdminPresentasiController::class, 'updateSlides'])->middleware('throttle:admin-builder')->name('presentations.builder.update');
         Route::post('/presentations/{presentationDeck}/import/pptx', [AdminPresentasiController::class, 'importPptx'])->middleware('throttle:admin-imports')->name('presentations.import.pptx');
         Route::post('/presentations/{presentationDeck}/import/pdf', [AdminPresentasiController::class, 'importPdf'])->middleware('throttle:admin-imports')->name('presentations.import.pdf');
         Route::post('/presentations/{presentationDeck}/import/images', [AdminPresentasiController::class, 'importImages'])->middleware('throttle:admin-imports')->name('presentations.import.images');
@@ -284,23 +302,31 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::redirect('/subscriptions', '/admin/dashboard')->name('subscriptions.index');
         Route::redirect('/vouchers', '/admin/dashboard')->name('vouchers.index');
         Route::get('/quizzes/{quiz}/builder', [AdminKuisController::class, 'builder'])->name('quizzes.builder');
-        Route::post('/quizzes/{quiz}/builder', [AdminKuisController::class, 'updateQuestions'])->name('quizzes.builder.update');
+        Route::post('/quizzes/{quiz}/builder', [AdminKuisController::class, 'updateQuestions'])->middleware('throttle:admin-builder')->name('quizzes.builder.update');
         Route::get('/quizzes/{quiz}/questions/template/{format}', [AdminKuisController::class, 'downloadImportTemplate'])->name('quizzes.questions.template');
         Route::post('/quizzes/{quiz}/questions/import/preview', [AdminKuisController::class, 'previewImportQuestions'])->middleware('throttle:admin-imports')->name('quizzes.questions.import.preview');
         Route::post('/quizzes/{quiz}/questions/import', [AdminKuisController::class, 'importQuestions'])->middleware('throttle:admin-imports')->name('quizzes.questions.import');
-        Route::post('/quizzes/{quiz}/questions/generate-vocabulary', [AdminKuisController::class, 'generateVocabularyQuestions'])->name('quizzes.questions.generate-vocabulary');
-        Route::post('/quizzes/{quiz}/questions/generate-vocabulary/preview', [AdminKuisController::class, 'previewVocabularyQuestions'])->name('quizzes.questions.generate-vocabulary.preview');
+        Route::post('/quizzes/{quiz}/questions/generate-vocabulary', [AdminKuisController::class, 'generateVocabularyQuestions'])->middleware('throttle:admin-generator')->name('quizzes.questions.generate-vocabulary');
+        Route::post('/quizzes/{quiz}/questions/generate-vocabulary/preview', [AdminKuisController::class, 'previewVocabularyQuestions'])->middleware('throttle:admin-generator')->name('quizzes.questions.generate-vocabulary.preview');
         Route::get('/module-days/{moduleDay}/grammar-quizzes', [AdminGrammarQuizController::class, 'index'])->name('grammar-quizzes.index');
-        Route::post('/module-days/{moduleDay}/grammar-quizzes', [AdminGrammarQuizController::class, 'store'])->name('grammar-quizzes.store');
+        Route::post('/module-days/{moduleDay}/grammar-quizzes', [AdminGrammarQuizController::class, 'store'])->middleware('throttle:admin-builder')->name('grammar-quizzes.store');
         Route::get('/grammar-quizzes/{quiz}', [AdminGrammarQuizController::class, 'show'])->name('grammar-quizzes.show');
-        Route::put('/grammar-quizzes/{quiz}', [AdminGrammarQuizController::class, 'update'])->name('grammar-quizzes.update');
+        Route::put('/grammar-quizzes/{quiz}', [AdminGrammarQuizController::class, 'update'])->middleware('throttle:admin-builder')->name('grammar-quizzes.update');
         Route::patch('/grammar-quizzes/{quiz}/status', [AdminGrammarQuizController::class, 'updateStatus'])->name('grammar-quizzes.status');
         Route::delete('/grammar-quizzes/{quiz}', [AdminGrammarQuizController::class, 'destroy'])->name('grammar-quizzes.destroy');
         Route::get('/programs/{program}/grammar-quizzes/template', [AdminGrammarQuizController::class, 'template'])->name('grammar-quizzes.template');
-        Route::post('/grammar-quizzes/generate-draft', [AdminGrammarQuizController::class, 'generateDraft'])->name('grammar-quizzes.generate-draft');
-        Route::post('/grammar-quizzes/regenerate-question', [AdminGrammarQuizController::class, 'regenerateQuestion'])->name('grammar-quizzes.regenerate-question');
+        Route::post('/grammar-quizzes/generate-draft', [AdminGrammarQuizController::class, 'generateDraft'])->middleware('throttle:admin-generator')->name('grammar-quizzes.generate-draft');
+        Route::post('/grammar-quizzes/regenerate-question', [AdminGrammarQuizController::class, 'regenerateQuestion'])->middleware('throttle:admin-generator')->name('grammar-quizzes.regenerate-question');
         Route::post('/programs/{program}/grammar-quizzes/import/preview', [AdminGrammarQuizController::class, 'previewImport'])->middleware('throttle:admin-imports')->name('grammar-quizzes.import.preview');
         Route::post('/programs/{program}/grammar-quizzes/import', [AdminGrammarQuizController::class, 'import'])->middleware('throttle:admin-imports')->name('grammar-quizzes.import');
+
+        Route::get('/dokkai-quizzes/picker', [AdminDokkaiController::class, 'picker'])->name('dokkai-quizzes.picker');
+        Route::get('/module-days/{moduleDay}/dokkai-quizzes', [AdminDokkaiController::class, 'index'])->name('dokkai-quizzes.index');
+        Route::post('/module-days/{moduleDay}/dokkai-quizzes', [AdminDokkaiController::class, 'store'])->middleware('throttle:admin-builder')->name('dokkai-quizzes.store');
+        Route::get('/dokkai-quizzes/{quiz}', [AdminDokkaiController::class, 'show'])->name('dokkai-quizzes.show');
+        Route::put('/dokkai-quizzes/{quiz}', [AdminDokkaiController::class, 'update'])->middleware('throttle:admin-builder')->name('dokkai-quizzes.update');
+        Route::patch('/dokkai-quizzes/{quiz}/status', [AdminDokkaiController::class, 'updateStatus'])->name('dokkai-quizzes.status');
+        Route::delete('/dokkai-quizzes/{quiz}', [AdminDokkaiController::class, 'destroy'])->name('dokkai-quizzes.destroy');
 
         // LevelPembelajaran CRUD
         Route::apiResource('/levels', AdminLevelController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -372,6 +398,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/quizzes/{quiz}', [PembelajaranController::class, 'showQuiz'])->name('quizzes.show');
         Route::get('/module-days/{moduleDay}/grammar-quizzes', [GrammarQuizController::class, 'index'])->name('grammar-quizzes.index');
         Route::get('/grammar-quizzes/{quiz}', [GrammarQuizController::class, 'show'])->name('grammar-quizzes.show');
+        Route::get('/dokkai', [DokkaiController::class, 'index'])->name('dokkai.index');
+        Route::get('/dokkai-quizzes/{quiz}', [DokkaiController::class, 'payload'])->name('dokkai-quizzes.payload');
+        Route::get('/dokkai/{quiz}', [DokkaiController::class, 'show'])->name('dokkai.show');
+        Route::post('/dokkai-quizzes/{quiz}/submit', [DokkaiController::class, 'submit'])->middleware('throttle:learning-actions')->name('dokkai-quizzes.submit');
         Route::get('/exams', [ExamPortalController::class, 'index'])->name('exams.index');
         Route::get('/exams/library', [ExamPortalController::class, 'library'])->name('exams.library');
         Route::get('/exams/ranking', [ExamPortalController::class, 'ranking'])->middleware('throttle:exam-ranking')->name('exams.ranking');

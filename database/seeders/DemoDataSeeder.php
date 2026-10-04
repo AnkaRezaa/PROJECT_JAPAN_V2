@@ -31,6 +31,10 @@ class DemoDataSeeder extends Seeder
 
     public function run(): void
     {
+        if (app()->environment('production')) {
+            throw new \RuntimeException('DemoDataSeeder resets demo data and cannot run in production.');
+        }
+
         $this->purgeDemoPrograms();
 
         $this->call([

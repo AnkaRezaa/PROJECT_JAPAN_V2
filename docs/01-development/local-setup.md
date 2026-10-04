@@ -93,7 +93,7 @@ npm audit --omit=dev
 
 ## Akun Demo
 
-Semua akun berikut memakai password `TOKU-UP#2026`:
+Semua akun berikut memakai password `password` (sesuai `PenggunaSeeder::DEMO_PASSWORD`):
 
 - `superadmin@toku-up.com`: superadmin.
 - `admin@toku-up.com`: admin global.
@@ -102,6 +102,10 @@ Semua akun berikut memakai password `TOKU-UP#2026`:
 - `student2@toku-up.com`: siswa kelas mentor.
 
 Email demo ditandai sudah terverifikasi sehingga login pertama tidak memicu OTP ke alamat dummy. Kredensial ini hanya untuk development, staging, dan demonstrasi client.
+
+Kelima akun mewakili empat persona: siswa, admin global, mentor, dan superadmin. Mentor tetap memakai role database `admin` dengan `admin_scope=kloter`; admin global memakai `admin_scope=global`. Kedua siswa memakai role `user` tanpa admin scope. Jangan menambahkan role `mentor` karena otorisasi aplikasi menggunakan kombinasi role dan scope tersebut.
+
+`PenggunaSeeder` mengembalikan password dan atribut akun demo saat dijalankan ulang. `DemoDataSeeder` juga mereset program demo sebelum membuat akses kelas mandiri dan kloter mentor. Keduanya menolak eksekusi pada `APP_ENV=production`, termasuk dengan `--force`; `DatabaseSeeder` ikut berhenti karena memanggil `DemoDataSeeder` terlebih dahulu. Ini bukan prosedur provisioning akun production. Jangan ubah environment production untuk melewati pengaman ini.
 
 ## Masalah Umum
 

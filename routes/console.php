@@ -20,3 +20,4 @@ Schedule::command('reviews:prune --days=30 --limit=100 --chunk=1000')->dailyAt('
 Schedule::command('exams:finalize-expired --limit=500')->everyMinute()->withoutOverlapping();
 Schedule::command('exams:release-scheduled')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('exams:prune-answers --days=365 --limit=10000')->dailyAt('02:00')->withoutOverlapping();
+Schedule::command('support:prune')->dailyAt('02:15')->withoutOverlapping();

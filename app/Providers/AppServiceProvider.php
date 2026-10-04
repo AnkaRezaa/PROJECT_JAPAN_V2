@@ -68,6 +68,10 @@ class AppServiceProvider extends ServiceProvider
             ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
         RateLimiter::for('admin-uploads', fn (Request $request) => Limit::perMinutes(10, 20)
             ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
+        RateLimiter::for('admin-builder', fn (Request $request) => Limit::perMinute(60)
+            ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
+        RateLimiter::for('admin-generator', fn (Request $request) => Limit::perMinute(15)
+            ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
         RateLimiter::for('exam-admin', fn (Request $request) => Limit::perMinute(20)
             ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
         RateLimiter::for('exam-start', fn (Request $request) => Limit::perMinute(10)
@@ -80,5 +84,21 @@ class AppServiceProvider extends ServiceProvider
             ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
         RateLimiter::for('guest-sensitive', fn (Request $request) => Limit::perMinute(5)
             ->by(strtolower((string) $request->input('email')).':'.$request->ip()));
+        RateLimiter::for('support-chat-start', fn (Request $request) => [
+            Limit::perMinute(3)->by($request->ip()),
+            Limit::perHour(12)->by($request->ip()),
+        ]);
+        RateLimiter::for('support-chat-send', function (Request $request) {
+            $identity = $request->user()?->id
+                ? 'user:'.$request->user()->id
+                : 'visitor:'.hash('sha256', (string) $request->cookie('support_chat_token', $request->ip()));
+
+            return [
+                Limit::perMinute(6)->by($identity),
+                Limit::perMinute(30)->by('ip:'.$request->ip()),
+                Limit::perHour(240)->by('ip:'.$request->ip()),
+            ];
+        });
+        RateLimiter::for('support-chat-read', fn (Request $request) => Limit::perMinute(300)->by($request->ip()));
     }
 }

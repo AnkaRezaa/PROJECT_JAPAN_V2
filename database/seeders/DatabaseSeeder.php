@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             NewsPortalSeeder::class,
             AchievementSeeder::class,
             StandaloneExamDemoSeeder::class,
+            DokkaiSeeder::class,
         ]);
     }
 }
