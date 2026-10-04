@@ -34,6 +34,7 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import SettingsIcon from '@mui/icons-material/Settings';
+import ConfirmActionDialog from '@/Components/UI/ConfirmActionDialog';
 
 const resolveThemeMode = () => {
     if (typeof window === 'undefined') {
@@ -189,6 +190,8 @@ export default function AuthenticatedLayout({ children }) {
     const [openMenuGroups, setOpenMenuGroups] = useState({});
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const sidebarRef = useRef(null);
     const layoutRef = useRef(null);
     const menuRef = useRef(null);
@@ -604,6 +607,19 @@ export default function AuthenticatedLayout({ children }) {
         setIsExpanded(expanded);
         window.localStorage.setItem('toku-up:sidebar-expanded', String(expanded));
     };
+    const handleLogoutClick = (event) => {
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
+        setProfileMenuOpen(false);
+        setMobileAccountOpen(false);
+        setIsLogoutDialogOpen(true);
+    };
+    const executeLogout = () => {
+        setIsLoggingOut(true);
+        router.post(route('logout'), {}, {
+            onFinish: () => setIsLoggingOut(false),
+        });
+    };
     const handleNavigation = () => {
         setMobileOpen(false);
         setMobileAccountOpen(false);
@@ -762,15 +778,15 @@ export default function AuthenticatedLayout({ children }) {
             </div>
 
             <div className="border-t border-gray-100 py-1 dark:border-gray-800">
-                <Link
-                    href={route('logout')}
-                    method="post"
-                    as="button"
-                    onClick={handleNavigation}
+                <button
+                    type="button"
+                    title="Keluar dari akun"
+                    aria-label="Keluar Akun"
+                    onClick={handleLogoutClick}
                     className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500 dark:text-red-400 dark:hover:bg-red-900/30"
                 >
                     <LogoutOutlinedIcon sx={{ fontSize: 18 }} /> Keluar Akun
-                </Link>
+                </button>
             </div>
         </div>
     );
@@ -1085,6 +1101,18 @@ export default function AuthenticatedLayout({ children }) {
                     ))}
                 </div>
             )}
+
+            <ConfirmActionDialog
+                show={isLogoutDialogOpen}
+                variant="danger"
+                title="Konfirmasi Keluar Akun"
+                message={`Apakah Anda yakin ingin keluar dari sesi akun ${user?.username || user?.name || ''}? Anda harus login kembali untuk mengakses panel ini.`}
+                confirmLabel={isLoggingOut ? 'Sedang keluar...' : 'Ya, Keluar'}
+                cancelLabel="Batal"
+                processing={isLoggingOut}
+                onConfirm={executeLogout}
+                onCancel={() => !isLoggingOut && setIsLogoutDialogOpen(false)}
+            />
 
             <style dangerouslySetInnerHTML={{__html:`
                 .hide-scrollbar::-webkit-scrollbar { display: none; }
