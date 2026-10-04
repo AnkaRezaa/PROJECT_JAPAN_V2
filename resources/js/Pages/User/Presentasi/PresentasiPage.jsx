@@ -50,6 +50,8 @@ function SlideFrame({ slide }) {
     const hasBoardSnapshot = slide.jamboard_snapshot || slide.snapshot_data;
     const visualUrl = slide.snapshot_url || slide.snapshot_data || slide.media_url;
     const isEditableMedia = slide.layout === 'media' && slide.media_url;
+    const isDarkBackground = ['dark', 'indigo'].includes(slide.background) || !backgroundClass[slide.background];
+    const slideLabel = slide.layout === 'title' ? 'Pembuka' : 'Materi';
 
     return (
         <article className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
@@ -69,10 +71,10 @@ function SlideFrame({ slide }) {
                     </div>
                 ) : (
                     <div className="flex h-full min-h-0 w-full flex-col items-center justify-center text-center">
-                        <p className="shrink-0 text-xs font-black uppercase tracking-[0.2em] text-white/70">{slide.layout}</p>
-                        <h2 className="mt-2 shrink-0 break-words text-xl font-black sm:mt-3 sm:text-2xl">{slide.title || 'Slide Presentasi'}</h2>
+                        <p className={`shrink-0 text-xs font-black uppercase tracking-[0.2em] ${isDarkBackground ? 'text-white/70' : 'text-gray-600'}`}>{slideLabel}</p>
+                        <h2 className="mt-2 shrink-0 break-words text-xl font-black sm:mt-3 sm:text-3xl">{slide.title || 'Slide Presentasi'}</h2>
                         <div className="mt-3 max-h-[55%] w-full overflow-y-auto overscroll-contain px-2">
-                            <p className="mx-auto max-w-xl whitespace-pre-line break-words text-xs font-semibold leading-6 text-white/85 sm:text-sm sm:leading-7">{slide.content || 'Konten slide belum diisi.'}</p>
+                            <p className={`mx-auto max-w-xl whitespace-pre-line break-words text-sm font-medium leading-5 sm:text-base sm:leading-7 lg:text-lg ${isDarkBackground ? 'text-white/85' : 'text-gray-800'}`}>{slide.content || 'Konten slide belum diisi.'}</p>
                         </div>
                     </div>
                 )}
@@ -107,12 +109,12 @@ function SlideCarousel({ deck }) {
         <div className="space-y-2.5">
             <SlideFrame slide={activeSlide} />
             <div className="flex items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-white p-2 sm:p-2.5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                <button type="button" onClick={previous} disabled={activeIndex === 0} className="shrink-0 rounded-xl border border-gray-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Prev</button>
+                <button type="button" onClick={previous} disabled={activeIndex === 0} className="shrink-0 rounded-xl border border-gray-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Sebelumnya</button>
                 <div className="min-w-0 flex-1 px-1 text-center">
                     <p className="text-[11px] sm:text-xs font-black text-gray-500">Slide {activeIndex + 1} dari {slides.length}</p>
                     <p className="mt-0.5 max-w-full truncate text-xs sm:text-sm font-black text-gray-900 dark:text-white">{activeSlide.title || 'Slide Presentasi'}</p>
                 </div>
-                <button type="button" onClick={next} disabled={activeIndex >= slides.length - 1} className="shrink-0 rounded-xl border border-gray-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Next</button>
+                <button type="button" onClick={next} disabled={activeIndex >= slides.length - 1} className="shrink-0 rounded-xl border border-gray-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Berikutnya</button>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2">
                 {slides.map((slide, index) => (
@@ -152,10 +154,10 @@ export default function PresentasiPage({ program = {}, decks = [], modules = [],
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_14px_14px,rgba(255,255,255,0.18)_2px,transparent_3px)] bg-[length:24px_24px]" />
                         <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white/70">PPT & Board Kelas</p>
+                                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white/70">Materi Presentasi</p>
                                 <h1 className="mt-1 text-xl font-black tracking-tight sm:text-2xl">{program.title || 'Presentasi Kelas'}</h1>
                                 <p className="mt-1 max-w-2xl text-xs font-semibold leading-5 text-white/80">
-                                    Materi penunjang dari admin. User hanya melihat, tidak mengedit.
+                                    {program.level || 'Materi kelas'}
                                 </p>
                             </div>
                             <Link href={program.roadmap_url || route('user.kelas.index')} className="inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-white/85 backdrop-blur transition hover:bg-white/20">
@@ -169,13 +171,13 @@ export default function PresentasiPage({ program = {}, decks = [], modules = [],
                         <aside className="space-y-3 lg:sticky lg:top-4 lg:self-start">
                             {modules.length > 0 && (
                                 <div className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                                    <h2 className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-gray-500">Filter Week</h2>
+                                    <h2 className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-gray-500">Minggu</h2>
                                     <div className="space-y-1.5">
                                         <Link
                                             href={route('user.modul.program.presentasi', program.slug)}
                                             className={`block rounded-xl px-3 py-2 text-xs font-black transition ${!selectedModuleId ? `bg-gradient-to-r ${theme.ctaBg} text-white` : 'bg-gray-50 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'}`}
                                         >
-                                            Semua Week
+                                            Semua Minggu
                                         </Link>
                                         {modules.map((module) => (
                                             <Link
@@ -183,7 +185,7 @@ export default function PresentasiPage({ program = {}, decks = [], modules = [],
                                                 href={route('user.modul.program.presentasi', { program: program.slug, module: module.id })}
                                                 className={`block rounded-xl px-3 py-2 text-xs font-black transition ${selectedModuleId === Number(module.id) ? `bg-gradient-to-r ${theme.ctaBg} text-white` : 'bg-gray-50 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'}`}
                                             >
-                                                Week {module.week_number ?? '-'} - {module.title}
+                                                Minggu {module.week_number ?? '-'} - {module.title}
                                             </Link>
                                         ))}
                                     </div>
@@ -193,7 +195,7 @@ export default function PresentasiPage({ program = {}, decks = [], modules = [],
                             <div className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                                 <div className="mb-3 flex items-center gap-2">
                                     <SlideshowIcon className={theme.heroAccent} />
-                                    <h2 className="text-xs font-black uppercase tracking-[0.18em] text-gray-500">Deck</h2>
+                                    <h2 className="text-xs font-black uppercase tracking-[0.18em] text-gray-500">Daftar Presentasi</h2>
                                 </div>
                                 <div className="space-y-1.5">
                                     {decks.map((deck) => (
@@ -204,7 +206,7 @@ export default function PresentasiPage({ program = {}, decks = [], modules = [],
                                             className={`w-full rounded-xl px-3 py-2.5 text-left transition ${selectedDeck?.id === deck.id ? 'bg-gray-950 text-white dark:bg-white dark:text-gray-950' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'}`}
                                         >
                                             <p className="truncate text-sm font-black">{deck.title}</p>
-                                            <p className="mt-1 text-xs opacity-70">Week {deck.module?.week_number ?? '-'} - {deck.module?.title || 'Kelas'} · {deck.slides_count ?? deck.slides?.length ?? 0} slide</p>
+                                            <p className="mt-1 text-xs opacity-70">Minggu {deck.module?.week_number ?? '-'} - {deck.module?.title || 'Kelas'} · {deck.slides_count ?? deck.slides?.length ?? 0} slide</p>
                                         </button>
                                     ))}
                                     {decks.length === 0 && (

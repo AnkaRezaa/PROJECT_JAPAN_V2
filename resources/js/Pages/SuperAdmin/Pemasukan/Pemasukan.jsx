@@ -8,6 +8,7 @@ import ChartPeriodSelect from '@/Components/Features/Dashboard/ChartPeriodSelect
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import AdminDialog from '@/Components/UI/AdminDialog';
 import SearchableSelect from '@/Components/UI/SearchableSelect';
+import FormField, { formInputClass } from '@/Components/UI/FormField';
 import { Area, AreaChart, CartesianGrid, Cell, Legend, Pie, PieChart, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartEmpty, ChartTooltip, ChartTooltipContent } from '@/Components/UI/Chart';
 
@@ -436,7 +437,7 @@ export default function Pemasukan({
                                             <button
                                                 type="button"
                                                 onClick={() => openPlanEditForm(plan)}
-                                                className="mt-3 rounded-lg border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-brand-900/40 dark:hover:bg-brand-900/20 dark:hover:text-brand-300"
+                                                className="mt-3 w-full sm:w-auto rounded-lg border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-brand-900/40 dark:hover:bg-brand-900/20 dark:hover:text-brand-300"
                                             >
                                                 Edit Harga
                                             </button>
@@ -457,7 +458,7 @@ export default function Pemasukan({
                                     <div key={item.id} className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0">
-                                                <p className="font-mono text-sm font-black tracking-widest text-gray-900 dark:text-white">{item.code}</p>
+                                                <p className="font-mono text-sm font-black tracking-widest text-gray-900 dark:text-white break-all">{item.code}</p>
                                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.name || item.plan_name} - {item.duration_days} hari - {item.usage}</p>
                                                 <p className="mt-1 text-[11px] font-black uppercase tracking-wider text-sky-600 dark:text-sky-300">{item.scope_label}</p>
                                                 {item.expires_at && <p className="mt-1 text-[11px] font-bold text-amber-600 dark:text-amber-300">Expired: {item.expires_at}</p>}
@@ -484,7 +485,7 @@ export default function Pemasukan({
                                                         onFinish: closeConfirm,
                                                     }),
                                                 })}
-                                                className="mt-3 rounded-lg border border-brand-100 px-3 py-2 text-xs font-black text-brand-600 dark:border-brand-900/40 dark:text-brand-400"
+                                                className="mt-3 w-full sm:w-auto rounded-lg border border-brand-100 px-3 py-2 text-xs font-black text-brand-600 dark:border-brand-900/40 dark:text-brand-400"
                                             >
                                                 Revoke
                                             </button>
@@ -499,15 +500,68 @@ export default function Pemasukan({
 
             {showPlanForm && (
                 <AdminDialog open onClose={closePlanForm} eyebrow="Harga dan Akses" title={editingPlan ? 'Edit Payment Plan' : 'Buat Payment Plan'} description={editingPlan ? 'Perubahan harga berlaku untuk checkout dan transaksi baru.' : 'Plan ini akan dipakai sebagai sumber harga pada halaman pricing.'} maxWidth="max-w-lg">
-                        <form onSubmit={submitPlan} className="space-y-4">
-                            <input value={planForm.data.name} onChange={(e) => planForm.setData('name', e.target.value)} placeholder="Nama plan" className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm" />
-                            <input value={planForm.data.slug} onChange={(e) => planForm.setData('slug', e.target.value)} placeholder="Slug" className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm" />
-                            <input value={planForm.data.description} onChange={(e) => planForm.setData('description', e.target.value)} placeholder="Deskripsi" className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm" />
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <input type="number" value={planForm.data.price} onChange={(e) => planForm.setData('price', e.target.value)} placeholder="Harga" className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
-                                <input type="number" value={planForm.data.duration_days} onChange={(e) => planForm.setData('duration_days', e.target.value)} placeholder="Durasi hari" className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
-                            </div>
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <form onSubmit={submitPlan} className="space-y-4">
+                        <FormField label="Nama Plan" required error={planForm.errors.name} tooltip="Nama paket langganan yang tampil di katalog.">
+                            <input
+                                value={planForm.data.name}
+                                onChange={(e) => {
+                                    planForm.setData('name', e.target.value);
+                                    planForm.clearErrors('name');
+                                }}
+                                placeholder="Contoh: Paket Belajar Mandiri N5"
+                                className={formInputClass(planForm.errors.name)}
+                            />
+                        </FormField>
+                        <FormField label="Slug URL" required error={planForm.errors.slug} tooltip="Pengenal unik berbasis URL untuk paket.">
+                            <input
+                                value={planForm.data.slug}
+                                onChange={(e) => {
+                                    planForm.setData('slug', e.target.value);
+                                    planForm.clearErrors('slug');
+                                }}
+                                placeholder="Contoh: mandiri-n5"
+                                className={formInputClass(planForm.errors.slug)}
+                            />
+                        </FormField>
+                        <FormField label="Deskripsi" error={planForm.errors.description} tooltip="Ringkasan benefit paket untuk calon siswa.">
+                            <input
+                                value={planForm.data.description}
+                                onChange={(e) => {
+                                    planForm.setData('description', e.target.value);
+                                    planForm.clearErrors('description');
+                                }}
+                                placeholder="Deskripsi singkat paket"
+                                className={formInputClass(planForm.errors.description)}
+                            />
+                        </FormField>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <FormField label="Harga (Rp)" required error={planForm.errors.price} tooltip="Nominal tarif langganan dalam Rupiah.">
+                                <input
+                                    type="number"
+                                    value={planForm.data.price}
+                                    onChange={(e) => {
+                                        planForm.setData('price', e.target.value);
+                                        planForm.clearErrors('price');
+                                    }}
+                                    placeholder="Contoh: 150000"
+                                    className={formInputClass(planForm.errors.price)}
+                                />
+                            </FormField>
+                            <FormField label="Durasi (Hari)" required error={planForm.errors.duration_days} tooltip="Masa aktif hak akses belajar siswa setelah pembayaran diverifikasi.">
+                                <input
+                                    type="number"
+                                    value={planForm.data.duration_days}
+                                    onChange={(e) => {
+                                        planForm.setData('duration_days', e.target.value);
+                                        planForm.clearErrors('duration_days');
+                                    }}
+                                    placeholder="Contoh: 30"
+                                    className={formInputClass(planForm.errors.duration_days)}
+                                />
+                            </FormField>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <FormField label="Tipe Akses" required error={planForm.errors.scope_type} tooltip="Pilih apakah akses mandiri atau dengan pendampingan mentor.">
                                 <select
                                     value={planForm.data.scope_type}
                                     onChange={(e) => {
@@ -516,39 +570,76 @@ export default function Pemasukan({
                                             scope_type: e.target.value,
                                             program_pembelajaran_id: planForm.data.program_pembelajaran_id,
                                         });
+                                        planForm.clearErrors('scope_type');
                                     }}
-                                    className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold dark:border-gray-700 dark:bg-gray-900"
+                                    className={formInputClass(planForm.errors.scope_type)}
                                 >
                                     <option value="program">Kelas Mandiri</option>
                                     <option value="kloter">Kelas Mentor</option>
                                 </select>
+                            </FormField>
+                            <FormField label="Program Pembelajaran" required error={planForm.errors.program_pembelajaran_id} tooltip="Pilih program/kelas materi yang di-unlock.">
                                 <SearchableSelect
                                     value={planForm.data.program_pembelajaran_id}
-                                    onChange={(programId) => planForm.setData('program_pembelajaran_id', programId)}
+                                    onChange={(programId) => {
+                                        planForm.setData('program_pembelajaran_id', programId);
+                                        planForm.clearErrors('program_pembelajaran_id');
+                                    }}
                                     disabled={!['program', 'kloter'].includes(planForm.data.scope_type)}
                                     placeholder="Pilih kelas"
                                     searchPlaceholder="Cari kelas..."
                                     options={programs.map((program) => ({ value: program.id, label: program.title }))}
                                 />
-                            </div>
-                            <textarea value={planForm.data.features} onChange={(e) => planForm.setData('features', e.target.value)} rows={4} placeholder="Satu fitur per baris" className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 text-sm" />
-                            <label className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm font-bold">
-                                <input type="checkbox" checked={planForm.data.is_active} onChange={(e) => planForm.setData('is_active', e.target.checked)} className="rounded border-gray-300 text-brand-600 focus:ring-focus" />
-                                Aktif
+                            </FormField>
+                        </div>
+                        <FormField label="Fitur / Benefit" error={planForm.errors.features} tooltip="Daftar keunggulan paket. Tulis satu fitur per baris.">
+                            <textarea
+                                value={planForm.data.features}
+                                onChange={(e) => {
+                                    planForm.setData('features', e.target.value);
+                                    planForm.clearErrors('features');
+                                }}
+                                rows={4}
+                                placeholder="Satu fitur per baris"
+                                className={formInputClass(planForm.errors.features)}
+                            />
+                        </FormField>
+                        <FormField label="Status" tooltip="Aktifkan agar paket muncul di pilihan transaksi/pricing.">
+                            <label className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 text-sm font-bold">
+                                <input
+                                    type="checkbox"
+                                    checked={planForm.data.is_active}
+                                    onChange={(e) => planForm.setData('is_active', e.target.checked)}
+                                    className="rounded border-gray-300 text-brand-600 focus:ring-focus"
+                                />
+                                Aktifkan Paket Ini
                             </label>
-                            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                                <button type="button" onClick={closePlanForm} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
-                                <button disabled={planForm.processing} className="min-h-11 w-full rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white sm:w-auto">{planForm.processing ? 'Menyimpan...' : editingPlan ? 'Update Plan' : 'Simpan Plan'}</button>
-                            </div>
-                        </form>
+                        </FormField>
+                        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                            <button type="button" onClick={closePlanForm} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
+                            <button disabled={planForm.processing} className="min-h-11 w-full rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white sm:w-auto">{planForm.processing ? 'Menyimpan...' : editingPlan ? 'Update Plan' : 'Simpan Plan'}</button>
+                        </div>
+                    </form>
                 </AdminDialog>
             )}
 
             {showTransactionForm && (
                 <AdminDialog open onClose={() => { setShowTransactionForm(false); transactionForm.reset(); }} eyebrow="Pemasukan" title="Buat Transaksi Manual" description="Simpan bukti pembayaran terlebih dahulu. Akses baru aktif setelah transaksi disetujui." maxWidth="max-w-2xl">
-                        <form onSubmit={submitTransaction} className="space-y-4">
-                            <SearchableSelect value={transactionForm.data.user_id} onChange={(userId) => transactionForm.setData('user_id', userId)} placeholder="Pilih siswa" searchPlaceholder="Cari nama atau email siswa..." options={users.map((user) => ({ value: user.id, label: user.label }))} />
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <form onSubmit={submitTransaction} className="space-y-4">
+                        <FormField label="Siswa" required error={transactionForm.errors.user_id} tooltip="Pilih akun pengguna/siswa yang bertransaksi.">
+                            <SearchableSelect
+                                value={transactionForm.data.user_id}
+                                onChange={(userId) => {
+                                    transactionForm.setData('user_id', userId);
+                                    transactionForm.clearErrors('user_id');
+                                }}
+                                placeholder="Pilih siswa"
+                                searchPlaceholder="Cari nama atau email siswa..."
+                                options={users.map((user) => ({ value: user.id, label: user.label }))}
+                            />
+                        </FormField>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <FormField label="Paket Pembayaran" required error={transactionForm.errors.payment_plan_id} tooltip="Paket langganan yang dibeli oleh siswa.">
                                 <SearchableSelect
                                     value={transactionForm.data.payment_plan_id}
                                     onChange={(planId) => {
@@ -559,67 +650,120 @@ export default function Pemasukan({
                                             amount: selectedPlan ? selectedPlan.price : transactionForm.data.amount,
                                             kloter_belajar_id: '',
                                         });
+                                        transactionForm.clearErrors('payment_plan_id');
                                     }}
                                     placeholder="Pilih plan"
                                     searchPlaceholder="Cari nama plan atau kelas..."
                                     options={availablePlans.map((plan) => ({ value: plan.id, label: plan.name, description: `${plan.scope_label} - ${plan.price_formatted}` }))}
                                 />
-                                <input type="number" value={transactionForm.data.amount} onChange={(e) => transactionForm.setData('amount', e.target.value)} placeholder="Nominal" className="h-11 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm" />
-                            </div>
-                            {selectedTransactionPlan?.scope_type === 'kloter' && (
+                            </FormField>
+                            <FormField label="Nominal (Rp)" required error={transactionForm.errors.amount} tooltip="Total uang yang dibayarkan siswa.">
+                                <input
+                                    type="number"
+                                    value={transactionForm.data.amount}
+                                    onChange={(e) => {
+                                        transactionForm.setData('amount', e.target.value);
+                                        transactionForm.clearErrors('amount');
+                                    }}
+                                    placeholder="Nominal"
+                                    className={formInputClass(transactionForm.errors.amount)}
+                                />
+                            </FormField>
+                        </div>
+                        {selectedTransactionPlan?.scope_type === 'kloter' && (
+                            <FormField label="Kloter Mentor" required error={transactionForm.errors.kloter_belajar_id} tooltip="Pilih kloter belajar yang dipandu mentor.">
                                 <SearchableSelect
                                     value={transactionForm.data.kloter_belajar_id}
-                                    onChange={(kloterId) => transactionForm.setData('kloter_belajar_id', kloterId)}
+                                    onChange={(kloterId) => {
+                                        transactionForm.setData('kloter_belajar_id', kloterId);
+                                        transactionForm.clearErrors('kloter_belajar_id');
+                                    }}
                                     placeholder="Pilih kloter mentor"
                                     searchPlaceholder="Cari kloter atau mentor..."
                                     options={selectedTransactionKloters.map((kloter) => ({ value: kloter.id, label: kloter.name, description: kloter.mentor_name }))}
                                 />
-                            )}
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <select value={transactionForm.data.payment_method} onChange={(e) => transactionForm.setData('payment_method', e.target.value)} className="h-11 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm">
+                            </FormField>
+                        )}
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <FormField label="Metode Pembayaran" required error={transactionForm.errors.payment_method}>
+                                <select
+                                    value={transactionForm.data.payment_method}
+                                    onChange={(e) => {
+                                        transactionForm.setData('payment_method', e.target.value);
+                                        transactionForm.clearErrors('payment_method');
+                                    }}
+                                    className={formInputClass(transactionForm.errors.payment_method)}
+                                >
                                     <option value="manual">Manual</option>
                                     <option value="bank_transfer">Bank Transfer</option>
                                     <option value="e-wallet">E-Wallet</option>
                                     <option value="credit_card">Credit Card</option>
-                                <option value="midtrans">Midtrans</option>
+                                    <option value="midtrans">Midtrans</option>
                                 </select>
-                                <select value={transactionForm.data.status} onChange={(e) => transactionForm.setData('status', e.target.value)} className="h-11 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm">
+                            </FormField>
+                            <FormField label="Status Transaksi" required error={transactionForm.errors.status}>
+                                <select
+                                    value={transactionForm.data.status}
+                                    onChange={(e) => {
+                                        transactionForm.setData('status', e.target.value);
+                                        transactionForm.clearErrors('status');
+                                    }}
+                                    className={formInputClass(transactionForm.errors.status)}
+                                >
                                     <option value="pending">Pending</option>
                                     <option value="success">Success</option>
                                     <option value="failed">Failed</option>
                                     <option value="expired">Expired</option>
                                 </select>
-                            </div>
-                            <textarea value={transactionForm.data.notes} onChange={(e) => transactionForm.setData('notes', e.target.value)} rows={3} placeholder="Catatan transaksi" className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 text-sm" />
-                            <input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => transactionForm.setData('proof_of_payment', e.target.files[0] || null)} className="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-4 file:rounded-xl file:border-0 file:bg-brand-50 file:px-4 file:py-3 file:text-sm file:font-black file:text-brand-600" />
-                            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                                <button type="button" onClick={() => setShowTransactionForm(false)} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
-                                <button disabled={transactionForm.processing} className="min-h-11 w-full rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white sm:w-auto">{transactionForm.processing ? 'Menyimpan...' : 'Simpan Transaksi'}</button>
-                            </div>
-                        </form>
+                            </FormField>
+                        </div>
+                        <FormField label="Catatan Transaksi" error={transactionForm.errors.notes} tooltip="Catatan referensi tambahan untuk pembayaran ini.">
+                            <textarea
+                                value={transactionForm.data.notes}
+                                onChange={(e) => {
+                                    transactionForm.setData('notes', e.target.value);
+                                    transactionForm.clearErrors('notes');
+                                }}
+                                rows={3}
+                                placeholder="Catatan transaksi..."
+                                className={formInputClass(transactionForm.errors.notes)}
+                            />
+                        </FormField>
+                        <FormField label="Bukti Pembayaran (File)" error={transactionForm.errors.proof_of_payment} tooltip="Format gambar JPG, PNG, atau dokumen PDF.">
+                            <input
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.pdf"
+                                onChange={(e) => {
+                                    transactionForm.setData('proof_of_payment', e.target.files[0] || null);
+                                    transactionForm.clearErrors('proof_of_payment');
+                                }}
+                                className="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-4 file:rounded-xl file:border-0 file:bg-brand-50 file:px-4 file:py-3 file:text-sm file:font-black file:text-brand-600"
+                            />
+                        </FormField>
+                        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                            <button type="button" onClick={() => setShowTransactionForm(false)} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
+                            <button disabled={transactionForm.processing} className="min-h-11 w-full rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white sm:w-auto">{transactionForm.processing ? 'Menyimpan...' : 'Simpan Transaksi'}</button>
+                        </div>
+                    </form>
                 </AdminDialog>
             )}
 
             {showAccessKeyForm && (
                 <AdminDialog open onClose={() => { setShowAccessKeyForm(false); accessKeyForm.reset(); }} eyebrow="Akses Manual" title="Buat Access Key" description="Kode dibuat otomatis untuk demo, promo, atau pemberian akses manual." maxWidth="max-w-lg">
                     <form onSubmit={submitAccessKey} className="space-y-4">
-                        <div>
-                            <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                                Nama Campaign / Keterangan Key <span className="text-red-500">*</span>
-                            </label>
+                        <FormField label="Nama Campaign / Keterangan Key" required error={accessKeyForm.errors.name} tooltip="Keterangan peruntukan kode akses ini (misal: Promo Early Bird, Demo Guru).">
                             <input
                                 value={accessKeyForm.data.name}
-                                onChange={(e) => accessKeyForm.setData('name', e.target.value)}
+                                onChange={(e) => {
+                                    accessKeyForm.setData('name', e.target.value);
+                                    accessKeyForm.clearErrors('name');
+                                }}
                                 placeholder="Contoh: Promo Early Bird, Akses Demo Sensei"
-                                className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                className={formInputClass(accessKeyForm.errors.name)}
                             />
-                            {accessKeyForm.errors.name && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.name}</p>}
-                        </div>
+                        </FormField>
 
-                        <div>
-                            <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                                Paket Langganan Terkait <span className="text-gray-400 font-normal">(opsional)</span>
-                            </label>
+                        <FormField label="Paket Langganan Terkait" error={accessKeyForm.errors.payment_plan_id} tooltip="Opsional: hubungkan langsung dengan paket yang ada.">
                             <SearchableSelect
                                 value={accessKeyForm.data.payment_plan_id}
                                 onChange={(planId) => {
@@ -630,6 +774,7 @@ export default function Pemasukan({
                                         program_pembelajaran_id: found ? found.program_pembelajaran_id : prev.program_pembelajaran_id,
                                         duration_days: found ? (found.duration_days || 30) : prev.duration_days,
                                     }));
+                                    accessKeyForm.clearErrors('payment_plan_id');
                                 }}
                                 placeholder="Pilih paket langganan (opsional)"
                                 searchPlaceholder="Cari paket langganan..."
@@ -637,98 +782,92 @@ export default function Pemasukan({
                                 clearLabel="Gunakan pengaturan manual di bawah"
                                 options={accessKeyPlans.map((plan) => ({ value: plan.id, label: plan.name, description: plan.scope_label }))}
                             />
-                            {accessKeyForm.errors.payment_plan_id && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.payment_plan_id}</p>}
-                        </div>
+                        </FormField>
 
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                                    Cakupan Akses
-                                </label>
+                            <FormField label="Cakupan Akses" error={accessKeyForm.errors.scope_type} tooltip="Cakupan level akses materi.">
                                 <select
                                     value={accessKeyForm.data.scope_type}
-                                    onChange={(e) => accessKeyForm.setData('scope_type', e.target.value)}
+                                    onChange={(e) => {
+                                        accessKeyForm.setData('scope_type', e.target.value);
+                                        accessKeyForm.clearErrors('scope_type');
+                                    }}
                                     disabled={Boolean(accessKeyForm.data.payment_plan_id)}
-                                    className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                    className={formInputClass(accessKeyForm.errors.scope_type)}
                                 >
                                     <option value="program">Per Kelas / Program</option>
                                 </select>
-                            </div>
-                            <div>
-                                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                                    Pilih Kelas <span className="text-red-500">*</span>
-                                </label>
+                            </FormField>
+                            <FormField label="Pilih Kelas" required error={accessKeyForm.errors.program_pembelajaran_id} tooltip="Kelas yang akan terbuka saat key digunakan.">
                                 <SearchableSelect
                                     value={accessKeyForm.data.program_pembelajaran_id}
-                                    onChange={(programId) => accessKeyForm.setData('program_pembelajaran_id', programId)}
+                                    onChange={(programId) => {
+                                        accessKeyForm.setData('program_pembelajaran_id', programId);
+                                        accessKeyForm.clearErrors('program_pembelajaran_id');
+                                    }}
                                     disabled={Boolean(accessKeyForm.data.payment_plan_id)}
                                     placeholder="Pilih kelas"
                                     searchPlaceholder="Cari kelas..."
                                     options={programs.map((program) => ({ value: program.id, label: program.title }))}
                                 />
-                                {accessKeyForm.errors.program_pembelajaran_id && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.program_pembelajaran_id}</p>}
-                            </div>
+                            </FormField>
                         </div>
 
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                                    Masa Aktif (Hari) <span className="text-red-500">*</span>
-                                </label>
+                            <FormField label="Masa Aktif (Hari)" required error={accessKeyForm.errors.duration_days} tooltip="Masa berlaku akses setelah kode diklaim oleh siswa.">
                                 <input
                                     type="number"
                                     min="1"
                                     max="366"
                                     value={accessKeyForm.data.duration_days}
-                                    onChange={(e) => accessKeyForm.setData('duration_days', e.target.value)}
+                                    onChange={(e) => {
+                                        accessKeyForm.setData('duration_days', e.target.value);
+                                        accessKeyForm.clearErrors('duration_days');
+                                    }}
                                     placeholder="Contoh: 30"
-                                    className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                    className={formInputClass(accessKeyForm.errors.duration_days)}
                                 />
-                                {accessKeyForm.errors.duration_days && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.duration_days}</p>}
-                            </div>
-                            <div>
-                                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                                    Maksimal Pemakaian (Siswa) <span className="text-red-500">*</span>
-                                </label>
+                            </FormField>
+                            <FormField label="Maksimal Pemakaian (Siswa)" required error={accessKeyForm.errors.max_uses} tooltip="Jumlah maksimal siswa yang bisa menggunakan kode ini.">
                                 <input
                                     type="number"
                                     min="1"
                                     max="500"
                                     value={accessKeyForm.data.max_uses}
-                                    onChange={(e) => accessKeyForm.setData('max_uses', e.target.value)}
+                                    onChange={(e) => {
+                                        accessKeyForm.setData('max_uses', e.target.value);
+                                        accessKeyForm.clearErrors('max_uses');
+                                    }}
                                     placeholder="Contoh: 1"
-                                    className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                    className={formInputClass(accessKeyForm.errors.max_uses)}
                                 />
-                                {accessKeyForm.errors.max_uses && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.max_uses}</p>}
-                            </div>
+                            </FormField>
                         </div>
 
-                        <div>
-                            <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                                Batas Waktu Kedaluwarsa Klaim <span className="text-gray-400 font-normal">(opsional)</span>
-                            </label>
+                        <FormField label="Batas Waktu Kedaluwarsa Klaim" error={accessKeyForm.errors.expires_at} tooltip="Batas akhir waktu kode ini dapat diaktivasi.">
                             <input
                                 type="datetime-local"
                                 value={accessKeyForm.data.expires_at}
-                                onChange={(e) => accessKeyForm.setData('expires_at', e.target.value)}
-                                className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                onChange={(e) => {
+                                    accessKeyForm.setData('expires_at', e.target.value);
+                                    accessKeyForm.clearErrors('expires_at');
+                                }}
+                                className={formInputClass(accessKeyForm.errors.expires_at)}
                             />
-                            {accessKeyForm.errors.expires_at && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.expires_at}</p>}
-                        </div>
+                        </FormField>
 
-                        <div>
-                            <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                                Catatan Internal Admin <span className="text-gray-400 font-normal">(opsional)</span>
-                            </label>
+                        <FormField label="Catatan Internal Admin" error={accessKeyForm.errors.notes} tooltip="Catatan internal pengelola sistem.">
                             <textarea
                                 value={accessKeyForm.data.notes}
-                                onChange={(e) => accessKeyForm.setData('notes', e.target.value)}
+                                onChange={(e) => {
+                                    accessKeyForm.setData('notes', e.target.value);
+                                    accessKeyForm.clearErrors('notes');
+                                }}
                                 rows={2}
                                 placeholder="Tuliskan catatan peruntukan kode akses ini..."
-                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                className={formInputClass(accessKeyForm.errors.notes)}
                             />
-                            {accessKeyForm.errors.notes && <p className="mt-1 text-xs font-bold text-red-500">{accessKeyForm.errors.notes}</p>}
-                        </div>
+                        </FormField>
 
                         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                             <button type="button" onClick={() => setShowAccessKeyForm(false)} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>

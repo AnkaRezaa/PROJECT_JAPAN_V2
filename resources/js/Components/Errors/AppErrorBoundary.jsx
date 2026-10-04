@@ -8,6 +8,7 @@ export default class AppErrorBoundary extends React.Component {
     }
 
     componentDidCatch(error, errorInfo) {
+        console.error('AppErrorBoundary caught an unhandled render error:', error, errorInfo);
         this.props.onError?.(error, errorInfo);
     }
 

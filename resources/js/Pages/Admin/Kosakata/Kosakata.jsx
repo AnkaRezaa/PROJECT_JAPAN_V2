@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Card from '@/Components/UI/Card';
 import AdminDialog from '@/Components/UI/AdminDialog';
+import FormField from '@/Components/UI/FormField';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import SearchableSelect from '@/Components/UI/SearchableSelect';
 import SearchableMultiSelect from '@/Components/UI/SearchableMultiSelect';
@@ -17,6 +18,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import SearchIcon from '@mui/icons-material/Search';
 import DrawOutlinedIcon from '@mui/icons-material/DrawOutlined';
+import { TooltipHelp } from '@/Components/UI/QuizField';
 
 const emptyForm = {
     content_type: 'kosakata',
@@ -84,12 +86,11 @@ const toForm = (item) => ({
     status: item.status || 'draft',
 });
 
-function Field({ label, children, wide = false }) {
+function Field({ label, tooltip, hint, error, required = false, children, wide = false }) {
     return (
-        <label className={`block ${wide ? 'md:col-span-2' : ''}`}>
-            <span className="mb-2 block text-xs font-black uppercase tracking-wider text-gray-400">{label}</span>
+        <FormField label={label} tooltip={tooltip} hint={hint} error={error} required={required} wide={wide}>
             {children}
-        </label>
+        </FormField>
     );
 }
 
@@ -404,7 +405,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                 >
                     <div className="space-y-5">
                         <div className="grid gap-4 md:grid-cols-2">
-                            <Field label="Kelas tujuan" wide>
+                            <Field label="Kelas tujuan" tooltip="Pilih program/kelas tempat materi akan diimpor." wide>
                                 <SearchableSelect
                                     value={importForm.data.program_id}
                                     onChange={(value) => importForm.setData({
@@ -422,7 +423,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                                     }))}
                                 />
                             </Field>
-                            <Field label="Week tujuan">
+                            <Field label="Week tujuan" tooltip="Pilih modul mingguan spesifik sasaran materi.">
                                 <SearchableSelect
                                     value={importForm.data.module_id}
                                     onChange={(value) => importForm.setData({
@@ -439,7 +440,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                                     }))}
                                 />
                             </Field>
-                            <Field label="Hari (opsional)">
+                            <Field label="Hari (opsional)" tooltip="Pilih hari tertentu jika materi hanya untuk sesi belajar harian tersebut.">
                                 <SearchableSelect
                                     value={importForm.data.module_day_id}
                                     onChange={(value) => importForm.setData('module_day_id', value || '')}
@@ -504,144 +505,301 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                 </AdminDialog>
 
                 {showForm && (
-                    <div className="fixed inset-0 z-[110] overflow-y-auto bg-gray-950/60 p-3 backdrop-blur-sm sm:p-5">
-                        <div className="mx-auto my-6 max-w-6xl overflow-hidden rounded-[1.6rem] bg-white shadow-2xl dark:bg-gray-900">
-                            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-800">
-                                <div>
-                                    <p className="text-xs font-black uppercase tracking-[0.25em] text-orange-600">Bank Konten</p>
-                                    <h2 className="text-xl font-black text-gray-900 dark:text-white">{editing ? 'Edit Konten' : 'Tambah Konten'}</h2>
-                                </div>
-                                <button onClick={closeForm} className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                                    <CloseIcon sx={{ fontSize: 18 }} />
-                                </button>
-                            </div>
-
-                            <form onSubmit={submitForm} className="grid gap-0 lg:grid-cols-[360px_minmax(0,1fr)]">
-                                <aside className="bg-gradient-to-br from-orange-500 to-rose-600 p-6 text-white">
-                                    <p className="text-xs font-black uppercase tracking-[0.25em] text-white/70">Live Preview</p>
-                                    <div className="mt-6 rounded-[1.4rem] bg-white/15 p-5 shadow-xl backdrop-blur">
-                                        <div className="flex items-center justify-between">
-                                            <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-black">{typeLabels[form.data.content_type] || 'Konten'}</span>
-                                            <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-black">{form.data.status}</span>
-                                        </div>
-                                        <h3 className="mt-6 break-words text-5xl font-black">{form.data.word || 'Konten'}</h3>
-                                        <p className="mt-2 break-words text-lg font-bold text-white/75">{form.data.reading || 'reading / struktur'}</p>
-                                        <p className="mt-6 rounded-2xl bg-white px-4 py-3 text-sm font-black text-orange-700">{form.data.meaning_id || form.data.meaning_en || 'Arti akan tampil di sini'}</p>
+                    <AdminDialog
+                        open={showForm}
+                        onClose={closeForm}
+                        eyebrow="Bank Konten"
+                        title={editing ? 'Edit Konten' : 'Tambah Konten'}
+                        maxWidth="max-w-6xl"
+                        contentClassName="p-0"
+                    >
+                        <form onSubmit={submitForm} className="grid gap-0 lg:grid-cols-[360px_minmax(0,1fr)]">
+                            <aside className="bg-gradient-to-br from-orange-500 to-rose-600 p-6 text-white shrink-0">
+                                <p className="text-xs font-black uppercase tracking-[0.25em] text-white/70">Live Preview</p>
+                                <div className="mt-6 rounded-[1.4rem] bg-white/15 p-5 shadow-xl backdrop-blur">
+                                    <div className="flex items-center justify-between">
+                                        <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-black">{typeLabels[form.data.content_type] || 'Konten'}</span>
+                                        <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-black">{form.data.status}</span>
                                     </div>
-                                    <p className="mt-4 text-sm font-semibold leading-relaxed text-white/75">
-                                        Pilih tipe konten, hubungkan ke modul bila perlu, lalu publish jika siap dipakai user.
+                                    <h3 className="mt-6 break-words text-5xl font-black">{form.data.word || 'Konten'}</h3>
+                                    <p className="mt-2 break-words text-lg font-bold text-white/75">{form.data.reading || 'reading / struktur'}</p>
+                                    <p className="mt-6 rounded-2xl bg-white px-4 py-3 text-sm font-black text-orange-700">{form.data.meaning_id || form.data.meaning_en || 'Arti akan tampil di sini'}</p>
+                                </div>
+                                <p className="mt-4 text-sm font-semibold leading-relaxed text-white/75">
+                                    Pilih tipe konten, hubungkan ke modul bila perlu, lalu publish jika siap dipakai user.
+                                </p>
+                            </aside>
+
+                            <div className="max-h-[78vh] overflow-y-auto p-6">
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <Field label="Tipe Konten" required error={form.errors.content_type} tooltip="Pilih Kosakata umum, Kanji khusus, atau Tata Bahasa (Bunpo).">
+                                        <select
+                                            value={form.data.content_type}
+                                            onChange={(event) => {
+                                                form.setData('content_type', event.target.value);
+                                                form.clearErrors('content_type');
+                                            }}
+                                            className={`${inputClass} ${form.errors.content_type ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        >
+                                            <option value="kosakata">Kosakata</option>
+                                            <option value="kanji">Kanji</option>
+                                            <option value="bunpo">Bunpo</option>
+                                        </select>
+                                    </Field>
+                                    <Field label="Modul Mingguan" error={form.errors.module_id} tooltip="Kaitkan materi dengan modul pembelajaran tertentu atau biarkan kosong untuk bank global.">
+                                        <SearchableSelect
+                                            value={form.data.module_id}
+                                            onChange={(moduleId) => {
+                                                form.setData((data) => ({ ...data, module_id: moduleId, module_day_ids: [] }));
+                                                form.clearErrors('module_id');
+                                            }}
+                                            options={modules.map((module) => ({
+                                                value: module.id,
+                                                label: `Week ${module.week_number ?? '-'} - ${module.title}`,
+                                            }))}
+                                            placeholder="Global / belum dikunci modul"
+                                            searchPlaceholder="Cari week atau modul..."
+                                            allowClear
+                                            clearLabel="Global / belum dikunci modul"
+                                        />
+                                    </Field>
+                                    <Field label="Dipakai pada Day" tooltip="Pilih satu atau beberapa hari sesi belajar tempat materi ini akan muncul." wide>
+                                        <SearchableMultiSelect
+                                            value={form.data.module_day_ids || []}
+                                            onChange={(moduleDayIds) => form.setData('module_day_ids', moduleDayIds)}
+                                            placeholder="Pilih satu atau beberapa Day"
+                                            searchPlaceholder="Cari Day..."
+                                            options={(modules.find((module) => String(module.id) === String(form.data.module_id))?.days || []).map((day) => ({
+                                                value: day.id,
+                                                label: `Day ${day.day_number} - ${day.title}`,
+                                                description: `Week ${modules.find((module) => String(module.id) === String(form.data.module_id))?.week_number || '-'}`,
+                                            }))}
+                                        />
+                                        <span className="mt-1.5 block text-xs font-medium text-gray-500">Pilih lebih dari satu Day bila kosakata dipakai pada beberapa sesi.</span>
+                                    </Field>
+                                    <Field label="Konten Utama" required error={form.errors.word} tooltip="Teks utama, kanji tunggal, atau frasa grammar (contoh: 会議, 割, 〜ように).">
+                                        <input
+                                            value={form.data.word}
+                                            onChange={(event) => {
+                                                form.setData('word', event.target.value);
+                                                form.clearErrors('word');
+                                            }}
+                                            placeholder="会議 / 割 / 〜ように"
+                                            className={`${inputClass} ${form.errors.word ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Reading / Struktur" required error={form.errors.reading} tooltip="Cara baca kana (furigana) atau struktur rumus pembentuk tata bahasa.">
+                                        <input
+                                            value={form.data.reading}
+                                            onChange={(event) => {
+                                                form.setData('reading', event.target.value);
+                                                form.clearErrors('reading');
+                                            }}
+                                            placeholder="かいぎ / カツ / Vる + ように"
+                                            className={`${inputClass} ${form.errors.reading ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Arti Indonesia" required error={form.errors.meaning_id} tooltip="Makna atau terjemahan utama dalam bahasa Indonesia.">
+                                        <input
+                                            value={form.data.meaning_id}
+                                            onChange={(event) => {
+                                                form.setData('meaning_id', event.target.value);
+                                                form.clearErrors('meaning_id');
+                                            }}
+                                            placeholder="rapat / diskon / agar"
+                                            className={`${inputClass} ${form.errors.meaning_id ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="English Meaning" error={form.errors.meaning_en} tooltip="Makna padanan dalam bahasa Inggris (opsional).">
+                                        <input
+                                            value={form.data.meaning_en}
+                                            onChange={(event) => {
+                                                form.setData('meaning_en', event.target.value);
+                                                form.clearErrors('meaning_en');
+                                            }}
+                                            placeholder="meeting"
+                                            className={`${inputClass} ${form.errors.meaning_en ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Level Program" tooltip="Level JLPT yang terhubung dari modul/program terkait.">
+                                        <input value={form.data.jlpt_level} readOnly placeholder={program?.curriculum_track?.code === 'jlpt' ? 'Pilih kelas JLPT' : 'Tidak digunakan'} className={`${inputClass} bg-gray-50 text-gray-500 dark:bg-gray-900`} />
+                                    </Field>
+                                    <Field label="Status" required error={form.errors.status} tooltip="Draf (hanya admin yang dapat melihat) atau Published (dapat diakses siswa).">
+                                        <select
+                                            value={form.data.status}
+                                            onChange={(event) => {
+                                                form.setData('status', event.target.value);
+                                                form.clearErrors('status');
+                                            }}
+                                            className={`${inputClass} ${form.errors.status ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        >
+                                            <option value="draft">Draft</option>
+                                            <option value="published">Published</option>
+                                        </select>
+                                    </Field>
+                                    <Field label="Kategori" error={form.errors.category} tooltip="Pengelompokan jenis kata (misal: kata benda, verba, kanji N3, ekspresi).">
+                                        <input
+                                            value={form.data.category}
+                                            onChange={(event) => {
+                                                form.setData('category', event.target.value);
+                                                form.clearErrors('category');
+                                            }}
+                                            placeholder="noun, kanji, grammar"
+                                            className={`${inputClass} ${form.errors.category ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Tags" error={form.errors.tags_text} tooltip="Label kata kunci untuk pencarian mudah, pisahkan dengan koma.">
+                                        <input
+                                            value={form.data.tags_text}
+                                            onChange={(event) => {
+                                                form.setData('tags_text', event.target.value);
+                                                form.clearErrors('tags_text');
+                                            }}
+                                            placeholder="daily, week1"
+                                            className={`${inputClass} ${form.errors.tags_text ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Contoh Kalimat" error={form.errors.example_sentence} tooltip="Contoh penggunaan kata/kanji dalam kalimat bahasa Jepang yang natural." wide>
+                                        <textarea
+                                            value={form.data.example_sentence}
+                                            onChange={(event) => {
+                                                form.setData('example_sentence', event.target.value);
+                                                form.clearErrors('example_sentence');
+                                            }}
+                                            placeholder="Kalimat contoh dalam bahasa Jepang"
+                                            className={`${inputClass} min-h-24 ${form.errors.example_sentence ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Reading Contoh" error={form.errors.example_reading} tooltip="Cara baca kana lengkap untuk kalimat contoh di atas.">
+                                        <textarea
+                                            value={form.data.example_reading}
+                                            onChange={(event) => {
+                                                form.setData('example_reading', event.target.value);
+                                                form.clearErrors('example_reading');
+                                            }}
+                                            placeholder="Reading contoh"
+                                            className={`${inputClass} min-h-24 ${form.errors.example_reading ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Arti Contoh" error={form.errors.example_meaning} tooltip="Terjemahan bahasa Indonesia dari kalimat contoh.">
+                                        <textarea
+                                            value={form.data.example_meaning}
+                                            onChange={(event) => {
+                                                form.setData('example_meaning', event.target.value);
+                                                form.clearErrors('example_meaning');
+                                            }}
+                                            placeholder="Arti contoh"
+                                            className={`${inputClass} min-h-24 ${form.errors.example_meaning ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Onyomi (opsional)" error={form.errors.onyomi} tooltip="Cara baca China kanji, umumnya ditulis dalam huruf Katakana (contoh: カツ).">
+                                        <input
+                                            value={form.data.onyomi}
+                                            onChange={(event) => {
+                                                form.setData('onyomi', event.target.value);
+                                                form.clearErrors('onyomi');
+                                            }}
+                                            placeholder="Contoh: カツ"
+                                            className={`${inputClass} ${form.errors.onyomi ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Kunyomi (opsional)" error={form.errors.kunyomi} tooltip="Cara baca asli Jepang kanji, gunakan titik untuk pemisah okurigana (contoh: わ.る).">
+                                        <input
+                                            value={form.data.kunyomi}
+                                            onChange={(event) => {
+                                                form.setData('kunyomi', event.target.value);
+                                                form.clearErrors('kunyomi');
+                                            }}
+                                            placeholder="Contoh: わ.る"
+                                            className={`${inputClass} ${form.errors.kunyomi ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Radikal (opsional)" error={form.errors.radicals_text} tooltip="Bagian radikal pembentuk kanji, pisahkan dengan tanda pipa | jika lebih dari satu.">
+                                        <input
+                                            value={form.data.radicals_text}
+                                            onChange={(event) => {
+                                                form.setData('radicals_text', event.target.value);
+                                                form.clearErrors('radicals_text');
+                                            }}
+                                            placeholder="Pisahkan dengan |"
+                                            className={`${inputClass} ${form.errors.radicals_text ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Jumlah Guratan (opsional)" error={form.errors.stroke_count} tooltip="Total goresan guratan kanji (1-64) untuk panduan urutan tulis.">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="64"
+                                            value={form.data.stroke_count}
+                                            onChange={(event) => {
+                                                form.setData('stroke_count', event.target.value);
+                                                form.clearErrors('stroke_count');
+                                            }}
+                                            placeholder="12"
+                                            className={`${inputClass} ${form.errors.stroke_count ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Catatan Kanji" error={form.errors.notes} tooltip="Penjelasan mnemonic, arti simbolik radikal, atau tips menghafal kanji." wide>
+                                        <textarea
+                                            value={form.data.notes}
+                                            onChange={(event) => {
+                                                form.setData('notes', event.target.value);
+                                                form.clearErrors('notes');
+                                            }}
+                                            placeholder="Catatan atau contoh kata turunan"
+                                            className={`${inputClass} min-h-20 ${form.errors.notes ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Audio URL" error={form.errors.audio_url} tooltip="Tautan langsung ke file audio pengucapan (MP3/WAV/AAC)." wide>
+                                        <input
+                                            value={form.data.audio_url}
+                                            onChange={(event) => {
+                                                form.setData('audio_url', event.target.value);
+                                                form.clearErrors('audio_url');
+                                            }}
+                                            placeholder="Opsional"
+                                            className={`${inputClass} ${form.errors.audio_url ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Sumber" error={form.errors.source_type} tooltip="Asal sumber materi (manual, pdf, xlsx, dll).">
+                                        <input
+                                            value={form.data.source_type}
+                                            onChange={(event) => {
+                                                form.setData('source_type', event.target.value);
+                                                form.clearErrors('source_type');
+                                            }}
+                                            placeholder="manual, pdf, xlsx, csv"
+                                            className={`${inputClass} ${form.errors.source_type ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Judul Sumber" error={form.errors.source_title} tooltip="Keterangan referensi buku atau modul asal materi.">
+                                        <input
+                                            value={form.data.source_title}
+                                            onChange={(event) => {
+                                                form.setData('source_title', event.target.value);
+                                                form.clearErrors('source_title');
+                                            }}
+                                            placeholder="Contoh: Modul Bunpo Minggu 1"
+                                            className={`${inputClass} ${form.errors.source_title ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                </div>
+
+                                {Object.values(form.errors).length > 0 && !form.errors.word && !form.errors.reading && !form.errors.meaning_id && (
+                                    <p className="mt-4 rounded-2xl bg-brand-50 px-4 py-3 text-sm font-bold text-brand-600 dark:bg-brand-950/30">
+                                        {Object.values(form.errors)[0]}
                                     </p>
-                                </aside>
+                                )}
 
-                                <div className="max-h-[78vh] overflow-y-auto p-6">
-                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                        <Field label="Tipe Konten">
-                                            <select value={form.data.content_type} onChange={(event) => form.setData('content_type', event.target.value)} className={inputClass}>
-                                                <option value="kosakata">Kosakata</option>
-                                                <option value="kanji">Kanji</option>
-                                                <option value="bunpo">Bunpo</option>
-                                            </select>
-                                        </Field>
-                                        <Field label="Modul Mingguan">
-                                            <SearchableSelect
-                                                value={form.data.module_id}
-                                                onChange={(moduleId) => form.setData((data) => ({ ...data, module_id: moduleId, module_day_ids: [] }))}
-                                                options={modules.map((module) => ({
-                                                    value: module.id,
-                                                    label: `Week ${module.week_number ?? '-'} - ${module.title}`,
-                                                }))}
-                                                placeholder="Global / belum dikunci modul"
-                                                searchPlaceholder="Cari week atau modul..."
-                                                allowClear
-                                                clearLabel="Global / belum dikunci modul"
-                                            />
-                                        </Field>
-                                        <Field label="Dipakai pada Day" wide>
-                                            <SearchableMultiSelect
-                                                value={form.data.module_day_ids || []}
-                                                onChange={(moduleDayIds) => form.setData('module_day_ids', moduleDayIds)}
-                                                placeholder="Pilih satu atau beberapa Day"
-                                                searchPlaceholder="Cari Day..."
-                                                options={(modules.find((module) => String(module.id) === String(form.data.module_id))?.days || []).map((day) => ({
-                                                    value: day.id,
-                                                    label: `Day ${day.day_number} - ${day.title}`,
-                                                    description: `Week ${modules.find((module) => String(module.id) === String(form.data.module_id))?.week_number || '-'}`,
-                                                }))}
-                                            />
-                                            <span className="mt-1.5 block text-xs font-medium text-gray-500">Pilih lebih dari satu Day bila kosakata dipakai pada beberapa sesi.</span>
-                                        </Field>
-                                        <Field label="Konten Utama">
-                                            <input value={form.data.word} onChange={(event) => form.setData('word', event.target.value)} placeholder="会議 / 割 / 〜ように" className={inputClass} />
-                                        </Field>
-                                        <Field label="Reading / Struktur">
-                                            <input value={form.data.reading} onChange={(event) => form.setData('reading', event.target.value)} placeholder="かいぎ / カツ / Vる + ように" className={inputClass} />
-                                        </Field>
-                                        <Field label="Arti Indonesia">
-                                            <input value={form.data.meaning_id} onChange={(event) => form.setData('meaning_id', event.target.value)} placeholder="rapat / diskon / agar" className={inputClass} />
-                                        </Field>
-                                        <Field label="English Meaning">
-                                            <input value={form.data.meaning_en} onChange={(event) => form.setData('meaning_en', event.target.value)} placeholder="meeting" className={inputClass} />
-                                        </Field>
-                                        <Field label="Level Program">
-                                            <input value={form.data.jlpt_level} readOnly placeholder={program?.curriculum_track?.code === 'jlpt' ? 'Pilih kelas JLPT' : 'Tidak digunakan'} className={`${inputClass} bg-gray-50 text-gray-500 dark:bg-gray-900`} />
-                                        </Field>
-                                        <Field label="Status">
-                                            <select value={form.data.status} onChange={(event) => form.setData('status', event.target.value)} className={inputClass}>
-                                                <option value="draft">Draft</option>
-                                                <option value="published">Published</option>
-                                            </select>
-                                        </Field>
-                                        <Field label="Kategori">
-                                            <input value={form.data.category} onChange={(event) => form.setData('category', event.target.value)} placeholder="noun, kanji, grammar" className={inputClass} />
-                                        </Field>
-                                        <Field label="Tags">
-                                            <input value={form.data.tags_text} onChange={(event) => form.setData('tags_text', event.target.value)} placeholder="daily, week1" className={inputClass} />
-                                        </Field>
-                                        <Field label="Contoh Kalimat" wide>
-                                            <textarea value={form.data.example_sentence} onChange={(event) => form.setData('example_sentence', event.target.value)} placeholder="Kalimat contoh dalam bahasa Jepang" className={`${inputClass} min-h-24`} />
-                                        </Field>
-                                        <Field label="Reading Contoh">
-                                            <textarea value={form.data.example_reading} onChange={(event) => form.setData('example_reading', event.target.value)} placeholder="Reading contoh" className={`${inputClass} min-h-24`} />
-                                        </Field>
-                                        <Field label="Arti Contoh">
-                                            <textarea value={form.data.example_meaning} onChange={(event) => form.setData('example_meaning', event.target.value)} placeholder="Arti contoh" className={`${inputClass} min-h-24`} />
-                                        </Field>
-                                        <Field label="Onyomi (opsional)">
-                                            <input value={form.data.onyomi} onChange={(event) => form.setData('onyomi', event.target.value)} placeholder="Contoh: カツ" className={inputClass} />
-                                        </Field>
-                                        <Field label="Kunyomi (opsional)">
-                                            <input value={form.data.kunyomi} onChange={(event) => form.setData('kunyomi', event.target.value)} placeholder="Contoh: わ.る" className={inputClass} />
-                                        </Field>
-                                        <Field label="Radikal (opsional)">
-                                            <input value={form.data.radicals_text} onChange={(event) => form.setData('radicals_text', event.target.value)} placeholder="Pisahkan dengan |" className={inputClass} />
-                                        </Field>
-                                        <Field label="Jumlah Guratan (opsional)">
-                                            <input type="number" min="1" max="64" value={form.data.stroke_count} onChange={(event) => form.setData('stroke_count', event.target.value)} placeholder="12" className={inputClass} />
-                                        </Field>
-                                        <Field label="Catatan Kanji" wide>
-                                            <textarea value={form.data.notes} onChange={(event) => form.setData('notes', event.target.value)} placeholder="Catatan atau contoh kata turunan" className={`${inputClass} min-h-20`} />
-                                        </Field>
-                                        <Field label="Audio URL" wide>
-                                            <input value={form.data.audio_url} onChange={(event) => form.setData('audio_url', event.target.value)} placeholder="Opsional" className={inputClass} />
-                                        </Field>
-                                        <Field label="Sumber">
-                                            <input value={form.data.source_type} onChange={(event) => form.setData('source_type', event.target.value)} placeholder="manual, pdf, xlsx, csv" className={inputClass} />
-                                        </Field>
-                                        <Field label="Judul Sumber">
-                                            <input value={form.data.source_title} onChange={(event) => form.setData('source_title', event.target.value)} placeholder="Contoh: Modul Bunpo Minggu 1" className={inputClass} />
-                                        </Field>
-                                    </div>
-
-                                    {Object.values(form.errors).length > 0 && <p className="mt-4 rounded-2xl bg-brand-50 px-4 py-3 text-sm font-bold text-brand-600 dark:bg-brand-950/30">{Object.values(form.errors)[0]}</p>}
-
-                                    <div className="sticky bottom-0 mt-6 flex justify-end gap-3 border-t border-gray-100 bg-white/95 pt-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
-                                        <button type="button" onClick={closeForm} className="rounded-2xl border border-gray-200 px-5 py-3 text-sm font-black text-gray-600 dark:border-gray-700 dark:text-gray-300">Batal</button>
-                                        <button disabled={form.processing} className="rounded-2xl bg-brand-600 px-6 py-3 text-sm font-black text-white disabled:opacity-50">{form.processing ? 'Menyimpan...' : 'Simpan Konten'}</button>
-                                    </div>
+                                <div className="sticky bottom-0 mt-6 flex justify-end gap-3 border-t border-gray-100 bg-white/95 pt-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
+                                    <button type="button" onClick={closeForm} className="rounded-2xl border border-gray-200 px-5 py-3 text-sm font-black text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Batal</button>
+                                    <button disabled={form.processing} className="rounded-2xl bg-brand-600 px-6 py-3 text-sm font-black text-white hover:bg-brand-700 transition disabled:opacity-50">
+                                        {form.processing ? 'Menyimpan...' : 'Simpan Konten'}
+                                    </button>
                                 </div>
-                            </form>
-                        </div>
-                    </div>
+                            </div>
+                        </form>
+                    </AdminDialog>
                 )}
             </div>
             <StrokeCharacterPreview

@@ -17,7 +17,6 @@ import { DarumaIcon, SakuraIcon, ScrollIcon, SeigaihaBand, ToriiIcon } from '@/C
 import Button from '@/Components/UI/Button';
 import GuestNavbar from '@/Components/Layout/GuestNavbar';
 import Footer from '@/Components/Layout/GuestFooter';
-import WhatsAppContact from '@/Components/Marketing/WhatsAppContact';
 import PromoPopup from '@/Components/Marketing/PromoPopup';
 import FallEffect from '@/Components/theme/FallEffect';
 import SeoHead from '@/Components/SEO/SeoHead';
@@ -576,7 +575,6 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
       </main>
 
       <PromoPopup popup={activePopup} />
-      <WhatsAppContact />
       <Footer />
     </>
   );

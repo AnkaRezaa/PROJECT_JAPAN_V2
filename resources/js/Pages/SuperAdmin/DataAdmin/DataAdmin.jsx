@@ -5,6 +5,7 @@ import Card from '@/Components/UI/Card';
 import StatCard from '@/Components/Features/Dashboard/StatCard';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import AdminDialog from '@/Components/UI/AdminDialog';
+import FormField, { formInputClass } from '@/Components/UI/FormField';
 
 const emptyAdmin = {
     username: '',
@@ -40,7 +41,7 @@ export default function DataAdmin({
     const [resetModalData, setResetModalData] = useState(null);
     const [copied, setCopied] = useState(false);
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
-    const { data, setData, post, processing, errors, reset } = useForm({ ...emptyAdmin });
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({ ...emptyAdmin });
     const filterForm = useForm({
         search: filters.search || '',
         status: filters.status || 'all',
@@ -320,31 +321,31 @@ export default function DataAdmin({
                                     <p className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 px-4 py-10 text-center text-sm font-bold text-gray-400">Belum ada admin.</p>
                                 )}
                                 {items.map((item) => (
-                                    <div key={item.id} className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4 transition hover:border-gray-200 dark:hover:border-gray-700">
-                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                            <div>
-                                                <h3 className="text-sm font-black text-gray-900 dark:text-white">{item.name}</h3>
-                                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{item.email}</p>
+                                    <div key={item.id} className="min-w-0 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 transition hover:border-gray-200 dark:hover:border-gray-700">
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between min-w-0">
+                                            <div className="min-w-0 flex-1">
+                                                <h3 className="text-sm font-black text-gray-900 dark:text-white truncate">{item.name}</h3>
+                                                <p className="mt-0.5 text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{item.email}</p>
                                             </div>
-                                            <span className={`rounded-full px-3 py-1 text-xs font-black ${item.raw_status === 'suspended' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'}`}>
+                                            <span className={`self-start sm:self-auto shrink-0 rounded-full px-2.5 py-0.5 text-xs font-black ${item.raw_status === 'suspended' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'}`}>
                                                 {item.status}
                                             </span>
                                         </div>
-                                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                                            <div className="flex flex-wrap gap-2">
-                                                <span className="rounded-full bg-brand-50 dark:bg-brand-900/20 px-3 py-1 text-xs font-black text-brand-600 dark:text-brand-400">{item.role}</span>
-                                                <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-sky-700 dark:bg-sky-900/20 dark:text-sky-300">{item.scope}</span>
-                                                <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-bold text-gray-500 dark:text-gray-400">Update terakhir {item.updated}</span>
+                                        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                                                <span className="rounded-full bg-brand-50 dark:bg-brand-900/20 px-2.5 py-0.5 text-xs font-black text-brand-600 dark:text-brand-400">{item.role}</span>
+                                                <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-black text-sky-700 dark:bg-sky-900/20 dark:text-sky-300">{item.scope}</span>
+                                                <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs font-bold text-gray-500 dark:text-gray-400">Update terakhir {item.updated}</span>
                                             </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                <button onClick={() => openEdit(item)} className="rounded-lg border border-sky-100 px-3 py-2 text-xs font-black text-sky-700 hover:bg-sky-50 dark:border-sky-900/40 dark:text-sky-300 dark:hover:bg-sky-950/30">
+                                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                                <button onClick={() => openEdit(item)} className="rounded-lg border border-sky-100 px-3 py-1.5 text-xs font-black text-sky-700 hover:bg-sky-50 dark:border-sky-900/40 dark:text-sky-300 dark:hover:bg-sky-950/30">
                                                     Edit
                                                 </button>
                                                 {item.raw_role === 'admin' && (
                                                     <select
                                                         value={item.raw_scope || 'global'}
                                                         onChange={(event) => updateScope(item, event.target.value)}
-                                                        className="h-9 rounded-lg border border-sky-200 bg-white px-2 text-xs font-black text-sky-700 dark:border-sky-900/40 dark:bg-gray-900 dark:text-sky-300"
+                                                        className="h-8 rounded-lg border border-sky-200 bg-white px-2 text-xs font-black text-sky-700 dark:border-sky-900/40 dark:bg-gray-900 dark:text-sky-300"
                                                         aria-label={`Cakupan ${item.name}`}
                                                     >
                                                         <option value="global">Global</option>
@@ -353,10 +354,10 @@ export default function DataAdmin({
                                                 )}
                                                 {!item.is_self && (
                                                     <>
-                                                        <button onClick={() => setStatusTarget(item)} className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs font-black text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                        <button onClick={() => setStatusTarget(item)} className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-black text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
                                                             {item.raw_status === 'suspended' ? 'Aktifkan' : 'Tangguhkan'}
                                                         </button>
-                                                        <button onClick={() => resetPassword(item)} className="rounded-lg border border-brand-100 dark:border-brand-900/30 px-3 py-2 text-xs font-black text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20">
+                                                        <button onClick={() => resetPassword(item)} className="rounded-lg border border-brand-100 dark:border-brand-900/30 px-3 py-1.5 text-xs font-black text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20">
                                                             Reset Password
                                                         </button>
                                                         <button
@@ -364,7 +365,7 @@ export default function DataAdmin({
                                                             onClick={() => removeAdmin(item)}
                                                             disabled={!item.can_permanently_delete && !item.can_anonymize}
                                                             title={(item.deletion_blockers || []).join(' ') || 'Hapus atau anonimkan akun'}
-                                                            className="rounded-lg bg-brand-600 px-3 py-2 text-xs font-black text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 dark:disabled:bg-gray-800"
+                                                            className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-black text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 dark:disabled:bg-gray-800"
                                                         >
                                                             Hapus
                                                         </button>
@@ -401,50 +402,95 @@ export default function DataAdmin({
 
             {showForm && (
                 <AdminDialog open onClose={() => setShowForm(false)} eyebrow="Akun dan role" title="Tambah Admin" description="Buat akun admin lalu tentukan cakupan operasionalnya." maxWidth="max-w-lg">
-                        <form onSubmit={submitAdmin} className="space-y-4">
-                            <div>
-                                <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Username</label>
-                                <input value={data.username} onChange={(e) => setData('username', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm text-gray-900 dark:text-white" />
-                                {errors.username && <p className="mt-1 text-xs font-bold text-red-500">{errors.username}</p>}
-                            </div>
-                            <div>
-                                <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Email</label>
-                                <input type="email" value={data.email} onChange={(e) => setData('email', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm text-gray-900 dark:text-white" />
-                                {errors.email && <p className="mt-1 text-xs font-bold text-red-500">{errors.email}</p>}
-                            </div>
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <div>
-                                    <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Role</label>
-                                    <select value={data.role} onChange={(e) => setData('role', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm font-bold text-gray-900 dark:text-white">
-                                        <option value="admin">Admin</option>
-                                        <option value="superadmin">Superadmin</option>
-                                    </select>
+                    <form onSubmit={submitAdmin} className="space-y-4">
+                        <FormField label="Username" required error={errors.username} tooltip="Nama pengguna unik untuk login dan identitas akun.">
+                            <input
+                                value={data.username}
+                                onChange={(e) => {
+                                    setData('username', e.target.value);
+                                    clearErrors('username');
+                                }}
+                                className={formInputClass(errors.username)}
+                                placeholder="Masukkan username"
+                            />
+                        </FormField>
+                        <FormField label="Email" required error={errors.email} tooltip="Alamat email resmi untuk notifikasi dan pemulihan akun.">
+                            <input
+                                type="email"
+                                value={data.email}
+                                onChange={(e) => {
+                                    setData('email', e.target.value);
+                                    clearErrors('email');
+                                }}
+                                className={formInputClass(errors.email)}
+                                placeholder="nama@japanlingo.id"
+                            />
+                        </FormField>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <FormField label="Role" required error={errors.role} tooltip="Tingkat hak akses: Admin biasa atau Superadmin sistem.">
+                                <select
+                                    value={data.role}
+                                    onChange={(e) => {
+                                        setData('role', e.target.value);
+                                        clearErrors('role');
+                                    }}
+                                    className={formInputClass(errors.role)}
+                                >
+                                    <option value="admin">Admin</option>
+                                    <option value="superadmin">Superadmin</option>
+                                </select>
+                            </FormField>
+                            <FormField label="Password Opsional" error={errors.password} tooltip="Dapat digenerate otomatis atau diisi manual.">
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={data.password}
+                                        onChange={(e) => {
+                                            setData('password', e.target.value);
+                                            clearErrors('password');
+                                        }}
+                                        placeholder="Otomatis jika kosong"
+                                        className={`min-w-0 flex-1 ${formInputClass(errors.password)}`}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setData('password', generateStrongPassword());
+                                            clearErrors('password');
+                                        }}
+                                        className="rounded-xl border border-gray-200 px-3 text-xs font-black text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                                    >
+                                        Buat
+                                    </button>
                                 </div>
-                                <div>
-                                    <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Password Opsional</label>
-                                    <div className="flex gap-2">
-                                        <input type="text" value={data.password} onChange={(e) => setData('password', e.target.value)} placeholder="Otomatis jika kosong" className="h-11 min-w-0 flex-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm text-gray-900 dark:text-white" />
-                                        <button type="button" onClick={() => setData('password', generateStrongPassword())} className="rounded-xl border border-gray-200 px-3 text-xs font-black text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Buat</button>
-                                    </div>
-                                    {errors.password && <p className="mt-1 text-xs font-bold text-red-500">{errors.password}</p>}
-                                </div>
-                            </div>
-                            {data.role === 'admin' && (
-                                <div>
-                                    <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Cakupan Admin</label>
-                                    <select value={data.admin_scope} onChange={(e) => setData('admin_scope', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
-                                        <option value="global">Admin Global</option>
-                                        <option value="kloter">Mentor Kelas</option>
-                                    </select>
-                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Mentor Kelas hanya mengelola siswa dan materi dari kloter yang ditugaskan. Kelas mandiri tidak termasuk.</p>
-                                    {errors.admin_scope && <p className="mt-1 text-xs font-bold text-red-500">{errors.admin_scope}</p>}
-                                </div>
-                            )}
-                            <div className="flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800 pt-5">
-                                <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 dark:border-gray-700 px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-300">Batal</button>
-                                <button disabled={processing} className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-60">{processing ? 'Menyimpan...' : 'Buat Admin'}</button>
-                            </div>
-                        </form>
+                            </FormField>
+                        </div>
+                        {data.role === 'admin' && (
+                            <FormField
+                                label="Cakupan Admin"
+                                required
+                                error={errors.admin_scope}
+                                tooltip="Tentukan apakah admin mengelola semua kloter atau hanya kloter yang ditugaskan."
+                                hint="Mentor Kelas hanya mengelola siswa dan materi dari kloter yang ditugaskan. Kelas mandiri tidak termasuk."
+                            >
+                                <select
+                                    value={data.admin_scope}
+                                    onChange={(e) => {
+                                        setData('admin_scope', e.target.value);
+                                        clearErrors('admin_scope');
+                                    }}
+                                    className={formInputClass(errors.admin_scope)}
+                                >
+                                    <option value="global">Admin Global</option>
+                                    <option value="kloter">Mentor Kelas</option>
+                                </select>
+                            </FormField>
+                        )}
+                        <div className="flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800 pt-5">
+                            <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 dark:border-gray-700 px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-300">Batal</button>
+                            <button disabled={processing} className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-60">{processing ? 'Menyimpan...' : 'Buat Admin'}</button>
+                        </div>
+                    </form>
                 </AdminDialog>
             )}
 
@@ -452,31 +498,59 @@ export default function DataAdmin({
                 <AdminDialog open onClose={() => setEditTarget(null)} eyebrow="Akses pengelola" title={`Edit ${editTarget.scope}`} description="Ubah identitas tampilan, status, password, dan kloter yang diampu." maxWidth="max-w-2xl">
                     <form onSubmit={submitEdit} className="space-y-5">
                         <div className="grid gap-4 sm:grid-cols-2">
-                            <label className="space-y-1.5">
-                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Nama</span>
-                                <input value={editForm.data.username} onChange={(event) => editForm.setData('username', event.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
-                                {editForm.errors.username && <span className="text-xs font-bold text-red-500">{editForm.errors.username}</span>}
-                            </label>
-                            <label className="space-y-1.5">
-                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Email identitas</span>
-                                <input value={editTarget.email} disabled className="h-11 w-full rounded-xl border border-gray-200 bg-gray-100 px-4 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800" />
-                            </label>
-                            <label className="space-y-1.5">
-                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Status</span>
-                                <select value={editForm.data.status} onChange={(event) => editForm.setData('status', event.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            <FormField label="Nama / Username" required error={editForm.errors.username} tooltip="Nama identitas admin pengelola.">
+                                <input
+                                    value={editForm.data.username}
+                                    onChange={(event) => {
+                                        editForm.setData('username', event.target.value);
+                                        editForm.clearErrors('username');
+                                    }}
+                                    className={formInputClass(editForm.errors.username)}
+                                />
+                            </FormField>
+                            <FormField label="Email Identitas" hint="Email login tidak dapat diubah dari modal ini.">
+                                <input
+                                    value={editTarget.email}
+                                    disabled
+                                    className="h-11 w-full rounded-xl border border-gray-200 bg-gray-100 px-4 text-sm text-gray-500 cursor-not-allowed dark:border-gray-700 dark:bg-gray-800"
+                                />
+                            </FormField>
+                            <FormField label="Status" required error={editForm.errors.status} tooltip="Status keaktifan akses dashboard admin.">
+                                <select
+                                    value={editForm.data.status}
+                                    onChange={(event) => {
+                                        editForm.setData('status', event.target.value);
+                                        editForm.clearErrors('status');
+                                    }}
+                                    className={formInputClass(editForm.errors.status)}
+                                >
                                     <option value="active">Aktif</option>
                                     <option value="suspended">Ditangguhkan</option>
                                 </select>
-                                {editForm.errors.status && <span className="text-xs font-bold text-red-500">{editForm.errors.status}</span>}
-                            </label>
-                            <label className="space-y-1.5">
-                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Password baru (opsional)</span>
+                            </FormField>
+                            <FormField label="Password Baru (Opsional)" error={editForm.errors.password} tooltip="Kosongkan jika tidak ingin mengubah password akun.">
                                 <div className="flex gap-2">
-                                    <input value={editForm.data.password} onChange={(event) => editForm.setData('password', event.target.value)} className="h-11 min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
-                                    <button type="button" onClick={() => editForm.setData('password', generateStrongPassword())} className="rounded-xl border border-gray-200 px-3 text-xs font-black text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Buat</button>
+                                    <input
+                                        value={editForm.data.password}
+                                        onChange={(event) => {
+                                            editForm.setData('password', event.target.value);
+                                            editForm.clearErrors('password');
+                                        }}
+                                        placeholder="Isi untuk ubah"
+                                        className={`min-w-0 flex-1 ${formInputClass(editForm.errors.password)}`}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            editForm.setData('password', generateStrongPassword());
+                                            editForm.clearErrors('password');
+                                        }}
+                                        className="rounded-xl border border-gray-200 px-3 text-xs font-black text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                                    >
+                                        Buat
+                                    </button>
                                 </div>
-                                {editForm.errors.password && <span className="text-xs font-bold text-red-500">{editForm.errors.password}</span>}
-                            </label>
+                            </FormField>
                         </div>
 
                         {editTarget.raw_role === 'admin' && editTarget.raw_scope === 'kloter' && (

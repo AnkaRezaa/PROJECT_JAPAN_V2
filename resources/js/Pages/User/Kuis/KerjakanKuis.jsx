@@ -5,7 +5,9 @@ import Confetti from 'react-confetti';
 import theme from '@/Components/theme/themes';
 import { FloatingLearningDecor, RewardSummary } from '@/Components/User/UserVisuals';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
-import JapaneseSpeechButton, { preloadNarrationAudio } from '@/Components/UI/JapaneseSpeechButton';
+import JapaneseSpeechButton, { isStreamableAudio, preloadNarrationAudio } from '@/Components/UI/JapaneseSpeechButton';
+import QuizSoundToggle, { japaneseSpeechText, useQuizSoundPreference } from '@/Components/UI/QuizNarration';
+import { QuizActionButton, QuizErrorMessage, QuizOptionButton, QuizSurface } from '@/Components/UI/QuizUI';
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
 import KanjiHandwritingCanvas from '@/Components/Features/Handwriting/KanjiHandwritingCanvas';
 import StrokeCharacterPreview from '@/Components/Features/Handwriting/StrokeCharacterPreview';
@@ -21,8 +23,6 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import StarIcon from '@mui/icons-material/Star';
-import VolumeOffIcon from '@mui/icons-material/VolumeOff';
-import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 
 const formatTime = (seconds) => {
     const safeSeconds = Math.max(0, Number(seconds) || 0);
@@ -46,52 +46,17 @@ function normalizeQuestionType(type) {
     return 'multiple_choice';
 }
 
-const japaneseTextPattern = /[\u3040-\u30ff\u3400-\u9fff]/g;
-
 const getJapaneseSpeechText = (question, { includeCorrectAnswer = true } = {}) => {
-    const source = [
+    return japaneseSpeechText(
         question?.kanji,
         question?.question,
         includeCorrectAnswer ? question?.correct_answer : null,
-    ].filter(Boolean).join(' ');
-
-    const matches = source.match(japaneseTextPattern);
-
-    return matches?.length ? matches.join('') : '';
-};
-
-const isStreamableAudio = (audioUrl) => audioUrl && !audioUrl.includes('youtube.com') && !audioUrl.includes('youtu.be');
-
-const SOUND_PREFERENCE_KEY = 'toku-up.quizSoundEnabled';
-const QUIZ_COLORS = {
-    progress: '#30C060',
-    warm: '#F2B705',
-    warmShadow: '#B77900',
-    warmSurface: '#FFF8DB',
-    ink: '#2D3742',
-    success: '#22C55E',
-    successDark: '#166534',
-    successSurface: '#F0FDF4',
-};
-
-function SoundToggleButton({ enabled, onToggle }) {
-    return (
-        <button
-            type="button"
-            onClick={onToggle}
-            title={enabled ? 'Nonaktifkan narator otomatis' : 'Aktifkan narator otomatis'}
-            aria-label={enabled ? 'Nonaktifkan narator otomatis' : 'Aktifkan narator otomatis'}
-            aria-pressed={enabled}
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition ${
-                enabled
-                    ? 'border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100 dark:border-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:hover:bg-orange-900/70'
-                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
-            }`}
-        >
-            {enabled ? <VolumeUpIcon fontSize="small" /> : <VolumeOffIcon fontSize="small" />}
-        </button>
     );
-}
+};
+
+const QUIZ_COLORS = {
+    success: '#22C55E',
+};
 
 function StrokeGuideGallery({ text }) {
     const [characters, setCharacters] = useState([]);
@@ -123,14 +88,14 @@ function StrokeGuideGallery({ text }) {
     return (
         <section className="mx-auto mt-5 max-w-2xl text-left sm:mt-7">
             <div className="mb-2">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-600">Cara Menulis</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-600 dark:text-orange-300">Cara Menulis</p>
                 <p className="mt-0.5 text-xs font-semibold text-gray-700 dark:text-gray-300">Lihat bentuk dan urutan stroke setiap kanji.</p>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 {characters.map((item) => (
                     <article key={item.character} className="flex min-w-0 items-center gap-3 rounded-2xl border border-orange-100 bg-orange-50/60 p-2.5 dark:border-orange-900/60 dark:bg-orange-950/25 sm:p-3">
                         <svg viewBox="0 0 109 109" className="h-16 w-16 shrink-0 rounded-xl border border-orange-100 bg-white dark:border-gray-700 dark:bg-gray-950" aria-label={`Panduan menulis ${item.character}`}>
-                            <path d="M 54.5 0 V 109 M 0 54.5 H 109 M 0 0 L 109 109 M 109 0 L 0 109" fill="none" stroke="#e5e7eb" strokeWidth="0.7" strokeDasharray="3 3" />
+                            <path d="M 54.5 0 V 109 M 0 54.5 H 109 M 0 0 L 109 109 M 109 0 L 0 109" fill="none" className="stroke-gray-200 dark:stroke-gray-700" strokeWidth="0.7" strokeDasharray="3 3" />
                             {item.paths.map((pathData, index) => (
                                 <path key={`${item.character}-${index}`} d={pathData} fill="none" stroke="#94a3b8" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
                             ))}
@@ -157,11 +122,7 @@ function StrokeGuideGallery({ text }) {
 
 export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = [], module_flow = false, back_url = null, finish_url = null, learning_feedback = null }) {
     const prefersReducedMotion = useReducedMotion();
-    const [soundEnabled, setSoundEnabled] = useState(() => {
-        if (typeof window === 'undefined') return true;
-
-        return window.localStorage.getItem(SOUND_PREFERENCE_KEY) !== 'false';
-    });
+    const [soundEnabled, setSoundEnabled] = useQuizSoundPreference();
     const [sessionFlashcards] = useState(() => flashcards);
     const [questions, setQuestions] = useState(() =>
         rawQuestions
@@ -217,13 +178,6 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
 
     // Window size for Confetti
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
-
-    useEffect(() => {
-        window.localStorage.setItem(SOUND_PREFERENCE_KEY, soundEnabled ? 'true' : 'false');
-        if (!soundEnabled) {
-            window.speechSynthesis?.cancel?.();
-        }
-    }, [soundEnabled]);
 
     useEffect(() => {
         setWindowSize({ width: window.innerWidth, height: window.innerHeight });
@@ -659,11 +613,11 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
     // Jika tidak ada soal dari DB
     if (questions.length === 0) {
         return (
-            <div className="relative flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-brand-50 via-white to-learning-50 px-4 py-8 sm:p-6">
+            <div className="relative flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-brand-50 via-white to-learning-50 px-4 py-8 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900 sm:p-6">
                 <Head title="Quiz" />
                 <FloatingLearningDecor />
                 <div className="relative z-10 max-w-md text-center">
-                    <p className="mb-4 text-2xl font-black text-gray-700">Belum Ada Soal</p>
+                    <p className="mb-4 text-2xl font-black text-gray-700 dark:text-white">Belum Ada Soal</p>
                     <p className="mb-6 text-gray-700 dark:text-gray-300">Admin belum menambahkan soal untuk kuis ini.</p>
                     <Link href={back_url || route('user.dashboard')} className="inline-flex min-h-11 items-center rounded-lg bg-action-primary px-6 py-3 font-black text-ink-900 no-underline shadow-sm transition hover:bg-action-primary-hover">
                         Kembali
@@ -692,8 +646,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
         const retrySubmit = () => submitAttempt({ timeout: finishedByTimeout });
 
         return (
-            <div className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 py-8 font-sans sm:p-6"
-                 style={{ backgroundColor: theme.sectionBg }}>
+            <div className={`relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 py-8 font-sans dark:bg-gray-950 sm:p-6 ${theme.sectionBg}`}>
                 <Head title="Hasil Kuis" />
                 
                 {isSuccess && !prefersReducedMotion && <Confetti width={windowSize.width} height={windowSize.height} recycle={false} numberOfPieces={180} />}
@@ -719,11 +672,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                             { label: 'Target', value: `${passingScore}%` },
                         ]}
                     />
-                    {attemptError && (
-                        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-                            {attemptError}
-                        </div>
-                    )}
+                    <QuizErrorMessage className="mt-4">{attemptError}</QuizErrorMessage>
                     {isSuccess && !attemptError && (
                         <section className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-left dark:border-amber-900/50 dark:bg-amber-950/20">
                             <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700 dark:text-amber-300">Feedback sesi</p>
@@ -749,7 +698,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                                 ))}
                             </div>
                             {learningFeedback && <p className="mt-3 text-xs font-bold text-emerald-700 dark:text-emerald-300">Feedback hari ini sudah tersimpan.</p>}
-                            {feedbackError && <p className="mt-3 text-xs font-bold text-red-700 dark:text-red-300">{feedbackError}</p>}
+                            <QuizErrorMessage className="mt-3 text-xs">{feedbackError}</QuizErrorMessage>
                         </section>
                     )}
                     {!attemptError && attemptResult?.attempt_id && (
@@ -780,7 +729,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                             continueAfterResult(true);
                         }}
                         disabled={isSubmittingAttempt || feedbackSubmitting}
-                        className="mt-4 w-full py-4 rounded-2xl font-black text-white text-lg tracking-wide uppercase shadow-lg hover:brightness-110 active:translate-y-1 active:shadow-none transition-all"
+                        className="mt-4 w-full rounded-2xl py-4 text-lg font-black uppercase tracking-wide text-gray-950 shadow-lg transition-all hover:brightness-110 active:translate-y-1 active:shadow-none"
                         style={{ backgroundColor: theme.doneColor, boxShadow: `0 4px 0 0 ${theme.doneShadow}` }}
                     >
                         {isSubmittingAttempt || feedbackSubmitting ? 'MENYIMPAN...' : (attemptError ? 'KIRIM ULANG HASIL' : (isSuccess ? 'SIMPAN & LANJUTKAN' : 'ULANGI KUIS'))}
@@ -817,7 +766,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                             <div className="h-3 min-w-0 flex-1 overflow-hidden rounded-full bg-orange-100 dark:bg-gray-800">
                                 <motion.div
                                     className="h-full rounded-full"
-                                    style={{ backgroundColor: QUIZ_COLORS.progress }}
+                                    style={{ backgroundColor: 'var(--toku-progress-active)' }}
                                     initial={false}
                                     animate={{ width: `${progressPercentage}%` }}
                                     transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -828,11 +777,11 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                                 <span className="tabular-nums">{lives}</span>
                             </div>
                         </div>
-                        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.22em] text-orange-600">Penguatan setelah flashcard</p>
+                        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.22em] text-orange-600 dark:text-orange-300">Penguatan setelah flashcard</p>
                         <h1 className="truncate text-lg font-black text-gray-900 dark:text-white">Tulis {activeWritingCharacter.character}</h1>
                         {handwritingTotal > 1 && <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Karakter {handwritingStep} dari {handwritingTotal}</p>}
                     </div>
-                    <SoundToggleButton enabled={soundEnabled} onToggle={() => setSoundEnabled((value) => !value)} />
+                    <QuizSoundToggle enabled={soundEnabled} onToggle={() => setSoundEnabled((value) => !value)} />
                 </header>
                 <main className="w-full max-w-4xl rounded-3xl border border-orange-100 bg-white p-4 shadow-xl shadow-orange-200/40 dark:border-gray-800 dark:bg-gray-900 dark:shadow-black/30 sm:p-5 md:grid md:grid-cols-[minmax(200px,0.72fr)_minmax(0,1fr)] md:items-start md:gap-6">
                     <div className="mb-4 text-center md:mb-0 md:pt-3 md:text-left">
@@ -877,7 +826,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                     <div className="h-3 min-w-0 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
                         <motion.div
                             className="h-full rounded-full"
-                            style={{ backgroundColor: QUIZ_COLORS.progress }}
+                            style={{ backgroundColor: 'var(--toku-progress-active)' }}
                             initial={false}
                             animate={{ width: `${progressPercentage}%` }}
                             transition={{ duration: 0.5, ease: "easeOut" }}
@@ -888,11 +837,11 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                         <span className="tabular-nums">{lives}</span>
                     </div>
                     {hasTimeLimit && (
-                        <div className={`hidden rounded-full px-3 py-1 text-xs font-black tabular-nums sm:block ${secondsLeft <= 10 ? 'bg-red-100 text-red-700' : 'bg-white text-gray-700'}`}>
+                        <div className={`hidden rounded-full px-3 py-1 text-xs font-black tabular-nums sm:block ${secondsLeft <= 10 ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-200' : 'bg-white text-gray-700 dark:bg-gray-900 dark:text-gray-200'}`}>
                             {formatTime(secondsLeft)}
                         </div>
                     )}
-                    <SoundToggleButton enabled={soundEnabled} onToggle={() => setSoundEnabled((value) => !value)} />
+                    <QuizSoundToggle enabled={soundEnabled} onToggle={() => setSoundEnabled((value) => !value)} />
                 </header>
 
                 <main className="w-full max-w-3xl flex-1 flex flex-col items-center justify-center relative z-10">
@@ -907,7 +856,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                         <div className="relative border-b border-orange-100 bg-gradient-to-r from-orange-50 to-lime-50 px-4 py-3 dark:border-gray-800 dark:from-orange-950/40 dark:to-lime-950/30 sm:px-8 sm:py-5">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-600 sm:text-xs sm:tracking-[0.3em]">Latihan Repetisi</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-600 dark:text-orange-300 sm:text-xs sm:tracking-[0.3em]">Latihan Repetisi</p>
                                     <h1 className="mt-1 text-lg font-black text-gray-900 dark:text-white sm:mt-2 sm:text-2xl">Penguatan materi dari Hari ini</h1>
                                 </div>
                                 <span className="w-fit rounded-full bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-orange-700 shadow-sm dark:bg-gray-900 dark:text-orange-300 dark:ring-1 dark:ring-orange-900/60 sm:px-4 sm:py-2 sm:text-xs">
@@ -922,7 +871,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                                 reading={activeFlashcard.reading}
                                 className="items-center text-3xl font-black tracking-tight text-gray-950 dark:text-white sm:text-5xl md:text-6xl"
                             />
-                            <div className="mx-auto mt-3 h-px max-w-md bg-orange-200 sm:mt-5" />
+                            <div className="mx-auto mt-3 h-px max-w-md bg-orange-200 dark:bg-orange-900/70 sm:mt-5" />
 
                             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:mt-5 sm:gap-3">
                                 <JapaneseSpeechButton
@@ -940,36 +889,36 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
 
                             <h2 className="mt-4 break-words text-xl font-black text-gray-900 dark:text-white sm:mt-5 sm:text-2xl">{activeFlashcard.back_text || 'Belum ada arti'}</h2>
                             {activeFlashcard.meaning_en && activeFlashcard.meaning_en !== activeFlashcard.back_text && (
-                                <p className="mt-1 text-sm font-semibold text-gray-500">{activeFlashcard.meaning_en}</p>
+                                <p className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-400">{activeFlashcard.meaning_en}</p>
                             )}
 
                             {activeFlashcard.content_type === 'kanji' && (
                                 <div className="mx-auto mt-4 grid max-w-xl grid-cols-2 gap-2 text-left sm:mt-5 sm:grid-cols-4">
-                                    {activeFlashcard.onyomi && <div className="rounded-lg bg-learning-50 px-3 py-2"><span className="block text-[10px] font-black uppercase text-learning-700">Onyomi</span><span className="text-sm font-bold text-gray-800">{activeFlashcard.onyomi}</span></div>}
-                                    {activeFlashcard.kunyomi && <div className="rounded-xl bg-orange-50 px-3 py-2"><span className="block text-[10px] font-black uppercase text-orange-500">Kunyomi</span><span className="text-sm font-bold text-gray-800">{activeFlashcard.kunyomi}</span></div>}
-                                    {activeFlashcard.radicals?.length > 0 && <div className="rounded-xl bg-lime-50 px-3 py-2"><span className="block text-[10px] font-black uppercase text-lime-700">Radical</span><span className="text-sm font-bold text-gray-800">{activeFlashcard.radicals.join(', ')}</span></div>}
-                                    {activeFlashcard.stroke_count && <div className="rounded-xl bg-sky-50 px-3 py-2"><span className="block text-[10px] font-black uppercase text-sky-600">Stroke</span><span className="text-sm font-bold text-gray-800">{activeFlashcard.stroke_count}</span></div>}
+                                    {activeFlashcard.onyomi && <div className="rounded-lg bg-learning-50 px-3 py-2 dark:bg-sky-950/50"><span className="block text-[10px] font-black uppercase text-learning-700 dark:text-sky-300">Onyomi</span><span className="text-sm font-bold text-gray-800 dark:text-gray-100">{activeFlashcard.onyomi}</span></div>}
+                                    {activeFlashcard.kunyomi && <div className="rounded-xl bg-orange-50 px-3 py-2 dark:bg-orange-950/50"><span className="block text-[10px] font-black uppercase text-orange-600 dark:text-orange-300">Kunyomi</span><span className="text-sm font-bold text-gray-800 dark:text-gray-100">{activeFlashcard.kunyomi}</span></div>}
+                                    {activeFlashcard.radicals?.length > 0 && <div className="rounded-xl bg-lime-50 px-3 py-2 dark:bg-lime-950/40"><span className="block text-[10px] font-black uppercase text-lime-700 dark:text-lime-300">Radical</span><span className="text-sm font-bold text-gray-800 dark:text-gray-100">{activeFlashcard.radicals.join(', ')}</span></div>}
+                                    {activeFlashcard.stroke_count && <div className="rounded-xl bg-sky-50 px-3 py-2 dark:bg-sky-950/50"><span className="block text-[10px] font-black uppercase text-sky-600 dark:text-sky-300">Stroke</span><span className="text-sm font-bold text-gray-800 dark:text-gray-100">{activeFlashcard.stroke_count}</span></div>}
                                 </div>
                             )}
 
                             <StrokeGuideGallery text={activeFlashcard.front_text} />
 
                             {(activeFlashcard.example_sentence || activeFlashcard.example_meaning) && (
-                                <div className="mx-auto mt-4 max-w-2xl rounded-2xl bg-gray-50 p-3 text-left sm:mt-5 sm:p-4">
-                                    <p className="break-words text-base font-bold text-gray-700">
+                                <div className="mx-auto mt-4 max-w-2xl rounded-2xl bg-gray-50 p-3 text-left dark:bg-gray-800 sm:mt-5 sm:p-4">
+                                    <p className="break-words text-base font-bold text-gray-700 dark:text-gray-100">
                                         <HighlightedLearningText text={activeFlashcard.example_sentence} term={activeFlashcard.front_text} />
                                     </p>
                                     {activeFlashcard.example_reading && (
-                                        <p className="mt-1 break-words text-sm font-semibold text-gray-500">
+                                        <p className="mt-1 break-words text-sm font-semibold text-gray-500 dark:text-gray-300">
                                             <HighlightedLearningText text={activeFlashcard.example_reading} term={activeFlashcard.reading} />
                                         </p>
                                     )}
-                                    <p className="mt-2 break-words text-sm italic text-gray-500">
+                                    <p className="mt-2 break-words text-sm italic text-gray-500 dark:text-gray-300">
                                         <HighlightedLearningText text={activeFlashcard.example_meaning} term={activeFlashcard.back_text} />
                                     </p>
                                 </div>
                             )}
-                            {activeFlashcard.notes && <p className="mx-auto mt-3 max-w-2xl text-left text-xs font-semibold text-gray-500">{activeFlashcard.notes}</p>}
+                            {activeFlashcard.notes && <p className="mx-auto mt-3 max-w-2xl text-left text-xs font-semibold text-gray-500 dark:text-gray-400">{activeFlashcard.notes}</p>}
                         </div>
                     </motion.div>
 
@@ -977,7 +926,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                         <button
                             onClick={() => handleFlashcardReview('learning')}
                             disabled={flashcardReviewing}
-                            className="flex min-h-[56px] items-center justify-center gap-2 rounded-xl bg-orange-500 px-2 py-3 text-center text-sm font-black text-white shadow-[0_5px_0_#C2410C] transition hover:bg-orange-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/60 active:translate-y-1 active:shadow-[0_3px_0_#C2410C] disabled:cursor-wait disabled:opacity-60 dark:bg-orange-600 dark:shadow-[0_5px_0_#9A3412] dark:hover:bg-orange-500 sm:min-h-[60px] sm:rounded-2xl sm:px-5 sm:text-base"
+                            className="flex min-h-[56px] items-center justify-center gap-2 rounded-xl bg-orange-500 px-2 py-3 text-center text-sm font-black text-gray-950 shadow-[0_5px_0_#C2410C] transition hover:bg-orange-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/60 active:translate-y-1 active:shadow-[0_3px_0_#C2410C] disabled:cursor-wait disabled:opacity-60 dark:bg-orange-500 dark:shadow-[0_5px_0_#9A3412] dark:hover:bg-orange-400 sm:min-h-[60px] sm:rounded-2xl sm:px-5 sm:text-base"
                         >
                             <span className="text-lg leading-none sm:text-xl">?</span>
                             <span>Belum Paham</span>
@@ -999,8 +948,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
 
     // === TAMPILAN KUIS AKTIF ===
     return (
-        <div className={`flex min-h-[100dvh] flex-col items-center overflow-x-hidden px-4 pt-4 font-sans dark:!bg-gray-950 sm:pt-5 md:pt-7 ${selectedAnswer !== null ? 'pb-56 sm:pb-36' : 'pb-8 sm:pb-10'}`}
-             style={{ backgroundColor: theme.landingHeroBg }}>
+        <div className={`flex min-h-[100dvh] flex-col items-center overflow-x-hidden px-4 pt-4 font-sans dark:bg-gray-950 sm:pt-5 md:pt-7 ${theme.landingHeroBg} ${selectedAnswer !== null ? 'pb-56 sm:pb-36' : 'pb-8 sm:pb-10'}`}>
             <Head title={`Quiz - Level 2`} />
 
             {/* Top Progress & Lives */}
@@ -1011,14 +959,14 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                 <div className="h-3 min-w-0 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
                     <motion.div 
                         className="h-full rounded-full" 
-                        style={{ backgroundColor: QUIZ_COLORS.progress }}
+                        style={{ backgroundColor: 'var(--toku-progress-active)' }}
                         initial={false}
                         animate={{ width: `${progressPercentage}%` }}
                         transition={{ duration: 0.5, ease: "easeOut" }}
                     />
                 </div>
                 {hasTimeLimit ? (
-                    <div className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-black tabular-nums ${secondsLeft <= 10 ? 'bg-red-100 text-red-700' : 'bg-white text-gray-700'}`}>
+                    <div className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-black tabular-nums ${secondsLeft <= 10 ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-200' : 'bg-white text-gray-700 dark:bg-gray-900 dark:text-gray-200'}`}>
                         {formatTime(secondsLeft)}
                     </div>
                 ) : (
@@ -1027,7 +975,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                         <span className="tabular-nums">{lives}</span>
                     </div>
                 )}
-                <SoundToggleButton enabled={soundEnabled} onToggle={() => setSoundEnabled((value) => !value)} />
+                <QuizSoundToggle enabled={soundEnabled} onToggle={() => setSoundEnabled((value) => !value)} />
             </header>
 
             {/* Quiz Content Area */}
@@ -1067,7 +1015,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
 
                         {/* Flashcard Canvas / Media */}
                         {(currentQ.kanji || currentQ.audio_url || currentSpeechText) && (
-                            <div className={`relative mb-4 flex w-full max-w-[500px] items-center justify-center overflow-hidden rounded-[1.5rem] border-2 border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:rounded-[2rem] ${currentQ.audio_url?.includes('youtu') ? 'aspect-video' : 'min-h-36 py-4 sm:min-h-44 sm:py-6 md:min-h-48'}`}>
+                            <QuizSurface media className={`relative mb-4 flex w-full max-w-[500px] items-center justify-center overflow-hidden ${currentQ.audio_url?.includes('youtu') ? 'aspect-video' : 'min-h-36 py-4 sm:min-h-44 sm:py-6 md:min-h-48'}`}>
                                 {currentQ.kanji ? (
                                     <span className="max-w-full break-words px-4 text-[60px] font-medium leading-none text-gray-900 select-none dark:text-white sm:text-[80px] md:text-[96px]">{currentQ.kanji}</span>
                                 ) : !currentQ.audio_url ? (
@@ -1107,7 +1055,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                                         className="absolute bottom-4 right-4 flex h-12 w-12 items-center justify-center rounded-2xl border-b-4 border-[#B77900] bg-[#F2B705] text-[#2D3742] shadow-md transition-all hover:bg-[#FFC928] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/60 active:translate-y-1 active:border-b-0 md:bottom-6 md:right-6"
                                     />
                                 )}
-                            </div>
+                            </QuizSurface>
                         )}
 
                         {/* Answer Area */}
@@ -1120,59 +1068,30 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                     {currentQ.options.map((option, index) => {
                                         const isSelected = selectedAnswer === index;
-                                        let buttonStyle = {
-                                            backgroundColor: "white",
-                                            borderColor: "#E5E7EB",
-                                            color: "#4B5563",
-                                            boxShadow: `0 4px 0 0 #E5E7EB`
-                                        };
-
-                                        if (isSelected && answerFeedback?.status === 'correct') {
-                                            buttonStyle = {
-                                                backgroundColor: '#dcfce7',
-                                                borderColor: '#22c55e',
-                                                color: '#166534',
-                                                boxShadow: '0 4px 0 0 #16a34a',
-                                            };
-                                        } else if (isSelected && answerFeedback?.status === 'wrong') {
-                                            buttonStyle = {
-                                                backgroundColor: '#fee2e2',
-                                                borderColor: '#ef4444',
-                                                color: '#991b1b',
-                                                boxShadow: '0 4px 0 0 #dc2626',
-                                            };
-                                        } else if (isSelected) {
-                                            buttonStyle = {
-                                                backgroundColor: QUIZ_COLORS.warmSurface,
-                                                borderColor: QUIZ_COLORS.warm,
-                                                color: QUIZ_COLORS.ink,
-                                                boxShadow: `0 4px 0 0 ${QUIZ_COLORS.warmShadow}`,
-                                            };
-                                        }
+                                        const optionState = !isSelected ? 'idle' :
+                                            answerFeedback?.status === 'correct' ? 'correct' :
+                                                answerFeedback?.status === 'wrong' ? 'wrong' : 'selected';
 
                                         return (
-                                            <button
+                                            <QuizOptionButton
                                                 key={index}
+                                                state={optionState}
                                                 disabled={selectedAnswer !== null}
                                                 onClick={() => handleAnswerClick(index)}
-                                                className={`relative min-h-[54px] min-w-0 w-full break-words rounded-2xl border-2 px-4 py-3 text-center text-base font-bold leading-tight transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/60 active:translate-y-1 active:shadow-none disabled:cursor-default sm:px-5 ${
-                                                    !isSelected ? 'hover:border-amber-300 hover:bg-amber-50/50 dark:!border-gray-700 dark:!bg-gray-900 dark:!text-gray-100 dark:!shadow-[0_4px_0_0_#374151] dark:hover:!border-amber-500' : ''
-                                                }`}
-                                                style={buttonStyle}
                                             >
                                                 <JapaneseReading
                                                     japanese={option}
                                                     reading={currentQ.option_readings?.[index]}
                                                     className="items-center"
                                                 />
-                                            </button>
+                                            </QuizOptionButton>
                                         );
                                     })}
                                 </div>
                             ) : (
                                 <form onSubmit={handleTypedAnswerSubmit} className="space-y-4">
                                     {currentType === 'fill_blank' && currentQ.options?.[0] && (
-                                        <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm font-bold text-yellow-700">
+                                        <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm font-bold text-yellow-700 dark:border-yellow-900 dark:bg-yellow-950/50 dark:text-yellow-200">
                                             Hint: {currentQ.options[0]}
                                         </div>
                                     )}
@@ -1184,21 +1103,19 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                                         placeholder={currentType === 'listening' ? 'Ketik jawaban dari audio...' : 'Ketik jawaban yang tepat...'}
                                         className="w-full rounded-lg border-2 border-gray-200 bg-white px-4 py-4 text-center text-lg font-black text-gray-800 shadow-sm outline-none transition-all focus:border-focus focus:ring-4 focus:ring-focus/10 disabled:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:disabled:bg-gray-800 sm:px-5 sm:py-5"
                                     />
-                                    <button
+                                    <QuizActionButton
                                         type="submit"
                                         disabled={selectedAnswer !== null || textAnswer.trim() === ''}
-                                        className="min-h-11 w-full rounded-lg bg-action-primary px-6 py-4 text-lg font-black text-ink-900 shadow-sm transition-all hover:bg-action-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="w-full rounded-lg py-4 text-lg"
                                     >
                                         Cek Jawaban
-                                    </button>
+                                    </QuizActionButton>
                                 </form>
                             )}
                         </motion.div>
 
                         {answerFeedback?.status === 'error' && selectedAnswer === null && (
-                            <div className="mt-5 w-full max-w-[500px] rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-                                {answerFeedback.message}
-                            </div>
+                            <QuizErrorMessage className="mt-5 w-full max-w-[500px]">{answerFeedback.message}</QuizErrorMessage>
                         )}
                     </motion.div>
                 </AnimatePresence>
@@ -1212,13 +1129,11 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="fixed bottom-0 left-0 right-0 z-50 max-h-[45dvh] overflow-y-auto border-t-2"
+                        className={`fixed bottom-0 left-0 right-0 z-50 max-h-[45dvh] overflow-y-auto border-t-2 ${answerFeedback?.status === 'wrong'
+                            ? 'border-red-500 bg-red-50 dark:border-red-700 dark:bg-red-950'
+                            : 'border-green-500 bg-green-50 dark:border-green-700 dark:bg-green-950'}`}
                         role="status"
                         aria-live="polite"
-                        style={{ 
-                            backgroundColor: answerFeedback?.status === 'wrong' ? '#fef2f2' : QUIZ_COLORS.successSurface,
-                            borderColor: answerFeedback?.status === 'wrong' ? '#ef4444' : QUIZ_COLORS.success
-                        }}
                     >
                         <div className="mx-auto flex max-w-4xl flex-col items-stretch justify-between gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-8 sm:py-3">
                             
@@ -1228,18 +1143,16 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
                                     transition={prefersReducedMotion ? { duration: 0 } : { type: "spring", bounce: 0.25, delay: 0.05 }}
-                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm sm:h-12 sm:w-12"
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm dark:bg-gray-900 sm:h-12 sm:w-12"
                                     style={{ color: answerFeedback?.status === 'wrong' ? '#ef4444' : QUIZ_COLORS.success }}
                                 >
                                     {answerFeedback?.status === 'wrong' ? <CloseIcon sx={{ fontSize: 30 }} /> : <CheckCircleIcon sx={{ fontSize: 30 }} />}
                                 </motion.div>
                                 <div>
-                                    <h3 className="mb-0.5 break-words text-lg font-black sm:text-xl"
-                                        style={{ color: answerFeedback?.status === 'wrong' ? '#991b1b' : QUIZ_COLORS.successDark }}>
+                                    <h3 className={`mb-0.5 break-words text-lg font-black sm:text-xl ${answerFeedback?.status === 'wrong' ? 'text-red-800 dark:text-red-200' : 'text-green-800 dark:text-green-200'}`}>
                                         {answerFeedback?.title || 'Jawaban direkam'}
                                     </h3>
-                                    <div className="break-words text-xs font-medium sm:text-sm"
-                                         style={{ color: answerFeedback?.status === 'wrong' ? '#b91c1c' : QUIZ_COLORS.successDark }}>
+                                    <div className={`break-words text-xs font-medium sm:text-sm ${answerFeedback?.status === 'wrong' ? 'text-red-700 dark:text-red-200' : 'text-green-800 dark:text-green-200'}`}>
                                         <JapaneseReading
                                             japanese={answerFeedback?.message || 'Koreksi dan XP dihitung oleh server.'}
                                             reading={answerFeedback?.reading}
@@ -1251,7 +1164,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                             {/* Action Button */}
                             <button 
                                 onClick={handleNext}
-                                className="w-full rounded-xl px-8 py-3 text-base font-black uppercase tracking-wide text-white shadow-lg transition-all active:translate-y-1 active:shadow-none hover:brightness-110 disabled:cursor-wait disabled:opacity-70 sm:w-auto sm:px-10"
+                                className="w-full rounded-xl px-8 py-3 text-base font-black uppercase tracking-wide text-gray-950 shadow-lg transition-all active:translate-y-1 active:shadow-none hover:brightness-110 disabled:cursor-wait disabled:opacity-70 sm:w-auto sm:px-10"
                                 style={{ 
                                     backgroundColor: theme.doneColor, 
                                     boxShadow: `0 4px 0 0 ${theme.doneShadow}` 

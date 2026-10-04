@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
+import QuizField, { TooltipHelp } from '@/Components/UI/QuizField';
 
 import SettingsIcon from '@mui/icons-material/Settings';
 import AssessmentIcon from '@mui/icons-material/Assessment';
@@ -65,6 +66,7 @@ export default function QuizBuilder({
     const [showStudentPreview, setShowStudentPreview] = useState(false);
     const [previewIndex, setPreviewIndex] = useState(0);
     const [previewAnswers, setPreviewAnswers] = useState({});
+    const [showValidation, setShowValidation] = useState(false);
     const importInputRef = useRef(null);
     const initialForm = {
         time_limit: quiz?.time_limit ?? '',
@@ -205,6 +207,7 @@ export default function QuizBuilder({
 
     const handleSave = () => {
         if (firstQuestionError) {
+            setShowValidation(true);
             const invalidIndex = questionErrors.findIndex(Boolean);
             setActiveTab('questions');
             setActiveIndex(invalidIndex);
@@ -224,6 +227,10 @@ export default function QuizBuilder({
             preserveScroll: true,
             onSuccess: () => {
                 cleanSnapshotRef.current = JSON.stringify(data);
+                setShowValidation(false);
+            },
+            onError: () => {
+                setShowValidation(true);
             },
         });
     };
@@ -432,7 +439,10 @@ export default function QuizBuilder({
                     </div>
                     <div className="flex flex-wrap items-center gap-4">
                         <label className="flex items-center gap-2">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Bobot</span>
+                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                                <span>Bobot</span>
+                                <TooltipHelp text="Bobot poin nilai yang didapatkan siswa jika menjawab soal ini dengan benar." />
+                            </span>
                             <input
                                 type="number"
                                 min="1"
@@ -458,7 +468,9 @@ export default function QuizBuilder({
                     {qType === 'listening' && (
                         <div>
                             <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                                <MicNoneOutlinedIcon sx={{ fontSize: 14 }} /> Audio URL
+                                <MicNoneOutlinedIcon sx={{ fontSize: 14 }} />
+                                <span>Audio URL</span>
+                                <TooltipHelp text="URL file audio soal listening (format mp3/wav/ogg) yang akan diputar oleh siswa." />
                             </label>
                             <input
                                 type="text"
@@ -483,22 +495,37 @@ export default function QuizBuilder({
 
                     {/* ─── Question Text ─── */}
                     <div>
-                        <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">
-                            {qType === 'listening' ? 'Question After Listening' : qType === 'fill_blank' ? 'Sentence (use ___ for blank)' : 'Question Text'}
-                        </label>
-                        <div className="relative">
-                            <textarea
-                                value={activeQ.question_text}
-                                onChange={(e) => updateQuestion(activeIndex, 'question_text', e.target.value)}
-                                placeholder={
-                                    qType === 'fill_blank'
-                                        ? 'e.g. 彼は___に行きました。'
-                                        : qType === 'listening'
-                                        ? 'e.g. 音声で言っていることは何ですか？'
-                                        : 'Contoh: Pilih cara baca yang benar untuk 経済'
-                                }
-                                className="w-full min-h-[100px] rounded-xl border border-transparent bg-gray-50 p-4 text-base font-medium text-gray-900 outline-none transition-all resize-none focus:border-brand-100 focus:bg-white focus:ring-4 focus:ring-focus/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-brand-900/30 dark:focus:bg-gray-950"
-                            />
+                        <QuizField
+                            label={qType === 'listening' ? 'Question After Listening' : qType === 'fill_blank' ? 'Sentence (use ___ for blank)' : 'Question Text'}
+                            required
+                            error={errors[`questions.${activeIndex}.question_text`] || (showValidation && !activeQ.question_text?.trim() ? 'Pertanyaan wajib diisi.' : null)}
+                            tooltip={qType === 'fill_blank' ? 'Tuliskan kalimat soal dan gunakan tanda ___ untuk bagian kosong yang harus diisi siswa.' : 'Pertanyaan atau kalimat pokok soal yang akan dijawab peserta kuis.'}
+                            labelClassName="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500"
+                        >
+                            <div className="relative">
+                                <textarea
+                                    value={activeQ.question_text}
+                                    onChange={(e) => updateQuestion(activeIndex, 'question_text', e.target.value)}
+                                    placeholder={
+                                        qType === 'fill_blank'
+                                            ? 'Contoh: 彼は___に行きました。'
+                                            : qType === 'listening'
+                                            ? 'Contoh: 音声で言っていることは何ですか？'
+                                            : 'Contoh: Pilih cara baca yang benar untuk 経済'
+                                    }
+                                    className={`w-full min-h-[100px] rounded-xl border p-4 text-base font-medium outline-none transition-all resize-none ${
+                                        (errors[`questions.${activeIndex}.question_text`] || (showValidation && !activeQ.question_text?.trim()))
+                                            ? 'border-rose-400 bg-rose-50/40 text-rose-900 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 dark:bg-rose-950/20 dark:text-rose-200'
+                                            : 'border-transparent bg-gray-50 text-gray-900 focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-emerald-500 dark:focus:bg-gray-950'
+                                    }`}
+                                />
+                            </div>
+                        </QuizField>
+                        <div className="mt-3">
+                            <label className="mb-1.5 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-sky-700 dark:text-sky-300">
+                                <span>Cara Baca Kana (Yomikata)</span>
+                                <TooltipHelp text="Cara baca kanji dalam hiragana untuk mempermudah siswa yang belum menguasai kanji." />
+                            </label>
                         </div>
                         <input
                             type="text"
@@ -511,7 +538,26 @@ export default function QuizBuilder({
 
                     {/* ─── Multiple Choice: Options Grid ─── */}
                     {qType === 'multiple_choice' && (
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <div className="mb-2 flex items-center justify-between">
+                                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">
+                                    <span>Pilihan Jawaban</span>
+                                    <span className="text-rose-500 font-black">*</span>
+                                    <TooltipHelp text="Opsi pilihan jawaban kuis. Klik lingkaran centang di sisi kanan salah satu opsi untuk menetapkannya sebagai kunci jawaban benar." />
+                                </span>
+                            </div>
+                            {showValidation && (
+                                (!activeQ.correct_answer || !activeQ.options?.includes(activeQ.correct_answer)) ? (
+                                    <p className="mb-2 text-xs font-bold text-rose-500">
+                                        {!activeQ.correct_answer ? 'Pilih salah satu opsi sebagai kunci jawaban benar.' : 'Jawaban benar harus sama dengan salah satu opsi.'}
+                                    </p>
+                                ) : activeQ.options?.filter((o) => o?.trim()).length < 2 ? (
+                                    <p className="mb-2 text-xs font-bold text-rose-500">
+                                        Minimal 2 pilihan jawaban harus diisi.
+                                    </p>
+                                ) : null
+                            )}
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             {(activeQ.options || ['', '', '', '']).map((opt, optIdx) => {
                                 const isCorrect = activeQ.correct_answer === opt && opt !== '';
                                 return (
@@ -547,6 +593,7 @@ export default function QuizBuilder({
                                     </div>
                                 );
                             })}
+                            </div>
                         </div>
                     )}
 
@@ -572,14 +619,25 @@ export default function QuizBuilder({
                                 </p>
                             </div>
                             <div>
-                                <label className="block text-[10px] font-black text-purple-500 uppercase tracking-widest mb-2">Jawaban Benar (isi dari blank)</label>
-                                <input
-                                    type="text"
-                                    value={activeQ.correct_answer}
-                                    onChange={(e) => updateQuestion(activeIndex, 'correct_answer', e.target.value)}
-                                    placeholder="Contoh: 学校"
-                                    className="w-full h-14 bg-white dark:bg-gray-950 border-2 border-purple-300 dark:border-purple-800 rounded-xl px-4 text-lg font-bold text-purple-900 dark:text-purple-200 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500"
-                                />
+                                <QuizField
+                                    label="Jawaban Benar (isi dari blank)"
+                                    required
+                                    error={errors[`questions.${activeIndex}.correct_answer`] || (showValidation && !activeQ.correct_answer?.trim() ? 'Jawaban benar wajib diisi.' : null)}
+                                    tooltip="Kata atau frasa yang benar untuk mengisi bagian kalimat yang kosong (___)."
+                                    labelClassName="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400"
+                                >
+                                    <input
+                                        type="text"
+                                        value={activeQ.correct_answer}
+                                        onChange={(e) => updateQuestion(activeIndex, 'correct_answer', e.target.value)}
+                                        placeholder="Contoh: 学校"
+                                        className={`w-full h-14 rounded-xl px-4 text-lg font-bold focus:outline-none focus:ring-4 ${
+                                            (errors[`questions.${activeIndex}.correct_answer`] || (showValidation && !activeQ.correct_answer?.trim()))
+                                                ? 'border-2 border-rose-400 bg-rose-50/40 text-rose-900 focus:border-rose-500 focus:ring-rose-500/20'
+                                                : 'border-2 border-purple-300 dark:border-purple-800 bg-white dark:bg-gray-950 text-purple-900 dark:text-purple-200 focus:border-purple-500 focus:ring-purple-500/20'
+                                        }`}
+                                    />
+                                </QuizField>
                                 <input
                                     type="text"
                                     value={activeQ.correct_answer_reading || ''}
@@ -589,7 +647,10 @@ export default function QuizBuilder({
                                 />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Hint (Opsional)</label>
+                                <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                    <span>Hint (Opsional)</span>
+                                    <TooltipHelp text="Petunjuk membaca atau arti tambahan yang dapat dilihat siswa saat mengerjakan latihan." />
+                                </label>
                                 <input
                                     type="text"
                                     value={(activeQ.options && activeQ.options[0]) || ''}
@@ -616,14 +677,25 @@ export default function QuizBuilder({
                     {qType === 'listening' && (
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-[10px] font-black text-green-600 uppercase tracking-widest mb-2">Jawaban Benar</label>
-                                <input
-                                    type="text"
-                                    value={activeQ.correct_answer}
-                                    onChange={(e) => updateQuestion(activeIndex, 'correct_answer', e.target.value)}
-                                    placeholder="Contoh: 天気予報"
-                                    className="w-full h-14 bg-white dark:bg-gray-950 border-2 border-green-300 dark:border-green-800 rounded-xl px-4 text-lg font-bold text-green-900 dark:text-green-200 focus:outline-none focus:ring-4 focus:ring-green-500/20 focus:border-green-500"
-                                />
+                                <QuizField
+                                    label="Jawaban Benar"
+                                    required
+                                    error={errors[`questions.${activeIndex}.correct_answer`] || (showValidation && !activeQ.correct_answer?.trim() ? 'Jawaban benar wajib diisi.' : null)}
+                                    tooltip="Kata atau frasa yang benar sesuai audio yang didengarkan siswa."
+                                    labelClassName="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400"
+                                >
+                                    <input
+                                        type="text"
+                                        value={activeQ.correct_answer}
+                                        onChange={(e) => updateQuestion(activeIndex, 'correct_answer', e.target.value)}
+                                        placeholder="Contoh: 天気予報"
+                                        className={`w-full h-14 rounded-xl px-4 text-lg font-bold focus:outline-none focus:ring-4 ${
+                                            (errors[`questions.${activeIndex}.correct_answer`] || (showValidation && !activeQ.correct_answer?.trim()))
+                                                ? 'border-2 border-rose-400 bg-rose-50/40 text-rose-900 focus:border-rose-500 focus:ring-rose-500/20'
+                                                : 'border-2 border-green-300 dark:border-green-800 bg-white dark:bg-gray-950 text-green-900 dark:text-green-200 focus:border-green-500 focus:ring-green-500/20'
+                                        }`}
+                                    />
+                                </QuizField>
                             </div>
                             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-xl p-4 flex items-center gap-3">
                                 <HelpOutlineIcon className="text-green-500" sx={{ fontSize: 18 }} />
@@ -636,7 +708,8 @@ export default function QuizBuilder({
                     <div>
                         <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1">
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            Explanation for Correct Answer
+                            <span>Explanation for Correct Answer</span>
+                            <TooltipHelp text="Penjelasan materi yang muncul setelah siswa menjawab, menerangkan alasan jawaban tersebut benar atau salah." />
                         </label>
                         <textarea
                             value={activeQ.explanation || ''}
@@ -665,7 +738,11 @@ export default function QuizBuilder({
 
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <div>
-                        <label className="mb-2 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500"><TimerOutlinedIcon sx={{ fontSize: 12 }} /> Batas Waktu (detik)</label>
+                        <label className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                            <TimerOutlinedIcon sx={{ fontSize: 12 }} />
+                            <span>Batas Waktu (detik)</span>
+                            <TooltipHelp text="Alokasi batas waktu pengerjaan kuis dalam detik. Kosongkan untuk tanpa batas waktu." />
+                        </label>
                         <input
                             type="number"
                             min="0"
@@ -677,7 +754,12 @@ export default function QuizBuilder({
                         {errors.time_limit && <p className="mt-1 text-[10px] font-bold text-red-600">{errors.time_limit}</p>}
                     </div>
                     <div>
-                        <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1"><TrendingUpIcon sx={{ fontSize: 12 }} /> Nilai Lulus (%)</label>
+                        <label className="mb-2 flex items-center gap-1.5 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                            <TrendingUpIcon sx={{ fontSize: 12 }} />
+                            <span>Nilai Lulus (%)</span>
+                            <span className="text-rose-500 font-black">*</span>
+                            <TooltipHelp text="Persentase skor minimal yang harus diraih siswa untuk dinyatakan lulus kuis ini." />
+                        </label>
                         <input
                             type="number"
                             min="1"
@@ -830,13 +912,13 @@ export default function QuizBuilder({
         const qType = question.type || 'multiple_choice';
         return (
             <div className={`relative flex flex-col overflow-hidden border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900 ${fullScreen ? 'h-full min-h-0 rounded-2xl' : 'h-[500px] rounded-[2rem]'}`}>
-                <div className="bg-brand-600 h-12 flex items-center px-4 justify-between shrink-0">
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Pratinjau Siswa</span>
+                <div className="bg-orange-600 h-12 flex items-center px-4 justify-between shrink-0">
+                    <span className="text-[10px] font-black !text-white uppercase tracking-widest">Pratinjau Siswa</span>
                     <div className="w-2 h-2 rounded-full bg-white dark:bg-gray-900/50"></div>
                 </div>
                 <div className="flex-1 p-6 flex flex-col overflow-y-auto">
                     <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full mb-6">
-                        <div className="h-1.5 bg-brand-600 rounded-full" style={{ width: `${data.questions.length > 0 ? ((index + 1) / data.questions.length) * 100 : 0}%` }}></div>
+                        <div className="h-1.5 bg-orange-600 rounded-full transition-all duration-300" style={{ width: `${data.questions.length > 0 ? ((index + 1) / data.questions.length) * 100 : 0}%` }}></div>
                     </div>
 
                     {qType === 'listening' && question.audio_url && (
@@ -857,7 +939,7 @@ export default function QuizBuilder({
                         <div className="space-y-2 mb-auto">
                             {(question.options || []).map((opt, i) => (
                                 <button type="button" key={i} onClick={() => setPreviewAnswers((answers) => ({ ...answers, [index]: opt }))} className={`w-full border rounded-xl px-4 py-2.5 text-center text-xs font-bold ${
-                                    previewAnswers[index] === opt && opt !== '' ? 'border-orange-500 bg-orange-50 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300' : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+                                    previewAnswers[index] === opt && opt !== '' ? 'border-orange-500 bg-orange-50 text-orange-950 ring-2 ring-orange-500/20 dark:border-orange-500 dark:bg-orange-950/40 dark:text-orange-200' : 'border-gray-200 bg-white text-gray-800 hover:border-orange-300 hover:bg-orange-50/30 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-orange-700'
                                 }`}>
                                     {opt || <span className="text-gray-300">-</span>}
                                 </button>
@@ -867,16 +949,16 @@ export default function QuizBuilder({
 
                     {qType === 'fill_blank' && (
                         <div className="mb-auto">
-                            <div className="border-2 border-dashed border-purple-300 rounded-xl px-4 py-3 text-center">
-                                <input type="text" value={previewAnswers[index] || ''} onChange={(event) => setPreviewAnswers((answers) => ({ ...answers, [index]: event.target.value }))} placeholder="Ketik jawaban siswa" className="w-full border-none bg-transparent text-center text-sm font-bold text-purple-600" />
+                            <div className="border-2 border-dashed border-purple-300 bg-purple-50/40 rounded-xl px-4 py-3 text-center dark:border-purple-800 dark:bg-purple-950/20">
+                                <input type="text" value={previewAnswers[index] || ''} onChange={(event) => setPreviewAnswers((answers) => ({ ...answers, [index]: event.target.value }))} placeholder="Ketik jawaban siswa" className="w-full border-none bg-transparent text-center text-sm font-bold text-purple-700 placeholder-purple-400 focus:outline-none dark:text-purple-300" />
                             </div>
                         </div>
                     )}
 
                     {qType === 'listening' && (
                         <div className="mb-auto">
-                            <div className="border-2 border-dashed border-green-300 rounded-xl px-4 py-3 text-center">
-                                <input type="text" value={previewAnswers[index] || ''} onChange={(event) => setPreviewAnswers((answers) => ({ ...answers, [index]: event.target.value }))} placeholder="Ketik jawaban siswa" className="w-full border-none bg-transparent text-center text-sm font-bold text-green-600" />
+                            <div className="border-2 border-dashed border-emerald-300 bg-emerald-50/40 rounded-xl px-4 py-3 text-center dark:border-emerald-800 dark:bg-emerald-950/20">
+                                <input type="text" value={previewAnswers[index] || ''} onChange={(event) => setPreviewAnswers((answers) => ({ ...answers, [index]: event.target.value }))} placeholder="Ketik jawaban siswa" className="w-full border-none bg-transparent text-center text-sm font-bold text-emerald-700 placeholder-emerald-400 focus:outline-none dark:text-emerald-300" />
                             </div>
                         </div>
                     )}
@@ -1159,13 +1241,13 @@ export default function QuizBuilder({
                 </main>
             )}
             {showStudentPreview && (
-                <div className="fixed inset-0 z-[90] flex flex-col bg-gray-950 p-3 sm:p-5">
-                    <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 pb-3 text-white">
+                <div className="fixed inset-0 z-[90] flex flex-col bg-[#f5f8f6] p-3 text-gray-900 antialiased dark:bg-gray-950 dark:text-white sm:p-5">
+                    <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 pb-3">
                         <div className="min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-300">Pratinjau Siswa</p>
-                            <h2 className="truncate text-base font-black">Draft saat ini - tidak membuat pengerjaan atau XP</h2>
+                            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-600 dark:text-orange-300">Pratinjau Siswa</p>
+                            <h2 className="truncate text-base font-black text-gray-950 dark:text-white">Draft saat ini - tidak membuat pengerjaan atau XP</h2>
                         </div>
-                        <button type="button" onClick={() => setShowStudentPreview(false)} className="rounded-xl border border-white/20 px-4 py-2 text-sm font-black hover:bg-white/10">
+                        <button type="button" onClick={() => setShowStudentPreview(false)} className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-xs hover:bg-gray-50 dark:border-white/20 dark:bg-gray-900 dark:text-white dark:hover:bg-white/10">
                             Tutup
                         </button>
                     </div>
@@ -1177,11 +1259,11 @@ export default function QuizBuilder({
                             type="button"
                             onClick={() => setPreviewIndex((index) => Math.max(0, index - 1))}
                             disabled={previewIndex === 0}
-                            className="h-11 rounded-xl border border-white/20 px-5 text-sm font-black text-white disabled:opacity-30"
+                            className="h-11 rounded-xl border border-gray-300 bg-white px-5 text-sm font-black text-gray-700 shadow-xs hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/20 dark:bg-gray-900 dark:text-white dark:hover:bg-white/10"
                         >
                             Sebelumnya
                         </button>
-                        <span className="hidden self-center text-sm font-bold text-gray-300 sm:block">
+                        <span className="hidden self-center text-sm font-bold text-gray-600 dark:text-gray-300 sm:block">
                             {previewIndex + 1} dari {data.questions.length}
                         </span>
                         <button
@@ -1193,7 +1275,7 @@ export default function QuizBuilder({
                                 }
                                 setPreviewIndex((index) => index + 1);
                             }}
-                            className="h-11 rounded-xl bg-brand-600 px-5 text-sm font-black text-white"
+                            className="h-11 rounded-xl bg-orange-600 px-5 text-sm font-black !text-white shadow-sm hover:bg-orange-700 active:translate-y-0.5 transition"
                         >
                             {previewIndex >= data.questions.length - 1 ? 'Selesai' : 'Berikutnya'}
                         </button>
@@ -1210,7 +1292,10 @@ export default function QuizBuilder({
                         </div>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <label className="space-y-1 sm:col-span-2">
-                                <span className="text-xs font-black text-gray-500 dark:text-gray-400">Tipe Konten</span>
+                                <span className="flex items-center gap-1.5 text-xs font-black text-gray-500 dark:text-gray-400">
+                                    <span>Tipe Konten</span>
+                                    <TooltipHelp text="Pilih jenis materi dari bank konten yang akan disaring (Kosakata, Kanji, atau Bunpo)." />
+                                </span>
                                 <select value={vocabularyForm.data.content_type} onChange={(e) => vocabularyForm.setData('content_type', e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                                     <option value="all">Semua tipe</option>
                                     <option value="kosakata">Kosakata</option>
@@ -1219,7 +1304,10 @@ export default function QuizBuilder({
                                 </select>
                             </label>
                             <label className="space-y-1">
-                                <span className="text-xs font-black text-gray-500 dark:text-gray-400">Level</span>
+                                <span className="flex items-center gap-1.5 text-xs font-black text-gray-500 dark:text-gray-400">
+                                    <span>Level</span>
+                                    <TooltipHelp text="Pilih tingkat kemahiran JLPT kosakata sasaran (N5 hingga N1)." />
+                                </span>
                                 <select value={vocabularyForm.data.jlpt_level} onChange={(e) => vocabularyForm.setData('jlpt_level', e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                                     <option value="all">Semua Level</option>
                                     <option value="N5">N5</option>
@@ -1230,11 +1318,17 @@ export default function QuizBuilder({
                                 </select>
                             </label>
                             <label className="space-y-1">
-                                <span className="text-xs font-black text-gray-500 dark:text-gray-400">Jumlah</span>
+                                <span className="flex items-center gap-1.5 text-xs font-black text-gray-500 dark:text-gray-400">
+                                    <span>Jumlah</span>
+                                    <TooltipHelp text="Berapa butir soal baru yang ingin digenerate dari bank materi." />
+                                </span>
                                 <input type="number" min="1" max="50" value={vocabularyForm.data.count} onChange={(e) => vocabularyForm.setData('count', e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                             </label>
                             <label className="space-y-1 sm:col-span-2">
-                                <span className="text-xs font-black text-gray-500 dark:text-gray-400">Mode Soal</span>
+                                <span className="flex items-center gap-1.5 text-xs font-black text-gray-500 dark:text-gray-400">
+                                    <span>Mode Soal</span>
+                                    <TooltipHelp text="Format pengujian: Kata Jepang ke arti, Arti ke kata Jepang, atau Cara baca (Reading) ke kata Jepang." />
+                                </span>
                                 <select value={vocabularyForm.data.mode} onChange={(e) => vocabularyForm.setData('mode', e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                                     <option value="word_to_meaning">Kata Jepang ke arti</option>
                                     <option value="meaning_to_word">Arti ke kata Jepang</option>
@@ -1242,7 +1336,10 @@ export default function QuizBuilder({
                                 </select>
                             </label>
                             <label className="space-y-1 sm:col-span-2">
-                                <span className="text-xs font-black text-gray-500 dark:text-gray-400">Kategori</span>
+                                <span className="flex items-center gap-1.5 text-xs font-black text-gray-500 dark:text-gray-400">
+                                    <span>Kategori</span>
+                                    <TooltipHelp text="Filter kategori kata (misal: noun, verb, counter). Kosongkan jika ingin mencakup seluruh kategori." />
+                                </span>
                                 <input
                                     type="text"
                                     value={vocabularyForm.data.category === 'all' ? '' : vocabularyForm.data.category}
@@ -1253,7 +1350,10 @@ export default function QuizBuilder({
                                 <p className="text-[11px] font-medium text-gray-400">Contoh: noun, verb, counter. Kosongkan jika ingin acak semua kategori.</p>
                             </label>
                             <label className="space-y-1 sm:col-span-2">
-                                <span className="text-xs font-black text-gray-500 dark:text-gray-400">Sumber Data</span>
+                                <span className="flex items-center gap-1.5 text-xs font-black text-gray-500 dark:text-gray-400">
+                                    <span>Sumber Data</span>
+                                    <TooltipHelp text="Saring materi dari database yang berstatus Published saja atau termasuk draf." />
+                                </span>
                                 <select value={vocabularyForm.data.status} onChange={(e) => vocabularyForm.setData('status', e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                                     <option value="published">Published saja</option>
                                     <option value="draft">Draft saja</option>
@@ -1277,11 +1377,11 @@ export default function QuizBuilder({
                         <div className="mt-6 flex justify-end gap-3">
                             <button type="button" onClick={() => setShowVocabularyGenerate(false)} className="rounded-xl border border-gray-200 px-5 py-3 text-sm font-black text-gray-600 dark:border-gray-700 dark:text-gray-300">Batal</button>
                             {vocabularyPreview ? (
-                                <button type="button" onClick={confirmGenerateVocabularyQuestions} className="rounded-xl bg-brand-600 px-6 py-3 text-sm font-black text-white">
+                                <button type="button" onClick={confirmGenerateVocabularyQuestions} className="rounded-xl bg-orange-600 px-6 py-3 text-sm font-black !text-white hover:bg-orange-700 transition">
                                     Tambahkan {vocabularyPreview.count} Soal
                                 </button>
                             ) : (
-                                <button disabled={vocabularyGeneratorLoading} className="rounded-xl bg-brand-600 px-6 py-3 text-sm font-black text-white disabled:opacity-50">
+                                <button disabled={vocabularyGeneratorLoading} className="rounded-xl bg-orange-600 px-6 py-3 text-sm font-black !text-white hover:bg-orange-700 transition disabled:opacity-50">
                                     {vocabularyGeneratorLoading ? 'Membuat Preview...' : 'Pratinjau'}
                                 </button>
                             )}

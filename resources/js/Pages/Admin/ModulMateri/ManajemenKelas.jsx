@@ -3,6 +3,8 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ConfirmActionDialog from '@/Components/UI/ConfirmActionDialog';
+import AdminDialog from '@/Components/UI/AdminDialog';
+import FormField from '@/Components/UI/FormField';
 
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -43,12 +45,11 @@ function StatusBadge({ status }) {
     );
 }
 
-function Field({ label, children, wide = false }) {
+function Field({ label, tooltip, hint, error, required = false, children, wide = false }) {
     return (
-        <label className={`block ${wide ? 'md:col-span-2' : ''}`}>
-            <span className="mb-2 block text-xs font-black uppercase tracking-wider text-gray-400">{label}</span>
+        <FormField label={label} tooltip={tooltip} hint={hint} error={error} required={required} wide={wide}>
             {children}
-        </label>
+        </FormField>
     );
 }
 
@@ -94,7 +95,7 @@ function OptionCard({ href, icon, label, description, tone = 'orange' }) {
 
 function ProgramCard({ program, onManage }) {
     return (
-        <article className="overflow-hidden rounded-[1.4rem] border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-gray-800 dark:bg-gray-900">
+        <article className="min-w-0 overflow-hidden rounded-[1.4rem] border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-gray-800 dark:bg-gray-900">
             <div className="relative h-44 overflow-hidden bg-gradient-to-br from-orange-500 to-rose-600">
                 {program.thumbnail_url ? (
                     <img src={program.thumbnail_url} alt={program.title} className="h-full w-full object-cover" />
@@ -105,7 +106,7 @@ function ProgramCard({ program, onManage }) {
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-gray-950/25 to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4">
-                    <div className="mb-2 flex flex-wrap gap-2">
+                    <div className="mb-2 flex flex-wrap gap-1.5 sm:gap-2">
                         <StatusBadge status={program.status} />
                         <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider backdrop-blur ${
                             program.is_mentor
@@ -117,11 +118,11 @@ function ProgramCard({ program, onManage }) {
                         {program.curriculum_track && <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-black text-white backdrop-blur">{program.curriculum_track.name}</span>}
                         {program.level && <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-black text-white backdrop-blur">{program.level.level_name}</span>}
                     </div>
-                    <h2 className="text-xl sm:text-2xl font-black text-white line-clamp-1">{program.title}</h2>
+                    <h2 className="text-lg sm:text-xl font-black text-white line-clamp-2 leading-tight">{program.title}</h2>
                 </div>
             </div>
 
-            <div className="space-y-4 p-5">
+            <div className="space-y-4 p-4 sm:p-5">
                 <p className="line-clamp-2 text-sm font-semibold text-gray-500 dark:text-gray-400">{program.description || 'Belum ada deskripsi.'}</p>
                 <div className="grid gap-2 text-sm font-bold text-gray-600 dark:text-gray-300">
                     <div className="flex items-center gap-2">
@@ -545,132 +546,167 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
             </AnimatePresence>
 
             {showForm && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-2.5 sm:p-4 bg-gray-950/60 backdrop-blur-sm">
-                    <div className="relative flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl dark:bg-gray-900">
-                        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3.5 sm:px-6 sm:py-4 dark:border-gray-800">
-                            <div>
-                                <p className="text-[11px] font-black uppercase tracking-[0.25em] text-orange-600">Pengaturan Kelas</p>
-                                <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white">{editing ? 'Edit Kelas' : 'Tambah Kelas'}</h2>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={closeForm}
-                                className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                            >
-                                <CloseIcon sx={{ fontSize: 18 }} />
-                            </button>
-                        </div>
-
-                        <form onSubmit={submitForm} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                            <div className="grid flex-1 overflow-y-auto lg:grid-cols-[330px_minmax(0,1fr)]">
-                                <aside className="bg-gradient-to-br from-orange-500 to-rose-600 p-4 sm:p-5 lg:p-6 text-white shrink-0">
-                                    <p className="text-[11px] font-black uppercase tracking-[0.25em] text-white/75">Preview Tampilan</p>
-                                    <div className="mt-3 sm:mt-4 overflow-hidden rounded-[1.2rem] bg-white/15 shadow-xl backdrop-blur">
-                                        <div className="relative h-36 sm:h-44 bg-white/10">
-                                            {thumbnailPreviewUrl ? (
-                                                <img src={thumbnailPreviewUrl} alt={form.data.title || 'Preview kelas'} className="h-full w-full object-cover" />
-                                            ) : (
-                                                <div className="flex h-full items-center justify-center text-white/70">
-                                                    <ImageOutlinedIcon sx={{ fontSize: 48 }} />
-                                                </div>
-                                            )}
-                                            <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 to-transparent" />
-                                            <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4">
-                                                <h3 className="text-base sm:text-lg font-black line-clamp-1">{form.data.title || 'Judul Kelas'}</h3>
-                                                <p className="text-xs font-bold text-white/80">{form.data.instructor_name || 'Nama pengajar'}</p>
+                <AdminDialog
+                    open={showForm}
+                    onClose={closeForm}
+                    eyebrow="Pengaturan Kelas"
+                    title={editing ? 'Edit Kelas' : 'Tambah Kelas'}
+                    maxWidth="max-w-5xl"
+                    contentClassName="p-0"
+                >
+                    <form onSubmit={submitForm} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                        <div className="grid flex-1 overflow-y-auto lg:grid-cols-[330px_minmax(0,1fr)]">
+                            <aside className="bg-gradient-to-br from-orange-500 to-rose-600 p-4 sm:p-5 lg:p-6 text-white shrink-0">
+                                <p className="text-[11px] font-black uppercase tracking-[0.25em] text-white/75">Preview Tampilan</p>
+                                <div className="mt-3 sm:mt-4 overflow-hidden rounded-[1.2rem] bg-white/15 shadow-xl backdrop-blur">
+                                    <div className="relative h-36 sm:h-44 bg-white/10">
+                                        {thumbnailPreviewUrl ? (
+                                            <img src={thumbnailPreviewUrl} alt={form.data.title || 'Preview kelas'} className="h-full w-full object-cover" />
+                                        ) : (
+                                            <div className="flex h-full items-center justify-center text-white/70">
+                                                <ImageOutlinedIcon sx={{ fontSize: 48 }} />
                                             </div>
-                                        </div>
-                                        <div className="p-3 sm:p-4">
-                                            <p className="line-clamp-2 text-xs sm:text-sm font-semibold text-white/80">{form.data.description || 'Deskripsi kelas akan tampil di sini.'}</p>
+                                        )}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 to-transparent" />
+                                        <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4">
+                                            <h3 className="text-base sm:text-lg font-black line-clamp-1">{form.data.title || 'Judul Kelas'}</h3>
+                                            <p className="text-xs font-bold text-white/80">{form.data.instructor_name || 'Nama pengajar'}</p>
                                         </div>
                                     </div>
-                                </aside>
-
-                                <div className="p-4 sm:p-6 space-y-4">
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                        <Field label="Judul Kelas" wide>
-                                            <input value={form.data.title} onChange={(event) => form.setData('title', event.target.value)} placeholder="Contoh: JLPT N4 Mingguan atau SSW Careworker" className={inputClass} />
-                                        </Field>
-                                        <Field label="Nama Pengajar">
-                                            <input value={form.data.instructor_name} onChange={(event) => form.setData('instructor_name', event.target.value)} placeholder="Masukkan nama pengajar" className={inputClass} />
-                                        </Field>
-                                        <Field label="Jalur Kurikulum">
-                                            <select
-                                                value={form.data.curriculum_track_id}
-                                                onChange={(event) => {
-                                                    form.setData((current) => ({
-                                                        ...current,
-                                                        curriculum_track_id: event.target.value,
-                                                        level_id: '',
-                                                    }));
-                                                }}
-                                                className={inputClass}
-                                            >
-                                                <option value="">Pilih jalur</option>
-                                                {tracks.map((track) => <option key={track.id} value={track.id}>{track.name}</option>)}
-                                            </select>
-                                        </Field>
-                                        <Field label="Level">
-                                            <select value={form.data.level_id} onChange={(event) => form.setData('level_id', event.target.value)} disabled={!form.data.curriculum_track_id} className={inputClass}>
-                                                <option value="">Tanpa Level</option>
-                                                {availableLevels.map((level) => <option key={level.id} value={level.id}>{level.level_name}</option>)}
-                                            </select>
-                                        </Field>
-                                        <Field label="Status">
-                                            <select value={form.data.status} onChange={(event) => form.setData('status', event.target.value)} className={inputClass}>
-                                                <option value="published">Terbit</option>
-                                                <option value="draft">Draf</option>
-                                            </select>
-                                        </Field>
-                                        <Field label="Urutan Tampil">
-                                            <input type="number" min="1" value={form.data.sort_order} onChange={(event) => form.setData('sort_order', event.target.value)} className={inputClass} />
-                                        </Field>
-                                        <Field label="Thumbnail Kelas" wide>
-                                            <div className="grid gap-3 sm:grid-cols-2">
-                                                <label className="block rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-3 transition hover:border-orange-300 hover:bg-orange-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:border-orange-800 dark:hover:bg-orange-950/20">
-                                                    <span className="mb-2 flex items-center gap-2 text-xs font-black text-gray-800 dark:text-gray-100">
-                                                        <ImageOutlinedIcon sx={{ fontSize: 17 }} /> Unggah Gambar
-                                                    </span>
-                                                    <input
-                                                        ref={thumbnailFileInputRef}
-                                                        type="file"
-                                                        accept="image/png,image/jpeg,image/webp"
-                                                        onChange={selectThumbnailFile}
-                                                        className="block w-full text-xs font-semibold text-gray-600 file:mr-2 file:rounded-lg file:border-0 file:bg-orange-100 file:px-2.5 file:py-1.5 file:text-xs file:font-black file:text-orange-700 hover:file:bg-orange-200 dark:text-gray-300 dark:file:bg-orange-900/30 dark:file:text-orange-300"
-                                                    />
-                                                    <span className="mt-1.5 block text-[11px] font-medium text-gray-500 dark:text-gray-400">PNG, JPG, WebP. Maks 5MB.</span>
-                                                </label>
-                                                <label className="block">
-                                                    <span className="mb-2 block text-xs font-black text-gray-800 dark:text-gray-100">URL Gambar Eksternal</span>
-                                                    <input type="text" inputMode="url" value={form.data.thumbnail_url} onChange={setThumbnailUrl} placeholder="https://contoh.com/thumbnail.webp" className={inputClass} />
-                                                    <span className="mt-1.5 block text-[11px] font-medium text-gray-500 dark:text-gray-400">Gunakan link langsung file gambar.</span>
-                                                </label>
-                                            </div>
-                                        </Field>
-                                        <Field label="Deskripsi" wide>
-                                            <textarea rows="3" value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} placeholder="Ringkasan isi dan target pembelajaran kelas..." className={`${inputClass} min-h-24`} />
-                                        </Field>
+                                    <div className="p-3 sm:p-4">
+                                        <p className="line-clamp-2 text-xs sm:text-sm font-semibold text-white/80">{form.data.description || 'Deskripsi kelas akan tampil di sini.'}</p>
                                     </div>
+                                </div>
+                            </aside>
 
-                                    {Object.values(form.errors).length > 0 && (
-                                        <p className="rounded-xl bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-600 dark:bg-rose-950/30 dark:text-rose-300">
-                                            {Object.values(form.errors)[0]}
-                                        </p>
-                                    )}
+                            <div className="p-4 sm:p-6 space-y-4">
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <Field label="Judul Kelas" required error={form.errors.title} tooltip="Nama resmi program atau kelas pembelajaran yang tampil pada roadmap dan katalog." wide>
+                                        <input
+                                            value={form.data.title}
+                                            onChange={(event) => {
+                                                form.setData('title', event.target.value);
+                                                form.clearErrors('title');
+                                            }}
+                                            placeholder="Contoh: JLPT N4 Mingguan atau SSW Careworker"
+                                            className={`${inputClass} ${form.errors.title ? '!border-rose-400 focus:!border-rose-500 focus:!ring-rose-500/20' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Nama Pengajar" error={form.errors.instructor_name} tooltip="Nama sensei / instruktur penanggung jawab materi kelas.">
+                                        <input
+                                            value={form.data.instructor_name}
+                                            onChange={(event) => {
+                                                form.setData('instructor_name', event.target.value);
+                                                form.clearErrors('instructor_name');
+                                            }}
+                                            placeholder="Masukkan nama pengajar"
+                                            className={`${inputClass} ${form.errors.instructor_name ? '!border-rose-400 focus:!border-rose-500 focus:!ring-rose-500/20' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Jalur Kurikulum" required error={form.errors.curriculum_track_id} tooltip="Kategori kurikulum (misal: JLPT, Persiapan Kerja SSW, Bahasa Jepang Umum).">
+                                        <select
+                                            value={form.data.curriculum_track_id}
+                                            onChange={(event) => {
+                                                form.setData((current) => ({
+                                                    ...current,
+                                                    curriculum_track_id: event.target.value,
+                                                    level_id: '',
+                                                }));
+                                                form.clearErrors('curriculum_track_id');
+                                            }}
+                                            className={`${inputClass} ${form.errors.curriculum_track_id ? '!border-rose-400 focus:!border-rose-500 focus:!ring-rose-500/20' : ''}`}
+                                        >
+                                            <option value="">Pilih jalur</option>
+                                            {tracks.map((track) => <option key={track.id} value={track.id}>{track.name}</option>)}
+                                        </select>
+                                    </Field>
+                                    <Field label="Level" error={form.errors.level_id} tooltip="Tingkat kemahiran khusus (misal: N5, N4, N3).">
+                                        <select
+                                            value={form.data.level_id}
+                                            onChange={(event) => {
+                                                form.setData('level_id', event.target.value);
+                                                form.clearErrors('level_id');
+                                            }}
+                                            disabled={!form.data.curriculum_track_id}
+                                            className={`${inputClass} ${form.errors.level_id ? '!border-rose-400 focus:!border-rose-500 focus:!ring-rose-500/20' : ''}`}
+                                        >
+                                            <option value="">Tanpa Level</option>
+                                            {availableLevels.map((level) => <option key={level.id} value={level.id}>{level.level_name}</option>)}
+                                        </select>
+                                    </Field>
+                                    <Field label="Status" required error={form.errors.status} tooltip="Terbit agar dapat diakses siswa atau Draf untuk proses persiapan materi.">
+                                        <select
+                                            value={form.data.status}
+                                            onChange={(event) => {
+                                                form.setData('status', event.target.value);
+                                                form.clearErrors('status');
+                                            }}
+                                            className={`${inputClass} ${form.errors.status ? '!border-rose-400 focus:!border-rose-500 focus:!ring-rose-500/20' : ''}`}
+                                        >
+                                            <option value="published">Terbit</option>
+                                            <option value="draft">Draf</option>
+                                        </select>
+                                    </Field>
+                                    <Field label="Urutan Tampil" required error={form.errors.sort_order} tooltip="Urutan posisi kelas saat ditampilkan pada katalog program siswa.">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={form.data.sort_order}
+                                            onChange={(event) => {
+                                                form.setData('sort_order', event.target.value);
+                                                form.clearErrors('sort_order');
+                                            }}
+                                            className={`${inputClass} ${form.errors.sort_order ? '!border-rose-400 focus:!border-rose-500 focus:!ring-rose-500/20' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Thumbnail Kelas" error={form.errors.thumbnail_url || form.errors.thumbnail_file} wide tooltip="Gambar sampul kartu kelas. Bisa diunggah langsung atau menggunakan link gambar eksternal.">
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <label className="block rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-3 transition hover:border-orange-300 hover:bg-orange-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:border-orange-800 dark:hover:bg-orange-950/20">
+                                                <span className="mb-2 flex items-center gap-2 text-xs font-black text-gray-800 dark:text-gray-100">
+                                                    <ImageOutlinedIcon sx={{ fontSize: 17 }} /> Unggah Gambar
+                                                </span>
+                                                <input
+                                                    ref={thumbnailFileInputRef}
+                                                    type="file"
+                                                    accept="image/png,image/jpeg,image/webp"
+                                                    onChange={selectThumbnailFile}
+                                                    className="block w-full text-xs font-semibold text-gray-600 file:mr-2 file:rounded-lg file:border-0 file:bg-orange-100 file:px-2.5 file:py-1.5 file:text-xs file:font-black file:text-orange-700 hover:file:bg-orange-200 dark:text-gray-300 dark:file:bg-orange-900/30 dark:file:text-orange-300"
+                                                />
+                                                <span className="mt-1.5 block text-[11px] font-medium text-gray-500 dark:text-gray-400">PNG, JPG, WebP. Maks 5MB.</span>
+                                            </label>
+                                            <label className="block">
+                                                <span className="mb-2 block text-xs font-black text-gray-800 dark:text-gray-100">URL Gambar Eksternal</span>
+                                                <input type="text" inputMode="url" value={form.data.thumbnail_url} onChange={setThumbnailUrl} placeholder="https://contoh.com/thumbnail.webp" className={inputClass} />
+                                                <span className="mt-1.5 block text-[11px] font-medium text-gray-500 dark:text-gray-400">Gunakan link langsung file gambar.</span>
+                                            </label>
+                                        </div>
+                                    </Field>
+                                    <Field label="Deskripsi" error={form.errors.description} wide tooltip="Ringkasan penjelasan kelas yang menarik bagi calon peserta.">
+                                        <textarea
+                                            rows="3"
+                                            value={form.data.description}
+                                            onChange={(event) => {
+                                                form.setData('description', event.target.value);
+                                                form.clearErrors('description');
+                                            }}
+                                            placeholder="Ringkasan isi dan target pembelajaran kelas..."
+                                            className={`${inputClass} min-h-24 ${form.errors.description ? '!border-rose-400 focus:!border-rose-500 focus:!ring-rose-500/20' : ''}`}
+                                        />
+                                    </Field>
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-gray-100 bg-white/95 px-4 py-3 sm:px-6 sm:py-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
-                                <button type="button" onClick={closeForm} className="h-10 sm:h-11 w-full sm:w-auto rounded-xl border border-gray-200 px-5 text-xs sm:text-sm font-black text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-                                    Batal
-                                </button>
-                                <button type="submit" disabled={form.processing} className="h-10 sm:h-11 w-full sm:w-auto rounded-xl bg-brand-600 px-6 text-xs sm:text-sm font-black text-white shadow-sm shadow-brand-500/20 transition hover:bg-brand-700 disabled:opacity-50">
-                                    {form.processing ? 'Menyimpan...' : 'Simpan Kelas'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-gray-100 bg-white/95 px-4 py-3 sm:px-6 sm:py-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
+                            <button type="button" onClick={closeForm} className="h-10 sm:h-11 w-full sm:w-auto rounded-xl border border-gray-200 px-5 text-xs sm:text-sm font-black text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                                Batal
+                            </button>
+                            <button type="submit" disabled={form.processing} className="h-10 sm:h-11 w-full sm:w-auto rounded-xl bg-brand-600 px-6 text-xs sm:text-sm font-black text-white shadow-sm shadow-brand-500/20 transition hover:bg-brand-700 disabled:opacity-50">
+                                {form.processing ? 'Menyimpan...' : 'Simpan Kelas'}
+                            </button>
+                        </div>
+                    </form>
+                </AdminDialog>
             )}
 
             <ConfirmActionDialog

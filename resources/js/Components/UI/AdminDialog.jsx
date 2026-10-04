@@ -13,6 +13,7 @@ export default function AdminDialog({
     children,
     footer,
     maxWidth = 'max-w-2xl',
+    contentClassName = 'px-5 py-5 sm:px-6',
 }) {
     const isDialogOpen = Boolean(open || isOpen);
     useScrollLock(isDialogOpen);
@@ -47,7 +48,7 @@ export default function AdminDialog({
                         <CloseIcon sx={{ fontSize: 19 }} />
                     </button>
                 </header>
-                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
+                <div className={`min-h-0 flex-1 overflow-y-auto ${contentClassName}`}>{children}</div>
                 {footer && <footer className="shrink-0 border-t border-gray-100 bg-white px-5 py-4 dark:border-gray-800 dark:bg-gray-900 sm:px-6">{footer}</footer>}
             </section>
         </div>,

@@ -1,18 +1,31 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Card from '@/Components/UI/Card';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
+import { TooltipHelp } from '@/Components/UI/QuizField';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineRounded';
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+
+export const getCardError = (card) => {
+    if (!card.front_text || !card.front_text.trim()) {
+        return 'Kata depan (Jepang) wajib diisi';
+    }
+    if (!card.back_text || !card.back_text.trim()) {
+        return 'Arti bahasa Indonesia wajib diisi';
+    }
+    return null;
+};
 
 const emptyCard = {
     id: null,
@@ -94,6 +107,11 @@ export function FlashcardEditorWorkspace({
     const [showImportMenu, setShowImportMenu] = useState(false);
     const [showLibrary, setShowLibrary] = useState(false);
     const [showSetSettings, setShowSetSettings] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState('');
+    const [saveSuccess, setSaveSuccess] = useState('');
+    const cardErrors = useMemo(() => cards.map(getCardError), [cards]);
+    const totalInvalid = useMemo(() => cardErrors.filter(Boolean).length, [cardErrors]);
     const generateForm = useForm({ quiz_id: '', mode: 'word_to_meaning', count: 10 });
     const settingsForm = useForm({
         title: set.title || '',
@@ -166,6 +184,22 @@ export function FlashcardEditorWorkspace({
     };
 
     const saveCards = () => {
+        setSaveError('');
+        setSaveSuccess('');
+
+        if (cards.length === 0) {
+            setSaveError('Belum ada kartu flashcard. Tambahkan minimal 1 kartu sebelum menyimpan.');
+            return;
+        }
+
+        const firstInvalidIdx = cardErrors.findIndex(Boolean);
+        if (firstInvalidIdx !== -1) {
+            setActiveIndex(firstInvalidIdx);
+            setSaveError(`Terdapat ${totalInvalid} kartu yang belum lengkap. Periksa Kartu #${firstInvalidIdx + 1}: ${cardErrors[firstInvalidIdx]}.`);
+            return;
+        }
+
+        setIsSaving(true);
         router.post(route('admin.flashcards.builder.update', set.id), {
             status: setRecordStatus,
             cards: cards.map((card) => ({
@@ -188,7 +222,20 @@ export function FlashcardEditorWorkspace({
                 stroke_count: card.stroke_count || null,
                 notes: card.notes || '',
             })),
-        }, { preserveScroll: true });
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsSaving(false);
+                setSaveSuccess('Flashcard berhasil disimpan.');
+                setTimeout(() => setSaveSuccess(''), 4000);
+            },
+            onError: (errs) => {
+                setIsSaving(false);
+                const firstVal = Object.values(errs)[0];
+                setSaveError(firstVal || 'Gagal menyimpan flashcard. Silakan periksa kembali kelengkapan data.');
+            },
+            onFinish: () => setIsSaving(false),
+        });
     };
 
     const generateQuiz = (event) => {
@@ -251,13 +298,30 @@ export function FlashcardEditorWorkspace({
                         )}
                         {embedded && (
                             <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-600">
-                                Flashcard Day
+                                Materi Repetisi & Flashcard
                             </p>
                         )}
                         <h1 className="mt-2 text-2xl font-black text-gray-900 dark:text-white">{set.title}</h1>
                         <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
                             Week {set.module?.week_number || '-'} → Day {set.day?.day_number || '-'} · Susun satu kartu untuk satu kosakata.
                         </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <span className="rounded-lg border border-gray-200 bg-white px-3 py-1 text-xs font-bold text-gray-700 shadow-2xs dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+                                Total: <strong className="text-gray-900 dark:text-white">{cards.length}</strong> Kartu
+                            </span>
+                            <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300">
+                                Siap: <strong>{cards.length - totalInvalid}</strong>
+                            </span>
+                            {totalInvalid > 0 ? (
+                                <span className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-black text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300">
+                                    Belum Lengkap: <strong>{totalInvalid}</strong>
+                                </span>
+                            ) : (
+                                <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300">
+                                    Semua Kartu Siap
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         <button
@@ -311,18 +375,42 @@ export function FlashcardEditorWorkspace({
                             <option value="draft">Draft</option>
                             <option value="published">Published</option>
                         </select>
-                        <button onClick={addBlankCard} className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <button onClick={addBlankCard} className="flex h-11 items-center gap-2 rounded-xl bg-gray-900 px-4 text-sm font-black text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 transition-colors">
                             <AddIcon sx={{ fontSize: 18 }} />
                             Kartu Baru
                         </button>
-                        <button onClick={saveCards} className="flex h-11 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-black text-white transition-colors hover:bg-brand-700">
+                        <button onClick={saveCards} disabled={isSaving} className="flex h-11 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-black text-white shadow-md shadow-brand-500/20 transition-colors hover:bg-brand-700 disabled:opacity-50">
                             <SaveOutlinedIcon sx={{ fontSize: 18 }} />
-                            Simpan Flashcard
+                            {isSaving ? 'Menyimpan...' : 'Simpan Flashcard'}
                         </button>
                     </div>
                 </div>
 
-                <button type="button" onClick={() => setShowLibrary(true)} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-teal-200 bg-teal-50 text-sm font-black text-teal-700 dark:border-teal-900/40 dark:bg-teal-900/20 dark:text-teal-300 xl:hidden">
+                {saveError && (
+                    <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-bold text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
+                        <div className="flex items-center gap-2">
+                            <ErrorOutlineIcon sx={{ fontSize: 20 }} className="text-rose-600 shrink-0" />
+                            <span>{saveError}</span>
+                        </div>
+                        <button type="button" onClick={() => setSaveError('')} className="text-rose-500 hover:text-rose-800">
+                            <CloseIcon sx={{ fontSize: 18 }} />
+                        </button>
+                    </div>
+                )}
+
+                {saveSuccess && (
+                    <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-200">
+                        <div className="flex items-center gap-2">
+                            <CheckCircleIcon sx={{ fontSize: 20 }} className="text-emerald-600 shrink-0" />
+                            <span>{saveSuccess}</span>
+                        </div>
+                        <button type="button" onClick={() => setSaveSuccess('')} className="text-emerald-600 hover:text-emerald-900">
+                            <CloseIcon sx={{ fontSize: 18 }} />
+                        </button>
+                    </div>
+                )}
+
+                <button type="button" onClick={() => setShowLibrary(true)} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-brand-200 bg-brand-50 text-sm font-black text-brand-700 dark:border-brand-900/40 dark:bg-brand-900/20 dark:text-brand-300 xl:hidden">
                     <LibraryBooksIcon sx={{ fontSize: 18 }} />
                     Buka Bank Kosakata
                 </button>
@@ -340,13 +428,24 @@ export function FlashcardEditorWorkspace({
                                     onClick={() => setActiveIndex(index)}
                                     className={`w-48 shrink-0 rounded-xl border p-3 text-left transition xl:w-full ${
                                         activeIndex === index
-                                            ? 'border-teal-500 bg-teal-50 ring-1 ring-teal-500 dark:bg-teal-900/20'
+                                            ? 'border-brand-500 bg-brand-50/70 ring-2 ring-brand-500 dark:bg-brand-900/30'
                                             : 'border-gray-100 hover:border-gray-300 dark:border-gray-800 dark:hover:border-gray-600'
                                     }`}
                                 >
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-teal-600">Kartu {index + 1}</p>
-                                    <p className="mt-1 truncate text-sm font-black text-gray-900 dark:text-white">{card.front_text || 'Kartu baru'}</p>
-                                    <p className="mt-0.5 truncate text-xs font-medium text-gray-400">{card.back_text || 'Belum ada arti'}</p>
+                                    <div className="flex items-center justify-between gap-1 mb-1">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">Kartu {index + 1}</p>
+                                        {cardErrors[index] ? (
+                                            <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[9px] font-black uppercase text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                                                Belum Lengkap
+                                            </span>
+                                        ) : (
+                                            <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-black uppercase text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                                Siap
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="mt-1 truncate text-sm font-black text-gray-900 dark:text-white">{card.front_text || <span className="text-rose-500 italic font-normal">Kata kosong</span>}</p>
+                                    <p className="mt-0.5 truncate text-xs font-medium text-gray-500 dark:text-gray-400">{card.back_text || <span className="text-amber-500 italic">Arti belum diisi</span>}</p>
                                 </button>
                             ))}
                         </div>
@@ -369,7 +468,18 @@ export function FlashcardEditorWorkspace({
                             <Card key={`${card.id || 'new'}-${card.vocabulary_id || 'manual'}-${index}`} className="overflow-hidden border-l-4 border-l-brand-600">
                                 <div className="mb-4 flex flex-col gap-3 border-b border-gray-100 pb-4 dark:border-gray-800 sm:flex-row sm:items-start sm:justify-between">
                                     <div>
-                                        <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-600">Kartu #{index + 1}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-xs font-black uppercase tracking-[0.2em] text-brand-600">Kartu #{index + 1}</p>
+                                        {cardErrors[index] ? (
+                                            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-black uppercase text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                                                Belum Lengkap
+                                            </span>
+                                        ) : (
+                                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                                Siap
+                                            </span>
+                                        )}
+                                    </div>
                                         <h2 className="mt-1 text-lg font-black text-gray-900 dark:text-white">{card.front_text || 'Kartu baru'}</h2>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
@@ -382,7 +492,10 @@ export function FlashcardEditorWorkspace({
 
                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                     <label className="space-y-1">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Jenis Materi</span>
+                                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                            <span>Jenis Materi</span>
+                                            <TooltipHelp text="Klasifikasi jenis materi kartu: Kosakata (kata & arti), Kanji (karakter & onyomi/kunyomi), atau Bunpo (tata bahasa)." />
+                                        </span>
                                         <select value={card.content_type || 'kosakata'} onChange={(event) => updateCard(index, 'content_type', event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                                             <option value="kosakata">Kosakata</option>
                                             <option value="kanji">Kanji</option>
@@ -390,42 +503,99 @@ export function FlashcardEditorWorkspace({
                                         </select>
                                     </label>
                                     <label className="space-y-1">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Level</span>
+                                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                            <span>Level</span>
+                                            <TooltipHelp text="Level kemahiran JLPT kartu (N5, N4, N3, N2, N1)." />
+                                        </span>
                                     <input value={card.jlpt_level || ''} onChange={(event) => updateCard(index, 'jlpt_level', event.target.value)} placeholder="Opsional" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                     </label>
                                     <label className="space-y-1">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Depan Kartu</span>
-                                        <input value={card.front_text || ''} onChange={(event) => updateCard(index, 'front_text', event.target.value)} placeholder="Kata Jepang" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-300">
+                                            <span>Depan Kartu (Kata Jepang) <span className="text-rose-500 font-black">*</span></span>
+                                            <TooltipHelp text="Teks bahasa Jepang (kanji atau kana) yang ditampilkan di sisi depan kartu untuk dihafalkan peserta." />
+                                        </span>
+                                        <input
+                                            value={card.front_text || ''}
+                                            onChange={(event) => updateCard(index, 'front_text', event.target.value)}
+                                            placeholder="Kata Jepang (misal: 食べる)"
+                                            className={`w-full rounded-xl border bg-white px-4 py-3 text-sm font-japanese dark:bg-gray-950 dark:text-white ${
+                                                !card.front_text?.trim() && saveError
+                                                    ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-200'
+                                                    : 'border-gray-200 dark:border-gray-700'
+                                            }`}
+                                        />
+                                        {!card.front_text?.trim() && saveError && (
+                                            <span className="block text-[11px] font-bold text-rose-600">Kata depan (Jepang) wajib diisi.</span>
+                                        )}
                                     </label>
                                     <label className="space-y-1">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Reading</span>
+                                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                            <span>Reading</span>
+                                            <TooltipHelp text="Cara baca hiragana/katakana untuk teks depan kartu jika mengandung kanji." />
+                                        </span>
                                         <input value={card.reading || ''} onChange={(event) => updateCard(index, 'reading', event.target.value)} placeholder="Reading / kana" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                     </label>
                                     <label className="space-y-1">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Belakang Kartu</span>
-                                        <input value={card.back_text || ''} onChange={(event) => updateCard(index, 'back_text', event.target.value)} placeholder="Arti bahasa Indonesia" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-300">
+                                            <span>Belakang Kartu (Arti Indonesia) <span className="text-rose-500 font-black">*</span></span>
+                                            <TooltipHelp text="Arti atau makna utama dalam bahasa Indonesia yang muncul di sisi belakang kartu." />
+                                        </span>
+                                        <input
+                                            value={card.back_text || ''}
+                                            onChange={(event) => updateCard(index, 'back_text', event.target.value)}
+                                            placeholder="Arti bahasa Indonesia (misal: makan)"
+                                            className={`w-full rounded-xl border bg-white px-4 py-3 text-sm dark:bg-gray-950 dark:text-white ${
+                                                !card.back_text?.trim() && saveError
+                                                    ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-200'
+                                                    : 'border-gray-200 dark:border-gray-700'
+                                            }`}
+                                        />
+                                        {!card.back_text?.trim() && saveError && (
+                                            <span className="block text-[11px] font-bold text-rose-600">Arti bahasa Indonesia wajib diisi.</span>
+                                        )}
                                     </label>
                                     <label className="space-y-1">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Arti Inggris</span>
+                                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                            <span>Arti Inggris</span>
+                                            <TooltipHelp text="Terjemahan bahasa Inggris sebagai referensi pelengkap makna (opsional)." />
+                                        </span>
                                         <input value={card.meaning_en || ''} onChange={(event) => updateCard(index, 'meaning_en', event.target.value)} placeholder="English meaning (opsional)" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                     </label>
                                     <label className="space-y-1">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Hint / Kategori</span>
+                                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                            <span>Hint / Kategori</span>
+                                            <TooltipHelp text="Petunjuk asosiasi makna atau kategori kata (misal: Kata Benda, Cuaca) untuk mempermudah daya ingat." />
+                                        </span>
                                         <input value={card.hint || ''} onChange={(event) => updateCard(index, 'hint', event.target.value)} placeholder="Kategori / hint" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                     </label>
                                     <label className="space-y-1">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Contoh Kalimat</span>
+                                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                            <span>Contoh Kalimat</span>
+                                            <TooltipHelp text="Kalimat contoh penerapan kata dalam konteks kalimat nyata bahasa Jepang." />
+                                        </span>
                                         <textarea value={card.example_sentence || ''} onChange={(event) => updateCard(index, 'example_sentence', event.target.value)} placeholder="Contoh kalimat" className="min-h-20 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                     </label>
                                     <label className="space-y-1">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Arti Contoh</span>
+                                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                            <span>Arti Contoh</span>
+                                            <TooltipHelp text="Terjemahan bahasa Indonesia dari kalimat contoh di atas." />
+                                        </span>
                                         <textarea value={card.example_meaning || ''} onChange={(event) => updateCard(index, 'example_meaning', event.target.value)} placeholder="Arti contoh kalimat" className="min-h-20 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                     </label>
                                     <label className="space-y-1 md:col-span-2">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Reading Contoh</span>
+                                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                            <span>Reading Contoh</span>
+                                            <TooltipHelp text="Cara baca kana lengkap untuk kalimat contoh di atas." />
+                                        </span>
                                         <input value={card.example_reading || ''} onChange={(event) => updateCard(index, 'example_reading', event.target.value)} placeholder="Cara baca contoh kalimat" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                     </label>
-                                    <input value={card.audio_url || ''} onChange={(event) => updateCard(index, 'audio_url', event.target.value)} placeholder="Audio URL opsional" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white md:col-span-2" />
+                                    <label className="space-y-1 md:col-span-2">
+                                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                            <span>Audio URL</span>
+                                            <TooltipHelp text="URL file audio pengucapan kata atau contoh kalimat (format mp3/wav/ogg)." />
+                                        </span>
+                                        <input value={card.audio_url || ''} onChange={(event) => updateCard(index, 'audio_url', event.target.value)} placeholder="Audio URL opsional" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                    </label>
                                 </div>
 
                                 <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
@@ -435,15 +605,24 @@ export function FlashcardEditorWorkspace({
                                         </div>
                                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                             <label className="space-y-1">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Onyomi</span>
+                                                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                                    <span>Onyomi</span>
+                                                    <TooltipHelp text="Cara baca Tionghoa (Onyomi) untuk kanji ini, ditulis dengan katakana (contoh: カツ)." />
+                                                </span>
                                                 <input value={card.onyomi || ''} onChange={(event) => updateCard(index, 'onyomi', event.target.value)} placeholder="Contoh: カツ" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                             </label>
                                             <label className="space-y-1">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Kunyomi</span>
+                                                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                                    <span>Kunyomi</span>
+                                                    <TooltipHelp text="Cara baca Jepang asli (Kunyomi) untuk kanji ini, ditulis dengan hiragana (contoh: わ.る)." />
+                                                </span>
                                                 <input value={card.kunyomi || ''} onChange={(event) => updateCard(index, 'kunyomi', event.target.value)} placeholder="Contoh: わ.る" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                             </label>
                                             <label className="space-y-1">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Radikal</span>
+                                                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                                    <span>Radikal</span>
+                                                    <TooltipHelp text="Komponen radikal pembentuk kanji. Pisahkan dengan tanda | jika lebih dari satu (misal: 木 | 目)." />
+                                                </span>
                                                 <input
                                                     value={(card.radicals || []).join(' | ')}
                                                     onChange={(event) => updateCard(index, 'radicals', event.target.value.split('|').map((value) => value.trim()).filter(Boolean))}
@@ -452,11 +631,17 @@ export function FlashcardEditorWorkspace({
                                                 />
                                             </label>
                                             <label className="space-y-1">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Jumlah Guratan</span>
+                                                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                                    <span>Jumlah Guratan</span>
+                                                    <TooltipHelp text="Jumlah total guratan (stroke count) penulisan karakter kanji." />
+                                                </span>
                                                 <input type="number" min="1" max="64" value={card.stroke_count || ''} onChange={(event) => updateCard(index, 'stroke_count', event.target.value)} placeholder="12" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                             </label>
                                             <label className="space-y-1 md:col-span-2">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Catatan Kanji</span>
+                                                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                                    <span>Catatan Kanji</span>
+                                                    <TooltipHelp text="Catatan makna tambahan, tips mnemonik, atau kata majemuk turunan." />
+                                                </span>
                                                 <textarea value={card.notes || ''} onChange={(event) => updateCard(index, 'notes', event.target.value)} placeholder="Catatan atau contoh kata turunan" className="min-h-20 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                             </label>
                                         </div>
@@ -514,7 +699,10 @@ export function FlashcardEditorWorkspace({
                         </Card>
 
                         <Card>
-                            <h2 className="text-sm font-black uppercase tracking-[0.2em] text-gray-900 dark:text-white">Generate Quiz</h2>
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-sm font-black uppercase tracking-[0.2em] text-gray-900 dark:text-white">Generate Quiz</h2>
+                                <TooltipHelp text="Konversi kartu flashcard dalam set ini secara otomatis menjadi butir-butir soal latihan kuis pilihan ganda." />
+                            </div>
                             <form onSubmit={generateQuiz} className="mt-4 space-y-3">
                                 <select value={generateForm.data.quiz_id} onChange={(event) => generateForm.setData('quiz_id', event.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                                     <option value="">Pilih kuis tujuan</option>
@@ -556,15 +744,24 @@ export function FlashcardEditorWorkspace({
                             </div>
                             <div className="mt-5 space-y-4">
                                 <label className="block">
-                                    <span className="mb-1.5 block text-xs font-black text-gray-600 dark:text-gray-300">Judul set</span>
+                                    <span className="mb-1.5 flex items-center gap-1.5 text-xs font-black text-gray-600 dark:text-gray-300">
+                                        <span>Judul set</span>
+                                        <TooltipHelp text="Nama paket kumpulan flashcard yang tampil pada daftar materi siswa." />
+                                    </span>
                                     <input value={settingsForm.data.title} onChange={(event) => settingsForm.setData('title', event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" required />
                                 </label>
                                 <label className="block">
-                                    <span className="mb-1.5 block text-xs font-black text-gray-600 dark:text-gray-300">Deskripsi</span>
+                                    <span className="mb-1.5 flex items-center gap-1.5 text-xs font-black text-gray-600 dark:text-gray-300">
+                                        <span>Deskripsi</span>
+                                        <TooltipHelp text="Deskripsi atau tujuan pembelajaran dari paket kartu hafalan ini." />
+                                    </span>
                                     <textarea value={settingsForm.data.description || ''} onChange={(event) => settingsForm.setData('description', event.target.value)} className="min-h-24 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                 </label>
                                 <label className="block">
-                                    <span className="mb-1.5 block text-xs font-black text-gray-600 dark:text-gray-300">Status</span>
+                                    <span className="mb-1.5 flex items-center gap-1.5 text-xs font-black text-gray-600 dark:text-gray-300">
+                                        <span>Status</span>
+                                        <TooltipHelp text="Status penerbitan kartu (Draft hanya terlihat oleh admin, Published bisa diakses siswa)." />
+                                    </span>
                                     <select value={settingsForm.data.status} onChange={(event) => settingsForm.setData('status', event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                                         <option value="draft">Draft</option>
                                         <option value="published">Published</option>

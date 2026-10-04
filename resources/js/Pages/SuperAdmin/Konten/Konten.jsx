@@ -10,6 +10,7 @@ import NewsEditor from '@/Components/Features/Editor/NewsEditor';
 import ArticleBody from '@/Components/Features/News/ArticleBody';
 import JapaneseReading, { kanaToRomaji } from '@/Components/Features/Learning/JapaneseReading';
 import PopupManager from '@/Components/Features/Marketing/PopupManager';
+import { TooltipHelp } from '@/Components/UI/QuizField';
 import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartEmpty, ChartTooltip, ChartTooltipContent } from '@/Components/UI/Chart';
 
@@ -619,8 +620,9 @@ export default function Konten({
                                     )}
 
                                     <div>
-                                        <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">
-                                            Judul <span className="text-red-500">*</span>
+                                        <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                            <span>Judul <span className="text-red-500">*</span></span>
+                                            <TooltipHelp text="Judul utama artikel berita yang menarik dan deskriptif." />
                                         </label>
                                         <input
                                             value={data.title}
@@ -633,7 +635,10 @@ export default function Konten({
                                         {errors.title && <p className="mt-1 text-xs font-bold text-red-500">{errors.title}</p>}
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Ringkasan</label>
+                                        <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                            <span>Ringkasan</span>
+                                            <TooltipHelp text="Ringkasan singkat 1-2 kalimat untuk preview di feed kartu berita (opsional)." />
+                                        </label>
                                         <input
                                             value={data.excerpt}
                                             onChange={(e) => setData('excerpt', e.target.value)}
@@ -645,7 +650,10 @@ export default function Konten({
                                         {errors.excerpt && <p className="mt-1 text-xs font-bold text-red-500">{errors.excerpt}</p>}
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Isi Berita</label>
+                                        <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                            <span>Isi Berita</span>
+                                            <TooltipHelp text="Konten lengkap artikel berita, mendukung teks kaya dan penyematan gambar." />
+                                        </label>
                                         <NewsEditor
                                             value={data.body}
                                             onChange={(value) => setData('body', value)}
@@ -656,7 +664,10 @@ export default function Konten({
                                     <section className="rounded-2xl border border-sky-100 bg-sky-50/50 p-4 dark:border-sky-900/40 dark:bg-sky-950/20 sm:p-5">
                                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                             <div>
-                                                <h4 className="text-sm font-black text-gray-900 dark:text-white">Bantuan Baca Jepang</h4>
+                                                <div className="flex items-center gap-1.5">
+                                                    <h4 className="text-sm font-black text-gray-900 dark:text-white">Bantuan Baca Jepang</h4>
+                                                    <TooltipHelp text="Bagian bacaan interaktif dengan furigana dan terjemahan per kalimat untuk pembelajar." />
+                                                </div>
                                                 <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
                                                     ✨ <strong>Romaji Otomatis</strong>: Ketika user mengaktifkan Romaji di pengaturan akun mereka, sistem akan otomatis menghasilkan Romaji dari Reading kana. Admin <strong>tidak perlu mengetik romaji manual</strong>. Cukup input teks Jepang dan Reading Kana.
                                                 </p>
@@ -673,8 +684,9 @@ export default function Konten({
                                                     <div key={index} className="rounded-xl border border-sky-100 bg-white p-4 dark:border-sky-900/40 dark:bg-gray-900">
                                                         <div className="grid gap-3 lg:grid-cols-2">
                                                             <label className="space-y-1.5">
-                                                                <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
-                                                                    Teks Jepang <span className="text-red-500">*</span>
+                                                                <span className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-300">
+                                                                    <span>Teks Jepang <span className="text-red-500">*</span></span>
+                                                                    <TooltipHelp text="Kalimat bahasa Jepang bertuliskan kanji/kana asli." />
                                                                 </span>
                                                                 <textarea
                                                                     rows={2}
@@ -688,8 +700,9 @@ export default function Konten({
                                                             </label>
                                                             <label className="space-y-1.5">
                                                                 <div className="flex items-center justify-between">
-                                                                    <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
-                                                                        Reading kana <span className="text-red-500">*</span>
+                                                                    <span className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-300">
+                                                                        <span>Reading kana <span className="text-red-500">*</span></span>
+                                                                        <TooltipHelp text="Cara baca murni huruf kana (hiragana/katakana). Romaji akan otomatis digenerate bila user mengaktifkannya." />
                                                                     </span>
                                                                     {block.reading && (
                                                                         <span className="rounded bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">
@@ -709,7 +722,10 @@ export default function Konten({
                                                                 {readError && <p className="text-xs font-bold text-red-500">{readError}</p>}
                                                             </label>
                                                             <label className="space-y-1.5 lg:col-span-2">
-                                                                <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Terjemahan Indonesia</span>
+                                                                <span className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-300">
+                                                                    <span>Terjemahan Indonesia</span>
+                                                                    <TooltipHelp text="Arti kalimat dalam bahasa Indonesia untuk mempermudah pemahaman." />
+                                                                </span>
                                                                 <textarea
                                                                     rows={2}
                                                                     value={block.translation}
@@ -733,7 +749,10 @@ export default function Konten({
 
                                 <div className="min-h-0 space-y-4 overflow-y-auto border-t border-gray-100 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-gray-900/40 sm:p-6 xl:border-l xl:border-t-0">
                                     <div>
-                                        <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Kategori</label>
+                                        <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                            <span>Kategori</span>
+                                            <TooltipHelp text="Kategori topik berita (platform, event, pengumuman, dll)." />
+                                        </label>
                                         <select
                                             value={data.category}
                                             onChange={(e) => setData('category', e.target.value)}
@@ -748,7 +767,10 @@ export default function Konten({
                                         {errors.category && <p className="mt-1 text-xs font-bold text-red-500">{errors.category}</p>}
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Status</label>
+                                        <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                            <span>Status</span>
+                                            <TooltipHelp text="Draft (hanya admin), Terjadwal (rilis otomatis sesuai jadwal), Terbitkan (langsung tampil), atau Arsip." />
+                                        </label>
                                         <select
                                             value={data.status}
                                             onChange={(e) => setData('status', e.target.value)}
@@ -764,7 +786,10 @@ export default function Konten({
                                         {errors.status && <p className="mt-1 text-xs font-bold text-red-500">{errors.status}</p>}
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Audience</label>
+                                        <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                            <span>Audience</span>
+                                            <TooltipHelp text="Target pembaca yang dapat melihat berita ini (semua user, hanya siswa, atau admin)." />
+                                        </label>
                                         <select
                                             value={data.audience}
                                             onChange={(e) => setData('audience', e.target.value)}
@@ -780,8 +805,9 @@ export default function Konten({
                                     </div>
                                     {data.status === 'scheduled' && (
                                         <div>
-                                            <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">
-                                                Jadwalkan Terbit <span className="text-red-500">*</span>
+                                            <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                                <span>Jadwalkan Terbit <span className="text-red-500">*</span></span>
+                                                <TooltipHelp text="Waktu otomatis publikasi oleh server cron scheduler." />
                                             </label>
                                             <input
                                                 type="datetime-local"
@@ -796,7 +822,10 @@ export default function Konten({
                                     )}
                                     <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
                                         <div>
-                                            <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Gambar Utama</label>
+                                            <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                                <span>Gambar Utama</span>
+                                                <TooltipHelp text="Cover artikel rasio 16:9, format JPG, PNG, atau WebP (maksimal 4 MB)." />
+                                            </label>
                                             {coverPreviewUrl ? (
                                                 <div className="mb-3 space-y-2">
                                                     <img src={coverPreviewUrl} alt="Preview baru" className="aspect-[16/9] w-full rounded-lg object-cover ring-2 ring-brand-500" />
@@ -822,8 +851,9 @@ export default function Konten({
                                             {errors.cover_image && <p className="mt-1 text-xs font-bold text-red-500">{errors.cover_image}</p>}
                                         </div>
                                         <div>
-                                            <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">
-                                                Alt gambar {Boolean(data.cover_image || editingNews?.cover_url) && <span className="text-red-500">*</span>}
+                                            <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                                <span>Alt gambar {Boolean(data.cover_image || editingNews?.cover_url) && <span className="text-red-500">*</span>}</span>
+                                                <TooltipHelp text="Teks deskripsi gambar untuk aksesibilitas pembaca layar (screen reader) dan SEO." />
                                             </label>
                                             <input
                                                 value={data.cover_image_alt}
@@ -836,7 +866,10 @@ export default function Konten({
                                             {errors.cover_image_alt && <p className="mt-1 text-xs font-bold text-red-500">{errors.cover_image_alt}</p>}
                                         </div>
                                         <div>
-                                            <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Keterangan gambar</label>
+                                            <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                                <span>Keterangan gambar</span>
+                                                <TooltipHelp text="Keterangan teks (caption) di bawah cover berita (opsional)." />
+                                            </label>
                                             <input
                                                 value={data.cover_image_caption}
                                                 onChange={(e) => setData('cover_image_caption', e.target.value)}
@@ -851,7 +884,10 @@ export default function Konten({
                                     <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
                                         <p className="text-sm font-black text-gray-900 dark:text-white">URL & pencarian</p>
                                         <div>
-                                            <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Slug URL</label>
+                                            <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                                <span>Slug URL</span>
+                                                <TooltipHelp text="Alamat URL permanen berita ramah SEO, dibuat otomatis dari judul atau dapat disesuaikan." />
+                                            </label>
                                             <input
                                                 value={data.slug}
                                                 onChange={(e) => setData('slug', e.target.value)}
@@ -863,7 +899,10 @@ export default function Konten({
                                             {errors.slug && <p className="mt-1 text-xs font-bold text-red-500">{errors.slug}</p>}
                                         </div>
                                         <div>
-                                            <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Judul SEO</label>
+                                            <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                                <span>Judul SEO</span>
+                                                <TooltipHelp text="Judul untuk meta tag pencarian Google (maksimal 70 karakter)." />
+                                            </label>
                                             <input
                                                 value={data.seo_title}
                                                 onChange={(e) => setData('seo_title', e.target.value)}
@@ -876,7 +915,10 @@ export default function Konten({
                                             {errors.seo_title && <p className="mt-1 text-xs font-bold text-red-500">{errors.seo_title}</p>}
                                         </div>
                                         <div>
-                                            <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Deskripsi SEO</label>
+                                            <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                                <span>Deskripsi SEO</span>
+                                                <TooltipHelp text="Deskripsi cuplikan hasil pencarian mesin pencari (maksimal 160 karakter)." />
+                                            </label>
                                             <textarea
                                                 value={data.seo_description}
                                                 onChange={(e) => setData('seo_description', e.target.value)}
@@ -891,7 +933,10 @@ export default function Konten({
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Mulai tampil</label>
+                                        <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                            <span>Mulai tampil</span>
+                                            <TooltipHelp text="Batas awal berita mulai ditampilkan kepada audiens." />
+                                        </label>
                                         <input
                                             type="datetime-local"
                                             value={data.starts_at}
@@ -903,7 +948,10 @@ export default function Konten({
                                         {errors.starts_at && <p className="mt-1 text-xs font-bold text-red-500">{errors.starts_at}</p>}
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-sm font-bold text-gray-700 dark:text-gray-300">Berhenti tampil</label>
+                                        <label className="mb-1.5 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                            <span>Berhenti tampil</span>
+                                            <TooltipHelp text="Batas akhir waktu berita tampil sebelum otomatis diarsipkan (opsional)." />
+                                        </label>
                                         <input
                                             type="datetime-local"
                                             value={data.ends_at}
@@ -916,7 +964,10 @@ export default function Konten({
                                     </div>
                                     <label className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300">
                                         <input type="checkbox" checked={data.is_pinned} onChange={(e) => setData('is_pinned', e.target.checked)} className="rounded border-gray-300 text-brand-600 focus:ring-focus" />
-                                        Pin di dashboard
+                                        <span className="flex items-center gap-1.5">
+                                            <span>Pin di dashboard</span>
+                                            <TooltipHelp text="Sematkan di posisi teratas widget berita pada dashboard pengguna." />
+                                        </span>
                                     </label>
 
                                     {editingNews && (

@@ -7,6 +7,8 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import ConfirmActionDialog from '@/Components/UI/ConfirmActionDialog';
+import AdminDialog from '@/Components/UI/AdminDialog';
+import FormField, { formInputClass } from '@/Components/UI/FormField';
 
 export default function ManajemenLevel({ levels = [], tracks = [] }) {
     const [showLevelModal, setShowLevelModal] = useState(false);
@@ -16,7 +18,7 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [deleteTrackConfirm, setDeleteTrackConfirm] = useState(null);
 
-    const { data, setData, processing, errors, reset } = useForm({
+    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         curriculum_track_id: '',
         level_name: '',
         stage: '',
@@ -69,23 +71,21 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
     const handleSubmit = (e) => {
         e.preventDefault();
 
+        const options = {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowLevelModal(false);
+                setEditingLevel(null);
+                reset();
+            },
+        };
+
         if (editingLevel) {
-            router.put(route('admin.levels.update', editingLevel.id), data, {
-                onSuccess: () => {
-                    setShowLevelModal(false);
-                    setEditingLevel(null);
-                    reset();
-                },
-            });
+            put(route('admin.levels.update', editingLevel.id), options);
             return;
         }
 
-        router.post(route('admin.levels.store'), data, {
-            onSuccess: () => {
-                setShowLevelModal(false);
-                reset();
-            },
-        });
+        post(route('admin.levels.store'), options);
     };
 
     const confirmDelete = () => {
@@ -193,108 +193,221 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
                 </main>
             </div>
 
-            {showLevelModal && (
-                <div className="fixed inset-0 z-[110] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-                        <div className="border-b border-gray-100 p-6">
-                            <h3 className="text-lg font-black text-gray-900">
-                                {editingLevel ? 'Edit Level' : 'Tambah Level Baru'}
-                            </h3>
-                        </div>
+            <AdminDialog
+                open={showLevelModal}
+                onClose={() => {
+                    setShowLevelModal(false);
+                    setEditingLevel(null);
+                    reset();
+                }}
+                title={editingLevel ? 'Edit Level' : 'Tambah Level Baru'}
+                description="Kelola tingkatan level pembelajaran (misal: N5, N4, N3)."
+                maxWidth="max-w-md"
+            >
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <FormField
+                        label="Jalur Kurikulum"
+                        required
+                        error={errors.curriculum_track_id}
+                        tooltip="Pilih jalur kurikulum induk untuk level ini (misal: JLPT, Umum)."
+                    >
+                        <select
+                            value={data.curriculum_track_id}
+                            onChange={(e) => {
+                                setData('curriculum_track_id', e.target.value);
+                                if (errors.curriculum_track_id) clearErrors('curriculum_track_id');
+                            }}
+                            className={formInputClass(errors.curriculum_track_id)}
+                        >
+                            <option value="">Pilih jalur</option>
+                            {tracks.map((track) => (
+                                <option key={track.id} value={track.id}>{track.name}</option>
+                            ))}
+                        </select>
+                    </FormField>
 
-                        <form onSubmit={handleSubmit} className="space-y-4 p-6">
-                            <div>
-                                <label className="mb-1.5 block text-sm font-bold text-gray-700">Jalur Kurikulum <span className="text-brand-500">*</span></label>
-                                <select value={data.curriculum_track_id} onChange={(e) => setData('curriculum_track_id', e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-medium text-gray-900 outline-none focus:border-orange-200 focus:ring-4 focus:ring-orange-500/10">
-                                    <option value="">Pilih jalur</option>
-                                    {tracks.map((track) => <option key={track.id} value={track.id}>{track.name}</option>)}
-                                </select>
-                                {errors.curriculum_track_id && <p className="mt-1 text-xs font-medium text-red-500">{errors.curriculum_track_id}</p>}
-                            </div>
-                            <div>
-                                <label className="mb-1.5 block text-sm font-bold text-gray-700">
-                                    Nama Level <span className="text-brand-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={data.level_name}
-                                    onChange={(e) => setData('level_name', e.target.value)}
-                                    placeholder="Contoh: N3"
-                                    className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-medium text-gray-900 outline-none transition-all focus:border-orange-200 focus:ring-4 focus:ring-orange-500/10"
-                                />
-                                {errors.level_name && <p className="mt-1 text-xs font-medium text-red-500">{errors.level_name}</p>}
-                            </div>
+                    <FormField
+                        label="Nama Level"
+                        required
+                        error={errors.level_name}
+                        tooltip="Label tingkatan level (misal: N5, N4, N3, Pemula)."
+                    >
+                        <input
+                            type="text"
+                            value={data.level_name}
+                            onChange={(e) => {
+                                setData('level_name', e.target.value);
+                                if (errors.level_name) clearErrors('level_name');
+                            }}
+                            placeholder="Contoh: N3"
+                            className={formInputClass(errors.level_name)}
+                        />
+                    </FormField>
 
-                            <div>
-                                <label className="mb-1.5 block text-sm font-bold text-gray-700">
-                                    Stage <span className="text-brand-500">*</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    value={data.stage}
-                                    onChange={(e) => setData('stage', e.target.value)}
-                                    placeholder="Contoh: 3"
-                                    className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-medium text-gray-900 outline-none transition-all focus:border-orange-200 focus:ring-4 focus:ring-orange-500/10"
-                                />
-                                {errors.stage && <p className="mt-1 text-xs font-medium text-red-500">{errors.stage}</p>}
-                            </div>
+                    <FormField
+                        label="Stage"
+                        required
+                        error={errors.stage}
+                        tooltip="Urutan tahapan pembelajaran level ini berupa angka numerik."
+                    >
+                        <input
+                            type="number"
+                            value={data.stage}
+                            onChange={(e) => {
+                                setData('stage', e.target.value);
+                                if (errors.stage) clearErrors('stage');
+                            }}
+                            placeholder="Contoh: 3"
+                            className={formInputClass(errors.stage)}
+                        />
+                    </FormField>
 
-                            <div className="flex justify-end gap-3 pt-2">
+                    <div className="flex justify-end gap-3 pt-3">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowLevelModal(false);
+                                setEditingLevel(null);
+                                reset();
+                            }}
+                            className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-600 transition-colors hover:bg-gray-50"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={processing}
+                            className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white shadow-md shadow-brand-500/20 transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {processing ? 'Menyimpan...' : editingLevel ? 'Simpan Perubahan' : 'Tambah Level'}
+                        </button>
+                    </div>
+                </form>
+            </AdminDialog>
+
+            <AdminDialog
+                open={showTrackModal}
+                onClose={() => {
+                    setShowTrackModal(false);
+                    setEditingTrack(null);
+                    trackForm.reset();
+                }}
+                title={editingTrack ? 'Edit Jalur' : 'Tambah Jalur Kurikulum'}
+                description="Kelola kategori jalur kurikulum pembelajaran di sistem."
+                maxWidth="max-w-md"
+            >
+                <form onSubmit={handleTrackSubmit} className="space-y-4">
+                    <FormField
+                        label="Kode Jalur"
+                        required
+                        error={trackForm.errors.code}
+                        tooltip="Kode unik pengenal jalur kurikulum (misal: jlpt, jft, umum). Hanya huruf kecil, angka, dan strip."
+                    >
+                        <input
+                            value={trackForm.data.code}
+                            onChange={(e) => {
+                                trackForm.setData('code', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
+                                if (trackForm.errors.code) trackForm.clearErrors('code');
+                            }}
+                            placeholder="contoh: jlpt"
+                            className={formInputClass(trackForm.errors.code)}
+                        />
+                    </FormField>
+
+                    <FormField
+                        label="Nama Jalur"
+                        required
+                        error={trackForm.errors.name}
+                        tooltip="Nama lengkap jalur kurikulum (misal: JLPT Japanese-Language Proficiency Test)."
+                    >
+                        <input
+                            value={trackForm.data.name}
+                            onChange={(e) => {
+                                trackForm.setData('name', e.target.value);
+                                if (trackForm.errors.name) trackForm.clearErrors('name');
+                            }}
+                            placeholder="Contoh: JLPT"
+                            className={formInputClass(trackForm.errors.name)}
+                        />
+                    </FormField>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                            label="Status"
+                            required
+                            error={trackForm.errors.status}
+                            tooltip="Status keaktifan jalur kurikulum."
+                        >
+                            <select
+                                value={trackForm.data.status}
+                                onChange={(e) => {
+                                    trackForm.setData('status', e.target.value);
+                                    if (trackForm.errors.status) trackForm.clearErrors('status');
+                                }}
+                                className={formInputClass(trackForm.errors.status)}
+                            >
+                                <option value="active">Aktif</option>
+                                <option value="inactive">Nonaktif</option>
+                            </select>
+                        </FormField>
+
+                        <FormField
+                            label="Urutan"
+                            required
+                            error={trackForm.errors.sort_order}
+                            tooltip="Nomor urutan penataan jalur."
+                        >
+                            <input
+                                type="number"
+                                min="1"
+                                value={trackForm.data.sort_order}
+                                onChange={(e) => {
+                                    trackForm.setData('sort_order', e.target.value);
+                                    if (trackForm.errors.sort_order) trackForm.clearErrors('sort_order');
+                                }}
+                                className={formInputClass(trackForm.errors.sort_order)}
+                            />
+                        </FormField>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3">
+                        <div>
+                            {editingTrack && (
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        setShowLevelModal(false);
-                                        setEditingLevel(null);
-                                        reset();
+                                        setShowTrackModal(false);
+                                        setDeleteTrackConfirm(editingTrack);
                                     }}
-                                    className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-600 transition-colors hover:bg-gray-50"
+                                    className="text-sm font-bold text-red-600 transition hover:underline"
                                 >
-                                    Batal
+                                    Hapus jalur
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white shadow-md shadow-brand-500/20 transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    {processing ? 'Menyimpan...' : editingLevel ? 'Simpan Perubahan' : 'Tambah Level'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {showTrackModal && (
-                <div className="fixed inset-0 z-[115] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-                        <div className="border-b border-gray-100 p-6">
-                            <h3 className="text-lg font-black text-gray-900">{editingTrack ? 'Edit Jalur' : 'Tambah Jalur Kurikulum'}</h3>
+                            )}
                         </div>
-                        <form onSubmit={handleTrackSubmit} className="space-y-4 p-6">
-                            <label className="block text-sm font-bold text-gray-700">Kode
-                                <input value={trackForm.data.code} onChange={(e) => trackForm.setData('code', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} placeholder="contoh: jlpt" className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 px-4 text-sm" />
-                                {trackForm.errors.code && <span className="mt-1 block text-xs text-red-500">{trackForm.errors.code}</span>}
-                            </label>
-                            <label className="block text-sm font-bold text-gray-700">Nama
-                                <input value={trackForm.data.name} onChange={(e) => trackForm.setData('name', e.target.value)} placeholder="Contoh: JLPT" className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 px-4 text-sm" />
-                            </label>
-                            <div className="grid grid-cols-2 gap-3">
-                                <label className="block text-sm font-bold text-gray-700">Status
-                                    <select value={trackForm.data.status} onChange={(e) => trackForm.setData('status', e.target.value)} className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 px-3 text-sm"><option value="active">Aktif</option><option value="inactive">Nonaktif</option></select>
-                                </label>
-                                <label className="block text-sm font-bold text-gray-700">Urutan
-                                    <input type="number" min="1" value={trackForm.data.sort_order} onChange={(e) => trackForm.setData('sort_order', e.target.value)} className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 px-4 text-sm" />
-                                </label>
-                            </div>
-                            {editingTrack && <button type="button" onClick={() => { setShowTrackModal(false); setDeleteTrackConfirm(editingTrack); }} className="text-sm font-bold text-red-600">Hapus jalur</button>}
-                            <div className="flex justify-end gap-3 pt-2">
-                                <button type="button" onClick={() => setShowTrackModal(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold text-gray-600">Batal</button>
-                                <button disabled={trackForm.processing} className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-60">Simpan</button>
-                            </div>
-                        </form>
+                        <div className="flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowTrackModal(false);
+                                    setEditingTrack(null);
+                                    trackForm.reset();
+                                }}
+                                className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-600 transition-colors hover:bg-gray-50"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={trackForm.processing}
+                                className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white shadow-md shadow-brand-500/20 transition-colors hover:bg-brand-700 disabled:opacity-60"
+                            >
+                                {trackForm.processing ? 'Menyimpan...' : 'Simpan'}
+                            </button>
+                        </div>
                     </div>
-                </div>
-            )}
+                </form>
+            </AdminDialog>
 
             {deleteConfirm && (
                 <ConfirmActionDialog

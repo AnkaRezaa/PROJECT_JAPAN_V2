@@ -186,3 +186,21 @@
         animation: float 4s ease-in-out infinite;
     }
 }
+
+/* Dokkai Reading Typography & Furigana */
+ruby {
+    ruby-position: over;
+    ruby-align: center;
+}
+
+rt {
+    font-size: 0.58em;
+    line-height: 1.1;
+    user-select: none;
+    letter-spacing: normal;
+}
+
+.furigana-hidden rt {
+    display: none;
+}
+

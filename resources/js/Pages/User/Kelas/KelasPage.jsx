@@ -12,6 +12,8 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import SchoolIcon from '@mui/icons-material/School';
 import SearchIcon from '@mui/icons-material/Search';
+import AutoStoriesIcon from '@mui/icons-material/AutoStories';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 const catalogFilters = [
     { value: 'all', label: 'Semua kelas' },
@@ -138,6 +140,7 @@ function ResourceSummary({ item }) {
         ['Kosakata', item.resource_summary?.vocabulary],
         ['Flashcard', item.resource_summary?.flashcards],
         ['Kuis', item.resource_summary?.quizzes],
+        ['Dokkai', item.resource_summary?.dokkai],
     ].filter(([, count]) => Number(count) > 0);
 
     if (resources.length === 0) return null;
@@ -352,7 +355,45 @@ export default function KelasPage({ programs = [] }) {
                     </div>
                 </section>
 
-                <div className="relative z-10 mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6 lg:px-8">
+                <div className="relative z-10 mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+                    {/* Banner Akses Dokkai di Dalam Kelas */}
+                    <div className="relative overflow-hidden rounded-2xl border border-emerald-200/80 bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 p-5 sm:p-6 text-white shadow-sm dark:border-emerald-800/50">
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute -right-6 -bottom-10 select-none text-9xl font-black text-white/[0.06]"
+                        >
+                            読解
+                        </div>
+                        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+                            <div className="flex items-start gap-4">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-emerald-300 backdrop-blur-sm border border-white/15">
+                                    <AutoStoriesIcon sx={{ fontSize: 28 }} />
+                                </div>
+                                <div className="max-w-2xl">
+                                    <div className="flex items-center gap-2">
+                                        <span className="rounded-md bg-emerald-500/25 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-200 border border-emerald-400/30">
+                                            Modul Membaca
+                                        </span>
+                                        <span className="text-xs text-emerald-200/90 font-bold">読解 · Dokkai Corner</span>
+                                    </div>
+                                    <h2 className="mt-1 text-lg sm:text-xl font-black text-white">
+                                        Latihan Pemahaman Teks & Wacana Bahasa Jepang
+                                    </h2>
+                                    <p className="mt-1 text-xs sm:text-sm text-emerald-100/80 leading-relaxed">
+                                        Asah kemampuan membaca kanji, kosakata kontekstual, furigana interaktif, dan analisis eviden jawaban bertahap dari level N5 hingga N1.
+                                    </p>
+                                </div>
+                            </div>
+                            <Link
+                                href="/user/dokkai"
+                                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs sm:text-sm font-black text-white shadow-sm transition hover:bg-emerald-400 active:scale-95"
+                            >
+                                <span>Katalog Dokkai</span>
+                                <ArrowForwardIcon sx={{ fontSize: 16 }} />
+                            </Link>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-2 rounded-lg bg-slate-200/80 p-1 dark:bg-gray-900 lg:hidden" role="tablist" aria-label="Tampilan kelas">
                         <button
                             type="button"

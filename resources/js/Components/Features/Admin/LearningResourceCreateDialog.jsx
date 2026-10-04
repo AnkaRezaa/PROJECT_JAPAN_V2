@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminDialog from '@/Components/UI/AdminDialog';
 import SearchableSelect from '@/Components/UI/SearchableSelect';
+import FormField, { formInputClass } from '@/Components/UI/FormField';
 
 const RESOURCE_CONFIG = {
     flashcard: {
@@ -20,8 +21,6 @@ const RESOURCE_CONFIG = {
         accent: 'bg-learning-700 hover:bg-learning-600',
     },
 };
-
-const inputClass = 'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition focus:border-focus focus:ring-4 focus:ring-focus/15 dark:border-gray-700 dark:bg-gray-950 dark:text-white';
 
 const initialData = (resourceType, module, day, weekSlot = null) => ({
     title: resourceType === 'presentation'
@@ -125,22 +124,32 @@ export default function LearningResourceCreateDialog({
                         </div>
                     ) : (
                         <div className="grid gap-4 sm:grid-cols-2">
-                            <label>
-                                <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Minggu</span>
+                            <FormField
+                                label="Minggu"
+                                required
+                                tooltip="Modul mingguan tujuan penempatan resource belajar."
+                                error={form.errors.module_id}
+                            >
                                 <SearchableSelect
                                     value={form.data.module_id}
-                                    onChange={(moduleId) => form.setData((data) => ({ ...data, module_id: moduleId, module_day_id: '' }))}
+                                    onChange={(moduleId) => {
+                                        form.setData((data) => ({ ...data, module_id: moduleId, module_day_id: '' }));
+                                        form.clearErrors('module_id');
+                                    }}
                                     placeholder="Pilih Week"
                                     searchPlaceholder="Cari week atau judul modul..."
                                     options={modules.map((item) => ({ value: item.id, label: `Week ${item.week_number} - ${item.title}`, description: item.program?.title }))}
                                 />
                                 <select
                                     value={form.data.module_id}
-                                    onChange={(event) => form.setData((data) => ({
-                                        ...data,
-                                        module_id: event.target.value,
-                                        module_day_id: '',
-                                    }))}
+                                    onChange={(event) => {
+                                        form.setData((data) => ({
+                                            ...data,
+                                            module_id: event.target.value,
+                                            module_day_id: '',
+                                        }));
+                                        form.clearErrors('module_id');
+                                    }}
                                     className="hidden"
                                     required
                                 >
@@ -149,109 +158,221 @@ export default function LearningResourceCreateDialog({
                                         <option key={item.id} value={item.id}>Minggu {item.week_number} · {item.title}</option>
                                     ))}
                                 </select>
-                            </label>
-                            {(resourceType !== 'presentation' || form.data.week_slot === 'after_day') && <label>
-                                <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Hari</span>
-                                <SearchableSelect
-                                    value={form.data.module_day_id}
-                                    onChange={(moduleDayId) => form.setData('module_day_id', moduleDayId)}
-                                    placeholder={resourceType === 'presentation' ? 'Presentasi Mingguan' : 'Pilih Day'}
-                                    searchPlaceholder="Cari day..."
-                                    allowClear={resourceType === 'presentation'}
-                                    clearLabel="Presentasi Mingguan"
-                                    options={(selectedModule?.days || []).map((item) => ({ value: item.id, label: `Day ${item.day_number} - ${item.title}`, description: `Week ${selectedModule?.week_number || '-'}` }))}
-                                />
-                                <select
-                                    value={form.data.module_day_id}
-                                    onChange={(event) => form.setData('module_day_id', event.target.value)}
-                                    className="hidden"
+                            </FormField>
+                            {(resourceType !== 'presentation' || form.data.week_slot === 'after_day') && (
+                                <FormField
+                                    label="Hari"
                                     required={resourceType === 'flashcard' || resourceType === 'quiz' || (resourceType === 'presentation' && form.data.week_slot === 'after_day')}
+                                    tooltip="Sesi harian spesifik tempat resource ini dipelajari siswa."
+                                    error={form.errors.module_day_id}
                                 >
-                                    <option value="">
-                                        {resourceType === 'presentation'
-                                            ? 'Presentasi Mingguan'
-                                            : 'Pilih Hari'}
-                                    </option>
-                                    {(selectedModule?.days || []).map((item) => (
-                                        <option key={item.id} value={item.id}>Hari {item.day_number} · {item.title}</option>
-                                    ))}
-                                </select>
-                            </label>}
+                                    <SearchableSelect
+                                        value={form.data.module_day_id}
+                                        onChange={(moduleDayId) => {
+                                            form.setData('module_day_id', moduleDayId);
+                                            form.clearErrors('module_day_id');
+                                        }}
+                                        placeholder={resourceType === 'presentation' ? 'Presentasi Mingguan' : 'Pilih Day'}
+                                        searchPlaceholder="Cari day..."
+                                        allowClear={resourceType === 'presentation'}
+                                        clearLabel="Presentasi Mingguan"
+                                        options={(selectedModule?.days || []).map((item) => ({ value: item.id, label: `Day ${item.day_number} - ${item.title}`, description: `Week ${selectedModule?.week_number || '-'}` }))}
+                                    />
+                                    <select
+                                        value={form.data.module_day_id}
+                                        onChange={(event) => {
+                                            form.setData('module_day_id', event.target.value);
+                                            form.clearErrors('module_day_id');
+                                        }}
+                                        className="hidden"
+                                        required={resourceType === 'flashcard' || resourceType === 'quiz' || (resourceType === 'presentation' && form.data.week_slot === 'after_day')}
+                                    >
+                                        <option value="">
+                                            {resourceType === 'presentation'
+                                                ? 'Presentasi Mingguan'
+                                                : 'Pilih Hari'}
+                                        </option>
+                                        {(selectedModule?.days || []).map((item) => (
+                                            <option key={item.id} value={item.id}>Hari {item.day_number} · {item.title}</option>
+                                        ))}
+                                    </select>
+                                </FormField>
+                            )}
                         </div>
                     )}
 
                     {resourceType !== 'quiz' && (
                         <>
                             {resourceType === 'presentation' && !weekSlot && (
-                                <label className="block">
-                                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Posisi</span>
-                                    <select value={form.data.week_slot} onChange={(event) => form.setData((data) => ({ ...data, week_slot: event.target.value, module_day_id: event.target.value === 'after_day' ? data.module_day_id : '' }))} className={inputClass}>
+                                <FormField
+                                    label="Posisi"
+                                    tooltip="Penempatan slide presentasi: pembuka minggu, sela hari, atau penutup minggu."
+                                    error={form.errors.week_slot}
+                                >
+                                    <select
+                                        value={form.data.week_slot}
+                                        onChange={(event) => {
+                                            form.setData((data) => ({ ...data, week_slot: event.target.value, module_day_id: event.target.value === 'after_day' ? data.module_day_id : '' }));
+                                            form.clearErrors('week_slot');
+                                        }}
+                                        className={formInputClass(form.errors.week_slot)}
+                                    >
                                         <option value="opening">Pembuka Minggu</option>
                                         <option value="after_day">Setelah Hari</option>
                                         <option value="closing">Penutup Minggu</option>
                                     </select>
-                                </label>
+                                </FormField>
                             )}
                             {resourceType === 'presentation' && (
-                                <label className="block">
-                                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Urutan</span>
-                                    <input type="number" min="0" value={form.data.sort_order} onChange={(event) => form.setData('sort_order', event.target.value)} className={inputClass} />
-                                </label>
+                                <FormField
+                                    label="Urutan"
+                                    tooltip="Angka urutan tampil materi dalam modul."
+                                    error={form.errors.sort_order}
+                                >
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={form.data.sort_order}
+                                        onChange={(event) => {
+                                            form.setData('sort_order', event.target.value);
+                                            form.clearErrors('sort_order');
+                                        }}
+                                        className={formInputClass(form.errors.sort_order)}
+                                    />
+                                </FormField>
                             )}
-                            <label className="block">
-                                <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Judul</span>
-                                <input value={form.data.title} onChange={(event) => form.setData('title', event.target.value)} className={inputClass} required />
-                            </label>
-                            <label className="block">
-                                <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Deskripsi</span>
-                                <textarea value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} className={`${inputClass} min-h-24`} placeholder="Ringkasan singkat untuk admin dan siswa" />
-                            </label>
-                            <label className="block">
-                                <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Level</span>
-                                <select value={form.data.level_id} onChange={(event) => form.setData('level_id', event.target.value)} className={inputClass}>
+                            <FormField
+                                label="Judul"
+                                required
+                                tooltip="Judul materi atau deck yang muncul pada daftar belajar siswa."
+                                error={form.errors.title}
+                            >
+                                <input
+                                    value={form.data.title}
+                                    onChange={(event) => {
+                                        form.setData('title', event.target.value);
+                                        form.clearErrors('title');
+                                    }}
+                                    className={formInputClass(form.errors.title)}
+                                    required
+                                />
+                            </FormField>
+                            <FormField
+                                label="Deskripsi"
+                                tooltip="Ringkasan isi materi untuk panduan siswa atau catatan pengajar."
+                                error={form.errors.description}
+                            >
+                                <textarea
+                                    value={form.data.description}
+                                    onChange={(event) => {
+                                        form.setData('description', event.target.value);
+                                        form.clearErrors('description');
+                                    }}
+                                    className={`${formInputClass(form.errors.description)} min-h-24`}
+                                    placeholder="Ringkasan singkat untuk admin dan siswa"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Level"
+                                tooltip="Tingkat kemahiran JLPT sasaran (N5-N1)."
+                                error={form.errors.level_id}
+                            >
+                                <select
+                                    value={form.data.level_id}
+                                    onChange={(event) => {
+                                        form.setData('level_id', event.target.value);
+                                        form.clearErrors('level_id');
+                                    }}
+                                    className={formInputClass(form.errors.level_id)}
+                                >
                                     <option value="">Tanpa level khusus</option>
                                     {levels.map((level) => <option key={level.id} value={level.id}>{level.level_name}</option>)}
                                 </select>
-                            </label>
+                            </FormField>
                         </>
                     )}
 
                     {resourceType === 'quiz' && (
                         <div className="grid gap-4 sm:grid-cols-2">
-                            <label className="sm:col-span-2">
-                                <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Tipe Soal Awal</span>
-                                <select value={form.data.type} onChange={(event) => form.setData('type', event.target.value)} className={inputClass} required>
+                            <FormField
+                                label="Tipe Soal Awal"
+                                required
+                                tooltip="Format dasar pertanyaan default (tiap butir soal nantinya bisa diatur bebas di builder kuis)."
+                                error={form.errors.type}
+                                hint="Setiap soal dapat memakai tipe berbeda di editor, termasuk listening."
+                                className="sm:col-span-2"
+                            >
+                                <select
+                                    value={form.data.type}
+                                    onChange={(event) => {
+                                        form.setData('type', event.target.value);
+                                        form.clearErrors('type');
+                                    }}
+                                    className={formInputClass(form.errors.type)}
+                                    required
+                                >
                                     <option value="multiple_choice">Pilihan Ganda</option>
                                     <option value="fill_blank">Mengetik / Isian</option>
                                     <option value="listening">Mendengarkan</option>
                                 </select>
-                                <span className="mt-1.5 block text-xs font-semibold text-gray-500">
-                                    Setiap soal dapat memakai tipe berbeda di editor, termasuk listening.
-                                </span>
-                            </label>
-                            <label>
-                                <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Batas Waktu (detik)</span>
-                                <input type="number" min="0" value={form.data.time_limit} onChange={(event) => form.setData('time_limit', event.target.value)} className={inputClass} placeholder="Kosong = tanpa batas" />
-                            </label>
-                            <label>
-                                <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Nilai Lulus</span>
-                                <input type="number" min="1" max="100" value={form.data.passing_score} onChange={(event) => form.setData('passing_score', event.target.value)} className={inputClass} required />
-                            </label>
+                            </FormField>
+                            <FormField
+                                label="Batas Waktu (detik)"
+                                tooltip="Durasi pengerjaan kuis dalam hitungan detik (kosongkan jika tanpa batas waktu)."
+                                error={form.errors.time_limit}
+                            >
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={form.data.time_limit}
+                                    onChange={(event) => {
+                                        form.setData('time_limit', event.target.value);
+                                        form.clearErrors('time_limit');
+                                    }}
+                                    className={formInputClass(form.errors.time_limit)}
+                                    placeholder="Kosong = tanpa batas"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Nilai Lulus"
+                                required
+                                tooltip="Skor minimum (persentase 1-100) agar siswa dinyatakan lulus kuis ini."
+                                error={form.errors.passing_score}
+                            >
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    value={form.data.passing_score}
+                                    onChange={(event) => {
+                                        form.setData('passing_score', event.target.value);
+                                        form.clearErrors('passing_score');
+                                    }}
+                                    className={formInputClass(form.errors.passing_score)}
+                                    required
+                                />
+                            </FormField>
                         </div>
                     )}
 
-                    <label className="block">
-                        <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Status Awal</span>
-                        <select value={form.data.status} onChange={(event) => form.setData('status', event.target.value)} className={inputClass}>
+                    <FormField
+                        label="Status Awal"
+                        tooltip="Draf (belum dapat diakses siswa) atau Terbit (langsung aktif di roadmap)."
+                        error={form.errors.status}
+                        hint={resourceType === 'quiz' ? 'Tambahkan soal terlebih dahulu sebelum menerbitkan kuis.' : undefined}
+                    >
+                        <select
+                            value={form.data.status}
+                            onChange={(event) => {
+                                form.setData('status', event.target.value);
+                                form.clearErrors('status');
+                            }}
+                            className={formInputClass(form.errors.status)}
+                        >
                             <option value="draft">Draft</option>
                             {resourceType !== 'quiz' && <option value="published">Published</option>}
                         </select>
-                        {resourceType === 'quiz' && (
-                            <span className="mt-1.5 block text-xs font-semibold text-gray-500">
-                                Tambahkan soal terlebih dahulu sebelum menerbitkan kuis.
-                            </span>
-                        )}
-                    </label>
+                    </FormField>
 
                     {Object.values(form.errors).length > 0 && (
                         <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700 dark:bg-red-900/20 dark:text-red-300">

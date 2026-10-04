@@ -6,7 +6,7 @@ const canUseSpeech = () => typeof window !== 'undefined' && 'speechSynthesis' in
 const narrationAudioCache = new Map();
 let activeSpeechOwner = null;
 
-const isStreamableAudio = (audioUrl) => audioUrl && !audioUrl.includes('youtube.com') && !audioUrl.includes('youtu.be');
+export const isStreamableAudio = (audioUrl) => audioUrl && !audioUrl.includes('youtube.com') && !audioUrl.includes('youtu.be');
 
 const debugNarration = (event, payload) => {
     if (import.meta.env.DEV) {
@@ -155,15 +155,16 @@ export default function JapaneseSpeechButton({
                 audioRef.current = null;
                 setIsPlaying(false);
             };
+            let playFailed = false;
             audio.onerror = () => {
                 audioRef.current = null;
                 setIsPlaying(false);
             };
             await audio.play().catch(() => {
                 audioRef.current = null;
-                setIsPlaying(false);
+                playFailed = true;
             });
-            return;
+            if (!playFailed) return;
         }
 
         if (!canUseSpeech()) return;

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PromoPopup from '@/Components/Marketing/PromoPopup';
@@ -17,19 +17,95 @@ import SearchIcon from '@mui/icons-material/Search';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 import TranslateIcon from '@mui/icons-material/Translate';
 
+const heroSlides = [
+    { src: MountFujiBg, label: 'Gunung Fuji' },
+    { src: '/images/dashboard/kiyomizu.jpg', label: 'Kuil Kiyomizu-dera' },
+    { src: '/images/dashboard/arashiyama.jpg', label: 'Hutan bambu Arashiyama' },
+];
+
+function HeroCarousel({ children }) {
+    const [active, setActive] = useState(0);
+    const [paused, setPaused] = useState(false);
+    const [focused, setFocused] = useState(false);
+    const [reducedMotion, setReducedMotion] = useState(true);
+    const [visible, setVisible] = useState(true);
+    const [ready, setReady] = useState([0]);
+
+    useEffect(() => {
+        const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const syncMotion = () => setReducedMotion(preference.matches);
+        const syncVisibility = () => setVisible(!document.hidden);
+        syncMotion();
+        syncVisibility();
+        preference.addEventListener('change', syncMotion);
+        document.addEventListener('visibilitychange', syncVisibility);
+        return () => {
+            preference.removeEventListener('change', syncMotion);
+            document.removeEventListener('visibilitychange', syncVisibility);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (paused || focused || reducedMotion || !visible || ready.length < 2) return;
+        const timer = window.setInterval(() => {
+            setActive(current => ready[(ready.indexOf(current) + 1) % ready.length]);
+        }, 8000);
+        return () => window.clearInterval(timer);
+    }, [paused, focused, reducedMotion, visible, ready]);
+
+    return (
+        <div className="relative mx-auto flex min-h-[420px] w-[97%] items-center justify-center overflow-hidden py-20 sm:min-h-[480px] lg:min-h-[520px]"
+            onFocusCapture={() => setFocused(true)}
+            onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+                {heroSlides.map((slide, index) => (
+                    <img key={slide.src} src={slide.src} alt="" loading={index === 0 ? 'eager' : 'lazy'}
+                        fetchPriority={index === 0 ? 'high' : 'low'} decoding="async"
+                        onLoad={() => setReady(current => current.includes(index) ? current : [...current, index].sort())}
+                        onError={() => { setReady(current => current.filter(item => item !== index)); setActive(current => current === index ? 0 : current); }}
+                        className={`absolute inset-0 h-full w-full object-cover object-[center_35%] transition-opacity duration-1000 motion-reduce:transition-none ${active === index ? 'opacity-100' : 'opacity-0'}`} />
+                ))}
+            </div>
+            {children}
+            <details className="absolute bottom-11 left-4 z-20 text-xs text-gray-700 sm:left-6 dark:text-gray-200">
+                <summary className="cursor-pointer rounded-full bg-white/95 px-3 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:bg-gray-900/95">Kredit foto</summary>
+                <div className="absolute bottom-full mb-2 w-64 rounded-xl border border-gray-200 bg-white p-3 leading-relaxed shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                    Kiyomizu-dera: <a className="underline" href="https://commons.wikimedia.org/wiki/File:JAP_Kyoto_Kiyomizu-dera.jpg" target="_blank" rel="noopener noreferrer">Grueslayer @Wikipedia</a>, <a className="underline" href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>. Foto diperkecil dan ditampilkan dengan crop serta overlay.
+                    <br />Arashiyama: Erol Ahmed, CC0.
+                </div>
+            </details>
+            <div role="group" aria-label="Pilihan latar Jepang" className="absolute bottom-11 right-4 z-20 flex items-center gap-1 rounded-full border border-gray-200 bg-white/95 px-2 shadow-sm sm:right-6 dark:border-gray-700 dark:bg-gray-900/95">
+                {heroSlides.map((slide, index) => (
+                    <button key={slide.src} type="button" disabled={!ready.includes(index)}
+                        aria-label={`Tampilkan ${slide.label}`} aria-pressed={active === index}
+                        onClick={() => { setActive(index); setPaused(true); }}
+                        className="flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:opacity-30">
+                        <span className={`h-2 w-2 rounded-full ${active === index ? 'bg-green-700 dark:bg-green-300' : 'bg-gray-400 dark:bg-gray-500'}`} />
+                    </button>
+                ))}
+                {!reducedMotion && <button type="button" aria-label={paused ? 'Putar pergantian latar' : 'Jeda pergantian latar'}
+                    onClick={() => setPaused(current => !current)}
+                    className="min-h-11 rounded-full px-3 text-xs font-semibold text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-gray-200">
+                    {paused ? 'Putar' : 'Jeda'}
+                </button>}
+            </div>
+        </div>
+    );
+}
+
 function SectionHeader({ eyebrow, title, actionHref, actionLabel }) {
     return (
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 {eyebrow && (
-                    <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-300">
                         {eyebrow}
                     </p>
                 )}
-                <h2 className="text-xl font-black text-gray-900 dark:text-white md:text-2xl">{title}</h2>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white md:text-2xl">{title}</h2>
             </div>
             {actionHref && (
-                <Link href={actionHref} className="inline-flex min-h-11 items-center gap-1 text-sm font-black text-learning-700 transition lg:hover:text-learning-600 dark:text-learning-200">
+                <Link href={actionHref} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-green-700 transition lg:hover:text-green-800 dark:text-green-300">
                     {actionLabel}
                     <ArrowRightAltIcon sx={{ fontSize: 20 }} />
                 </Link>
@@ -52,8 +128,8 @@ function DailyGoalCard({ goal = {} }) {
                         <HitodamaIcon className="h-5 w-5" />
                     </span>
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Target Hari Ini</p>
-                        <h3 className="text-base font-black text-gray-900 dark:text-white">Capai 30 XP</h3>
+                        <p className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">Target Hari Ini</p>
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white">Capai 30 XP</h3>
                     </div>
                 </div>
                 <CheckCircleIcon className={goal.completed ? 'text-emerald-500' : 'text-amber-400/80'} />
@@ -62,7 +138,7 @@ function DailyGoalCard({ goal = {} }) {
                 <div>
                     <div className="mb-1.5 flex items-center justify-between text-xs font-bold text-gray-600 dark:text-gray-300">
                         <span>XP Terkumpul</span>
-                        <span className="font-black text-gray-900 dark:text-white">{xpEarned} <span className="font-normal text-gray-400">/ {xpTarget} XP</span></span>
+                        <span className="font-semibold text-gray-900 dark:text-white">{xpEarned} <span className="font-normal text-gray-400">/ {xpTarget} XP</span></span>
                     </div>
                     <div className="h-2.5 overflow-hidden rounded-full bg-amber-200/60 dark:bg-gray-800">
                         <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-500" style={{ width: `${xpProgress}%` }} />
@@ -73,12 +149,12 @@ function DailyGoalCard({ goal = {} }) {
                         <QuizIcon sx={{ fontSize: 17 }} className="text-amber-500" />
                         Sesi Latihan
                     </span>
-                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-black ${goal.sessions_done ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${goal.sessions_done ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
                         {sessionsCompleted >= 1 ? 'Selesai' : '0/1 Sesi'}
                     </span>
                 </div>
             </div>
-            <p className="mt-4 text-xs font-medium leading-relaxed text-gray-600 dark:text-gray-400">
+            <p className="mt-4 text-sm font-normal leading-relaxed text-gray-600 dark:text-gray-400">
                 {goal.completed ? 'Target hari ini sudah tercapai! Pertahankan ritme belajarmu besok.' : 'Selesaikan satu sesi latihan kuis untuk menutup target harian.'}
             </p>
         </aside>
@@ -214,25 +290,24 @@ export default function BerandaUser({
 
     return (
         <AuthenticatedLayout header={false}>
-            <Head title="Beranda Utama" />
+            <Head title="Beranda Utama">
+                <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap" />
+            </Head>
 
             <div className="relative min-h-screen w-full overflow-hidden bg-[#F7FAF8] pb-16 transition-colors duration-300 dark:bg-gray-950">
                 <div className="pointer-events-none absolute inset-x-0 top-[360px] h-[620px] bg-[radial-gradient(circle_at_18%_20%,rgba(48,192,96,0.08),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(37,99,235,0.07),transparent_32%),linear-gradient(180deg,rgba(247,250,248,0)_0%,rgba(247,250,248,0.78)_22%,rgba(255,255,255,0.88)_52%,rgba(247,250,248,0.9)_100%)] dark:bg-[radial-gradient(circle_at_18%_20%,rgba(48,192,96,0.09),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(37,99,235,0.08),transparent_32%),linear-gradient(180deg,rgba(3,7,18,0)_0%,rgba(3,7,18,0.58)_24%,rgba(17,24,39,0.88)_58%,rgba(3,7,18,1)_100%)]" />
                 <div className="pointer-events-none absolute left-8 top-[560px] hidden text-[11rem] font-black leading-none text-brand-900/[0.04] dark:text-white/[0.035] lg:block">学</div>
                 <div className="pointer-events-none absolute right-10 top-[860px] hidden text-[10rem] font-black leading-none text-amber-900/[0.05] dark:text-white/[0.03] lg:block">語</div>
 
-                <div
-                    className="relative w-full overflow-hidden bg-cover bg-center pb-20 pt-12 sm:pb-24 sm:pt-16"
-                    style={{ backgroundImage: `url(${MountFujiBg})` }}
-                >
-                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.22)_0%,rgba(255,255,255,0.58)_52%,rgba(247,250,248,0.94)_86%,#F7FAF8_100%)] transition-colors duration-300 dark:bg-[linear-gradient(180deg,rgba(3,7,18,0.20)_0%,rgba(3,7,18,0.55)_56%,rgba(3,7,18,0.92)_88%,#030712_100%)]" />
-                    <div className="pointer-events-none absolute inset-x-0 -bottom-px h-40 bg-gradient-to-b from-transparent via-[#F7FAF8]/90 to-[#F7FAF8] dark:via-gray-950/90 dark:to-gray-950" />
+                <HeroCarousel>
+                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(3,7,18,0.45)_0%,rgba(3,7,18,0.28)_58%,rgba(247,250,248,0.20)_76%,#F7FAF8_100%)] transition-colors duration-300 dark:bg-[linear-gradient(180deg,rgba(3,7,18,0.45)_0%,rgba(3,7,18,0.28)_58%,rgba(3,7,18,0.45)_80%,#030712_100%)]" />
+                    <div className="pointer-events-none absolute inset-x-0 -bottom-px h-20 bg-gradient-to-b from-transparent via-[#F7FAF8]/90 to-[#F7FAF8] dark:via-gray-950/90 dark:to-gray-950" />
 
-                    <div className="relative z-10 mx-auto flex max-w-7xl flex-col items-center px-4 text-center sm:px-6 lg:px-8">
-                        <p className="mb-3 text-xs font-black uppercase tracking-[0.28em] text-brand-600 dark:text-brand-300">
+                    <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col items-center px-4 text-center sm:px-6 lg:px-8">
+                        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-white/90 [text-shadow:0_1px_4px_rgba(0,0,0,0.6)]">
                             Learning Hub
                         </p>
-                        <h1 className="mb-6 text-3xl font-black tracking-tight text-gray-900 dark:text-white md:text-5xl">
+                        <h1 style={{ fontFamily: '"DM Serif Display", Georgia, serif' }} className="mx-auto mb-6 w-full max-w-4xl text-center text-[38px] font-normal leading-[1.12] tracking-[-0.015em] text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.6)] sm:text-[48px] md:text-[56px]">
                             Mau lanjut belajar apa hari ini?
                         </h1>
 
@@ -246,10 +321,10 @@ export default function BerandaUser({
                                     <Link
                                         key={item.label}
                                         href={item.href}
-                                        className={`group inline-flex min-h-11 items-center gap-2 rounded-2xl border px-4 py-2 text-xs font-black shadow-sm backdrop-blur-md transition-all hover:-translate-y-0.5 ${isPrimary
-                                            ? 'border-brand-500 bg-brand-600 text-white hover:bg-brand-700 dark:border-brand-500'
+                                        className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 group inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold shadow-sm backdrop-blur-md transition-all  ${isPrimary
+                                            ? 'border-green-700 bg-green-700 text-white hover:bg-green-800 dark:border-brand-500'
                                             : isQuiz
-                                                ? 'border-learning-200 bg-white/95 text-learning-800 hover:border-learning-400 hover:bg-white dark:border-learning-700 dark:bg-gray-900 dark:text-learning-200'
+                                                ? 'border-gray-200 bg-white/95 text-gray-700 hover:border-gray-400 hover:bg-white dark:border-learning-700 dark:bg-gray-900 dark:text-learning-200'
                                                 : 'border-white/80 bg-white/90 text-gray-700 hover:border-brand-200 hover:bg-white dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200'}`}
                                     >
                                         <Icon sx={{ fontSize: 18 }} />
@@ -262,21 +337,21 @@ export default function BerandaUser({
                         {/* Stats Floating Pill Bar */}
                         <div className="flex flex-wrap items-center justify-center gap-3">
                             <div className="flex items-center gap-2.5 rounded-2xl border border-white/80 bg-white/90 px-4 py-2 shadow-sm backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/90">
-                                <span className="rounded-lg bg-amber-100 px-2 py-0.5 text-xs font-black text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+                                <span className="rounded-lg bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
                                     Lv.{user.level || 1}
                                 </span>
-                                <span className="text-xs font-bold text-gray-500 dark:text-gray-400">XP:</span>
-                                <span className="text-xs font-black text-gray-900 dark:text-white">{user.xp || 0}</span>
+                                <span className="text-xs font-bold text-gray-600 dark:text-gray-400">XP:</span>
+                                <span className="text-xs font-semibold text-gray-900 dark:text-white">{user.xp || 0}</span>
                             </div>
                             <div className="flex items-center gap-2 rounded-2xl border border-white/80 bg-white/90 px-4 py-2 shadow-sm backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/90">
                                 <HitodamaIcon className="h-4 w-4 text-orange-500" />
-                                <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Streak:</span>
-                                <span className="text-xs font-black text-gray-900 dark:text-white">{user.streak_count || 0} Hari</span>
+                                <span className="text-xs font-bold text-gray-600 dark:text-gray-400">Streak:</span>
+                                <span className="text-xs font-semibold text-gray-900 dark:text-white">{user.streak_count || 0} Hari</span>
                             </div>
                             <div className="flex items-center gap-2 rounded-2xl border border-white/80 bg-white/90 px-4 py-2 shadow-sm backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/90">
-                                {isPremium ? <KabutoIcon className="h-4 w-4 text-amber-500" /> : <ScrollIcon className="h-4 w-4 text-gray-500" />}
-                                <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Akses:</span>
-                                <span className={`text-xs font-black ${isPremium ? 'text-amber-600 dark:text-amber-300' : 'text-gray-900 dark:text-white'}`}>{isPremium ? 'Premium' : 'Gratis'}</span>
+                                {isPremium ? <KabutoIcon className="h-4 w-4 text-amber-500" /> : <ScrollIcon className="h-4 w-4 text-gray-600" />}
+                                <span className="text-xs font-bold text-gray-600 dark:text-gray-400">Akses:</span>
+                                <span className={`text-xs font-semibold ${isPremium ? 'text-amber-600 dark:text-amber-300' : 'text-gray-900 dark:text-white'}`}>{isPremium ? 'Premium' : 'Gratis'}</span>
                             </div>
                         </div>
 
@@ -286,14 +361,14 @@ export default function BerandaUser({
                             </div>
                         )}
                     </div>
-                </div>
+                </HeroCarousel>
 
                 <div className="relative z-10 mx-auto -mt-10 max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
                         {/* Kolom Kiri: Jalur Belajar (lg:col-span-8) */}
                         <div className="space-y-8 lg:col-span-8">
                             {/* 1. Quick Quiz - Energetic Action Card */}
-                            <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-700 to-emerald-800 p-6 text-white shadow-xl shadow-emerald-950/10 sm:p-7">
+                            <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-800 to-emerald-900 p-6 text-white shadow-sm sm:p-7">
                                 <span aria-hidden="true" className="pointer-events-none absolute -bottom-6 right-3 select-none text-9xl font-black text-white/[0.08]">
                                     問
                                 </span>
@@ -308,7 +383,7 @@ export default function BerandaUser({
                                         </div>
                                         <div className="min-w-0">
                                             <div className="mb-1 flex items-center gap-2">
-                                                <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-100">
+                                                <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-emerald-100">
                                                     Latihan Cepat
                                                 </span>
                                                 {quickQuiz?.active && (
@@ -317,7 +392,7 @@ export default function BerandaUser({
                                                     </span>
                                                 )}
                                             </div>
-                                            <h2 className="text-xl font-black text-white sm:text-2xl">
+                                            <h2 className="text-xl font-semibold text-white sm:text-2xl">
                                                 {quickQuiz?.active ? 'Lanjutkan Sesi Latihan' : (quickQuiz?.available ? 'Asah Refleks Kosakata & Tata Bahasa' : 'Quick Quiz Siap')}
                                             </h2>
                                             <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-emerald-50/90">
@@ -341,7 +416,7 @@ export default function BerandaUser({
                                                             <select
                                                                 value={quickQuizProgramId}
                                                                 onChange={(event) => setQuickQuizProgramId(event.target.value)}
-                                                                className="cursor-pointer border-0 bg-transparent py-0.5 pr-6 text-xs font-bold text-white focus:ring-0"
+                                                                className="cursor-pointer border-0 bg-transparent py-0.5 pr-6 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                                                             >
                                                                 <option value="" className="text-gray-900">Semua Kelas</option>
                                                                 {quickQuiz.programs.map((program) => (
@@ -363,7 +438,7 @@ export default function BerandaUser({
                                                 type="button"
                                                 onClick={openQuickQuiz}
                                                 disabled={isStartingQuickQuiz}
-                                                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-7 py-3 text-sm font-black text-emerald-900 shadow-md transition-all hover:bg-emerald-50 hover:shadow-lg hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                                                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-emerald-900 shadow-sm transition-colors hover:bg-emerald-50 hover:shadow-sm  disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                                             >
                                                 {isStartingQuickQuiz ? 'Menyiapkan...' : (quickQuiz.active ? 'Lanjutkan Kuis' : 'Mulai Latihan')}
                                                 <ArrowRightAltIcon sx={{ fontSize: 22 }} />
@@ -371,7 +446,7 @@ export default function BerandaUser({
                                         ) : (
                                             <Link
                                                 href={activeLearning?.roadmap_url || route('user.kelas.index')}
-                                                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-7 py-3 text-sm font-black text-emerald-900 shadow-md transition-all hover:bg-emerald-50 hover:-translate-y-0.5 sm:w-auto"
+                                                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-emerald-900 shadow-sm transition-colors hover:bg-emerald-50  sm:w-auto"
                                             >
                                                 Buka Roadmap <ArrowRightAltIcon sx={{ fontSize: 22 }} />
                                             </Link>
@@ -392,10 +467,10 @@ export default function BerandaUser({
                                             />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="mb-1 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                                            <p className="mb-1 text-xs font-bold uppercase tracking-wider text-green-700 dark:text-green-300">
                                                 Lanjutkan Belajar
                                             </p>
-                                            <h2 className="text-xl font-black text-gray-900 sm:text-2xl dark:text-white">
+                                            <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">
                                                 {activeLearning ? activeLearning.title : 'Belum Ada Kelas Aktif'}
                                             </h2>
                                             <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-gray-600 dark:text-gray-300">
@@ -420,7 +495,7 @@ export default function BerandaUser({
                                     <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
                                         <Link
                                             href={nextAction?.href || activeLearning?.roadmap_url || route('user.kelas.index')}
-                                            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-7 py-3 text-sm font-black text-white shadow-sm transition-all hover:bg-brand-600 hover:-translate-y-0.5 dark:bg-white dark:text-gray-950 dark:hover:bg-brand-300"
+                                            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-green-700 px-7 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-800 dark:bg-white dark:text-gray-950 dark:hover:bg-brand-300"
                                         >
                                             {nextAction?.label || (activeLearning ? 'Buka Roadmap' : 'Jelajahi Kelas')}
                                             <ArrowRightAltIcon sx={{ fontSize: 22 }} />
@@ -433,7 +508,7 @@ export default function BerandaUser({
                                                     <Link
                                                         key={item.category}
                                                         href={item.href}
-                                                        className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-gray-700 transition hover:border-brand-500 hover:text-brand-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                                                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-gray-700 transition hover:border-brand-500 hover:text-green-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200"
                                                     >
                                                         <Icon sx={{ fontSize: 16 }} />
                                                         {item.title}
@@ -478,15 +553,15 @@ export default function BerandaUser({
                                                 </div>
                                                 <div className="relative z-10 min-w-0">
                                                     <div className="mb-1.5 flex items-center gap-2">
-                                                        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-black ${program.waiting_for_kloter
+                                                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${program.waiting_for_kloter
                                                             ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
                                                             : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'}`}>
                                                             {program.waiting_for_kloter ? 'Menunggu kloter' : 'Kelas aktif'}
                                                         </span>
-                                                        {!program.waiting_for_kloter && <span className="text-xs font-bold text-slate-500 dark:text-gray-400">{program.total_modules || 0} modul</span>}
+                                                        {!program.waiting_for_kloter && <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{program.total_modules || 0} modul</span>}
                                                     </div>
-                                                    <h3 className="truncate text-base font-black text-slate-900 sm:text-lg dark:text-white">{program.title}</h3>
-                                                    <p className="mt-0.5 truncate text-xs font-medium text-slate-500 dark:text-gray-400">
+                                                    <h3 className="line-clamp-2 break-words text-base font-semibold leading-snug text-slate-900 sm:text-lg dark:text-white">{program.title}</h3>
+                                                    <p className="mt-0.5 line-clamp-2 break-words text-sm font-normal leading-relaxed text-gray-600 dark:text-gray-400">
                                                         {program.waiting_for_kloter
                                                             ? 'Roadmap tersedia setelah jadwal kloter dimulai.'
                                                             : (program.next_module ? `Berikutnya: Week ${program.next_module.week_number} - ${program.next_module.title}` : 'Semua modul yang tersedia telah selesai.')}
@@ -496,13 +571,13 @@ export default function BerandaUser({
                                                             <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-gray-800">
                                                                 <div className="h-full rounded-full bg-brand-600 transition-all duration-500" style={{ width: `${program.progress}%` }} />
                                                             </div>
-                                                            <span className="shrink-0 text-xs font-black text-slate-700 dark:text-gray-300">{program.progress}%</span>
+                                                            <span className="shrink-0 text-xs font-semibold text-slate-700 dark:text-gray-300">{program.progress}%</span>
                                                         </div>
                                                     )}
                                                 </div>
-                                                <span className={`relative z-10 col-span-2 inline-flex min-h-10 items-center justify-center gap-1 rounded-xl px-4 text-xs font-black sm:col-auto sm:min-h-11 ${program.waiting_for_kloter
+                                                <span className={`relative z-10 col-span-2 inline-flex min-h-11 items-center justify-center gap-1 rounded-xl px-4 text-sm font-semibold sm:col-auto sm:min-h-11 ${program.waiting_for_kloter
                                                     ? 'bg-slate-100 text-slate-700 dark:bg-gray-800 dark:text-gray-300'
-                                                    : 'bg-brand-600 text-white lg:group-hover:bg-brand-700 shadow-sm'}`}>
+                                                    : 'bg-green-700 text-white lg:group-hover:bg-green-800 shadow-sm'}`}>
                                                     {program.waiting_for_kloter ? 'Menunggu jadwal' : 'Lanjutkan'}
                                                     {!program.waiting_for_kloter && <ArrowRightAltIcon sx={{ fontSize: 18 }} />}
                                                 </span>
@@ -512,7 +587,7 @@ export default function BerandaUser({
                                         return program.waiting_for_kloter ? (
                                             <article key={program.id} className={cardClass}>{content}</article>
                                         ) : (
-                                            <Link key={program.id} href={program.roadmap_url} className={`group ${cardClass} hover:border-brand-300 hover:shadow-md lg:dark:hover:border-brand-900/60`}>
+                                            <Link key={program.id} href={program.roadmap_url} className={`group ${cardClass} hover:border-brand-300 hover:shadow-sm lg:dark:hover:border-brand-900/60`}>
                                                 {content}
                                             </Link>
                                         );
@@ -520,9 +595,9 @@ export default function BerandaUser({
                                     {ownedPrograms.length === 0 && (
                                         <div className="rounded-2xl border border-dashed border-gray-300 bg-white/70 px-5 py-8 text-center dark:border-gray-700 dark:bg-gray-950/70">
                                             <SchoolIcon sx={{ fontSize: 30 }} className="mb-2 text-brand-500" />
-                                            <p className="font-black text-gray-900 dark:text-white">Belum ada kelas aktif</p>
+                                            <p className="font-semibold text-gray-900 dark:text-white">Belum ada kelas aktif</p>
                                             <p className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">Pilih kelas untuk memulai roadmap belajar.</p>
-                                            <Link href={route('user.kelas.index')} className="mt-4 inline-flex min-h-11 items-center gap-1 text-sm font-black text-brand-600 dark:text-brand-400">
+                                            <Link href={route('user.kelas.index')} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 mt-4 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-green-700 dark:text-green-300">
                                                 Jelajahi kelas <ArrowRightAltIcon sx={{ fontSize: 20 }} />
                                             </Link>
                                         </div>
@@ -549,19 +624,19 @@ export default function BerandaUser({
                                     <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-gray-800 dark:bg-gray-950/80">
                                         <div className="grid grid-cols-3 gap-2 text-center">
                                             <div className="rounded-xl bg-achievement-50 px-2 py-2.5 dark:bg-achievement-900/30">
-                                                <p className="text-xl font-black text-achievement-700 dark:text-achievement-100">{user.xp || 0}</p>
-                                                <p className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">XP</p>
+                                                <p className="text-xl font-semibold text-gray-900 dark:text-white">{user.xp || 0}</p>
+                                                <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400">XP</p>
                                             </div>
                                             <div className="rounded-xl bg-amber-50 px-2 py-2.5 dark:bg-amber-950/30">
-                                                <p className="text-xl font-black text-amber-600 dark:text-amber-300">{user.streak_count || 0}</p>
-                                                <p className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">Streak</p>
+                                                <p className="text-xl font-semibold text-gray-900 dark:text-white">{user.streak_count || 0}</p>
+                                                <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400">Streak</p>
                                             </div>
                                             <div className="rounded-xl bg-emerald-50 px-2 py-2.5 dark:bg-emerald-950/30">
-                                                <p className="text-xl font-black text-emerald-600 dark:text-emerald-300">{rewardHistory.length}</p>
-                                                <p className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">Log</p>
+                                                <p className="text-xl font-semibold text-gray-900 dark:text-white">{rewardHistory.length}</p>
+                                                <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400">Log</p>
                                             </div>
                                         </div>
-                                        <Link href={route('user.leaderboard')} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 transition hover:border-brand-500 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                        <Link href={route('user.leaderboard')} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 mt-3 inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-brand-500 hover:text-green-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
                                             Lihat peringkat liga <ArrowRightAltIcon sx={{ fontSize: 17 }} />
                                         </Link>
                                     </div>
@@ -576,8 +651,8 @@ export default function BerandaUser({
                                                                 {activity.source_type === 'quiz' ? <QuizIcon sx={{ fontSize: 16 }} /> : <AutoStoriesIcon sx={{ fontSize: 16 }} />}
                                                             </div>
                                                             <div className="min-w-0">
-                                                                <p className="truncate text-xs font-bold text-gray-900 dark:text-white">{activity.description || activity.title || activity.source_type || 'Aktivitas belajar'}</p>
-                                                                <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-400">
+                                                                <p className="line-clamp-2 break-words text-sm font-medium leading-relaxed text-gray-900 dark:text-white">{activity.description || activity.title || activity.source_type || 'Aktivitas belajar'}</p>
+                                                                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">
                                                                     {activity.created_at
                                                                         ? new Date(activity.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
                                                                         : 'Baru saja'}
@@ -585,7 +660,7 @@ export default function BerandaUser({
                                                             </div>
                                                         </div>
                                                         {activity.xp_amount !== undefined && (
-                                                            <span className="shrink-0 rounded-md bg-green-50 px-2 py-0.5 text-xs font-black text-green-600 dark:bg-green-900/30 dark:text-green-300">
+                                                            <span className="shrink-0 rounded-md bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-600 dark:bg-green-900/30 dark:text-green-300">
                                                                 +{activity.xp_amount} XP
                                                             </span>
                                                         )}
@@ -593,7 +668,7 @@ export default function BerandaUser({
                                                 ))}
                                             </div>
                                         ) : (
-                                            <div className="p-4 text-center text-xs font-medium text-gray-400 dark:text-gray-400">
+                                            <div className="p-4 text-center text-sm font-normal leading-relaxed text-gray-600 dark:text-gray-400">
                                                 Belum ada aktivitas terbaru. Mulai dari kelas aktif untuk mengisi progress.
                                             </div>
                                         )}
@@ -617,13 +692,13 @@ export default function BerandaUser({
                                 <Link
                                     href={route('user.news.show', item.slug || item.id)}
                                     key={item.id || index}
-                                    className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-gray-800 dark:bg-gray-950"
+                                    className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300  hover:shadow-sm dark:border-gray-800 dark:bg-gray-950"
                                 >
                                     <div className="aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-gray-800">
                                         {item.thumbnail_url || item.cover_url ? (
                                             <img src={item.thumbnail_url || item.cover_url} alt={item.cover_image_alt || item.title} className="h-full w-full object-cover transition-transform duration-500 lg:group-hover:scale-105" />
                                         ) : (
-                                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-50 to-gray-100 text-3xl font-black text-brand-200 dark:from-gray-800 dark:to-gray-900 dark:text-gray-700">
+                                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-50 to-gray-100 text-3xl font-semibold text-brand-200 dark:from-gray-800 dark:to-gray-900 dark:text-gray-700">
                                                 JP
                                             </div>
                                         )}
@@ -631,7 +706,7 @@ export default function BerandaUser({
                                     <div className="flex flex-grow flex-col p-4 sm:p-5">
                                         {item.is_pinned && (
                                             <div className="mb-2.5">
-                                                <span className="rounded-md bg-brand-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:bg-[#12351f] dark:text-green-200">
+                                                <span className="rounded-md bg-brand-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-green-700 dark:bg-[#12351f] dark:text-green-200">
                                                     PIN Disematkan
                                                 </span>
                                             </div>
@@ -643,13 +718,13 @@ export default function BerandaUser({
                                                 ? new Date(item.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
                                                 : 'TOKU-UP'}
                                         </div>
-                                        <h3 className="mb-2 text-base font-extrabold leading-snug text-gray-900 transition-colors sm:mb-2.5 lg:group-hover:text-brand-600 dark:text-white lg:dark:group-hover:text-brand-400 line-clamp-2">
+                                        <h3 className="mb-2 text-base font-bold leading-snug text-gray-900 transition-colors sm:mb-2.5 lg:group-hover:text-green-700 dark:text-white lg:dark:group-hover:text-brand-400 line-clamp-2">
                                             {item.title}
                                         </h3>
-                                        <p className="mb-4 line-clamp-2 flex-grow text-xs font-medium leading-relaxed text-gray-600 dark:text-gray-300">
+                                        <p className="mb-4 line-clamp-2 flex-grow text-sm font-normal leading-relaxed text-gray-600 dark:text-gray-300">
                                             {item.excerpt || (item.body ? `${item.body.replace(/<[^>]*>/g, '').substring(0, 100)}...` : 'Baca update terbaru dari TOKU-UP.')}
                                         </p>
-                                        <div className="mt-auto flex items-center gap-1.5 text-xs font-black text-brand-600 dark:text-brand-400">
+                                        <div className="mt-auto flex items-center gap-1.5 text-xs font-semibold text-green-700 dark:text-green-300">
                                             Baca selengkapnya
                                             <ArrowRightAltIcon sx={{ fontSize: 18 }} />
                                         </div>

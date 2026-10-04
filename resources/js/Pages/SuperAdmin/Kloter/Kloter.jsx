@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Card from '@/Components/UI/Card';
 import SearchableSelect from '@/Components/UI/SearchableSelect';
 import StatCard from '@/Components/Features/Dashboard/StatCard';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
+import AdminDialog from '@/Components/UI/AdminDialog';
+import FormField, { formInputClass } from '@/Components/UI/FormField';
 import ChartCard from '@/Components/Features/Dashboard/ChartCard';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartEmpty, ChartTooltip, ChartTooltipContent } from '@/Components/UI/Chart';
@@ -536,76 +537,222 @@ export default function Kloter({
                 </div>
             </div>
 
-            {showKloterForm && (
-                <Modal title={editingKloter ? 'Edit Kloter' : 'Buat Kloter'} onClose={() => setShowKloterForm(false)}>
-                    <form onSubmit={submitKloter} className="space-y-4">
-                        <Field label="Nama kloter" help="Nama batch yang terlihat oleh superadmin, contoh: N3 Juli 2026.">
-                            <input value={kloterForm.data.nama} onChange={(event) => kloterForm.setData('nama', event.target.value)} placeholder="N3 Juli 2026" className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
+            <AdminDialog
+                open={showKloterForm}
+                onClose={() => setShowKloterForm(false)}
+                title={editingKloter ? 'Edit Kloter' : 'Buat Kloter'}
+                description="Kelola batch belajar, jadwal, instruktur, dan kuota kapasitas siswa."
+                maxWidth="max-w-2xl"
+            >
+                <form onSubmit={submitKloter} className="space-y-4">
+                    <Field
+                        label="Nama Kloter"
+                        required
+                        error={kloterForm.errors.nama}
+                        tooltip="Nama batch yang terlihat oleh superadmin dan siswa."
+                        help="Contoh penamaan: N3 Batch Juli 2026."
+                    >
+                        <input
+                            value={kloterForm.data.nama}
+                            onChange={(event) => {
+                                kloterForm.setData('nama', event.target.value);
+                                if (kloterForm.errors.nama) kloterForm.clearErrors('nama');
+                            }}
+                            placeholder="N3 Juli 2026"
+                            className={formInputClass(kloterForm.errors.nama)}
+                        />
+                    </Field>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <Field
+                            label="Kelas/Program"
+                            required
+                            error={kloterForm.errors.program_pembelajaran_id}
+                            tooltip="Pembayaran dan kurikulum belajar siswa akan terikat pada kelas ini."
+                        >
+                            <SearchableSelect
+                                value={kloterForm.data.program_pembelajaran_id}
+                                onChange={(programId) => {
+                                    kloterForm.setData('program_pembelajaran_id', programId);
+                                    if (kloterForm.errors.program_pembelajaran_id) kloterForm.clearErrors('program_pembelajaran_id');
+                                }}
+                                placeholder="Pilih kelas"
+                                searchPlaceholder="Cari kelas atau program..."
+                                options={programs.map((program) => ({ value: program.id, label: program.title }))}
+                            />
                         </Field>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Field label="Kelas/program" help="Payment dan roadmap user akan mengikuti kelas ini.">
-                                <SearchableSelect value={kloterForm.data.program_pembelajaran_id} onChange={(programId) => kloterForm.setData('program_pembelajaran_id', programId)} placeholder="Pilih kelas" searchPlaceholder="Cari kelas atau program..." options={programs.map((program) => ({ value: program.id, label: program.title }))} />
-                            </Field>
-                            <Field label="Admin pengampu" help="Admin/sensei yang bertanggung jawab pada batch ini.">
-                                <SearchableSelect value={kloterForm.data.admin_id} onChange={(adminId) => kloterForm.setData('admin_id', adminId)} placeholder="Pilih admin pengampu" searchPlaceholder="Cari nama atau email admin..." options={admins.map((admin) => ({ value: admin.id, label: admin.label }))} />
-                            </Field>
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Field label="Tanggal mulai" help="Menentukan Week aktif pada roadmap user.">
-                                <input type="date" value={kloterForm.data.tanggal_mulai} onChange={(event) => kloterForm.setData('tanggal_mulai', event.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
-                            </Field>
-                            <Field label="Tanggal selesai" help="Opsional. Kosongkan jika belum ada tanggal akhir.">
-                                <input type="date" value={kloterForm.data.tanggal_selesai} onChange={(event) => kloterForm.setData('tanggal_selesai', event.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
-                            </Field>
-                        </div>
-                        <Field label="Kapasitas siswa" help="Batas user yang boleh masuk kloter. Kosongkan jika tidak dibatasi.">
-                            <input type="number" min="1" max="500" value={kloterForm.data.max_siswa} onChange={(event) => kloterForm.setData('max_siswa', event.target.value)} placeholder="Contoh: 30" className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                        <Field
+                            label="Admin Pengampu"
+                            error={kloterForm.errors.admin_id}
+                            tooltip="Admin atau sensei yang bertanggung jawab mengampu batch ini."
+                        >
+                            <SearchableSelect
+                                value={kloterForm.data.admin_id}
+                                onChange={(adminId) => {
+                                    kloterForm.setData('admin_id', adminId);
+                                    if (kloterForm.errors.admin_id) kloterForm.clearErrors('admin_id');
+                                }}
+                                placeholder="Pilih admin pengampu"
+                                searchPlaceholder="Cari nama atau email admin..."
+                                options={admins.map((admin) => ({ value: admin.id, label: admin.label }))}
+                            />
                         </Field>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Field label="Status kloter" help="Aktif bisa dipakai auto-assign; draft belum dipakai; arsip disembunyikan dari operasional.">
-                                <select value={kloterForm.data.status} onChange={(event) => kloterForm.setData('status', event.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900">
-                                    <option value="active">Aktif</option>
-                                    <option value="draft">Draft</option>
-                                    <option value="archived">Arsip</option>
-                                </select>
-                            </Field>
-                            <Field label="Default payment" help="Jika aktif, user yang bayar kelas ini otomatis masuk kloter ini selama belum penuh.">
-                                <label className="flex h-11 items-center gap-3 rounded-xl border border-gray-200 px-4 text-sm font-bold dark:border-gray-700">
-                                    <input type="checkbox" checked={kloterForm.data.is_default} onChange={(event) => kloterForm.setData('is_default', event.target.checked)} className="rounded border-gray-300 text-brand-600 focus:ring-focus" />
-                                    Jadikan default
-                                </label>
-                            </Field>
-                        </div>
-                        <Field label="Catatan internal" help="Tidak tampil ke user. Gunakan untuk info batch, jadwal, atau instruksi admin.">
-                            <textarea value={kloterForm.data.catatan} onChange={(event) => kloterForm.setData('catatan', event.target.value)} rows={3} placeholder="Catatan internal" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <Field
+                            label="Tanggal Mulai"
+                            required
+                            error={kloterForm.errors.tanggal_mulai}
+                            tooltip="Menentukan awal jadwal dan perhitungan Week aktif pada roadmap user."
+                        >
+                            <input
+                                type="date"
+                                value={kloterForm.data.tanggal_mulai}
+                                onChange={(event) => {
+                                    kloterForm.setData('tanggal_mulai', event.target.value);
+                                    if (kloterForm.errors.tanggal_mulai) kloterForm.clearErrors('tanggal_mulai');
+                                }}
+                                className={formInputClass(kloterForm.errors.tanggal_mulai)}
+                            />
                         </Field>
-                        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                            <button type="button" onClick={() => setShowKloterForm(false)} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
-                            <button disabled={kloterForm.processing} className="min-h-11 w-full rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-60 sm:w-auto">{kloterForm.processing ? 'Menyimpan...' : 'Simpan'}</button>
-                        </div>
-                    </form>
-                </Modal>
-            )}
+                        <Field
+                            label="Tanggal Selesai"
+                            error={kloterForm.errors.tanggal_selesai}
+                            tooltip="Opsional. Kosongkan jika batch berjalan terus tanpa batas akhir."
+                        >
+                            <input
+                                type="date"
+                                value={kloterForm.data.tanggal_selesai}
+                                onChange={(event) => {
+                                    kloterForm.setData('tanggal_selesai', event.target.value);
+                                    if (kloterForm.errors.tanggal_selesai) kloterForm.clearErrors('tanggal_selesai');
+                                }}
+                                className={formInputClass(kloterForm.errors.tanggal_selesai)}
+                            />
+                        </Field>
+                    </div>
+                    <Field
+                        label="Kapasitas Siswa"
+                        error={kloterForm.errors.max_siswa}
+                        tooltip="Batas kuota maksimal siswa yang boleh masuk kloter. Kosongkan jika kuota tidak dibatasi."
+                    >
+                        <input
+                            type="number"
+                            min="1"
+                            max="500"
+                            value={kloterForm.data.max_siswa}
+                            onChange={(event) => {
+                                kloterForm.setData('max_siswa', event.target.value);
+                                if (kloterForm.errors.max_siswa) kloterForm.clearErrors('max_siswa');
+                            }}
+                            placeholder="Contoh: 30"
+                            className={formInputClass(kloterForm.errors.max_siswa)}
+                        />
+                    </Field>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <Field
+                            label="Status Kloter"
+                            required
+                            error={kloterForm.errors.status}
+                            tooltip="Status aktif dapat auto-assign; draft persiapan internal; arsip disembunyikan."
+                        >
+                            <select
+                                value={kloterForm.data.status}
+                                onChange={(event) => {
+                                    kloterForm.setData('status', event.target.value);
+                                    if (kloterForm.errors.status) kloterForm.clearErrors('status');
+                                }}
+                                className={formInputClass(kloterForm.errors.status)}
+                            >
+                                <option value="active">Aktif</option>
+                                <option value="draft">Draft</option>
+                                <option value="archived">Arsip</option>
+                            </select>
+                        </Field>
+                        <Field
+                            label="Default Payment"
+                            tooltip="Jika aktif, user yang membeli kelas ini otomatis ditempatkan ke kloter ini selama kuota tersedia."
+                        >
+                            <label className="flex h-11 items-center gap-3 rounded-xl border border-gray-200 px-4 text-sm font-bold dark:border-gray-700">
+                                <input
+                                    type="checkbox"
+                                    checked={kloterForm.data.is_default}
+                                    onChange={(event) => kloterForm.setData('is_default', event.target.checked)}
+                                    className="rounded border-gray-300 text-brand-600 focus:ring-focus"
+                                />
+                                Jadikan default
+                            </label>
+                        </Field>
+                    </div>
+                    <Field
+                        label="Catatan Internal"
+                        error={kloterForm.errors.catatan}
+                        tooltip="Catatan khusus hanya untuk superadmin (tidak ditampilkan kepada siswa)."
+                    >
+                        <textarea
+                            value={kloterForm.data.catatan}
+                            onChange={(event) => {
+                                kloterForm.setData('catatan', event.target.value);
+                                if (kloterForm.errors.catatan) kloterForm.clearErrors('catatan');
+                            }}
+                            rows={3}
+                            placeholder="Catatan internal"
+                            className={formInputClass(kloterForm.errors.catatan)}
+                        />
+                    </Field>
+                    <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+                        <button
+                            type="button"
+                            onClick={() => setShowKloterForm(false)}
+                            className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold transition-colors hover:bg-gray-50 dark:border-gray-700 sm:w-auto"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={kloterForm.processing}
+                            className="min-h-11 w-full rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-black text-white shadow-md shadow-brand-500/20 transition-colors hover:bg-brand-700 disabled:opacity-60 sm:w-auto"
+                        >
+                            {kloterForm.processing ? 'Menyimpan...' : 'Simpan'}
+                        </button>
+                    </div>
+                </form>
+            </AdminDialog>
 
-            {showAssignForm && selectedKloter && (
-                <Modal title="Tambah User ke Kloter" onClose={() => setShowAssignForm(false)}>
+            {selectedKloter && (
+                <AdminDialog
+                    open={showAssignForm}
+                    onClose={() => setShowAssignForm(false)}
+                    title="Tambah User ke Kloter"
+                    description={`Daftarkan siswa secara manual ke dalam kloter ${selectedKloter.nama}.`}
+                    maxWidth="max-w-xl"
+                >
                     <form onSubmit={submitAssign} className="space-y-4">
                         <div className="flex items-center justify-between rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-bold text-sky-800 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-200">
                             <span>Kapasitas Kloter Saat Ini</span>
-                            <span className="rounded-full bg-white px-3 py-1 font-black text-sky-900 shadow-sm dark:bg-gray-800 dark:text-sky-200">{selectedKloter.kapasitas_label || `${selectedKloter.anggota_aktif_count || 0}/-`}</span>
+                            <span className="rounded-full bg-white px-3 py-1 font-black text-sky-900 shadow-sm dark:bg-gray-800 dark:text-sky-200">
+                                {selectedKloter.kapasitas_label || `${selectedKloter.anggota_aktif_count || 0}/-`}
+                            </span>
                         </div>
                         {isKloterFull && (
                             <div className="rounded-2xl border border-brand-100 bg-brand-50 p-4 text-sm font-bold text-brand-700 dark:border-brand-900/40 dark:bg-brand-900/20 dark:text-brand-300">
                                 Kloter ini sudah penuh. Naikkan kapasitas atau keluarkan anggota sebelum menambah user.
                             </div>
                         )}
-                        <Field label="Pilih user" help="Cari siswa berdasarkan email.">
+                        <Field
+                            label="Pilih User"
+                            required
+                            error={assignForm.errors.user_id}
+                            tooltip="Cari akun siswa terdaftar berdasarkan alamat email."
+                            help="Hanya menampilkan user aktif yang belum terdaftar di kloter ini."
+                        >
                             <div className="relative">
                                 <button
                                     type="button"
                                     onClick={() => !isKloterFull && setAssignDropdownOpen((open) => !open)}
                                     disabled={isKloterFull}
-                                    className="flex h-11 w-full items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900"
+                                    className={`flex h-11 w-full items-center justify-between gap-3 rounded-xl border bg-white px-4 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-900 ${
+                                        assignForm.errors.user_id ? 'border-red-400 dark:border-red-500' : 'border-gray-200 dark:border-gray-700'
+                                    }`}
                                 >
                                     <span className={selectedAssignableUser ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-400'}>
                                         {selectedAssignableUser?.email ? `${selectedAssignableUser.email} (${selectedAssignableUser.username})` : 'Pilih user berdasarkan email'}
@@ -634,6 +781,7 @@ export default function Kloter({
                                                     type="button"
                                                     onClick={() => {
                                                         assignForm.setData('user_id', user.id);
+                                                        if (assignForm.errors.user_id) assignForm.clearErrors('user_id');
                                                         setAssignDropdownOpen(false);
                                                         setAssignSearch('');
                                                     }}
@@ -648,46 +796,158 @@ export default function Kloter({
                                 )}
                             </div>
                         </Field>
-                        <Field label="Catatan penambahan" help="Opsional, hanya untuk riwayat internal superadmin.">
-                            <textarea value={assignForm.data.catatan} onChange={(event) => assignForm.setData('catatan', event.target.value)} rows={3} placeholder="Catatan opsional" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                        <Field
+                            label="Catatan Penambahan"
+                            error={assignForm.errors.catatan}
+                            tooltip="Opsional. Riwayat internal superadmin terkait alasan penambahan."
+                        >
+                            <textarea
+                                value={assignForm.data.catatan}
+                                onChange={(event) => {
+                                    assignForm.setData('catatan', event.target.value);
+                                    if (assignForm.errors.catatan) assignForm.clearErrors('catatan');
+                                }}
+                                rows={3}
+                                placeholder="Catatan opsional"
+                                className={formInputClass(assignForm.errors.catatan)}
+                            />
                         </Field>
-                        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                            <button type="button" onClick={() => setShowAssignForm(false)} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
-                            <button disabled={assignForm.processing || isKloterFull} className="min-h-11 w-full rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-60 sm:w-auto">{assignForm.processing ? 'Menyimpan...' : 'Tambah User'}</button>
+                        <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setShowAssignForm(false)}
+                                className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold transition-colors hover:bg-gray-50 dark:border-gray-700 sm:w-auto"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={assignForm.processing || isKloterFull}
+                                className="min-h-11 w-full rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-black text-white shadow-md shadow-sky-500/20 transition-colors hover:bg-sky-700 disabled:opacity-60 sm:w-auto"
+                            >
+                                {assignForm.processing ? 'Menyimpan...' : 'Tambah User'}
+                            </button>
                         </div>
                     </form>
-                </Modal>
+                </AdminDialog>
             )}
 
-            {showAccessKeyForm && selectedKloter && (
-                <Modal title="Generate Access Key Kloter" onClose={() => setShowAccessKeyForm(false)}>
+            {selectedKloter && (
+                <AdminDialog
+                    open={showAccessKeyForm}
+                    onClose={() => setShowAccessKeyForm(false)}
+                    title="Generate Access Key Kloter"
+                    description={`Buat kode voucher akses langsung ke kloter ${selectedKloter.nama}.`}
+                    maxWidth="max-w-xl"
+                >
                     <form onSubmit={submitAccessKey} className="space-y-4">
-                        <Field label="Nama access key" help="Label internal agar mudah tahu kode ini untuk campaign atau batch apa.">
-                            <input value={keyForm.data.name} onChange={(event) => keyForm.setData('name', event.target.value)} placeholder={`Access ${selectedKloter.nama}`} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                        <Field
+                            label="Nama Access Key"
+                            error={keyForm.errors.name}
+                            tooltip="Label internal agar mudah mengenali peruntukan kode key (misal: Batch 1 Promo)."
+                            help="Opsional. Kosongkan untuk nama otomatis: Access [Nama Kloter]."
+                        >
+                            <input
+                                value={keyForm.data.name}
+                                onChange={(event) => {
+                                    keyForm.setData('name', event.target.value);
+                                    if (keyForm.errors.name) keyForm.clearErrors('name');
+                                }}
+                                placeholder={`Access ${selectedKloter.nama}`}
+                                className={formInputClass(keyForm.errors.name)}
+                            />
                         </Field>
                         <div className="grid grid-cols-2 gap-4">
-                            <Field label="Durasi akses" help="Berapa hari subscription aktif setelah user redeem.">
-                                <input type="number" min="1" max="366" value={keyForm.data.duration_days} onChange={(event) => keyForm.setData('duration_days', event.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                            <Field
+                                label="Durasi Akses (Hari)"
+                                required
+                                error={keyForm.errors.duration_days}
+                                tooltip="Berapa hari langganan kelas aktif terhitung sejak pengguna melakukan redeem."
+                            >
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="366"
+                                    value={keyForm.data.duration_days}
+                                    onChange={(event) => {
+                                        keyForm.setData('duration_days', event.target.value);
+                                        if (keyForm.errors.duration_days) keyForm.clearErrors('duration_days');
+                                    }}
+                                    className={formInputClass(keyForm.errors.duration_days)}
+                                />
                             </Field>
-                            <Field label="Maks pemakaian" help="Batas maksimal jumlah pengguna yang dapat mengklaim kode ini.">
-                                <input type="number" min="1" max="500" value={keyForm.data.max_uses} onChange={(event) => keyForm.setData('max_uses', event.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                            <Field
+                                label="Maksimal Pemakaian"
+                                required
+                                error={keyForm.errors.max_uses}
+                                tooltip="Batas jumlah kali kode ini dapat di-redeem oleh pengguna yang berbeda."
+                            >
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="500"
+                                    value={keyForm.data.max_uses}
+                                    onChange={(event) => {
+                                        keyForm.setData('max_uses', event.target.value);
+                                        if (keyForm.errors.max_uses) keyForm.clearErrors('max_uses');
+                                    }}
+                                    className={formInputClass(keyForm.errors.max_uses)}
+                                />
                             </Field>
                         </div>
-                        <Field label="Tanggal kedaluwarsa key" help="Opsional. Setelah tanggal ini kode tidak bisa dipakai lagi.">
-                            <input type="datetime-local" value={keyForm.data.expires_at} onChange={(event) => keyForm.setData('expires_at', event.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                        <Field
+                            label="Tanggal Kedaluwarsa Key"
+                            error={keyForm.errors.expires_at}
+                            tooltip="Batas waktu redeem kode key. Setelah tanggal ini kode kadaluwarsa dan tidak bisa diklaim."
+                            help="Opsional. Kosongkan jika tanpa batas waktu kedaluwarsa."
+                        >
+                            <input
+                                type="datetime-local"
+                                value={keyForm.data.expires_at}
+                                onChange={(event) => {
+                                    keyForm.setData('expires_at', event.target.value);
+                                    if (keyForm.errors.expires_at) keyForm.clearErrors('expires_at');
+                                }}
+                                className={formInputClass(keyForm.errors.expires_at)}
+                            />
                         </Field>
-                        <Field label="Catatan key" help="Tidak tampil ke user. Cocok untuk mencatat siapa penerima kode.">
-                            <textarea value={keyForm.data.notes} onChange={(event) => keyForm.setData('notes', event.target.value)} rows={3} placeholder="Catatan internal" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                        <Field
+                            label="Catatan Key"
+                            error={keyForm.errors.notes}
+                            tooltip="Catatan internal tujuan pembuatan kode key (tidak tampak ke user)."
+                        >
+                            <textarea
+                                value={keyForm.data.notes}
+                                onChange={(event) => {
+                                    keyForm.setData('notes', event.target.value);
+                                    if (keyForm.errors.notes) keyForm.clearErrors('notes');
+                                }}
+                                rows={3}
+                                placeholder="Catatan internal"
+                                className={formInputClass(keyForm.errors.notes)}
+                            />
                         </Field>
                         <p className="rounded-xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
                             Kode akses ini otomatis membuka kelas dan mendaftarkan pengguna langsung ke kloter {selectedKloter.nama}.
                         </p>
-                        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                            <button type="button" onClick={() => setShowAccessKeyForm(false)} className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold dark:border-gray-700 sm:w-auto">Batal</button>
-                            <button disabled={keyForm.processing} className="min-h-11 w-full rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-black text-gray-950 disabled:opacity-60 sm:w-auto">{keyForm.processing ? 'Membuat...' : 'Buat Key'}</button>
+                        <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setShowAccessKeyForm(false)}
+                                className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold transition-colors hover:bg-gray-50 dark:border-gray-700 sm:w-auto"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={keyForm.processing}
+                                className="min-h-11 w-full rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-black text-gray-950 shadow-md shadow-amber-400/20 transition-colors hover:bg-amber-500 disabled:opacity-60 sm:w-auto"
+                            >
+                                {keyForm.processing ? 'Membuat...' : 'Buat Key'}
+                            </button>
                         </div>
                     </form>
-                </Modal>
+                </AdminDialog>
             )}
             <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
         </AuthenticatedLayout>
@@ -703,28 +963,17 @@ function MiniStat({ label, value }) {
     );
 }
 
-function Field({ label, help, children }) {
+function Field({ label, help, tooltip, required = false, error = null, wide = false, children }) {
     return (
-        <label className="block">
-            <span className="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">{label}</span>
-            <div className="mt-2">{children}</div>
-            {help && <p className="mt-1 text-xs font-semibold leading-5 text-gray-500 dark:text-gray-400">{help}</p>}
-        </label>
-    );
-}
-
-function Modal({ title, onClose, children }) {
-    return createPortal(
-        <div className="fixed inset-0 z-[120] grid place-items-end overflow-y-auto p-0 sm:place-items-center sm:p-5">
-            <button type="button" aria-label="Tutup dialog" className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative flex max-h-[calc(100dvh-0.75rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-[1.5rem] bg-white shadow-2xl dark:bg-gray-900 sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-[1.5rem]">
-                <div className="flex shrink-0 items-center justify-between border-b border-gray-100 p-4 sm:p-6 dark:border-gray-800">
-                    <h3 className="text-lg font-black text-gray-900 dark:text-white">{title}</h3>
-                    <button type="button" onClick={onClose} className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-500 dark:border-gray-700 dark:text-gray-300">Tutup</button>
-                </div>
-                <div className="min-h-0 overflow-y-auto p-4 sm:p-6">{children}</div>
-            </div>
-        </div>,
-        document.body,
+        <FormField
+            label={label}
+            help={help}
+            tooltip={tooltip}
+            required={required}
+            error={error}
+            wide={wide}
+        >
+            {children}
+        </FormField>
     );
 }
