@@ -6,6 +6,9 @@ import QuizSoundToggle, { japaneseSpeechText, useQuizSoundPreference } from '@/C
 import { QuizActionButton, QuizErrorMessage, QuizOptionButton, QuizSurface } from '@/Components/UI/QuizUI';
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
+import useQuizCheckpoint from '@/Hooks/useQuizCheckpoint';
+import ResumeQuizModal from '@/Components/Features/Quiz/ResumeQuizModal';
+import SentenceBuilder from '@/Components/Features/Quiz/SentenceBuilder';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -57,6 +60,78 @@ function ProgressHeader({ quiz, stageIndex, questionIndex, totalAnswered, totalQ
     );
 }
 
+function GrammarFormulaDisplay({ formula, meaning }) {
+    if (!formula && !meaning) return null;
+
+    // Memecah baris rumus berdasarkan delimiter Excel: baris baru, '/', atau ';'
+    const lines = formula
+        ? formula
+            .split(/[\r\n/;\\]+/)
+            .map((line) => line.trim())
+            .filter(Boolean)
+        : [];
+
+    return (
+        <div className="mt-5 rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4 sm:p-5 dark:border-slate-800 dark:bg-slate-900/60 shadow-2xs">
+            <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
+                    <span>Rumus Pola Kalimat</span>
+                </div>
+                {lines.length > 1 && (
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                        {lines.length} Variasi Pola
+                    </span>
+                )}
+            </div>
+
+            {lines.length > 0 && (
+                <div className="space-y-2">
+                    {lines.map((line, idx) => {
+                        const tokens = line.includes('+')
+                            ? line.split('+').map((t) => t.trim()).filter(Boolean)
+                            : [line];
+
+                        return (
+                            <div
+                                key={idx}
+                                className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white p-2.5 sm:px-3 sm:py-2.5 shadow-2xs dark:border-slate-800 dark:bg-slate-800"
+                            >
+                                {tokens.map((token, tIdx) => (
+                                    <React.Fragment key={tIdx}>
+                                        <span
+                                            lang="ja"
+                                            className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100/90 px-2.5 py-1 text-xs sm:text-sm font-black font-japanese text-slate-900 dark:border-slate-700 dark:bg-slate-750 dark:text-white"
+                                        >
+                                            {token}
+                                        </span>
+                                        {tIdx < tokens.length - 1 && (
+                                            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 select-none px-0.5">
+                                                +
+                                            </span>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {meaning && (
+                <div className="mt-3 pt-2.5 border-t border-slate-200/80 dark:border-slate-800 flex items-baseline gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
+                        Arti:
+                    </span>
+                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
+                        {meaning}
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function IntroScreen({ quiz, onStart, onClose }) {
     const examples = quiz?.intro?.examples || [];
 
@@ -78,12 +153,7 @@ function IntroScreen({ quiz, onStart, onClose }) {
                             <p className="mt-2 max-w-xl text-sm font-medium leading-6 text-gray-600 dark:text-gray-300">{quiz.intro.explanation}</p>
                         )}
 
-                        {(quiz?.intro?.formula || quiz?.intro?.meaning) && (
-                            <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50/80 p-4 dark:border-violet-900/60 dark:bg-violet-950/30">
-                                {quiz.intro.formula && <><p className="text-[11px] font-black uppercase tracking-wider text-violet-700 dark:text-violet-300">Rumus Pola</p><p lang="ja" className="mt-2 text-base font-black font-japanese text-gray-900 dark:text-white">{quiz.intro.formula}</p></>}
-                                {quiz.intro.meaning && <p className="mt-2 text-sm font-bold text-violet-900 dark:text-violet-200">{quiz.intro.meaning}</p>}
-                            </div>
-                        )}
+                        <GrammarFormulaDisplay formula={quiz?.intro?.formula} meaning={quiz?.intro?.meaning} />
                     </QuizSurface>
 
                     <QuizSurface as="aside" className="p-5">
@@ -154,74 +224,14 @@ function ChoiceQuestion({ question, answer, feedback, disabled, onAnswer }) {
 }
 
 function SentenceBuilderQuestion({ question, selectedIds, disabled, onChange }) {
-    const selected = Array.isArray(selectedIds) ? selectedIds : [];
-    const selectedTokens = selected.map((id) => question.tokens?.find((token) => token.id === id)).filter(Boolean);
-    const availableTokens = (question.tokens || []).filter((token) => !selected.includes(token.id));
-
     return (
-        <div className="space-y-3">
-            <div className="min-h-24 rounded-2xl border-2 border-dashed border-sky-300 bg-sky-50/60 p-3.5 dark:border-sky-800 dark:bg-sky-950/25">
-                {selectedTokens.length === 0 ? (
-                    <p className="flex min-h-16 items-center justify-center text-center text-xs font-bold text-gray-400 dark:text-gray-500">
-                        Ketuk potongan kata di bawah untuk menyusun kalimat.
-                    </p>
-                ) : (
-                    <div className="flex flex-wrap gap-2">
-                        {selectedTokens.map((token, index) => (
-                            <button
-                                key={token.id}
-                                type="button"
-                                disabled={disabled}
-                                onClick={() => onChange(selected.filter((id) => id !== token.id))}
-                                aria-label={`Lepas ${token.text}`}
-                                className="flex items-center gap-1.5 rounded-xl border border-sky-300 bg-white px-3 py-2 text-sm font-black text-gray-900 shadow-[0_2px_0_#bae6fd] transition hover:border-rose-300 hover:bg-rose-50 dark:border-sky-700 dark:bg-gray-900 dark:text-white dark:hover:bg-rose-950/30"
-                            >
-                                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sky-100 text-[10px] font-black text-sky-700 dark:bg-sky-900 dark:text-sky-300">
-                                    {index + 1}
-                                </span>
-                                <JapaneseReading
-                                    japanese={token.text}
-                                    reading={token.reading}
-                                    forcePreferences={{ showRomaji: false, showTranslation: false }}
-                                    className="items-center text-sm font-black text-gray-900 dark:text-white"
-                                />
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {selectedTokens.length > 0 && !disabled && (
-                <div className="flex justify-end">
-                    <button
-                        type="button"
-                        onClick={() => onChange([])}
-                        className="text-xs font-bold text-gray-400 hover:text-rose-600 transition dark:hover:text-rose-400"
-                    >
-                        Kosongkan susunan
-                    </button>
-                </div>
-            )}
-
-            <div className="flex min-h-16 flex-wrap content-start justify-center gap-2 pt-1">
-                {availableTokens.map((token) => (
-                    <button
-                        key={token.id}
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => onChange([...selected, token.id])}
-                        className="h-fit rounded-xl border border-gray-300 bg-white px-3.5 py-2 text-sm font-black text-gray-900 shadow-[0_2px_0_#d1d5db] transition hover:-translate-y-0.5 hover:border-sky-400 hover:bg-sky-50/40 active:translate-y-0.5 active:shadow-none dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:hover:border-sky-600"
-                    >
-                        <JapaneseReading
-                            japanese={token.text}
-                            reading={token.reading}
-                            forcePreferences={{ showRomaji: false, showTranslation: false }}
-                            className="items-center text-gray-900 dark:text-white font-japanese"
-                        />
-                    </button>
-                ))}
-            </div>
-        </div>
+        <SentenceBuilder
+            tokens={question?.tokens || []}
+            selectedIds={selectedIds}
+            disabled={disabled}
+            onChange={onChange}
+            theme="sky"
+        />
     );
 }
 
@@ -507,6 +517,42 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
     const question = stage?.questions?.[questionIndex];
     const answeredBeforeCurrent = stages.slice(0, stageIndex).reduce((total, item) => total + (item?.questions?.length || 0), 0) + questionIndex;
 
+    const {
+        hasCheckpoint,
+        initialCheckpointData,
+        saveCheckpoint,
+        clearCheckpoint,
+        dismissResume,
+        formattedSavedTime,
+    } = useQuizCheckpoint({
+        quizType: 'grammar',
+        quizId: quiz?.id,
+        enabled: persist,
+    });
+
+    const [isResumeModalOpen, setIsResumeModalOpen] = useState(() => {
+        return Boolean(hasCheckpoint && persist && (initialCheckpointData?.stageIndex > 0 || initialCheckpointData?.questionIndex > 0));
+    });
+
+    const handleResumeCheckpoint = () => {
+        if (initialCheckpointData) {
+            setStageIndex(initialCheckpointData.stageIndex || 0);
+            setQuestionIndex(initialCheckpointData.questionIndex || 0);
+            if (initialCheckpointData.session) setSession(initialCheckpointData.session);
+            setScreen('question');
+        }
+        setIsResumeModalOpen(false);
+        dismissResume();
+    };
+
+    const handleRestartCheckpoint = () => {
+        clearCheckpoint();
+        setStageIndex(0);
+        setQuestionIndex(0);
+        setScreen('intro');
+        setIsResumeModalOpen(false);
+    };
+
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
     const hasPushedStateRef = useRef(false);
 
@@ -655,12 +701,20 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
         }
 
         if (questionIndex < stage.questions.length - 1) {
-            setQuestionIndex((index) => index + 1);
+            const nextQ = questionIndex + 1;
+            setQuestionIndex(nextQ);
+            if (persist) {
+                saveCheckpoint({ stageIndex, questionIndex: nextQ, session });
+            }
             return;
         }
         if (stageIndex < quiz.stages.length - 1) {
-            setStageIndex((index) => index + 1);
+            const nextStage = stageIndex + 1;
+            setStageIndex(nextStage);
             setQuestionIndex(0);
+            if (persist) {
+                saveCheckpoint({ stageIndex: nextStage, questionIndex: 0, session });
+            }
             return;
         }
         if (persist) {
@@ -673,6 +727,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
                     submission_token: session.submission_token,
                     module_flow: true,
                 });
+                clearCheckpoint();
                 setResult({ correct: data.correct_count, total: data.total_questions, xp: data.xp_earned, score: data.score });
             } catch (error) {
                 setRequestError(error.response?.data?.message || 'Hasil Grammar gagal disimpan.');
@@ -686,6 +741,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
     };
 
     const restart = () => {
+        clearCheckpoint();
         correctQuestionIds.current = new Set();
         firstAttemptedIds.current = new Set();
         setResult({ correct: 0, total: 0, xp: 0 });
@@ -706,6 +762,21 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
                 <QuizActionButton onClick={onClose} className="mt-5 flex items-center gap-2 text-xs">
                     <ArrowBackIcon sx={{ fontSize: 16 }} /> {persist ? 'Kembali ke Roadmap' : 'Kembali ke Builder'}
                 </QuizActionButton>
+            </div>
+        );
+    }
+
+    if (isResumeModalOpen && initialCheckpointData) {
+        return (
+            <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center p-4 bg-[#f5f8f6] dark:bg-gray-950 text-gray-900 dark:text-white">
+                <ResumeQuizModal
+                    isOpen={true}
+                    onResume={handleResumeCheckpoint}
+                    onRestart={handleRestartCheckpoint}
+                    savedTimeFormatted={formattedSavedTime}
+                    quizTitle={quiz?.title || (quiz?.pattern ? `Tata Bahasa: ${quiz.pattern}` : 'Kuis Tata Bahasa')}
+                    currentStepDescription={`Tahap ${(initialCheckpointData.stageIndex || 0) + 1}, Soal ${(initialCheckpointData.questionIndex || 0) + 1}`}
+                />
             </div>
         );
     }

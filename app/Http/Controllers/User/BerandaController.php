@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Berita;
 use App\Models\BroadcastPopup;
 use App\Models\DeckPresentasi;
+use App\Models\HariModul;
 use App\Models\KodeAkses;
 use App\Models\Kosakata;
 use App\Models\Kuis;
@@ -16,6 +17,7 @@ use App\Models\PengerjaanKuis;
 use App\Models\PenukaranKodeAkses;
 use App\Models\ProgramPembelajaran;
 use App\Models\ProgresHariModul;
+use App\Models\ReviewSoal;
 use App\Services\AksesKuisPenggunaService;
 use App\Services\AksesLanggananService;
 use App\Services\AksesPremiumService;
@@ -24,6 +26,7 @@ use App\Services\NotifikasiPenggunaService;
 use App\Services\QuickQuizSessionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -110,6 +113,7 @@ class BerandaController extends Controller
             'quickQuiz' => $quickQuiz->summary($user),
             'lastCompletedQuiz' => $this->lastCompletedQuizPayload($user->id),
             'dailyGoal' => $this->dailyGoalPayload($user->id),
+            'weakspotSummary' => $this->weakspotSummaryPayload($user->id),
         ]);
     }
 
@@ -248,6 +252,9 @@ class BerandaController extends Controller
             ->whereDate('completed_at', $today)
             ->count();
 
+        $defaultDay = HariModul::query()->where('status', 'published')->orderBy('id')->first();
+        $mixedQuizUrl = $defaultDay ? route('user.kuis-campuran.show', $defaultDay->id) : route('user.quizzes.index');
+
         return [
             'xp_target' => $xpTarget,
             'xp_earned' => $xpEarned,
@@ -256,7 +263,28 @@ class BerandaController extends Controller
             'sessions_completed' => $completedSessions,
             'sessions_done' => $completedSessions >= 1,
             'completed' => $xpEarned >= $xpTarget && $completedSessions >= 1,
+            'quiz_url' => $mixedQuizUrl,
         ];
+    }
+
+    private function weakspotSummaryPayload(int $userId): array
+    {
+        return Cache::remember("user-weakspot-summary:{$userId}", 45, function () use ($userId) {
+            $failedCount = ReviewSoal::query()
+                ->where('user_id', $userId)
+                ->where(function ($q) {
+                    $q->where('wrong_count', '>', 0)
+                        ->orWhere('last_result', 'incorrect')
+                        ->orWhere('last_result', 'wrong');
+                })
+                ->count();
+
+            return [
+                'has_weakspot' => $failedCount > 0,
+                'count' => $failedCount,
+                'url' => route('user.weakspot.show'),
+            ];
+        });
     }
 
     private function thumbnailProgramUrl(?string $thumbnailUrl): ?string

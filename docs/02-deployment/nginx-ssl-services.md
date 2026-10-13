@@ -1,5 +1,8 @@
 # Nginx, TLS, Scheduler, dan Service
 
+> **Catatan Alur Terpadu:**  
+> Untuk panduan langkah-demi-langkah setup VPS Debian secara utuh dari awal hingga akhir, silakan gunakan [Panduan Deployment VPS Debian](vps-debian.md#8-nginx-tls-dan-proses-background). Dokumen ini berfungsi sebagai referensi mendalam arsitektur service.
+
 ## Virtual Host Aplikasi
 
 Buat `/etc/nginx/sites-available/toku-up`:
@@ -21,6 +24,9 @@ server {
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_buffer_size 64k;
+        fastcgi_buffers 16 32k;
+        fastcgi_busy_buffers_size 64k;
     }
 
     location ~ /\. {
@@ -41,6 +47,15 @@ sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx
 ```
+
+> **Catatan Pencegahan 502 Bad Gateway (`upstream sent too big header`):**  
+> Jika terjadi error 502 setelah login Google OAuth, buka kembali file `/etc/nginx/sites-enabled/project_japan_v2` (atau `/etc/nginx/sites-available/toku-up`) pada blok PHP dan pastikan tertulis seperti ini:
+> ```nginx
+>         fastcgi_buffer_size 64k;
+>         fastcgi_buffers 16 32k;
+>         fastcgi_busy_buffers_size 64k;
+> ```
+> Lalu jalankan kembali `sudo nginx -t && sudo systemctl reload nginx`.
 
 ## TLS
 

@@ -16,6 +16,8 @@ import HighlightedLearningText from '@/Components/Features/Learning/HighlightedL
 import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
 import ContextualFeedbackPrompt from '@/Components/Features/Feedback/ContextualFeedbackPrompt';
 import { pushAnalyticsEvent } from '@/lib/analytics';
+import useQuizCheckpoint from '@/Hooks/useQuizCheckpoint';
+import ResumeQuizModal from '@/Components/Features/Quiz/ResumeQuizModal';
 
 // MUI Icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -171,6 +173,59 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
     const correctMapRef = useRef({});
     const practiceResumeRef = useRef('next');
     const handwritingReviewRecordedRef = useRef(false);
+
+    const isWeakspotQuiz = Boolean(quiz?.is_weakspot || quiz?.quiz_kind === 'weakspot');
+
+    const {
+        hasCheckpoint,
+        initialCheckpointData,
+        saveCheckpoint,
+        clearCheckpoint,
+        dismissResume,
+        formattedSavedTime,
+    } = useQuizCheckpoint({
+        quizType: 'vocab',
+        quizId: isWeakspotQuiz ? null : quiz?.id,
+        enabled: Boolean(quiz?.id) && !isWeakspotQuiz,
+    });
+
+    const [isResumeModalOpen, setIsResumeModalOpen] = useState(() => {
+        if (isWeakspotQuiz || !hasCheckpoint) return false;
+        return Boolean(initialCheckpointData?.currentIndex > 0 || (initialCheckpointData?.answerEvents && initialCheckpointData.answerEvents.length > 0));
+    });
+
+    const handleResumeCheckpoint = () => {
+        if (initialCheckpointData) {
+            if (typeof initialCheckpointData.currentIndex === 'number') {
+                setCurrentIndex(initialCheckpointData.currentIndex);
+            }
+            if (typeof initialCheckpointData.lives === 'number') {
+                setLives(initialCheckpointData.lives);
+            }
+            if (typeof initialCheckpointData.score === 'number') {
+                setScore(initialCheckpointData.score);
+            }
+            if (Array.isArray(initialCheckpointData.completedIds)) {
+                setCompletedOriginalQuestionIds(new Set(initialCheckpointData.completedIds));
+            }
+            if (Array.isArray(initialCheckpointData.answerEvents)) {
+                answerEventsRef.current = initialCheckpointData.answerEvents;
+            }
+            if (initialCheckpointData.answerLog) {
+                answerLogRef.current = initialCheckpointData.answerLog;
+            }
+            if (initialCheckpointData.correctMap) {
+                correctMapRef.current = initialCheckpointData.correctMap;
+            }
+        }
+        setIsResumeModalOpen(false);
+        dismissResume();
+    };
+
+    const handleRestartCheckpoint = () => {
+        clearCheckpoint();
+        setIsResumeModalOpen(false);
+    };
 
     // Animasi state
     const [shakeKey, setShakeKey] = useState(0); // Trigger shake animation
@@ -365,6 +420,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
             });
 
             setAttemptResult(response.data || null);
+            clearCheckpoint();
             pushAnalyticsEvent('quiz_completed', {
                 quiz_type: quiz?.quiz_kind || quiz?.type || 'standard',
                 passed: response.data?.passed === true,
@@ -426,7 +482,17 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
             return;
         }
 
-        setCurrentIndex(prev => prev + 1);
+        const nextIdx = currentIndex + 1;
+        setCurrentIndex(nextIdx);
+        saveCheckpoint({
+            currentIndex: nextIdx,
+            lives,
+            score,
+            completedIds: Array.from(completedOriginalQuestionIds),
+            answerEvents: answerEventsRef.current,
+            answerLog: answerLogRef.current,
+            correctMap: correctMapRef.current,
+        });
         setSelectedAnswer(null);
         setTextAnswer('');
         setAnswerFeedback(null);
@@ -447,7 +513,17 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
             return;
         }
 
-        setCurrentIndex((prev) => Math.min(prev + 1, questions.length - 1));
+        const nextIdx = Math.min(currentIndex + 1, questions.length - 1);
+        setCurrentIndex(nextIdx);
+        saveCheckpoint({
+            currentIndex: nextIdx,
+            lives,
+            score,
+            completedIds: Array.from(completedOriginalQuestionIds),
+            answerEvents: answerEventsRef.current,
+            answerLog: answerLogRef.current,
+            correctMap: correctMapRef.current,
+        });
     };
 
     const continueWithHandwriting = async () => {
@@ -639,6 +715,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
             : (!finishedByTimeout && lives > 0 && hasAnsweredAll && finalScore >= passingScore);
         const resultTotalQuestions = attemptResult?.total_questions ?? totalQuestionCount;
         const retryQuiz = () => {
+            clearCheckpoint();
             if (typeof window !== 'undefined') {
                 router.get(window.location.href);
             }
@@ -941,6 +1018,23 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                         </button>
                     </div>
                 </main>
+                {exitConfirmation}
+            </div>
+        );
+    }
+
+    if (isResumeModalOpen && initialCheckpointData) {
+        return (
+            <div className="flex min-h-[100dvh] flex-col items-center justify-center p-4 font-sans bg-gray-50 dark:bg-gray-950">
+                <Head title={`Lanjutkan ${quiz?.title || 'Kuis'}`} />
+                <ResumeQuizModal
+                    isOpen={true}
+                    onResume={handleResumeCheckpoint}
+                    onRestart={handleRestartCheckpoint}
+                    savedTimeFormatted={formattedSavedTime}
+                    quizTitle={quiz?.title || 'Kuis Harian'}
+                    currentStepDescription={`Soal ${(initialCheckpointData.currentIndex || 0) + 1} dari ${totalQuestionCount}`}
+                />
                 {exitConfirmation}
             </div>
         );

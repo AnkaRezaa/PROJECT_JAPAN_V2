@@ -158,12 +158,110 @@ Jangan memberi `777` pada repository atau storage.
 
 ## 8. Nginx, TLS, dan Proses Background
 
-Ikuti [Nginx, TLS, dan service](nginx-ssl-services.md), kemudian:
+### 8.1 Virtual Host Nginx
+Buat file virtual host `/etc/nginx/sites-available/toku-up` (atau `/etc/nginx/sites-available/project_japan_v2`):
+
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+    server_name rezawalker.web.id www.rezawalker.web.id;
+
+    root /var/www/project_japan_v2/public;
+    index index.php;
+    client_max_body_size 25m;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_buffer_size 64k;
+        fastcgi_buffers 16 32k;
+        fastcgi_busy_buffers_size 64k;
+    }
+
+    # Proxy WebSocket Reverb
+    location /app {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_pass http://127.0.0.1:8080;
+    }
+
+    location /apps {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_pass http://127.0.0.1:8080;
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+
+    location ~* \.(env|log|sql|bak)$ {
+        deny all;
+    }
+}
+```
+
+Aktifkan konfigurasi dan verifikasi:
 
 ```bash
+sudo ln -sf /etc/nginx/sites-available/toku-up /etc/nginx/sites-enabled/project_japan_v2
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+> **PENTING — Mitigasi 502 Bad Gateway (`upstream sent too big header`):**  
+> Jika setelah login Google OAuth muncul error 502 Bad Gateway, buka kembali file `/etc/nginx/sites-enabled/project_japan_v2` pada baris 35 (blok PHP) dan pastikan tertulis seperti ini:
+> ```nginx
+>         fastcgi_buffer_size 64k;
+>         fastcgi_buffers 16 32k;
+>         fastcgi_busy_buffers_size 64k;
+> ```
+> Lalu jalankan kembali `sudo nginx -t && sudo systemctl reload nginx`.
+
+### 8.2 Sertifikat TLS (HTTPS)
+Pasang sertifikat SSL menggunakan Certbot:
+
+```bash
+sudo certbot --nginx -d rezawalker.web.id -d www.rezawalker.web.id
+sudo certbot renew --dry-run
+```
+
+### 8.3 Service Reverb & Scheduler Background
+Pasang systemd service Reverb dan crontab scheduler:
+
+```bash
+cd /var/www/project_japan_v2
+sudo cp deployment/systemd/toku-up-reverb.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now toku-up-reverb
+```
+
+Tambahkan crontab scheduler user `webtest`:
+```bash
+sudo crontab -u webtest -e
+```
+Isi baris berikut:
+```cron
+* * * * * cd /var/www/project_japan_v2 && /usr/bin/php artisan schedule:run >> /dev/null 2>&1
+```
+
+### 8.4 Optimasi dan Restart Layanan
+```bash
+cd /var/www/project_japan_v2
 php artisan optimize:clear
 php artisan optimize
-sudo systemctl restart php8.3-fpm
+sudo systemctl restart php8.3-fpm toku-up-reverb
 sudo systemctl reload nginx
 ```
 

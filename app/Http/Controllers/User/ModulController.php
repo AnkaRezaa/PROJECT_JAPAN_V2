@@ -26,6 +26,7 @@ use App\Services\PenilaianJawabanKuisService;
 use App\Services\ProgresRoadmapService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -177,7 +178,21 @@ class ModulController extends Controller
                 ->whereIn('module_day_id', $modul->days->pluck('id'))
                 ->whereNotNull('completed_at')
                 ->pluck('module_day_id');
-            $days = $modul->days->values()->map(function (HariModul $day, int $dayIndex) use ($program, $modul, $weekCanOpen, $completedDayIds, $aksesKuis, $user) {
+
+            $allQuizIdsInModul = $modul->days->flatMap->quizzes->pluck('id')->unique();
+            $mixedAttemptsByQuiz = PengerjaanKuis::query()
+                ->where('user_id', $user->id)
+                ->whereIn('quiz_id', $allQuizIdsInModul)
+                ->where('status', 'completed')
+                ->whereExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('dokkai_attempt_answers')
+                        ->whereColumn('dokkai_attempt_answers.attempt_id', 'attempts.id');
+                })
+                ->get(['id', 'quiz_id', 'score'])
+                ->groupBy('quiz_id');
+
+            $days = $modul->days->values()->map(function (HariModul $day, int $dayIndex) use ($program, $modul, $weekCanOpen, $completedDayIds, $mixedAttemptsByQuiz, $aksesKuis, $user) {
                 $checkpointQuiz = $day->checkpointQuiz?->status === 'published' && $day->checkpointQuiz?->questions?->isNotEmpty()
                     ? $day->checkpointQuiz
                     : null;
@@ -238,6 +253,12 @@ class ModulController extends Controller
                     })
                     ->values();
                 $checkpointBestScore = $day->quizzes->firstWhere('id', $checkpointQuiz?->id)?->attempts->max('score');
+                $targetQuizId = $checkpointQuiz?->id ?? $day->quizzes->first()?->id;
+                $dayMixedAttempts = $targetQuizId ? ($mixedAttemptsByQuiz->get($targetQuizId) ?? collect()) : collect();
+                $mixedBestScore = $dayMixedAttempts->isNotEmpty() ? $dayMixedAttempts->max('score') : null;
+                $mixedPassingScore = (int) ($checkpointQuiz->passing_score ?? 70);
+                $mixedProgressStatus = $mixedBestScore === null ? 'not_started' : ($this->quizProgressStatus($mixedBestScore, $mixedPassingScore));
+                $mixedDone = $mixedProgressStatus === 'passed';
                 $hasContent = $presentationCount > 0 || $flashcardCount > 0 || $questionCount > 0 || $day->vocabulary->isNotEmpty();
                 $completionMethod = $checkpointQuiz ? 'checkpoint' : ($flashcardCount > 0 ? 'flashcard' : null);
                 $isReady = $hasContent && $completionMethod;
@@ -321,6 +342,23 @@ class ModulController extends Controller
                     'primary_url' => $checkpointQuiz && $quizAccess['allowed']
                         ? route('user.quizzes.show', $checkpointQuiz->id)
                         : null,
+                    'mixed_quiz_summary' => [
+                        'available' => $isReady,
+                        'locked' => ! $weekCanOpen || ! $previousDayDone || ! $isReady || ($checkpointQuiz && ! $quizAccess['allowed']),
+                        'lock_reason' => ! $hasContent
+                            ? 'Konten Hari ini belum tersedia.'
+                            : (! $isReady
+                                ? 'Kuis checkpoint belum siap.'
+                                : ($checkpointQuiz && ! $quizAccess['allowed']
+                                    ? $quizAccess['message']
+                                    : (! $weekCanOpen || ! $previousDayDone
+                                        ? 'Selesaikan Hari sebelumnya.'
+                                        : null))),
+                        'best_score' => $mixedBestScore,
+                        'passing_score' => $mixedPassingScore,
+                        'progress_status' => $mixedProgressStatus,
+                        'is_done' => $mixedDone,
+                    ],
                 ];
             });
             $allDaysCompleted = $days->isNotEmpty() && $days->every(fn (array $day) => $day['status'] === 'done');
@@ -422,6 +460,27 @@ class ModulController extends Controller
         $remainingWeeks = max(0, $weeks->count() - $completedWeekCount);
         $examTargetPayload = null;
 
+        $dokkaiItems = $weeks->flatMap(function ($week) {
+            $weekLocked = in_array($week['status'], ['locked', 'unavailable'], true);
+
+            return collect($week['days'] ?? [])->flatMap(function ($day) use ($week, $weekLocked) {
+                $dayLocked = $weekLocked || in_array($day['status'], ['locked', 'unavailable'], true);
+
+                return collect($day['dokkai_lessons'] ?? [])->map(function ($dokkai) use ($week, $day, $dayLocked) {
+                    return array_merge($dokkai, [
+                        'week_number' => $week['week_number'],
+                        'week_title' => $week['display_title'] ?? $week['title'],
+                        'day_number' => $day['day_number'],
+                        'day_title' => $day['title'],
+                        'locked' => $dayLocked,
+                        'lock_reason' => $dayLocked ? ($day['lock_reason'] ?? $week['lock_reason'] ?? 'Materi belum terbuka.') : null,
+                    ]);
+                });
+            });
+        })->values();
+        $dokkaiCount = $dokkaiItems->count();
+        $dokkaiCompletedCount = $dokkaiItems->where('done', true)->count();
+
         if ($examTarget) {
             $daysRemaining = (int) today()->diffInDays($examTarget->exam_date, false);
             $paceMessage = match (true) {
@@ -472,6 +531,9 @@ class ModulController extends Controller
                         ->where('status', 'published')
                         ->whereHas('questions')
                         ->count(),
+                    'dokkai_count' => $dokkaiCount,
+                    'dokkai_completed_count' => $dokkaiCompletedCount,
+                    'dokkai_items' => $dokkaiItems,
                     'presentations_url' => route('user.modul.program.presentasi', $program->slug),
                     'vocabulary_url' => route('user.modul.program.kosakata', $program->slug),
                     'quizzes_url' => $resourceWeek['quiz_url'] ?? null,

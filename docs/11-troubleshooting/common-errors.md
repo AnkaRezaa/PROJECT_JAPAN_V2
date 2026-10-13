@@ -95,6 +95,22 @@ URI Google Console dan `.env` harus identik termasuk scheme, host, port, path, d
 
 Biasanya diblokir extension/privacy filter browser dan bukan akar kegagalan OAuth. Fokus pada error OAuth utama, coba Incognito tanpa extension, dan cek callback.
 
+### 502 Bad Gateway setelah Login OAuth (`upstream sent too big header`)
+
+Header response Laravel/Inertia yang membawa cookie session dan preload headers melebihi buffer default Nginx FastCGI. Buka kembali file `/etc/nginx/sites-enabled/project_japan_v2` (atau vhost aktif) pada baris `location ~ \.php$` dan pastikan tertulis seperti ini:
+
+```nginx
+        fastcgi_buffer_size 64k;
+        fastcgi_buffers 16 32k;
+        fastcgi_busy_buffers_size 64k;
+```
+
+Lalu jalankan kembali:
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
 ## Database
 
 ### Table tidak ditemukan
