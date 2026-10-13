@@ -276,6 +276,16 @@ class SoalKuisService
             $query->whereNotNull('reading')->where('reading', '!=', '');
         }
 
+        if ($quiz->module_day_id && $selectedIds->isEmpty()) {
+            $dayScopedQuery = (clone $query)->whereHas('days', function ($q) use ($quiz) {
+                $q->where('module_days.id', $quiz->module_day_id);
+            });
+
+            if ($dayScopedQuery->count() >= 2) {
+                $query = $dayScopedQuery;
+            }
+        }
+
         $pool = $selectedIds->isNotEmpty()
             ? $query->get()
             : $query->inRandomOrder()->limit(max(20, $count * 4))->get();

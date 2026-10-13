@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\DokkaiAttemptAnswer;
+use App\Models\HariModul;
+use App\Models\JawabanPengerjaanKuis;
 use App\Models\Kuis;
 use App\Models\LogReward;
 use App\Models\Modul;
@@ -9,8 +12,11 @@ use App\Models\PengerjaanKuis;
 use App\Models\Pengguna;
 use App\Models\ProgramPembelajaran;
 use App\Models\Progres;
+use App\Models\ReviewSoal;
+use App\Models\Soal;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 class RingkasanProgresPenggunaService
 {
@@ -59,13 +65,14 @@ class RingkasanProgresPenggunaService
             'jlptJourney' => $learningJourneys,
             'recentActivity' => $this->recentActivity($user)->values()->all(),
             'skills' => $this->topicActivity($modulesDone, $quizzesDone, $completedModules, $completedQuizzes),
+            'category_cards' => $this->categoryCards($user, $modulesDone, $quizzesDone),
             'next_learning' => $this->nextLearning($user, $completedModuleIds),
         ];
     }
 
     private function cacheKey(Pengguna $user): string
     {
-        return "user-progress-summary:v3:{$user->id}";
+        return "user-progress-summary:v8:{$user->id}";
     }
 
     private function weekActivity(Pengguna $user): Collection
@@ -205,28 +212,22 @@ class RingkasanProgresPenggunaService
 
     private function topicActivity(int $modulesDone, int $quizzesDone, Collection $modules, Collection $quizzes): array
     {
-        $grammarCount = $modulesDone * 5;
-        $kanjiCount = $modulesDone * 2;
-        $vocabCount = $modulesDone * 8;
-        $listenCount = $quizzesDone * 5;
-        $readCount = ($modulesDone * 3) + ($quizzesDone * 3);
+        $vocabCount = ($modulesDone * 8) + ($quizzesDone * 5);
+        $grammarCount = ($modulesDone * 6) + ($quizzesDone * 5);
+        $readCount = ($modulesDone * 4) + ($quizzesDone * 3);
 
-        $grammarCount += $modules->filter(fn ($module) => $this->titleContains($module->title, ['grammar', 'partikel', 'pola']))->count() * 15;
-        $kanjiCount += $modules->filter(fn ($module) => $this->titleContains($module->title, ['kanji']))->count() * 15;
-        $vocabCount += $modules->filter(fn ($module) => $this->titleContains($module->title, ['vocab', 'kosakata']))->count() * 15;
-        $listenCount += $modules->filter(fn ($module) => $this->titleContains($module->title, ['listen', 'audio']))->count() * 20;
+        $vocabCount += $modules->filter(fn ($module) => $this->titleContains($module->title, ['vocab', 'kosakata', 'kanji']))->count() * 15;
+        $grammarCount += $modules->filter(fn ($module) => $this->titleContains($module->title, ['grammar', 'partikel', 'pola', 'bunpo']))->count() * 15;
         $readCount += $modules->filter(fn ($module) => $this->titleContains($module->title, ['read', 'baca', 'dokkai']))->count() * 15;
 
+        $vocabCount += $quizzes->filter(fn ($quiz) => $this->titleContains($this->quizSkillText($quiz), ['vocab', 'kosakata', 'kanji']))->count() * 10;
         $grammarCount += $quizzes->filter(fn ($quiz) => $this->titleContains($this->quizSkillText($quiz), ['grammar', 'partikel']))->count() * 10;
-        $vocabCount += $quizzes->filter(fn ($quiz) => $this->titleContains($this->quizSkillText($quiz), ['vocab', 'kosakata']))->count() * 10;
-        $kanjiCount += $quizzes->filter(fn ($quiz) => $this->titleContains($this->quizSkillText($quiz), ['kanji']))->count() * 10;
+        $readCount += $quizzes->filter(fn ($quiz) => $this->titleContains($this->quizSkillText($quiz), ['dokkai', 'baca']))->count() * 10;
 
         return [
-            ['label' => 'Grammar', 'value' => min(100, $grammarCount), 'color' => 'bg-red-500'],
-            ['label' => 'Kanji', 'value' => min(100, $kanjiCount), 'color' => 'bg-blue-500'],
-            ['label' => 'Kosakata', 'value' => min(100, $vocabCount), 'color' => 'bg-green-500'],
-            ['label' => 'Listening', 'value' => min(100, $listenCount), 'color' => 'bg-amber-500'],
-            ['label' => 'Reading', 'value' => min(100, $readCount), 'color' => 'bg-purple-500'],
+            ['label' => 'Kosakata & Kanji', 'value' => min(100, $vocabCount), 'color' => 'bg-sky-500'],
+            ['label' => 'Tata Bahasa (Bunpo)', 'value' => min(100, $grammarCount), 'color' => 'bg-emerald-500'],
+            ['label' => 'Pemahaman Bacaan (Dokkai)', 'value' => min(100, $readCount), 'color' => 'bg-amber-500'],
         ];
     }
 
@@ -244,5 +245,152 @@ class RingkasanProgresPenggunaService
     private function quizSkillText(Kuis $quiz): string
     {
         return trim($quiz->type.' '.($quiz->module?->title ?? ''));
+    }
+
+    private function categoryCards(Pengguna $user, int $modulesDone, int $quizzesDone): array
+    {
+        // 1. Ambil ID Soal biasa yang pernah gagal dijawab (dari ReviewSoal dan JawabanPengerjaanKuis)
+        $failedSoalFromReviews = ReviewSoal::query()
+            ->where('user_id', $user->id)
+            ->where(function ($q) {
+                $q->where('wrong_count', '>', 0)
+                    ->orWhere('last_result', 'incorrect')
+                    ->orWhere('last_result', 'wrong');
+            })
+            ->pluck('question_id')
+            ->all();
+
+        $failedSoalFromAnswers = JawabanPengerjaanKuis::query()
+            ->whereHas('attempt', fn ($q) => $q->where('user_id', $user->id))
+            ->where('is_correct', false)
+            ->pluck('question_id')
+            ->all();
+
+        $allFailedSoalIds = array_values(array_unique(array_merge($failedSoalFromReviews, $failedSoalFromAnswers)));
+
+        // 2. Ambil soal Dokkai yang pernah salah dijawab
+        $failedDokkaiQuestions = DokkaiAttemptAnswer::query()
+            ->whereHas('attempt', fn ($q) => $q->where('user_id', $user->id))
+            ->where('is_correct', false)
+            ->with('question.passage:id,title')
+            ->latest('id')
+            ->get()
+            ->pluck('question')
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        $failedDokkaiCount = $failedDokkaiQuestions->count();
+
+        // 3. Ambil soal Tata Bahasa (Bunpo) yang pernah salah
+        $failedGrammarQuestions = empty($allFailedSoalIds) ? collect() : Soal::query()
+            ->whereIn('id', $allFailedSoalIds)
+            ->whereHas('quiz', fn ($q) => $q->where('type', 'grammar'))
+            ->latest('id')
+            ->get(['id', 'question_text', 'question_reading']);
+
+        $failedGrammarCount = $failedGrammarQuestions->count();
+
+        // 4. Ambil soal Kosakata & Kanji yang pernah salah
+        $failedKosakataQuestions = empty($allFailedSoalIds) ? collect() : Soal::query()
+            ->whereIn('id', $allFailedSoalIds)
+            ->whereHas('quiz', fn ($q) => $q->where('type', '!=', 'grammar'))
+            ->latest('id')
+            ->get(['id', 'question_text', 'question_reading']);
+
+        $failedKosakataCount = $failedKosakataQuestions->count();
+
+        // 5. Hitung tingkat akurasi / penguasaan riil dari riwayat jawaban pengguna
+        $vocabStats = JawabanPengerjaanKuis::query()
+            ->whereHas('attempt', fn ($q) => $q->where('user_id', $user->id))
+            ->whereHas('question.quiz', fn ($q) => $q->where('type', '!=', 'grammar'))
+            ->selectRaw('COUNT(*) as total, SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as correct')
+            ->first();
+        $vocabTotal = (int) ($vocabStats?->total ?? 0);
+        $vocabCorrect = (int) ($vocabStats?->correct ?? 0);
+        $vocabPct = $vocabTotal > 0
+            ? (int) round(($vocabCorrect / $vocabTotal) * 100)
+            : ($failedKosakataCount > 0 ? max(20, 100 - ($failedKosakataCount * 10)) : 100);
+
+        $grammarStats = JawabanPengerjaanKuis::query()
+            ->whereHas('attempt', fn ($q) => $q->where('user_id', $user->id))
+            ->whereHas('question.quiz', fn ($q) => $q->where('type', 'grammar'))
+            ->selectRaw('COUNT(*) as total, SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as correct')
+            ->first();
+        $grammarTotal = (int) ($grammarStats?->total ?? 0);
+        $grammarCorrect = (int) ($grammarStats?->correct ?? 0);
+        $grammarPct = $grammarTotal > 0
+            ? (int) round(($grammarCorrect / $grammarTotal) * 100)
+            : ($failedGrammarCount > 0 ? max(20, 100 - ($failedGrammarCount * 10)) : 100);
+
+        $dokkaiStats = DokkaiAttemptAnswer::query()
+            ->whereHas('attempt', fn ($q) => $q->where('user_id', $user->id))
+            ->selectRaw('COUNT(*) as total, SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as correct')
+            ->first();
+        $dokkaiTotal = (int) ($dokkaiStats?->total ?? 0);
+        $dokkaiCorrect = (int) ($dokkaiStats?->correct ?? 0);
+        $dokkaiPct = $dokkaiTotal > 0
+            ? (int) round(($dokkaiCorrect / $dokkaiTotal) * 100)
+            : ($failedDokkaiCount > 0 ? max(20, 100 - ($failedDokkaiCount * 10)) : 100);
+
+        // Helper untuk memformat cuplikan butir soal kelemahan riil
+        $buildWeakspots = function ($questions, string $defaultTitle) {
+            if ($questions->isEmpty()) {
+                return [
+                    ['title' => $defaultTitle, 'is_cleared' => true],
+                ];
+            }
+
+            return $questions->take(3)->map(function ($item) {
+                $text = $item->question_text ?? ($item->passage?->title ?? 'Soal Latihan');
+
+                return [
+                    'title' => Str::limit(strip_tags((string) $text), 50),
+                    'is_cleared' => false,
+                ];
+            })->values()->all();
+        };
+
+        return [
+            [
+                'id' => 'vocab',
+                'title' => 'Kosakata & Kanji',
+                'kanji_char' => '語',
+                'pct' => $vocabPct,
+                'theme' => 'sky',
+                'color' => '#0284c7',
+                'quiz_url' => route('user.weakspot.show', ['category' => 'vocab']),
+                'failed_count' => $failedKosakataCount,
+                'has_weakspot' => $failedKosakataCount > 0,
+                'weakspots' => $buildWeakspots($failedKosakataQuestions, 'Semua kosakata terkuasai dengan baik'),
+                'focus' => 'Fokus: perkuat hafalan kosakata dan kanji yang pernah keliru.',
+            ],
+            [
+                'id' => 'grammar',
+                'title' => 'Tata Bahasa (Bunpo)',
+                'kanji_char' => '文',
+                'pct' => $grammarPct,
+                'theme' => 'emerald',
+                'color' => '#10b981',
+                'quiz_url' => route('user.weakspot.show', ['category' => 'grammar']),
+                'failed_count' => $failedGrammarCount,
+                'has_weakspot' => $failedGrammarCount > 0,
+                'weakspots' => $buildWeakspots($failedGrammarQuestions, 'Pola kalimat tuntas dikuasai'),
+                'focus' => 'Fokus: latih pemahaman pola kalimat, partikel, dan susunan kata.',
+            ],
+            [
+                'id' => 'dokkai',
+                'title' => 'Pemahaman Bacaan (Dokkai)',
+                'kanji_char' => '読',
+                'pct' => $dokkaiPct,
+                'theme' => 'amber',
+                'color' => '#f59e0b',
+                'quiz_url' => route('user.weakspot.show', ['category' => 'dokkai']),
+                'failed_count' => $failedDokkaiCount,
+                'has_weakspot' => $failedDokkaiCount > 0,
+                'weakspots' => $buildWeakspots($failedDokkaiQuestions, 'Pemahaman wacana tuntas dikuasai'),
+                'focus' => 'Fokus: asah kemampuan membaca cepat dan analisis informasi wacana.',
+            ],
+        ];
     }
 }
