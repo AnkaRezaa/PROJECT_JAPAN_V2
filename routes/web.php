@@ -40,6 +40,7 @@ use App\Http\Controllers\User\DokkaiController;
 use App\Http\Controllers\User\ExamPortalController;
 use App\Http\Controllers\User\FlashcardController;
 use App\Http\Controllers\User\GrammarQuizController;
+use App\Http\Controllers\User\KuisCampuranController;
 use App\Http\Controllers\User\ModulController;
 use App\Http\Controllers\User\PapanPeringkatController;
 use App\Http\Controllers\User\PembelajaranController;
@@ -59,6 +60,7 @@ Route::post('/payments/midtrans/notification', [PembayaranMidtransController::cl
 Route::get('/', [HalamanController::class, 'home'])->name('home');
 Route::get('/about', [HalamanController::class, 'about'])->name('about');
 Route::get('/pricing', [HalamanController::class, 'pricing'])->name('pricing');
+Route::get('/katalog', [HalamanController::class, 'pricing'])->name('katalog');
 Route::get('/roadmap', [HalamanController::class, 'roadmap'])->name('roadmap');
 Route::get('/kelas/{programSlug}', [HalamanController::class, 'publicClass'])->name('public.classes.show');
 Route::get('/privacy-policy', [HalamanController::class, 'privacyPolicy'])->name('privacy-policy');
@@ -328,6 +330,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/dokkai-quizzes/{quiz}', [AdminDokkaiController::class, 'update'])->middleware('throttle:admin-builder')->name('dokkai-quizzes.update');
         Route::patch('/dokkai-quizzes/{quiz}/status', [AdminDokkaiController::class, 'updateStatus'])->name('dokkai-quizzes.status');
         Route::delete('/dokkai-quizzes/{quiz}', [AdminDokkaiController::class, 'destroy'])->name('dokkai-quizzes.destroy');
+        Route::get('/module-days/{moduleDay}/dokkai-quizzes/template', [AdminDokkaiController::class, 'template'])->name('dokkai-quizzes.template');
+        Route::post('/module-days/{moduleDay}/dokkai-quizzes/import/preview', [AdminDokkaiController::class, 'previewImport'])->middleware('throttle:admin-imports')->name('dokkai-quizzes.import.preview');
+        Route::post('/module-days/{moduleDay}/dokkai-quizzes/import', [AdminDokkaiController::class, 'import'])->middleware('throttle:admin-imports')->name('dokkai-quizzes.import');
 
         // LevelPembelajaran CRUD
         Route::apiResource('/levels', AdminLevelController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -403,6 +408,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dokkai-quizzes/{quiz}', [DokkaiController::class, 'payload'])->name('dokkai-quizzes.payload');
         Route::get('/dokkai/{quiz}', [DokkaiController::class, 'show'])->name('dokkai.show');
         Route::post('/dokkai-quizzes/{quiz}/submit', [DokkaiController::class, 'submit'])->middleware('throttle:learning-actions')->name('dokkai-quizzes.submit');
+        Route::get('/module-days/{moduleDay}/kuis-campuran', [KuisCampuranController::class, 'show'])->name('kuis-campuran.show');
+        Route::post('/module-days/{moduleDay}/kuis-campuran/submit', [KuisCampuranController::class, 'submit'])->middleware('throttle:learning-actions')->name('kuis-campuran.submit');
+        Route::get('/weakspot-quiz', [KuisCampuranController::class, 'showWeakspot'])->name('weakspot.show');
+        Route::post('/weakspot-quiz/submit', [KuisCampuranController::class, 'submitWeakspot'])->middleware('throttle:learning-actions')->name('weakspot.submit');
         Route::get('/exams', [ExamPortalController::class, 'index'])->name('exams.index');
         Route::get('/exams/library', [ExamPortalController::class, 'library'])->name('exams.library');
         Route::get('/exams/ranking', [ExamPortalController::class, 'ranking'])->middleware('throttle:exam-ranking')->name('exams.ranking');

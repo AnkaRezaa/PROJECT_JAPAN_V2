@@ -13,6 +13,7 @@ import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 import ShieldIcon from '@mui/icons-material/Shield';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import SchoolIcon from '@mui/icons-material/School';
+import ExploreIcon from '@mui/icons-material/Explore';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -453,7 +454,14 @@ export default function AuthenticatedLayout({ children }) {
     const userMenu = [
         { href: '/user/dashboard', activePaths: ['/user/dashboard'], icon: <DashboardIcon sx={{ fontSize: 22 }} />, label: 'Beranda' },
         { type: 'heading', label: 'Belajar' },
-        { href: '/user/kelas', activePaths: ['/user/kelas', '/user/modul', '/user/quizzes', '/user/flashcards', '/user/grammar-quizzes', '/user/dokkai'], icon: <SchoolIcon sx={{ fontSize: 22 }} />, label: 'Kelas' },
+        { href: '/user/kelas', activePaths: ['/user/kelas', '/user/modul', '/user/quizzes', '/user/flashcards', '/user/grammar-quizzes', '/user/dokkai'], icon: <SchoolIcon sx={{ fontSize: 22 }} />, label: 'Kelas Saya' },
+        {
+            href: '/katalog',
+            activePaths: ['/katalog', '/pricing'],
+            icon: <ExploreIcon sx={{ fontSize: 22 }} />,
+            label: 'Katalog Program',
+            className: '!text-amber-800 dark:!text-amber-300 !border-amber-300/40 dark:!border-amber-700/50 bg-amber-50/70 dark:bg-amber-950/25 hover:!bg-amber-100/80 dark:hover:!bg-amber-900/40 font-bold',
+        },
         { href: '/user/exams', activePaths: ['/user/exams'], icon: <FactCheckOutlinedIcon sx={{ fontSize: 22 }} />, label: 'Ujian', target: '_blank' },
         { href: '/user/review', activePaths: ['/user/review'], icon: <ReplayIcon sx={{ fontSize: 22 }} />, label: 'Review' },
         { type: 'heading', label: 'Perkembangan' },
@@ -590,7 +598,9 @@ export default function AuthenticatedLayout({ children }) {
         ['/user/flashcards', 'Latihan & Kuis'],
         ['/user/exams', 'Ujian'],
         ['/user/review', 'Review'],
-        ['/user/kelas', 'Kelas'],
+        ['/user/kelas', 'Kelas Saya'],
+        ['/katalog', 'Katalog Program'],
+        ['/pricing', 'Katalog Program'],
         ['/user/leaderboard', 'Peringkat'],
         ['/user/progress', 'Progres'],
         ['/user/news', 'Berita'],

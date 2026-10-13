@@ -32,7 +32,7 @@ class HalamanController extends Controller
             ->latest()
             ->first();
 
-        return Inertia::render('landingPage', [
+        return Inertia::render('LandingPage', [
             'programs' => $this->publicPricingPrograms($kelasPayload),
             'activePopup' => $activePopup ? [
                 'id' => $activePopup->id,
@@ -484,7 +484,9 @@ class HalamanController extends Controller
                         'dokkai' => Kuis::whereIn('module_id', $moduleIds)->where('type', 'dokkai')->where('status', 'published')->count(),
                     ],
                 ];
-            });
+            })
+            ->filter(fn ($item) => !empty($item['has_class_access']) || !empty($item['waiting_for_approval']) || !empty($item['refund_required']))
+            ->values();
 
         return Inertia::render('User/Kelas/KelasPage', [
             'programs' => $programs,

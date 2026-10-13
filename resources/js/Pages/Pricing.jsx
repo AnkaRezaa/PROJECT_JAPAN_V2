@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { usePage } from '@inertiajs/react';
 import { motion, useReducedMotion } from 'framer-motion';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -6,7 +6,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import GroupsIcon from '@mui/icons-material/Groups';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SchoolIcon from '@mui/icons-material/School';
-import { SeigaihaBand, ToriiIcon } from '@/Components/JapaneseIcons';
+import { SeigaihaBand } from '@/Components/JapaneseIcons';
 import Button from '@/Components/UI/Button';
 import Footer from '@/Components/Layout/GuestFooter';
 import GuestNavbar from '@/Components/Layout/GuestNavbar';
@@ -50,7 +50,7 @@ function ClassThumbnail({ program }) {
   const [failed, setFailed] = useState(false);
 
   return (
-    <div className="aspect-[16/8] overflow-hidden bg-[#102D29]">
+    <div className="aspect-[16/8] overflow-hidden bg-slate-800">
       {program.thumbnail_url && !failed ? (
         <img
           src={program.thumbnail_url}
@@ -68,11 +68,14 @@ function ClassThumbnail({ program }) {
   );
 }
 
-function PlanRow({ plan, auth }) {
+function PlanRow({ plan, auth, programSlug }) {
   const isMentored = plan.scope_type === 'kloter';
+  const targetHref = auth?.user
+    ? (programSlug ? route('user.modul.program', programSlug) : route('user.kelas.index'))
+    : route('register');
 
   return (
-    <div className="border-t border-white/10 py-5 first:border-t-0 first:pt-0 last:pb-0">
+    <div className="border-t border-slate-800 py-5 first:border-t-0 first:pt-0 last:pb-0">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -81,16 +84,16 @@ function PlanRow({ plan, auth }) {
               {plan.scope_label}
             </span>
           </div>
-          {plan.description && <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/[0.55]">{plan.description}</p>}
+          {plan.description && <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-300">{plan.description}</p>}
         </div>
         <div className="shrink-0 text-right">
           <p className="text-base font-black text-white">{plan.price_formatted}</p>
-          <p className="text-[11px] font-semibold text-white/50">{formatDuration(plan.duration_days)}</p>
+          <p className="text-[11px] font-semibold text-slate-400">{formatDuration(plan.duration_days)}</p>
         </div>
       </div>
 
-      <Button href={auth?.user ? route('user.kelas.index', { plan: plan.id }) : route('register')} className="mt-4 min-h-10 w-full !rounded-lg">
-        {auth?.user ? 'Pilih paket ini' : 'Daftar dan pilih kelas'}
+      <Button href={targetHref} className="mt-4 min-h-10 w-full !rounded-xl !bg-brand-600 !text-white hover:!bg-brand-500">
+        {auth?.user ? (isMentored ? 'Pilih Kloter & Daftar' : 'Beli & Mulai Belajar') : 'Daftar dan pilih kelas'}
       </Button>
     </div>
   );
@@ -98,21 +101,21 @@ function PlanRow({ plan, auth }) {
 
 function ClassContents({ modules = [] }) {
   if (modules.length === 0) {
-    return <p className="text-sm text-white/[0.55]">Materi preview sedang disiapkan.</p>;
+    return <p className="text-sm text-slate-300">Materi preview sedang disiapkan.</p>;
   }
 
   return (
     <details className="group/details">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
         <span>Lihat isi kelas ({modules.length} Week)</span>
         <span className="text-lg text-brand-300 transition-transform group-open/details:rotate-45">+</span>
       </summary>
-      <div className="mt-4 divide-y divide-white/10 border-y border-white/10">
+      <div className="mt-4 divide-y divide-slate-800 border-y border-slate-800">
         {modules.map((module) => (
           <div key={module.id} className="py-3">
             <p className="text-xs font-black uppercase text-brand-300">Week {module.week_number}</p>
             <p className="mt-1 text-sm font-bold text-white">{module.title}</p>
-            <p className="mt-1 text-xs leading-5 text-white/50">
+            <p className="mt-1 text-xs leading-5 text-slate-300">
               {module.presentations_count || 0} PPT
               {' · '}{module.flashcards_count || 0} set flashcard
               {' · '}{module.quizzes_count || 0} kuis
@@ -127,41 +130,53 @@ function ClassContents({ modules = [] }) {
 function ClassCard({ program, auth }) {
   const plans = program.payment_plans || [];
   const cheapestPlan = plans[0];
+  const hasMentoredPlan = plans.some((p) => p.scope_type === 'kloter');
+  const hasIndependentPlan = plans.some((p) => p.scope_type !== 'kloter');
 
   return (
-    <article className="group flex h-full min-w-0 flex-col overflow-hidden border border-white/10 bg-[#183B37] transition-colors duration-300 hover:border-brand-300/[0.45]">
+    <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-800/40 transition-colors duration-300 hover:border-brand-400/40">
       <ClassThumbnail program={program} />
 
       <div className="flex flex-1 flex-col p-5 sm:p-6">
-        <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-white/[0.55]">
-          {program.level && <span className="rounded-full border border-brand-300/30 bg-brand-300/10 px-2.5 py-1 text-brand-300">{program.level}</span>}
-          <span className="inline-flex items-center gap-1"><MenuBookIcon sx={{ fontSize: 16 }} />{program.weeks_count || 0} Week</span>
-          {program.instructor_name && <span className="inline-flex min-w-0 items-center gap-1"><GroupsIcon sx={{ fontSize: 16 }} /><span className="truncate">{program.instructor_name}</span></span>}
+        <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-300">
+          {program.level && <span className="rounded-full border border-brand-300/30 bg-brand-300/10 px-2.5 py-0.5 text-brand-300">{program.level}</span>}
+          {hasMentoredPlan && (
+            <span className="rounded-full border border-achievement-400/30 bg-achievement-400/10 px-2.5 py-0.5 text-[11px] text-achievement-200">
+              Bimbingan Mentor
+            </span>
+          )}
+          {hasIndependentPlan && !hasMentoredPlan && (
+            <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-0.5 text-[11px] text-emerald-200">
+              Belajar Mandiri
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1 text-slate-400"><MenuBookIcon sx={{ fontSize: 16 }} />{program.weeks_count || 0} Week</span>
+          {program.instructor_name && <span className="inline-flex min-w-0 items-center gap-1 text-slate-400"><GroupsIcon sx={{ fontSize: 16 }} /><span className="truncate">{program.instructor_name}</span></span>}
         </div>
 
         <h2 className="mt-4 text-xl font-black leading-snug text-white">{program.title}</h2>
-        {program.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/[0.58]">{program.description}</p>}
+        {program.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-300">{program.description}</p>}
 
-        <Button variant="outline" href={route('public.classes.show', program.slug)} className="mt-5 w-full !border-white/20 !text-white hover:!border-brand-300 hover:!bg-white/[0.06] hover:!text-brand-300">
-          Lihat detail kelas
+        <Button variant="outline" href={route('public.classes.show', program.slug)} className="mt-5 w-full !border-slate-700 !text-slate-200 hover:!border-brand-400 hover:!bg-slate-800 hover:!text-brand-300">
+          Lihat silabus lengkap
         </Button>
 
-        <div className="mt-6 border-t border-white/10 pt-5"><ClassContents modules={program.preview_modules} /></div>
+        <div className="mt-6 border-t border-slate-800 pt-5"><ClassContents modules={program.preview_modules} /></div>
 
-        <div className="mt-6 border-t border-white/10 pt-5">
+        <div className="mt-6 border-t border-slate-800 pt-5">
           {plans.length > 0 ? (
             <details className="group/plans">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
-              <div><p className="text-[11px] font-black uppercase text-white/[0.45]">Harga mulai</p><p className="mt-1 text-2xl font-black text-white">{cheapestPlan.price_formatted}</p></div>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
+              <div><p className="text-[11px] font-black uppercase text-slate-400">Harga mulai</p><p className="mt-1 text-2xl font-black text-white">{cheapestPlan.price_formatted}</p></div>
                 <span className="text-right text-xs font-bold text-brand-300">{plans.length} pilihan paket<span className="ml-2 inline-block text-lg transition-transform group-open/plans:rotate-45">+</span></span>
               </summary>
-              <div className="mt-5 border-t border-white/10 pt-5">{plans.map((plan) => <PlanRow key={plan.id} plan={plan} auth={auth} />)}</div>
+              <div className="mt-5 border-t border-slate-800 pt-5">{plans.map((plan) => <PlanRow key={plan.id} plan={plan} auth={auth} programSlug={program.slug} />)}</div>
             </details>
           ) : (
             <div>
               <p className="text-sm font-bold text-white">Harga belum tersedia</p>
-              <p className="mt-1 text-sm leading-6 text-white/[0.55]">Kelas tetap dapat dilihat sebagai preview sambil menunggu paket dibuka.</p>
-              <Button variant="outline" href={auth?.user ? route('user.kelas.index') : route('register')} className="mt-4 w-full !border-white/20 !text-white sm:w-auto">
+              <p className="mt-1 text-sm leading-6 text-slate-300">Kelas tetap dapat dilihat sebagai preview sambil menunggu paket dibuka.</p>
+              <Button variant="outline" href={auth?.user ? route('user.kelas.index') : route('register')} className="mt-4 w-full !border-slate-700 !text-slate-200 sm:w-auto">
                 {auth?.user ? 'Buka preview kelas' : 'Daftar untuk preview'}
               </Button>
             </div>
@@ -175,6 +190,7 @@ function ClassCard({ program, auth }) {
 export default function Pricing({ programs = [], seo = {} }) {
   const { auth } = usePage().props;
   const [openFaq, setOpenFaq] = useState(null);
+  const [modelFilter, setModelFilter] = useState('all');
   const reduceMotion = useReducedMotion();
   const reveal = reduceMotion
     ? {}
@@ -184,6 +200,16 @@ export default function Pricing({ programs = [], seo = {} }) {
       viewport: { once: true, amount: 0.14 },
       transition: { duration: 0.5, ease: 'easeOut' },
     };
+
+  const filteredPrograms = useMemo(() => {
+    if (modelFilter === 'mentor') {
+      return programs.filter((p) => (p.payment_plans || []).some((plan) => plan.scope_type === 'kloter'));
+    }
+    if (modelFilter === 'independent') {
+      return programs.filter((p) => (p.payment_plans || []).some((plan) => plan.scope_type !== 'kloter'));
+    }
+    return programs;
+  }, [programs, modelFilter]);
 
   return (
     <>
@@ -201,16 +227,10 @@ export default function Pricing({ programs = [], seo = {} }) {
             className="absolute inset-0 -z-20 h-full w-full object-cover object-[50%_35%] sm:object-center opacity-45"
           />
           <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-white/85 via-white/55 to-white/95" />
-          <div className="pointer-events-none absolute -right-24 -top-24 -z-10 h-96 w-96 rounded-full bg-emerald-200/20 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-24 -left-24 -z-10 h-96 w-96 rounded-full bg-brand-200/20 blur-3xl" />
 
           <div className="relative mx-auto max-w-4xl text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand-200/80 bg-white/90 px-3.5 py-1 text-xs font-bold text-brand-700 shadow-sm backdrop-blur-sm">
-              <ToriiIcon className="h-3.5 w-3.5" />
-              <span>Pilihan Kelas & Program Belajar</span>
-            </div>
-            <h1 className="mx-auto mt-4 max-w-3xl break-words text-[2rem] font-black leading-tight text-ink-900 sm:text-4xl lg:text-5xl">Pilih kelas dan cara belajar yang sesuai.</h1>
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-ink-600 sm:text-base">Bandingkan kurikulum, masa akses, Kelas Mandiri, dan Kelas Mentor sebelum menentukan pilihan belajar terbaik Anda.</p>
+            <h1 className="mx-auto mt-4 max-w-3xl break-words text-[2rem] font-black leading-tight text-ink-900 sm:text-4xl lg:text-5xl">Pilih kurikulum dan ritme belajar yang Anda butuhkan.</h1>
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-ink-600 sm:text-base">Pelajari susunan modul, durasi akses, dan tentukan metode belajar mandiri atau bimbingan mentor langsung.</p>
             
             <div className="mx-auto mt-9 grid min-w-0 max-w-xl grid-cols-3 gap-2.5 sm:gap-4">
               {[
@@ -232,22 +252,56 @@ export default function Pricing({ programs = [], seo = {} }) {
 
         <SeigaihaBand />
 
-        <motion.section {...reveal} className="bg-[#102F2B] px-5 py-16 text-white sm:px-8 lg:px-20 lg:py-24">
+        <motion.section {...reveal} className="bg-slate-900 px-5 py-16 text-white sm:px-8 lg:px-20 lg:py-24">
           <div className="mx-auto max-w-7xl">
-            <div className="mb-9 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div><p className="text-xs font-black uppercase text-brand-300">Katalog kelas</p><h2 className="mt-2 text-3xl font-black">Kelas yang tersedia</h2></div>
-              <p className="text-sm font-semibold text-white/[0.55]">{programs.length} kelas dapat dipilih</p>
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div><p className="text-xs font-black uppercase text-brand-300">Katalog Program</p><h2 className="mt-2 text-3xl font-black">Pilihan kelas aktif</h2></div>
+              <p className="text-sm font-semibold text-slate-400">{filteredPrograms.length} dari {programs.length} kelas tampil</p>
             </div>
 
-            {programs.length > 0 ? (
-              <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 xl:grid-cols-3">{programs.map((program) => <ClassCard key={program.id} program={program} auth={auth} />)}</div>
+            <div className="mb-8 flex flex-wrap gap-2.5">
+              {[
+                { id: 'all', label: `Semua Kelas (${programs.length})` },
+                { id: 'mentor', label: 'Bimbingan Mentor (Kloter)' },
+                { id: 'independent', label: 'Belajar Mandiri (Self-Paced)' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setModelFilter(tab.id)}
+                  className={`h-10 rounded-full px-4 text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 ${
+                    modelFilter === tab.id
+                      ? 'bg-brand-600 text-white shadow-sm'
+                      : 'border border-slate-700 bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {filteredPrograms.length > 0 ? (
+              <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredPrograms.map((program) => <ClassCard key={program.id} program={program} auth={auth} />)}
+              </div>
             ) : (
-              <div className="border border-dashed border-white/20 px-6 py-16 text-center"><SchoolIcon className="text-brand-300" sx={{ fontSize: 40 }} /><h2 className="mt-4 text-lg font-black">Belum ada kelas publik</h2><p className="mt-2 text-sm text-white/[0.55]">Kelas akan tampil setelah statusnya dipublikasikan.</p></div>
+              <div className="border border-dashed border-slate-700 px-6 py-16 text-center">
+                <SchoolIcon className="text-brand-300" sx={{ fontSize: 40 }} />
+                <h2 className="mt-4 text-lg font-black">Kelas tidak ditemukan untuk kategori ini</h2>
+                <p className="mt-2 text-sm text-slate-300">Pilih tab Semua Kelas untuk melihat seluruh program yang tersedia.</p>
+                <button
+                  type="button"
+                  onClick={() => setModelFilter('all')}
+                  className="mt-4 text-xs font-bold text-brand-300 hover:underline"
+                >
+                  Lihat semua kelas
+                </button>
+              </div>
             )}
 
-            <div className="mt-8 flex flex-col gap-4 border-t border-white/[0.12] pt-8 sm:flex-row sm:items-center sm:justify-between">
-              <div><p className="font-black">Belum siap membeli kelas?</p><p className="mt-1 text-sm text-white/[0.55]">Buat akun dan coba materi preview yang tersedia.</p></div>
-              <Button href={auth?.user ? route('user.kelas.index') : route('register')} className="w-full !rounded-lg !bg-[#D9FFB8] !text-ink-950 hover:!bg-white sm:w-auto">{auth?.user ? 'Buka katalog saya' : 'Mulai gratis'}</Button>
+            <div className="mt-8 flex flex-col gap-4 border-t border-slate-800 pt-8 sm:flex-row sm:items-center sm:justify-between">
+              <div><p className="font-black">Ingin mencoba materi terlebih dahulu?</p><p className="mt-1 text-sm text-slate-300">Daftar akun gratis untuk mengakses modul preview dan latihan dasar.</p></div>
+              <Button href={auth?.user ? route('user.kelas.index') : route('register')} className="w-full !rounded-xl !bg-brand-600 !text-white hover:!bg-brand-500 sm:w-auto">{auth?.user ? 'Buka materi preview' : 'Coba materi gratis'}</Button>
             </div>
           </div>
         </motion.section>
@@ -256,7 +310,7 @@ export default function Pricing({ programs = [], seo = {} }) {
           <div className="mx-auto max-w-6xl">
             <div className="grid gap-6 border-b border-gray-200 pb-8 md:grid-cols-[0.8fr_1.2fr] md:items-end">
               <div><p className="text-xs font-black uppercase text-learning-700">Bandingkan akses</p><h2 className="mt-3 text-3xl font-black text-ink-900">Mandiri atau bersama mentor?</h2></div>
-              <p className="max-w-xl text-sm leading-7 text-ink-600 md:justify-self-end">Materi inti tetap terhubung dalam roadmap. Perbedaannya berada pada aktivasi, ritme belajar, dan pendampingan.</p>
+              <p className="max-w-xl text-sm leading-7 text-ink-600 md:justify-self-end">Keduanya menggunakan kurikulum roadmap yang sama. Perbedaannya terletak pada jadwal belajar dan bimbingan mentor.</p>
             </div>
 
             <div className="mt-8 overflow-x-auto">
@@ -279,7 +333,7 @@ export default function Pricing({ programs = [], seo = {} }) {
             <div>
               <AccessTimeIcon className="text-brand-600" sx={{ fontSize: 30 }} />
               <h2 className="mt-4 text-3xl font-black text-ink-900">Pertanyaan sebelum memilih kelas.</h2>
-              <p className="mt-4 text-sm leading-7 text-ink-600">Informasi singkat mengenai aktivasi, preview, masa akses, dan access key.</p>
+              <p className="mt-4 text-sm leading-7 text-ink-600">Jawaban seputar aktivasi instan, modul preview, durasi akses, dan access key.</p>
             </div>
             <div className="divide-y divide-gray-200 border-y border-gray-200">
               {faqs.map((faq, index) => {
