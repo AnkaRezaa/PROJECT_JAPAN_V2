@@ -37,6 +37,7 @@ export default function DokkaiReviewView({
     questions = [],
     userAnswers = {},
     onProceedToGlossary,
+    onFinish,
     onBackToResult,
 }) {
     const [highlightedParagraphId, setHighlightedParagraphId] = useState(null);
@@ -387,12 +388,11 @@ export default function DokkaiReviewView({
 
                         <button
                             type="button"
-                            onClick={onProceedToGlossary}
+                            onClick={onFinish || onProceedToGlossary}
                             className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-xs font-bold text-white shadow-md hover:bg-emerald-700 active:scale-[0.99] transition"
                         >
-                            <MenuBookIcon sx={{ fontSize: 16 }} />
-                            <span>Lanjut ke Glosarium & Latihan</span>
-                            <ArrowForwardIcon sx={{ fontSize: 16 }} />
+                            <CheckCircleIcon sx={{ fontSize: 16 }} />
+                            <span>Selesai & Kembali ke Modul</span>
                         </button>
                     </div>
                 </div>

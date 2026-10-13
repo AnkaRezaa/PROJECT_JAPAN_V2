@@ -7,9 +7,11 @@ import QuickQuestionParserDialog from './QuickQuestionParserDialog';
 import QuickVocabParserDialog from './QuickVocabParserDialog';
 import AutoSplitParagraphDialog from './AutoSplitParagraphDialog';
 import DokkaiPreviewDialog from './DokkaiPreviewDialog';
+import DokkaiImportDialog from './DokkaiImportDialog';
 
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -285,6 +287,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
     };
 
     const [showBankPicker, setShowBankPicker] = useState(false);
+    const [showImportDialog, setShowImportDialog] = useState(false);
     const [showQuestionParser, setShowQuestionParser] = useState(false);
     const [showVocabParser, setShowVocabParser] = useState(false);
     const [showSplitParagraph, setShowSplitParagraph] = useState(false);
@@ -821,6 +824,14 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                         >
                             <BoltIcon sx={{ fontSize: 14 }} />
                             <span>Salin dari Bank</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowImportDialog(true)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300 shrink-0"
+                        >
+                            <UploadFileIcon sx={{ fontSize: 14 }} />
+                            <span>Import Excel/CSV</span>
                         </button>
                     </div>
 
@@ -1420,6 +1431,18 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                     onClose={() => setShowBankPicker(false)}
                     onSelect={handleSelectFromBank}
                     initialLevel={draft.passage?.jlpt_level || defaultLevel}
+                />
+
+                <DokkaiImportDialog
+                    open={showImportDialog}
+                    day={day}
+                    onClose={() => setShowImportDialog(false)}
+                    onImportSuccess={(data) => {
+                        fetchLessons();
+                        if (data?.message) {
+                            setSuccessMessage(data.message);
+                        }
+                    }}
                 />
 
                 <QuickQuestionParserDialog

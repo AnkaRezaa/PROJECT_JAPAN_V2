@@ -14,12 +14,14 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import FindInPageIcon from '@mui/icons-material/FindInPage';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 
+import useQuizCheckpoint from '@/Hooks/useQuizCheckpoint';
+import ResumeQuizModal from '@/Components/Features/Quiz/ResumeQuizModal';
+
 const STEPS = [
     { key: 'reading', label: '1. Baca Wacana', icon: AutoStoriesIcon },
     { key: 'quiz', label: '2. Soal Dokkai', icon: QuizIcon },
     { key: 'result', label: '3. Hasil Evaluasi', icon: EmojiEventsIcon },
     { key: 'review', label: '4. Pembahasan & Eviden', icon: FindInPageIcon },
-    { key: 'glossary', label: '5. Glosarium & Latihan', icon: MenuBookIcon },
 ];
 
 export default function DokkaiQuizRunner({
@@ -36,7 +38,7 @@ export default function DokkaiQuizRunner({
     const displayQuiz = useMemo(() => persist || !quiz ? quiz : { ...quiz, xp_reward: null }, [persist, quiz]);
     const [step, setStep] = useState(initialAttempt ? 'result' : 'reading');
     const [unlockedSteps, setUnlockedSteps] = useState(() => {
-        if (initialAttempt) return ['reading', 'quiz', 'result', 'review', 'glossary'];
+        if (initialAttempt) return ['reading', 'quiz', 'result', 'review'];
         return ['reading'];
     });
     const [selectedAnswers, setSelectedAnswers] = useState(initialAttempt?.user_answers || {});
@@ -44,6 +46,47 @@ export default function DokkaiQuizRunner({
     const [showFurigana, setShowFurigana] = useState(true);
     const [fontSize, setFontSize] = useState('base');
     const [activeVocab, setActiveVocab] = useState(vocabularies[0] || null);
+
+    const {
+        hasCheckpoint,
+        initialCheckpointData,
+        saveCheckpoint,
+        clearCheckpoint,
+        dismissResume,
+        formattedSavedTime,
+    } = useQuizCheckpoint({
+        quizType: 'dokkai',
+        quizId: quiz?.id,
+        enabled: persist && !initialAttempt,
+    });
+
+    const [isResumeModalOpen, setIsResumeModalOpen] = useState(() => {
+        if (!hasCheckpoint || !persist || initialAttempt) return false;
+        const hasSavedAnswers = Object.keys(initialCheckpointData?.selectedAnswers || {}).length > 0;
+        return Boolean(initialCheckpointData?.step === 'quiz' || hasSavedAnswers);
+    });
+
+    const handleResumeCheckpoint = () => {
+        if (initialCheckpointData) {
+            if (initialCheckpointData.selectedAnswers) {
+                setSelectedAnswers(initialCheckpointData.selectedAnswers);
+            }
+            if (initialCheckpointData.step) {
+                setStep(initialCheckpointData.step);
+                setUnlockedSteps(Array.from(new Set(['reading', initialCheckpointData.step])));
+            }
+        }
+        setIsResumeModalOpen(false);
+        dismissResume();
+    };
+
+    const handleRestartCheckpoint = () => {
+        clearCheckpoint();
+        setSelectedAnswers({});
+        setStep('reading');
+        setUnlockedSteps(['reading']);
+        setIsResumeModalOpen(false);
+    };
 
     // Narator Teks Bahasa Jepang
     const fullPassageText = useMemo(() => {
@@ -188,10 +231,19 @@ export default function DokkaiQuizRunner({
     };
 
     const handleSelectAnswer = (questionId, optionLabel) => {
-        setSelectedAnswers((prev) => ({
-            ...prev,
-            [questionId]: optionLabel,
-        }));
+        setSelectedAnswers((prev) => {
+            const updated = {
+                ...prev,
+                [questionId]: optionLabel,
+            };
+            if (persist && !initialAttempt) {
+                saveCheckpoint({
+                    step: 'quiz',
+                    selectedAnswers: updated,
+                });
+            }
+            return updated;
+        });
     };
 
     const handleSubmitQuiz = async () => {
@@ -244,6 +296,7 @@ export default function DokkaiQuizRunner({
             };
         }
 
+        clearCheckpoint();
         setResult(finalResult);
         setUnlockedSteps(['reading', 'quiz', 'result', 'review', 'glossary']);
         setStep('result');
@@ -280,6 +333,21 @@ export default function DokkaiQuizRunner({
         }
     }, [step, selectedAnswers, questions.length]);
 
+    if (isResumeModalOpen && initialCheckpointData) {
+        return (
+            <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white">
+                <ResumeQuizModal
+                    isOpen={true}
+                    onResume={handleResumeCheckpoint}
+                    onRestart={handleRestartCheckpoint}
+                    savedTimeFormatted={formattedSavedTime}
+                    quizTitle={quiz?.title ? `Dokkai: ${quiz.title}` : 'Kuis Dokkai'}
+                    currentStepDescription={initialCheckpointData?.selectedAnswers ? `${Object.keys(initialCheckpointData.selectedAnswers).length} dari ${questions.length} soal terjawab` : 'Tahap Kuis'}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gray-50/70 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100 flex flex-col">
             {/* Global Header Runner */}
@@ -311,7 +379,7 @@ export default function DokkaiQuizRunner({
                                 )}
                                 {/* Mobile Step Indicator */}
                                 <span className="xl:hidden rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[10px] font-bold text-gray-600 dark:text-gray-300" title={`Tahap: ${STEPS.find((s) => s.key === step)?.label}`}>
-                                    {STEPS.findIndex((s) => s.key === step) + 1}/5
+                                    {STEPS.findIndex((s) => s.key === step) + 1}/{STEPS.length}
                                 </span>
                             </div>
                             <h2 className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 truncate max-w-[120px] sm:max-w-xs md:max-w-md font-japanese font-semibold">
@@ -428,6 +496,12 @@ export default function DokkaiQuizRunner({
                         onProceedToQuiz={() => {
                             setUnlockedSteps((prev) => Array.from(new Set([...prev, 'quiz'])));
                             setStep('quiz');
+                            if (persist && !initialAttempt) {
+                                saveCheckpoint({
+                                    step: 'quiz',
+                                    selectedAnswers,
+                                });
+                            }
                         }}
                         audioState={audioState}
                     />
@@ -455,8 +529,9 @@ export default function DokkaiQuizRunner({
                         preview={!persist}
                         result={result}
                         onReviewAnswers={() => setStep('review')}
-                        onProceedToGlossary={() => setStep('glossary')}
+                        onFinish={onClose}
                         onRetry={() => {
+                            clearCheckpoint();
                             setSelectedAnswers({});
                             setStep('quiz');
                         }}
@@ -469,7 +544,7 @@ export default function DokkaiQuizRunner({
                         paragraphs={paragraphs}
                         questions={currentQuestions}
                         userAnswers={selectedAnswers}
-                        onProceedToGlossary={() => setStep('glossary')}
+                        onFinish={onClose}
                         onBackToResult={() => setStep('result')}
                     />
                 )}

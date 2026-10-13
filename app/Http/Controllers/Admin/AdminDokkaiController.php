@@ -5,12 +5,16 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\HariModul;
 use App\Models\Kuis;
+use App\Services\ImportKuisDokkaiService;
+use App\Services\ImportSpreadsheetService;
 use App\Services\KloterBelajarService;
 use App\Services\KuisDokkaiService;
+use App\Services\TemplateExcelService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AdminDokkaiController extends Controller
 {
@@ -127,6 +131,126 @@ class AdminDokkaiController extends Controller
                 ? 'Wacana Dokkai berhasil diterbitkan.'
                 : 'Wacana Dokkai dikembalikan menjadi draf.',
             'status' => $quiz->status,
+        ]);
+    }
+
+    public function template(
+        Request $request,
+        HariModul $moduleDay,
+        TemplateExcelService $excel
+    ): BinaryFileResponse {
+        $this->authorizeDay($request, $moduleDay);
+        $format = strtolower((string) $request->query('format', 'xlsx'));
+
+        $headers = ImportKuisDokkaiService::EXPECTED_HEADERS;
+
+        $sampleRows = [
+            [
+                '日本のゴミ分別文化',
+                'JLPT N3',
+                "日本では、ゴミを捨てる時に細かく分別しなければなりません。\n\n例えば、燃えるゴミと燃えないゴミ、そしてペットボトルや空き缶などを分けて決められた曜日に出します。",
+                '日本のゴミ捨てについて正しいものはどれか。',
+                '何も分別しない',
+                '細かく分別する',
+                'いつでも捨てられる',
+                '分別は有料である',
+                'B',
+                'Paragraf 1 menyatakan bahwa sampah harus dipilah secara detail sesuai jenisnya.',
+            ],
+            [
+                '',
+                '',
+                '',
+                'ペットボトルを捨てる時の正しい出し方はどれか。',
+                'キャップをつけたまま出す',
+                '洗わずにそのまま出す',
+                '中を洗ってキャップやラベルを外す',
+                '燃えないゴミの日に出す',
+                'C',
+                'Botol plastik harus dicuci dan dipisahkan antara tutup dan labelnya.',
+            ],
+            [
+                '温泉のマナー',
+                'JLPT N3',
+                "日本の温泉には、みんなが気持ちよく利用するための特別なマナーがあります。\n\nまず、湯船に入る前に必ず体を洗わなければなりません。また、タオルを湯船の中に入れてはいけません。",
+                '温泉に入る前に最初にしなければならないことは何か。',
+                'すぐに湯船に入って温まる',
+                '体をきれいに洗う',
+                'タオルを湯船につける',
+                '大きな声で挨拶をする',
+                'B',
+                'Paragraf 2 menyatakan harus membersihkan tubuh terlebih dahulu sebelum masuk ke kolam air panas.',
+            ],
+        ];
+
+        if ($format === 'csv') {
+            $tempPath = tempnam(sys_get_temp_dir(), 'dokkai-csv-');
+            $handle = fopen($tempPath, 'w');
+            fputs($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, $headers);
+            foreach ($sampleRows as $row) {
+                fputcsv($handle, $row);
+            }
+            fclose($handle);
+
+            return response()->download($tempPath, 'template-wacana-dokkai-hari-'.$moduleDay->day_number.'.csv')
+                ->deleteFileAfterSend(true);
+        }
+
+        $path = $excel->xlsxPath($headers, $sampleRows, 'Dokkai', 'dokkai-template-');
+
+        return response()->download($path, 'template-wacana-dokkai-hari-'.$moduleDay->day_number.'.xlsx')
+            ->deleteFileAfterSend(true);
+    }
+
+    public function previewImport(
+        Request $request,
+        HariModul $moduleDay,
+        ImportSpreadsheetService $spreadsheets,
+        ImportKuisDokkaiService $importer
+    ): JsonResponse {
+        $this->authorizeDay($request, $moduleDay);
+        $validated = $request->validate([
+            'import_file' => ['required', 'file', 'mimes:xlsx,csv,txt', 'max:5120'],
+        ]);
+
+        $file = $validated['import_file'];
+        $extension = strtolower($file->getClientOriginalExtension());
+        $rows = $spreadsheets->rows($file->getRealPath(), $extension);
+        $preview = $importer->preview($moduleDay, $rows);
+
+        if (! $preview['valid']) {
+            return response()->json($preview, 422);
+        }
+
+        return response()->json($preview);
+    }
+
+    public function import(
+        Request $request,
+        HariModul $moduleDay,
+        ImportSpreadsheetService $spreadsheets,
+        ImportKuisDokkaiService $importer
+    ): JsonResponse {
+        $this->authorizeDay($request, $moduleDay);
+        $validated = $request->validate([
+            'import_file' => ['required', 'file', 'mimes:xlsx,csv,txt', 'max:5120'],
+        ]);
+
+        $file = $validated['import_file'];
+        $extension = strtolower($file->getClientOriginalExtension());
+        $rows = $spreadsheets->rows($file->getRealPath(), $extension);
+        $preview = $importer->preview($moduleDay, $rows);
+
+        if (! $preview['valid']) {
+            return response()->json($preview, 422);
+        }
+
+        $count = $importer->commit($moduleDay, $preview);
+
+        return response()->json([
+            'message' => "{$count} wacana Dokkai berhasil diimpor dan disimpan sebagai draf.",
+            'imported_count' => $count,
         ]);
     }
 

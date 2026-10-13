@@ -12,6 +12,7 @@ export default function DokkaiResultView({
     result = {},
     onReviewAnswers,
     onProceedToGlossary,
+    onFinish,
     onRetry,
     preview = false,
 }) {
@@ -94,11 +95,11 @@ export default function DokkaiResultView({
 
                     <button
                         type="button"
-                        onClick={onProceedToGlossary}
+                        onClick={onFinish || onProceedToGlossary}
                         className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-6 py-3.5 text-xs font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition"
                     >
-                        <MenuBookIcon sx={{ fontSize: 16 }} />
-                        <span>Glosarium Kosakata</span>
+                        <CheckCircleIcon sx={{ fontSize: 16 }} className="text-emerald-600" />
+                        <span>Selesai & Kembali</span>
                     </button>
 
                     {onRetry && (

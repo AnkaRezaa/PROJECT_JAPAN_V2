@@ -96,10 +96,10 @@ function renderInteractiveText(
     return primaryParts.map((part, index) => {
         const matchingVocab = sortedVocabs.find((v) => v.word === part);
         if (!matchingVocab) {
-            return <React.Fragment key={`p-${index}`}>{segmentSubText(part, `${basePrefix}-seg-${index}`)}</React.Fragment>;
+            return <React.Fragment key={`${basePrefix}-p-${index}`}>{segmentSubText(part, `${basePrefix}-seg-${index}`)}</React.Fragment>;
         }
 
-        const itemKey = `${basePrefix}-vocab-${matchingVocab.id || index}`;
+        const itemKey = `${basePrefix}-vocab-${matchingVocab.id || 'v'}-${index}`;
         const isSelected = activeVocab?.id === matchingVocab.id || activeVocab?.word === matchingVocab.word;
 
         return (
