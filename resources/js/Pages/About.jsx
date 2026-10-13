@@ -1,6 +1,5 @@
 import { Link } from '@inertiajs/react';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import SchoolIcon from '@mui/icons-material/School';
 import GuestFooter from '@/Components/Layout/GuestFooter';
 import GuestNavbar from '@/Components/Layout/GuestNavbar';
 import FallEffect from '@/Components/theme/FallEffect';
@@ -55,18 +54,15 @@ export default function About({ seo = {} }) {
             <SeoHead seo={seo} />
             <GuestNavbar />
 
-            <main className="overflow-hidden bg-[#f7f8f8] text-slate-900 dark:bg-slate-950 dark:text-white">
+            <main className="overflow-hidden bg-[#f7f8f8] text-slate-900">
                 <section className="relative min-h-[570px] overflow-hidden bg-slate-950">
                     <img src={MountFujiBg} alt="Gunung Fuji" className="absolute inset-0 h-full w-full object-cover object-center opacity-80" />
                     <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.93)_0%,rgba(2,6,23,0.74)_48%,rgba(2,6,23,0.28)_100%)]" />
-                    <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-b from-transparent to-[#f7f8f8] dark:to-slate-950" />
+                    <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-b from-transparent to-[#f7f8f8]" />
 
                     <div className="relative mx-auto flex min-h-[570px] max-w-7xl items-center px-5 py-20 sm:px-8 lg:px-10">
                         <div className="max-w-2xl">
-                            <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-amber-200 backdrop-blur-sm">
-                                <SchoolIcon sx={{ fontSize: 16 }} /> Belajar Bahasa Jepang N5 – N2
-                            </p>
-                            <h1 className="mt-5 text-4xl font-black leading-tight text-white sm:text-5xl lg:text-6xl">
+                            <h1 className="text-4xl font-black leading-tight text-white sm:text-5xl lg:text-6xl">
                                 Kelas terstruktur yang memberi arah belajar nyata.
                             </h1>
                             <p className="mt-5 max-w-xl text-base font-medium leading-7 text-slate-200 sm:text-lg">

@@ -51,7 +51,7 @@ export default function GuestNavbar() {
     const closeMenu = () => setIsMenuOpen(false);
 
     return (
-        <nav className="sticky top-0 z-50 border-b border-[#e2ece5] bg-white/95 shadow-sm backdrop-blur transition-[background-color,border-color,box-shadow] duration-300">
+        <nav className="sticky top-0 z-50 border-b border-slate-200/90 bg-white/95 shadow-sm backdrop-blur-md transition-all duration-300">
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 bg-repeat opacity-65"
@@ -67,10 +67,10 @@ export default function GuestNavbar() {
                         <li key={item.href}>
                             <Link
                                 href={item.href}
-                                className={`relative py-1.5 text-sm font-bold tracking-wide no-underline transition-colors [text-shadow:0_1px_4px_rgba(255,255,255,0.9),0_0_8px_#ffffff] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:rounded-full after:bg-[#15803D] after:transition-all after:duration-300 ${
+                                className={`relative py-1.5 text-sm font-bold tracking-wide no-underline transition-colors after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:rounded-full after:bg-[#15803D] after:transition-all after:duration-300 ${
                                     isActive(item.href)
                                         ? 'text-[#15803D] after:w-full'
-                                        : 'text-[#0f172a] after:w-0 hover:text-[#15803D] hover:after:w-full'
+                                        : 'text-slate-800 after:w-0 hover:text-[#15803D] hover:after:w-full'
                                 }`}
                             >
                                 {item.label}
@@ -117,13 +117,8 @@ export default function GuestNavbar() {
             </div>
 
             {isMenuOpen && (
-                <div id="guest-mobile-menu" className="relative overflow-hidden border-t border-[var(--toku-border)] bg-white px-5 py-4 shadow-xl md:hidden">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 bg-repeat opacity-85"
-                        style={{ backgroundImage: akatsukiPattern, backgroundSize: '240px 120px' }}
-                    />
-                    <div className="relative">
+                <div id="guest-mobile-menu" className="relative border-t border-slate-200 bg-white px-5 py-4 shadow-xl md:hidden">
+                    <div>
                         <div className="flex flex-col gap-1">
                             {navigationItems.map((item) => (
                                 <Link

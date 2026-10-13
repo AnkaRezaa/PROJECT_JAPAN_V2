@@ -20,6 +20,28 @@ const analyticsReady = getAnalyticsConsent() === 'granted' && initializeAnalytic
 router.on('navigate', () => {
     resetScrollLock();
     pushPageView();
+
+    if (typeof window !== 'undefined') {
+        const path = window.location.pathname;
+        const isGuestOrAdmin = path === '/' ||
+            path.startsWith('/about') ||
+            path.startsWith('/pricing') ||
+            path.startsWith('/roadmap') ||
+            path.startsWith('/login') ||
+            path.startsWith('/register') ||
+            path.startsWith('/forgot-password') ||
+            path.startsWith('/reset-password') ||
+            path.startsWith('/privacy-policy') ||
+            path.startsWith('/terms') ||
+            path.startsWith('/cookie-policy') ||
+            path.startsWith('/kelas/') ||
+            path.startsWith('/admin') ||
+            path.startsWith('/superadmin');
+
+        if (isGuestOrAdmin) {
+            document.documentElement.classList.remove('dark');
+        }
+    }
 });
 
 const sentryEnabled = import.meta.env.VITE_SENTRY_ENABLED === 'true' && Boolean(import.meta.env.VITE_SENTRY_DSN);

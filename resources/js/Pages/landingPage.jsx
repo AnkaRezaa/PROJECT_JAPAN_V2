@@ -2,7 +2,6 @@ import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import BoltIcon from '@mui/icons-material/Bolt';
 import CheckIcon from '@mui/icons-material/Check';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
@@ -10,9 +9,9 @@ import HeadsetIcon from '@mui/icons-material/Headset';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import PlayCircleIcon from '@mui/icons-material/PlayCircle';
+import SchoolIcon from '@mui/icons-material/School';
 import VideogameAssetIcon from '@mui/icons-material/VideogameAsset';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
-import StarIcon from '@mui/icons-material/Star';
 import { DarumaIcon, SakuraIcon, ScrollIcon, ToriiIcon } from '@/Components/JapaneseIcons';
 import Button from '@/Components/UI/Button';
 import GuestNavbar from '@/Components/Layout/GuestNavbar';
@@ -46,36 +45,6 @@ const sampleFlashcards = [
     sentence: '文章の論理構成を正確に把握する。',
     sentenceMeaning: 'Memahami struktur logika wacana secara akurat.',
     level: 'JLPT N2',
-  },
-];
-
-const testimonials = [
-  {
-    name: 'Dimas Pratama',
-    tag: 'Lolos JLPT N3 (Skor 142/180)',
-    batch: 'Alumni Kloter N3 Reguler',
-    comment: 'Fitur bedah eviden di kuis Dokkai benar-benar penyelamat. Di ujian JLPT asli saya tidak lagi menebak-nebak karena sudah terbiasa mencari kalimat kunci pembuktian di teks.',
-    rating: 5,
-    avatar: 'D',
-    avatarTone: 'bg-brand-100 text-brand-700',
-  },
-  {
-    name: 'Siti Nurhaliza',
-    tag: 'Lolos Tokutei Ginou Kaigo',
-    batch: 'Peserta Intensif Kerja Jepang',
-    comment: 'Alur 3-stage kuis grammar sangat efektif. Dari yang awalnya bingung perubahan bentuk te dan nai, pas latihan susun kalimat langsung paham pola percakapan kerja di panti.',
-    rating: 5,
-    avatar: 'S',
-    avatarTone: 'bg-learning-100 text-learning-700',
-  },
-  {
-    name: 'Rian Ardiansyah',
-    tag: 'Target JLPT N2 (Alumni N3)',
-    batch: 'Alumni Kloter N3',
-    comment: 'Roadmap per minggu membuat ritme belajar kerja shift jadi teratur. Kosakata yang dipelajari di flashcard pagi hari langsung nyambung ke latihan wacana malamnya.',
-    rating: 5,
-    avatar: 'R',
-    avatarTone: 'bg-achievement-100 text-achievement-700',
   },
 ];
 
@@ -127,7 +96,7 @@ const benefits = [
     tone: 'bg-learning-50 text-learning-700',
   },
   {
-    icon: <AutoAwesomeIcon sx={{ fontSize: 22 }} />,
+    icon: <SchoolIcon sx={{ fontSize: 22 }} />,
     title: 'Diawasi Kurikulum Sensei Native',
     description: 'Standar materi mengacu pada kaidah JF Standard dan pengalaman nyata pengajar bersertifikasi.',
     tone: 'bg-achievement-50 text-achievement-700',
@@ -164,18 +133,8 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
       transition: { duration: 0.55, ease: 'easeOut' },
     };
 
-  React.useEffect(() => {
-    const wasDark = document.documentElement.classList.contains('dark');
-    document.documentElement.classList.remove('dark');
-    return () => {
-      if (wasDark) {
-        document.documentElement.classList.add('dark');
-      }
-    };
-  }, []);
 
   const [activeCardIdx, setActiveCardIdx] = React.useState(0);
-  const [studiedCount, setStudiedCount] = React.useState(18);
   const [isPlayingAudio, setIsPlayingAudio] = React.useState(false);
 
   const currentCard = sampleFlashcards[activeCardIdx];
@@ -195,7 +154,6 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
 
   const handleNextCard = () => {
     setActiveCardIdx((prev) => (prev + 1) % sampleFlashcards.length);
-    setStudiedCount((prev) => prev + 1);
   };
 
   const scrollToDemo = () => {
@@ -221,11 +179,6 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
 
           <div className="mx-auto grid min-w-0 max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
             <div className="relative z-10 min-w-0 max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/[0.85] px-3 py-1 shadow-sm backdrop-blur-sm">
-                <span className="h-2 w-2 rounded-full bg-brand-600 motion-safe:animate-pulse" />
-                <span className="text-xs font-bold uppercase text-brand-700">Roadmap Belajar Bahasa Jepang N5 – N2</span>
-              </div>
-
               <h1 className="mb-4 break-words text-2xl font-extrabold leading-tight text-ink-900 sm:text-4xl lg:text-[2.75rem]">
                 Kuasai Bahasa Jepang
                 <span className="mt-1 block text-[#15803D]">Metode Terpadu & Terarah</span>
@@ -248,7 +201,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
                     </span>
                   ))}
                 </div>
-                <span className="min-w-0 break-words text-xs sm:text-sm">Bergabunglah dengan <strong className="font-bold text-ink-900">3.200+ pembelajar</strong> persiapan ujian JLPT & karier di Jepang</span>
+                <span className="min-w-0 break-words text-xs sm:text-sm">Kurikulum terstruktur berbasis blueprint <strong className="font-bold text-ink-900">Nihongo Soumatome</strong> untuk persiapan JLPT dan kerja</span>
               </div>
 
               <div className="mt-5 hidden items-center gap-4 text-[11px] font-bold text-ink-600 sm:flex">
@@ -320,10 +273,10 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
 
                 <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-[11px] text-ink-600">
                   <span className="flex items-center gap-1.5">
-                    <LocalFireDepartmentIcon sx={{ fontSize: 15 }} className="text-amber-500" />
-                    <strong>{studiedCount}</strong> kosakata diulang hari ini
+                    <LocalFireDepartmentIcon sx={{ fontSize: 15 }} className="text-emerald-600" />
+                    Contoh materi interaktif
                   </span>
-                  <span className="font-bold text-brand-700">Streak Aktif 6 Hari</span>
+                  <span className="font-bold text-brand-700">Dilengkapi Audio Native</span>
                 </div>
               </div>
 
@@ -339,18 +292,18 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
         </section>
 
 
-        <motion.section {...reveal} id="demo-belajar" className="scroll-mt-24 bg-[#0F171B] px-4 py-16 text-white sm:px-6 lg:px-8 lg:py-20">
+        <motion.section {...reveal} id="demo-belajar" className="scroll-mt-24 bg-slate-900 px-4 py-16 text-white sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-6xl">
             <div className="mb-10 grid gap-4 lg:grid-cols-[0.75fr_1.25fr] lg:items-end">
               <div>
-                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-300">
-                  <ToriiIcon className="h-4 w-4 text-brand-300" /> Satu ekosistem belajar
+                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400">
+                  <ToriiIcon className="h-4 w-4 text-emerald-400" /> Satu ekosistem belajar
                 </p>
                 <h2 className="mt-2 max-w-xl text-2xl font-extrabold leading-tight text-white sm:text-3xl">
                   Dari memilih kelas sampai melihat progres.
                 </h2>
               </div>
-              <p className="max-w-2xl text-xs leading-relaxed text-white/70 lg:justify-self-end sm:text-sm">
+              <p className="max-w-2xl text-xs leading-relaxed text-slate-300 lg:justify-self-end sm:text-sm">
                 Setiap aktivitas tetap berada dalam konteks roadmap yang sama, sehingga siswa tidak perlu menebak apa yang harus dikerjakan berikutnya.
               </p>
             </div>
@@ -359,16 +312,16 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
               {learningSteps.map((step) => (
                 <article
                   key={step.number}
-                  className="group relative rounded-xl border border-white/15 bg-white/[0.04] p-5 transition-all duration-300 hover:border-brand-300/40 hover:bg-white/[0.08]"
+                  className="group relative rounded-xl border border-slate-800 bg-slate-800/40 p-5 transition-all duration-300 hover:border-emerald-500/40 hover:bg-slate-800/70"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-sm font-black text-brand-300">{step.number}</span>
-                    <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] text-brand-300 transition-colors group-hover:bg-brand-500/20 group-hover:text-white">
+                    <span className="font-mono text-sm font-black text-emerald-400">{step.number}</span>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-emerald-400 transition-colors group-hover:bg-emerald-500/20 group-hover:text-white">
                       {step.icon}
                     </span>
                   </div>
                   <h3 className="mt-5 text-base font-bold text-white">{step.title}</h3>
-                  <p className="mt-2 text-xs leading-relaxed text-white/65">{step.description}</p>
+                  <p className="mt-2 text-xs leading-relaxed text-slate-300">{step.description}</p>
                 </article>
               ))}
             </div>
@@ -446,68 +399,18 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
           </div>
         </motion.section>
 
-        {/* Section Testimoni Siswa */}
-        <motion.section {...reveal} className="bg-[#F7FAF8] px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
-          <div className="mx-auto max-w-6xl">
-            <div className="mx-auto max-w-2xl text-center">
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-3 py-1 text-xs font-bold text-brand-700 shadow-sm">
-                <ToriiIcon className="h-3.5 w-3.5" />
-                <span>Cerita Pembelajar TOKU-UP</span>
-              </div>
-              <h2 className="mt-3 text-2xl font-extrabold text-ink-900 sm:text-3xl">
-                Dipercaya Siswa dengan Berbagai Target Belajar
-              </h2>
-              <p className="mt-2 text-xs text-ink-600 sm:text-sm">
-                Pengalaman nyata dari pembelajar mandiri hingga alumni persiapan kerja dan ujian JLPT.
-              </p>
-            </div>
-
-            <div className="mt-10 grid gap-6 md:grid-cols-3">
-              {testimonials.map((item) => (
-                <div
-                  key={item.name}
-                  className="flex flex-col justify-between rounded-2xl border border-gray-200/80 bg-white p-6 shadow-sm transition-all duration-300 hover:border-brand-200 hover:shadow-md"
-                >
-                  <div>
-                    <div className="flex items-center gap-0.5 text-amber-400">
-                      {[...Array(item.rating)].map((_, i) => (
-                        <StarIcon key={i} sx={{ fontSize: 16 }} />
-                      ))}
-                    </div>
-                    <p className="mt-3 text-xs leading-relaxed text-ink-700 italic">
-                      "{item.comment}"
-                    </p>
-                  </div>
-                  <div className="mt-6 flex items-center gap-3 border-t border-gray-100 pt-4">
-                    <div className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-black ${item.avatarTone}`}>
-                      {item.avatar}
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-ink-900">{item.name}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-semibold text-brand-700">{item.tag}</span>
-                        <span className="text-[10px] text-ink-400">· {item.batch}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.section>
-
-        <motion.section {...reveal} className="bg-[#0F171B] px-4 py-16 text-white sm:px-6 lg:px-8 lg:py-20">
+        <motion.section {...reveal} className="bg-slate-900 px-4 py-16 text-white sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-6xl">
             <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-300">
+                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400">
                   <ToriiIcon className="h-4 w-4" /> Kelas TOKU-UP
                 </p>
                 <h2 className="mt-2 max-w-2xl text-2xl font-extrabold leading-tight text-white sm:text-3xl">
                   Pilih cara belajar yang sesuai dengan ritme Anda.
                 </h2>
               </div>
-              <p className="max-w-md text-xs leading-relaxed text-white/70">
+              <p className="max-w-md text-xs leading-relaxed text-slate-300">
                 Harga, durasi, dan jenis akses selalu mengikuti pengaturan kelas yang sedang tersedia.
               </p>
             </div>
@@ -517,8 +420,8 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
                   key={`${plan.programId}-${plan.id}`}
                   className={`relative rounded-2xl border p-6 transition-all duration-300 ${
                     index === 0
-                      ? 'border-emerald-500/50 bg-[#122B27] shadow-xl shadow-black/30'
-                      : 'border-white/10 bg-white/[0.045] hover:border-white/25'
+                      ? 'border-emerald-500/50 bg-emerald-950/40 shadow-xl shadow-black/30'
+                      : 'border-slate-800 bg-slate-800/40 hover:border-slate-700'
                   }`}
                 >
                   {index === 0 && (
@@ -526,32 +429,32 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
                       Pilihan Favorit
                     </span>
                   )}
-                  <p className="pr-24 text-[10px] font-bold uppercase tracking-wider text-achievement-100">{plan.programTitle}</p>
+                  <p className="pr-24 text-[10px] font-bold uppercase tracking-wider text-emerald-300">{plan.programTitle}</p>
                   <h3 className="mt-2 text-lg font-black text-white">{plan.name}</h3>
                   <p className="mt-3 text-2xl font-black text-white">{plan.price_formatted}</p>
-                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-medium text-white/70">
+                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-medium text-slate-300">
                     <span className="rounded-md bg-white/10 px-2 py-0.5">{plan.scope_label}</span>
                     <span className="rounded-md bg-white/10 px-2 py-0.5">{formatDuration(plan.duration_days)}</span>
                   </div>
-                  {plan.description && <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-white/80">{plan.description}</p>}
-                  <ul className="mt-5 space-y-2.5 border-t border-white/10 pt-4 p-0">
+                  {plan.description && <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-slate-300">{plan.description}</p>}
+                  <ul className="mt-5 space-y-2.5 border-t border-slate-800 pt-4 p-0">
                     {(plan.features || []).slice(0, 4).map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-xs text-white/90">
-                        <CheckIcon sx={{ fontSize: 16 }} className="mt-0.5 shrink-0 text-brand-300" />
+                      <li key={feature} className="flex items-start gap-2 text-xs text-slate-200">
+                        <CheckIcon sx={{ fontSize: 16 }} className="mt-0.5 shrink-0 text-emerald-400" />
                         <span>{feature}</span>
                       </li>
                     ))}
                   </ul>
                 </article>
               )) : (
-                <div className="rounded-2xl border border-dashed border-white/20 px-5 py-10 text-center sm:col-span-2">
+                <div className="rounded-2xl border border-dashed border-slate-700 px-5 py-10 text-center sm:col-span-2">
                   <p className="text-base font-bold text-white">Paket kelas sedang disiapkan</p>
-                  <p className="mt-1.5 text-xs text-white/60">Daftar untuk membuka preview kelas yang tersedia.</p>
+                  <p className="mt-1.5 text-xs text-slate-400">Daftar untuk membuka preview kelas yang tersedia.</p>
                 </div>
               )}
             </div>
-            <div className="mt-8 flex flex-col items-start justify-between gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center">
-              <p className="max-w-xl text-xs leading-relaxed text-white/70">
+            <div className="mt-8 flex flex-col items-start justify-between gap-4 border-t border-slate-800 pt-6 sm:flex-row sm:items-center">
+              <p className="max-w-xl text-xs leading-relaxed text-slate-300">
                 Bandingkan materi, tipe pendampingan, dan masa akses sebelum menentukan kelas.
               </p>
               <Button href="/pricing" className="!h-10 !min-h-[40px] !rounded-xl !bg-[#15803D] !px-5 !text-xs !font-bold !text-white hover:!bg-[#166534] shadow-sm">

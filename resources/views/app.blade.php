@@ -89,16 +89,34 @@
                 'id' => config('beta.google_tag_manager.id'),
             ]);
             (() => {
-                const isAdminPath = window.location.pathname.startsWith('/admin') || window.location.pathname.startsWith('/superadmin');
-                if (isAdminPath) {
+                const path = window.location.pathname;
+                const isGuestOrAdmin = path === '/' ||
+                    path.startsWith('/about') ||
+                    path.startsWith('/pricing') ||
+                    path.startsWith('/roadmap') ||
+                    path.startsWith('/login') ||
+                    path.startsWith('/register') ||
+                    path.startsWith('/forgot-password') ||
+                    path.startsWith('/reset-password') ||
+                    path.startsWith('/privacy-policy') ||
+                    path.startsWith('/terms') ||
+                    path.startsWith('/cookie-policy') ||
+                    path.startsWith('/kelas/') ||
+                    path.startsWith('/admin') ||
+                    path.startsWith('/superadmin');
+
+                if (isGuestOrAdmin) {
                     document.documentElement.classList.remove('dark');
                     return;
                 }
+
                 const mode = localStorage.getItem('theme') || 'system';
                 const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
                 if (mode === 'dark' || (mode === 'system' && prefersDark)) {
                     document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
                 }
             })();
         </script>
