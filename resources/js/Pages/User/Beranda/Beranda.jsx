@@ -12,6 +12,7 @@ import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import QuizIcon from '@mui/icons-material/Quiz';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SchoolIcon from '@mui/icons-material/School';
 import SearchIcon from '@mui/icons-material/Search';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
@@ -60,7 +61,7 @@ function HeroCarousel({ children }) {
             <div aria-hidden="true" className="pointer-events-none absolute inset-0">
                 {heroSlides.map((slide, index) => (
                     <img key={slide.src} src={slide.src} alt="" loading={index === 0 ? 'eager' : 'lazy'}
-                        fetchPriority={index === 0 ? 'high' : 'low'} decoding="async"
+                        fetchpriority={index === 0 ? 'high' : 'low'} decoding="async"
                         onLoad={() => setReady(current => current.includes(index) ? current : [...current, index].sort())}
                         onError={() => { setReady(current => current.filter(item => item !== index)); setActive(current => current === index ? 0 : current); }}
                         className={`absolute inset-0 h-full w-full object-cover object-[center_35%] transition-opacity duration-1000 motion-reduce:transition-none ${active === index ? 'opacity-100' : 'opacity-0'}`} />
@@ -157,6 +158,14 @@ function DailyGoalCard({ goal = {} }) {
             <p className="mt-4 text-sm font-normal leading-relaxed text-gray-600 dark:text-gray-400">
                 {goal.completed ? 'Target hari ini sudah tercapai! Pertahankan ritme belajarmu besok.' : 'Selesaikan satu sesi latihan kuis untuk menutup target harian.'}
             </p>
+
+            <Link
+                href={goal.quiz_url || route('user.kelas.index')}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-amber-500 to-orange-500 py-2.5 px-4 text-xs font-black text-white shadow-md hover:from-amber-600 hover:to-orange-600 active:scale-[0.98] transition"
+            >
+                <PlayArrowIcon sx={{ fontSize: 18 }} />
+                <span>{goal.completed ? 'Latihan Tambahan (+5 XP)' : 'Mulai Kuis Campuran Harian (10 Soal · +30 XP)'}</span>
+            </Link>
         </aside>
     );
 }
@@ -172,6 +181,7 @@ export default function BerandaUser({
     quickQuiz = null,
     lastCompletedQuiz = null,
     dailyGoal = {},
+    weakspotSummary = { has_weakspot: false, count: 0, url: '' },
 }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -432,13 +442,13 @@ export default function BerandaUser({
                                         </div>
                                     </div>
 
-                                    <div className="shrink-0">
+                                    <div className="flex shrink-0 flex-col gap-2.5 w-full sm:w-auto">
                                         {quickQuiz?.available ? (
                                             <button
                                                 type="button"
                                                 onClick={openQuickQuiz}
                                                 disabled={isStartingQuickQuiz}
-                                                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-emerald-900 shadow-sm transition-colors hover:bg-emerald-50 hover:shadow-sm  disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                                                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-emerald-900 shadow-sm transition-colors hover:bg-emerald-50 hover:shadow-sm disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                                             >
                                                 {isStartingQuickQuiz ? 'Menyiapkan...' : (quickQuiz.active ? 'Lanjutkan Kuis' : 'Mulai Latihan')}
                                                 <ArrowRightAltIcon sx={{ fontSize: 22 }} />
@@ -446,11 +456,32 @@ export default function BerandaUser({
                                         ) : (
                                             <Link
                                                 href={activeLearning?.roadmap_url || route('user.kelas.index')}
-                                                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-emerald-900 shadow-sm transition-colors hover:bg-emerald-50  sm:w-auto"
+                                                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-emerald-900 shadow-sm transition-colors hover:bg-emerald-50 sm:w-auto"
                                             >
                                                 Buka Roadmap <ArrowRightAltIcon sx={{ fontSize: 22 }} />
                                             </Link>
                                         )}
+
+                                        <Link
+                                            href={weakspotSummary?.url || route('user.weakspot.show')}
+                                            className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all sm:w-auto ${
+                                                weakspotSummary?.has_weakspot
+                                                    ? 'bg-amber-400 text-amber-950 hover:bg-amber-300 shadow-sm hover:shadow active:scale-[0.98]'
+                                                    : 'border border-emerald-400/40 bg-emerald-950/40 text-emerald-100 hover:bg-emerald-900/60 backdrop-blur-xs'
+                                            }`}
+                                        >
+                                            {weakspotSummary?.has_weakspot ? (
+                                                <>
+                                                    <span className="h-2 w-2 rounded-full bg-rose-600 animate-pulse" />
+                                                    <span>Latih Titik Lemah ({weakspotSummary.count} Soal · +20 XP)</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircleIcon sx={{ fontSize: 16 }} className="text-emerald-300" />
+                                                    <span>Latih Titik Lemah (Semua Aman)</span>
+                                                </>
+                                            )}
+                                        </Link>
                                     </div>
                                 </div>
                             </section>

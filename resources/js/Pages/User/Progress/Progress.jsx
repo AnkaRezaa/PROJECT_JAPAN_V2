@@ -1,3 +1,4 @@
+import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -7,6 +8,7 @@ import HelpCenterIcon from '@mui/icons-material/HelpCenter';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
+import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -19,6 +21,122 @@ const toList = (value) => {
 
     return [];
 };
+
+const THEME_MAP = {
+    sky: {
+        avatar: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700',
+        bar: 'bg-sky-500',
+        btn: 'bg-sky-600 hover:bg-sky-700 text-white',
+    },
+    emerald: {
+        avatar: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700',
+        bar: 'bg-emerald-500',
+        btn: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+    },
+    amber: {
+        avatar: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700',
+        bar: 'bg-amber-500',
+        btn: 'bg-amber-600 hover:bg-amber-700 text-white',
+    },
+};
+
+function WeakspotCategoryCard({ category }) {
+    const {
+        title,
+        kanji_char,
+        pct = 0,
+        theme = 'emerald',
+        weakspots = [],
+        quiz_url = route('user.weakspot.show'),
+        failed_count = 0,
+        has_weakspot = false,
+    } = category;
+
+    const style = THEME_MAP[theme] || THEME_MAP.emerald;
+
+    return (
+        <div className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+            <div>
+                {/* Header Kartu: Kotak Kanji & Tingkat Penguasaan */}
+                <div className="flex items-center gap-3">
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border text-base font-black ${style.avatar}`}>
+                        {kanji_char}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                            <h3 className="text-base font-black text-slate-950 dark:text-white truncate">{title}</h3>
+                            <span className="text-xs font-black tabular-nums text-slate-700 dark:text-slate-200">{clamp(pct)}%</span>
+                        </div>
+                        <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            Tingkat Penguasaan
+                        </p>
+                    </div>
+                </div>
+
+                {/* Progress Bar Horizontal */}
+                <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div className={`h-full rounded-full transition-all duration-500 ${style.bar}`} style={{ width: `${clamp(pct)}%` }} />
+                </div>
+
+                {/* Status Badge Weakspot */}
+                <div className="mt-4 flex items-center justify-between">
+                    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${has_weakspot ? 'bg-amber-50 text-amber-900 border border-amber-200/90 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800' : 'bg-emerald-50 text-emerald-900 border border-emerald-200/90 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800'}`}>
+                        <span className={has_weakspot ? "text-amber-600 dark:text-amber-400 text-xs leading-none" : "text-emerald-600 dark:text-emerald-400 text-xs leading-none"} aria-hidden="true">
+                            {has_weakspot ? '▲' : '✓'}
+                        </span>
+                        {has_weakspot ? 'Perlu Dilatih' : 'Tuntas'}
+                    </span>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                        {has_weakspot ? `${failed_count} butir keliru` : 'Semua soal dikuasai'}
+                    </span>
+                </div>
+
+                {/* List Butir Soal Kelemahan Riil (Interaktif Sesuai IMG-WA0013) */}
+                <div className="mt-3 min-h-[96px] space-y-1.5">
+                    {weakspots.map((item, idx) => (
+                        <Link
+                            key={idx}
+                            href={quiz_url}
+                            className="group flex items-center justify-between gap-2.5 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-100/90 dark:border-slate-800/80 dark:bg-slate-800/50 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-800"
+                            title={`Latih soal: ${item.title}`}
+                        >
+                            <div className="flex min-w-0 flex-1 items-center gap-2">
+                                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.is_cleared ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                                <span className="truncate group-hover:text-slate-950 dark:group-hover:text-white">{item.title}</span>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-1.5">
+                                {item.is_cleared ? (
+                                    <span className="text-[10px] font-extrabold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">Aman</span>
+                                ) : (
+                                    <span className="text-[10px] font-extrabold uppercase tracking-wide text-amber-700 dark:text-amber-400">Ulangi</span>
+                                )}
+                                <ChevronRightIcon sx={{ fontSize: 14 }} className="text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300" />
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+            </div>
+
+            {/* Footer Kartu: Tombol CTA & Status Selesai Berkontras Tinggi */}
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                {has_weakspot && failed_count > 0 ? (
+                    <Link
+                        href={quiz_url}
+                        className={`flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 px-3 text-xs font-black shadow-sm transition active:scale-[0.98] ${style.btn}`}
+                    >
+                        <PlayArrowIcon sx={{ fontSize: 16 }} />
+                        Latih {failed_count} Soal Titik Lemah
+                    </Link>
+                ) : (
+                    <div className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-200/80 bg-emerald-50/80 py-2.5 px-3 text-xs font-extrabold text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
+                        <CheckCircleIcon sx={{ fontSize: 16 }} className="text-emerald-600 dark:text-emerald-400" />
+                        Semua Materi Tuntas Dikuasai
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 function StatTile({ icon, label, value, tone }) {
     return (
@@ -60,6 +178,7 @@ export default function Progress({
     jlptJourney = [],
     recentActivity = [],
     skills = [],
+    category_cards = [],
     next_learning: nextLearning = null,
 }) {
     const weekItems = toList(weekActivity);
@@ -68,42 +187,44 @@ export default function Progress({
         : toList(jlptJourney);
     const recentItems = toList(recentActivity);
     const skillItems = toList(skills);
+    const categoryList = toList(category_cards);
+    const totalWeakspots = categoryList.reduce((acc, cat) => acc + (Number(cat.failed_count) || 0), 0);
     const totalXP = weekItems.reduce((total, day) => total + (Number(day.xp) || 0), 0);
     const activeDays = weekItems.filter((day) => Number(day.xp) > 0).length;
     const peakWeekXp = Math.max(1, ...weekItems.map((day) => Number(day.xp) || 0));
-    const activityRate = Math.round((activeDays / Math.max(weekItems.length, 7)) * 100);
+    const totalProgressPct = Math.min(100, Math.round(((Number(stats.xp) || 0) / 3200) * 100));
     const statCards = [
         {
             label: 'Total XP',
             value: stats.xp,
-            icon: <EmojiEventsIcon sx={{ fontSize: 21 }} />,
-            tone: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+            icon: <EmojiEventsIcon sx={{ fontSize: 20 }} />,
+            tone: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
         },
         {
             label: 'Streak',
             value: stats.streak,
-            icon: <LocalFireDepartmentIcon sx={{ fontSize: 21 }} />,
-            tone: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
+            icon: <LocalFireDepartmentIcon sx={{ fontSize: 20 }} />,
+            tone: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
         },
         {
             label: 'Modul selesai',
             value: stats.lessonsDone,
-            icon: <AutoStoriesIcon sx={{ fontSize: 21 }} />,
-            tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+            icon: <AutoStoriesIcon sx={{ fontSize: 20 }} />,
+            tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
         },
         {
             label: 'Kuis selesai',
             value: stats.quizzesDone,
-            icon: <HelpCenterIcon sx={{ fontSize: 21 }} />,
-            tone: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
+            icon: <HelpCenterIcon sx={{ fontSize: 20 }} />,
+            tone: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
         },
     ];
     const skillTones = [
-        'bg-rose-500',
+        'bg-slate-500',
         'bg-sky-500',
         'bg-emerald-500',
         'bg-amber-500',
-        'bg-violet-500',
+        'bg-indigo-500',
     ];
 
     return (
@@ -117,16 +238,10 @@ export default function Progress({
         >
             <Head title="Progres - TOKU-UP" />
 
-            <div className="relative min-h-screen overflow-hidden bg-[#f3f7f5] pb-12 text-slate-900 dark:bg-slate-950 dark:text-white">
-                <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(16,185,129,0.10)_0%,rgba(243,247,245,0)_32%,rgba(226,232,240,0.42)_100%),repeating-linear-gradient(90deg,rgba(15,23,42,0.035)_0_1px,transparent_1px_76px),repeating-linear-gradient(0deg,rgba(15,23,42,0.026)_0_1px,transparent_1px_76px)] dark:bg-[linear-gradient(180deg,rgba(16,185,129,0.10)_0%,rgba(2,6,23,0)_30%,rgba(15,23,42,0.56)_100%),repeating-linear-gradient(90deg,rgba(255,255,255,0.026)_0_1px,transparent_1px_76px),repeating-linear-gradient(0deg,rgba(255,255,255,0.02)_0_1px,transparent_1px_76px)]"
-                />
-                <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 via-amber-400 to-rose-500" />
-
-                <main className="relative z-10 mx-auto max-w-7xl px-4 pt-7 sm:px-6 lg:px-8">
-                    <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm dark:border-emerald-950 dark:bg-slate-900">
-                        <div className="grid lg:grid-cols-[minmax(0,1fr)_300px]">
+            <div className="min-h-screen bg-slate-50/60 pb-12 text-slate-900 dark:bg-slate-950 dark:text-white">
+                <main className="mx-auto max-w-7xl px-4 pt-7 sm:px-6 lg:px-8">
+                    <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px]">
                             <div className="p-6 sm:p-8">
                                 <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
                                     <TrendingUpIcon sx={{ fontSize: 15 }} />
@@ -166,15 +281,16 @@ export default function Progress({
                                 <div className="relative flex flex-col items-center text-center">
                                     <div
                                         className="flex h-36 w-36 items-center justify-center rounded-full border-[10px] border-white/20 bg-emerald-800/30 shadow-xl"
-                                        style={{ background: `conic-gradient(#fbbf24 ${activityRate}%, rgba(255,255,255,0.18) 0)` }}
+                                        style={{ background: `conic-gradient(#34d399 ${Math.max(5, totalProgressPct)}%, rgba(255,255,255,0.18) 0)` }}
                                     >
-                                        <div className="flex h-[102px] w-[102px] flex-col items-center justify-center rounded-full bg-emerald-700 dark:bg-emerald-900">
-                                            <span className="text-3xl font-black">{totalXP.toLocaleString()}</span>
-                                            <span className="mt-1 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-100">XP minggu ini</span>
+                                        <div className="flex h-[104px] w-[104px] flex-col items-center justify-center rounded-full bg-emerald-700 dark:bg-emerald-900">
+                                            <span className="text-2xl font-black">{totalProgressPct}%</span>
+                                            <span className="mt-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-100">Total Progress</span>
+                                            <span className="text-[10px] font-bold text-emerald-200">{(Number(stats.xp) || 0).toLocaleString()} / 3,200 XP</span>
                                         </div>
                                     </div>
-                                    <p className="mt-5 text-sm font-black">Aktif {activeDays} dari {Math.max(weekItems.length, 7)} hari</p>
-                                    <p className="mt-1 text-xs font-medium text-emerald-100">Konsistensi kecil tetap berarti.</p>
+                                    <p className="mt-4 text-xs font-black tracking-wide text-emerald-100">「コツコツが勝つコツだ。」</p>
+                                    <p className="mt-0.5 text-[11px] font-medium text-emerald-200">"Konsistensi kecil tetap berarti."</p>
                                 </div>
                             </div>
                         </div>
@@ -186,7 +302,7 @@ export default function Progress({
 
                     <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.85fr)]">
                         <div className="space-y-6">
-                            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+                            <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div>
                                         <div className="flex items-center gap-2">
@@ -230,13 +346,43 @@ export default function Progress({
                                 )}
                             </section>
 
-                            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-                                <div>
-                                    <h2 className="text-lg font-black text-slate-950 dark:text-white">Aktivitas per Topik</h2>
-                                    <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-300">Jejak latihan berdasarkan modul dan kuis yang telah kamu kerjakan.</p>
+                            <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                                            <TrackChangesIcon sx={{ fontSize: 20 }} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-black text-slate-950 dark:text-white">Evaluasi Titik Lemah (Weakspot)</h2>
+                                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Deteksi otomatis materi yang perlu diperbaiki dari riwayat kuis.</p>
+                                        </div>
+                                    </div>
+                                    {totalWeakspots > 0 ? (
+                                        <Link
+                                            href={route('user.weakspot.show')}
+                                            className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-amber-600 active:scale-95"
+                                        >
+                                            <PlayArrowIcon sx={{ fontSize: 16 }} />
+                                            Latih Semua Titik Lemah ({totalWeakspots} Soal)
+                                        </Link>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                            <CheckCircleIcon sx={{ fontSize: 16 }} className="text-emerald-500" />
+                                            Semua Titik Lemah Bersih
+                                        </span>
+                                    )}
                                 </div>
 
-                                {skillItems.length > 0 ? (
+                                {categoryList.length > 0 ? (
+                                    <div className="mt-6 grid gap-4 grid-cols-1 md:grid-cols-3">
+                                        {categoryList.map((cat) => (
+                                            <WeakspotCategoryCard
+                                                key={cat.id}
+                                                category={cat}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : skillItems.length > 0 ? (
                                     <div className="mt-6 grid gap-4 sm:grid-cols-2">
                                         {skillItems.map((skill, index) => (
                                             <div key={skill.label || index} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
@@ -257,14 +403,14 @@ export default function Progress({
                         </div>
 
                         <aside className="space-y-6">
-                            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                            <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                                 <div className="flex items-center justify-between gap-3">
                                     <div>
                                         <h2 className="text-lg font-black text-slate-950 dark:text-white">Perjalanan Belajar</h2>
                                         <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-300">Tahapan yang sudah kamu selesaikan.</p>
                                     </div>
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
-                                        <AutoStoriesIcon sx={{ fontSize: 21 }} />
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                        <AutoStoriesIcon sx={{ fontSize: 20 }} />
                                     </div>
                                 </div>
 
@@ -278,7 +424,7 @@ export default function Progress({
                                                 <div key={`${level.program || level.label}-${index}`}>
                                                     <div className="flex items-center justify-between gap-3">
                                                         <div className="flex min-w-0 items-center gap-2">
-                                                            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-black ${completed ? 'bg-emerald-500 text-white' : progress > 0 ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300'}`}>
+                                                            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-black ${completed ? 'bg-emerald-500 text-white' : progress > 0 ? 'bg-sky-500 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300'}`}>
                                                                 {completed ? <CheckCircleIcon sx={{ fontSize: 16 }} /> : (level.level || index + 1)}
                                                             </span>
                                                             <span className="truncate text-sm font-black text-slate-800 dark:text-slate-100">{level.program || level.label}</span>
@@ -286,7 +432,7 @@ export default function Progress({
                                                         <span className="text-xs font-black tabular-nums text-slate-600 dark:text-slate-300">{progress}%</span>
                                                     </div>
                                                     <div className="ml-9 mt-2 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                                                        <div className={`h-full rounded-full ${completed ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${progress}%` }} />
+                                                        <div className={`h-full rounded-full ${completed ? 'bg-emerald-500' : 'bg-sky-500'}`} style={{ width: `${progress}%` }} />
                                                     </div>
                                                 </div>
                                             );
@@ -297,14 +443,14 @@ export default function Progress({
                                 )}
                             </section>
 
-                            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                            <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                                 <div className="flex items-center justify-between gap-3">
                                     <div>
                                         <h2 className="text-lg font-black text-slate-950 dark:text-white">Aktivitas Terkini</h2>
                                         <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-300">Pencapaian terbaru dari belajarmu.</p>
                                     </div>
-                                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-                                        <LocalFireDepartmentIcon sx={{ fontSize: 21 }} />
+                                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                                        <LocalFireDepartmentIcon sx={{ fontSize: 20 }} />
                                     </span>
                                 </div>
 
@@ -332,7 +478,7 @@ export default function Progress({
                         </aside>
                     </div>
 
-                    <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex sm:items-center sm:justify-between sm:p-5">
+                    <section className="mt-6 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex sm:items-center sm:justify-between sm:p-5">
                         <div className="flex items-start gap-3">
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"><PlayArrowIcon /></span>
                             <div>

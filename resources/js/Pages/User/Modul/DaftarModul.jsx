@@ -847,6 +847,30 @@ function PathNodeLabel({ item, onDayToggle, selected }) {
     );
 }
 
+function SoumatomeNodeBadge({ type = 'kanji', locked = false }) {
+    const BADGE_IMAGES = {
+        kanji: '/images/nodes/soumatome-kanji.webp',
+        bunpo: '/images/nodes/soumatome-bunpo.webp',
+        dokkai: '/images/nodes/soumatome-dokkai.webp',
+        mixed: '/images/nodes/soumatome-mixed.webp',
+    };
+
+    const src = BADGE_IMAGES[type] || BADGE_IMAGES.kanji;
+
+    return (
+        <span className="relative flex h-[62px] w-[50px] min-[380px]:h-[70px] min-[380px]:w-[56px] sm:h-[78px] sm:w-[62px] shrink-0 items-center justify-center select-none">
+            <img
+                src={src}
+                alt={`Soumatome ${type}`}
+                className={`h-full w-full object-contain drop-shadow-sm transition-transform group-hover:scale-105 ${
+                    locked ? 'grayscale opacity-60' : ''
+                }`}
+                loading="lazy"
+            />
+        </span>
+    );
+}
+
 function DayDetailContent({ day, onClose, mobile = false, dragControls = null, onOpenGrammarQuiz = null, dokkaiPreview = null, onRetryDokkai = null, onOpenDokkai = null }) {
     const items = dayChildItems(day);
     const dokkaiQuiz = dokkaiPreview?.payload?.quiz;
@@ -943,15 +967,7 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null, o
                     const recommended = recommendedId === item.key;
                     const row = (
                         <>
-                            <span className={`flex h-9 w-9 min-[380px]:h-10 min-[380px]:w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl ${
-                                locked
-                                    ? 'bg-gray-100 text-gray-400 dark:bg-gray-700'
-                                    : passed
-                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                        : 'bg-[#f1e4ff] text-[#7c3aed] dark:bg-violet-950/60 dark:text-violet-300'
-                            }`}>
-                                <QuizIcon sx={{ fontSize: { xs: 22, sm: 24 } }} />
-                            </span>
+                            <SoumatomeNodeBadge type="kanji" locked={locked} />
                             <span className="min-w-0 flex-1">
                                 <span className="flex flex-wrap items-center gap-1.5">
                                     <span className="rounded-full bg-violet-200 px-2 py-0.5 text-[10px] font-bold text-violet-950 dark:bg-violet-800 dark:text-violet-50">Kosakata</span>
@@ -985,7 +1001,7 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null, o
                             </span>
                         </>
                     );
-                    const className = `group flex min-h-[58px] sm:min-h-[66px] w-full items-center gap-2 min-[380px]:gap-2.5 sm:gap-3 rounded-xl border p-2 min-[380px]:p-2.5 sm:px-4 sm:py-3 text-left transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-200/70 ${
+                    const className = `group flex min-h-[68px] sm:min-h-[82px] w-full items-center gap-2.5 min-[380px]:gap-3 sm:gap-3.5 rounded-xl border p-2.5 min-[380px]:p-3 sm:px-4 sm:py-3 text-left transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-200/70 ${
                         locked
                             ? 'cursor-not-allowed border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
                             : 'border-violet-200 bg-white shadow-[0_3px_0_#ddd6fe] hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/40 hover:shadow-[0_4px_0_#c4b5fd] active:translate-y-0.5 active:shadow-none dark:border-violet-900/70 dark:bg-gray-800 dark:hover:bg-violet-950/20'
@@ -1021,13 +1037,15 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null, o
                             transition={{ delay: (items.length + index) * 0.06 }}
                             disabled={isLoading}
                             onClick={() => openGrammar(lesson.id)}
-                            className="group flex min-h-[58px] sm:min-h-[66px] w-full items-center gap-2 min-[380px]:gap-2.5 sm:gap-3 rounded-xl border border-sky-200 bg-white p-2 min-[380px]:p-2.5 sm:px-4 sm:py-3 text-left shadow-[0_3px_0_#bae6fd] transition hover:-translate-y-0.5 hover:border-sky-300 hover:bg-sky-50/40 hover:shadow-[0_4px_0_#7dd3fc] active:translate-y-0.5 active:scale-[0.98] active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/70 disabled:opacity-75 dark:border-sky-900/70 dark:bg-gray-800 dark:hover:bg-sky-950/20"
+                            className="group flex min-h-[68px] sm:min-h-[82px] w-full items-center gap-2.5 min-[380px]:gap-3 sm:gap-3.5 rounded-xl border border-sky-200 bg-white p-2.5 min-[380px]:p-3 sm:px-4 sm:py-3 text-left shadow-[0_3px_0_#bae6fd] transition hover:-translate-y-0.5 hover:border-sky-300 hover:bg-sky-50/40 hover:shadow-[0_4px_0_#7dd3fc] active:translate-y-0.5 active:scale-[0.98] active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/70 disabled:opacity-75 dark:border-sky-900/70 dark:bg-gray-800 dark:hover:bg-sky-950/20"
                         >
-                            <span className="flex h-9 w-9 min-[380px]:h-10 min-[380px]:w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
+                            <span className="relative shrink-0 flex items-center justify-center">
                                 {isLoading ? (
-                                    <span className="h-4 w-4 sm:h-5 sm:w-5 animate-spin rounded-full border-2 border-sky-600 border-t-transparent dark:border-sky-300" />
+                                    <span className="flex h-[62px] w-[50px] min-[380px]:h-[70px] min-[380px]:w-[56px] sm:h-[76px] sm:w-[60px] items-center justify-center rounded-xl bg-sky-100 dark:bg-sky-950/50">
+                                        <span className="h-6 w-6 animate-spin rounded-full border-2 border-sky-600 border-t-transparent dark:border-sky-300" />
+                                    </span>
                                 ) : (
-                                    <AutoStoriesIcon sx={{ fontSize: { xs: 19, sm: 22 } }} />
+                                    <SoumatomeNodeBadge type="bunpo" />
                                 )}
                             </span>
                             <span className="min-w-0 flex-1">
@@ -1060,13 +1078,19 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null, o
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: (items.length + (day.grammar_lessons?.length || 0) + dokkaiIdx) * 0.06 }}
-                            onClick={() => onOpenDokkai?.(dokkai.id)}
-                            className="group flex min-h-[76px] w-full items-center gap-2.5 rounded-xl border border-emerald-200 bg-white p-2.5 text-left shadow-[0_3px_0_#a7f3d0] transition hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-[0_4px_0_#6ee7b7] active:translate-y-0.5 active:scale-[0.98] active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200/70 dark:border-emerald-800 dark:bg-gray-800 dark:hover:bg-emerald-950/20 sm:gap-3 sm:px-4 sm:py-3"
+                            onClick={() => {
+                                onClose?.();
+                                onOpenDokkai?.(dokkai.id);
+                            }}
+                            className="group flex min-h-[76px] sm:min-h-[82px] w-full items-center gap-2.5 min-[380px]:gap-3 sm:gap-3.5 rounded-xl border border-emerald-200 bg-white p-2.5 min-[380px]:p-3 text-left shadow-[0_3px_0_#a7f3d0] transition hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-[0_4px_0_#6ee7b7] active:translate-y-0.5 active:scale-[0.98] active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200/70 dark:border-emerald-800 dark:bg-gray-800 dark:hover:bg-emerald-950/20 sm:px-4 sm:py-3"
                         >
-                            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${
-                                isDone ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100'
-                            }`}>
-                                {isDone ? <CheckCircleIcon sx={{ fontSize: 24 }} /> : <FindInPageIcon sx={{ fontSize: 24 }} />}
+                            <span className="relative shrink-0 flex items-center justify-center">
+                                <SoumatomeNodeBadge type="dokkai" />
+                                {isDone && (
+                                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xs z-10">
+                                        <CheckCircleIcon sx={{ fontSize: 13 }} />
+                                    </span>
+                                )}
                             </span>
                             <span className="min-w-0 flex-1">
                                 <span className="flex flex-wrap items-center gap-1.5">
@@ -1093,6 +1117,93 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null, o
                         </motion.button>
                     );
                 })}
+                {/* Tombol Ekosistem Baru: Kuis Campuran Hari Ini (Revisi Oktober Fuad) */}
+                {(() => {
+                    const mixedSummary = day.mixed_quiz_summary;
+                    const isMixedLocked = mixedSummary ? mixedSummary.locked : (['locked', 'unavailable'].includes(day.status) || Boolean(day.checkpoint_summary?.locked));
+                    const isMixedDone = Boolean(mixedSummary?.is_done);
+                    const mixedProgress = mixedSummary?.progress_status;
+                    const mixedStatusText = isMixedLocked
+                        ? (day.status === 'unavailable' ? 'Belum tersedia' : 'Terkunci')
+                        : (isMixedDone
+                            ? 'Selesai'
+                            : (mixedProgress === 'needs_retry' ? 'Coba lagi' : 'Belum dimulai'));
+                    const mixedLockReason = mixedSummary?.lock_reason || day.lock_reason || 'Selesaikan materi sebelumnya terlebih dahulu.';
+
+                    const mixedRow = (
+                        <>
+                            <span className="relative shrink-0 flex items-center justify-center">
+                                <SoumatomeNodeBadge type="mixed" locked={isMixedLocked} />
+                                {isMixedDone && (
+                                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-white shadow-xs z-10">
+                                        <CheckCircleIcon sx={{ fontSize: 13 }} />
+                                    </span>
+                                )}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="flex flex-wrap items-center gap-1.5">
+                                    <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-950 dark:bg-amber-800 dark:text-amber-50">Kuis Campuran</span>
+                                    <span className="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.2 text-[9px] font-black text-amber-800 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-200">10 Soal</span>
+                                    <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">{mixedStatusText}</span>
+                                    {isMixedDone && mixedSummary?.best_score != null && (
+                                        <span className="rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-[10px] font-black dark:bg-amber-950 dark:text-amber-300">
+                                            ({mixedSummary.best_score}%)
+                                        </span>
+                                    )}
+                                </span>
+                                <span className="mt-1 block line-clamp-2 break-words text-xs font-extrabold leading-tight text-[#2d3742] dark:text-white min-[380px]:text-[13px] sm:text-sm" title={isMixedDone ? 'Ulangi Kuis Campuran' : `Evaluasi Campuran Hari ${day.day_number}`}>
+                                    {isMixedDone ? 'Ulangi Kuis Campuran' : `Evaluasi Campuran Hari ${day.day_number}`}
+                                </span>
+                                {!isMixedLocked && (
+                                    <span className="mt-0.5 block line-clamp-2 text-[10px] font-medium leading-4 text-gray-600 dark:text-gray-300 min-[380px]:text-xs">
+                                        {isMixedDone ? 'Latihan kembali gabungan Kanji, Bunpo, & Dokkai kilat (+30 XP).' : 'Gabungan Kanji, Bunpo, & Dokkai kilat (+30 XP)'}
+                                    </span>
+                                )}
+                                {isMixedLocked && (
+                                    <span className="mt-0.5 block line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 text-gray-500 dark:text-gray-400">
+                                        {mixedLockReason}
+                                    </span>
+                                )}
+                            </span>
+                            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                                isMixedLocked
+                                    ? 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'
+                                    : 'bg-amber-100 text-amber-900 transition group-hover:bg-amber-200 dark:bg-amber-900 dark:text-amber-100'
+                            }`}>
+                                {isMixedLocked
+                                    ? <LockIcon sx={{ fontSize: 20 }} />
+                                    : <ChevronRightIcon sx={{ fontSize: 24 }} />}
+                            </span>
+                        </>
+                    );
+
+                    const mixedClassName = `group flex min-h-[68px] sm:min-h-[82px] w-full items-center gap-2.5 min-[380px]:gap-3 sm:gap-3.5 rounded-xl border p-2.5 min-[380px]:p-3 text-left transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-200/70 sm:px-4 sm:py-3 ${
+                        isMixedLocked
+                            ? 'cursor-not-allowed border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
+                            : 'border-amber-200 bg-linear-to-r from-amber-50/60 to-orange-50/40 shadow-[0_3px_0_#fde68a] hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-[0_4px_0_#fcd34d] active:translate-y-0.5 active:shadow-none dark:border-amber-900/60 dark:from-gray-800 dark:to-amber-950/20'
+                    }`;
+
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: (items.length + (day.grammar_lessons?.length || 0) + (day.dokkai_lessons?.length || 0)) * 0.06 }}
+                        >
+                            {!isMixedLocked ? (
+                                <Link
+                                    href={route('user.kuis-campuran.show', day.id)}
+                                    className={mixedClassName}
+                                >
+                                    {mixedRow}
+                                </Link>
+                            ) : (
+                                <div className={mixedClassName}>
+                                    {mixedRow}
+                                </div>
+                            )}
+                        </motion.div>
+                    );
+                })()}
 
             </div>
         </div>
@@ -1322,13 +1433,10 @@ function DuolingoPath({ week, selectedDayId, dayAnchorEl, onDayToggle, onOpenGra
     );
 }
 
-function WeekRoadmapSection({ week, expanded, onToggle }) {
+function WeekRoadmapSection({ week, expanded, onToggle, onOpenDokkai, onOpenGrammarQuiz }) {
     const days = week.days || [];
     const [selectedDayId, setSelectedDayId] = useState(null);
     const [dayAnchorEl, setDayAnchorEl] = useState(null);
-    const [activeGrammarQuiz, setActiveGrammarQuiz] = useState(null);
-    const [activeDokkaiQuiz, setActiveDokkaiQuiz] = useState(null);
-    const [loadingDokkaiId, setLoadingDokkaiId] = useState(null);
     const locked = ['locked', 'unavailable'].includes(week.status);
     const canExpand = !locked || Boolean(week.live_session);
     const completedDays = days.filter((day) => day.status === 'done').length;
@@ -1338,25 +1446,6 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
         setSelectedDayId(null);
         setDayAnchorEl(null);
     }, [week.id]);
-
-    const handleOpenDokkai = async (quizId) => {
-        try {
-            setLoadingDokkaiId(quizId);
-            const endpoint = typeof route !== 'undefined'
-                ? route('user.dokkai-quizzes.payload', { quiz: quizId })
-                : `/user/dokkai-quizzes/${quizId}`;
-            const { data } = await window.axios.get(endpoint);
-            setSelectedDayId(null);
-            setDayAnchorEl(null);
-            setActiveDokkaiQuiz(data);
-        } catch (err) {
-            console.error('Gagal memuat materi Dokkai:', err);
-        } finally {
-            setLoadingDokkaiId(null);
-        }
-    };
-
-    useScrollLock(Boolean(activeDokkaiQuiz));
 
     const toggleDay = (dayId, anchorEl = null) => {
         const isClosing = selectedDayId === dayId;
@@ -1458,98 +1547,253 @@ function WeekRoadmapSection({ week, expanded, onToggle }) {
                                 selectedDayId={selectedDayId}
                                 dayAnchorEl={dayAnchorEl}
                                 onDayToggle={toggleDay}
-                                onOpenGrammarQuiz={setActiveGrammarQuiz}
-                                onOpenDokkai={handleOpenDokkai}
+                                onOpenGrammarQuiz={onOpenGrammarQuiz}
+                                onOpenDokkai={onOpenDokkai}
                             />
 
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            <GrammarQuizPreviewDialog
-                open={Boolean(activeGrammarQuiz)}
-                quiz={activeGrammarQuiz}
-                persist
-                onClose={() => setActiveGrammarQuiz(null)}
-            />
-
-            {activeDokkaiQuiz && typeof document !== 'undefined' && createPortal(
-                <div role="dialog" aria-modal="true" aria-label="Kuis Dokkai" className="fixed inset-0 z-[10000] flex flex-col overflow-y-auto overscroll-contain bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white">
-                    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm font-semibold">Memuat wacana Dokkai...</div>}>
-                        <DokkaiQuizRunner
-                            quiz={activeDokkaiQuiz.quiz}
-                            paragraphs={activeDokkaiQuiz.paragraphs}
-                            vocabularies={activeDokkaiQuiz.vocabularies}
-                            questions={activeDokkaiQuiz.questions}
-                            onClose={() => {
-                                setActiveDokkaiQuiz(null);
-                                router.reload({ only: ['weeks', 'auth', 'progress'] });
-                            }}
-                            onSubmitAttempt={async (attemptPayload) => {
-                                const quizId = attemptPayload?.quiz_id || activeDokkaiQuiz?.quiz?.id;
-                                const endpoint = typeof route !== 'undefined'
-                                    ? route('user.dokkai-quizzes.submit', { quiz: quizId })
-                                    : `/user/dokkai-quizzes/${quizId}/submit`;
-
-                                const axiosClient = (typeof window !== 'undefined' && window.axios) ? window.axios : (await import('axios')).default;
-                                const { data } = await axiosClient.post(endpoint, {
-                                    answers: attemptPayload.answers || {},
-                                    submission_token: attemptPayload.submission_token,
-                                });
-
-                                return data;
-                            }}
-                            persist={true}
-                        />
-                    </Suspense>
-                </div>,
-                document.body,
-            )}
-
         </section>
     );
 }
 
-function LibraryShortcut({ program }) {
-    if (!program?.resources?.vocabulary_url) return null;
+function DokkaiProgramDrawer({ open, onClose, dokkaiItems = [], onSelectDokkai, loadingId = null }) {
+    useScrollLock(open);
 
-    return (
-        <Link
-            href={program.resources.vocabulary_url}
-            className="group mb-5 flex min-h-14 items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/75 px-2.5 py-2 backdrop-blur-sm transition hover:border-amber-300 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/40 dark:border-amber-900/60 dark:bg-amber-950/25 dark:hover:border-amber-700 dark:hover:bg-amber-950/40 min-[360px]:gap-3 min-[360px]:px-3 sm:px-3.5 xl:hidden"
-        >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-400 text-amber-950 shadow-[0_2px_0_#b45309] min-[360px]:h-10 min-[360px]:w-10">
-                <AutoStoriesIcon sx={{ fontSize: 21 }} />
-            </span>
-            <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-black text-gray-900 dark:text-white">
-                    Pustaka Materi
-                </span>
-                <span className="block truncate text-[10px] font-semibold text-gray-600 dark:text-gray-400 min-[360px]:text-[11px]">
-                    Kosakata, kanji, dan bunpo
-                </span>
-            </span>
-            <span className="flex shrink-0 items-center gap-1">
-                <span className="rounded-lg bg-white/80 px-2 py-1 text-center dark:bg-gray-900/70">
-                    <span className="block text-xs font-black leading-none text-gray-800 dark:text-gray-100">
-                        {program.resources.vocabulary_count || 0}
-                    </span>
-                    <span className="mt-0.5 block text-[8px] font-bold uppercase leading-none text-gray-500 dark:text-gray-400">
-                        Entri
-                    </span>
-                </span>
-                <ChevronRightIcon
-                    className="text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-amber-600"
-                    sx={{ fontSize: 21 }}
-                />
-            </span>
-        </Link>
+    useEffect(() => {
+        if (!open) return undefined;
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [open, onClose]);
+
+    if (typeof document === 'undefined') return null;
+
+    const completedCount = dokkaiItems.filter((item) => item.done).length;
+    const totalCount = dokkaiItems.length;
+
+    return createPortal(
+        <AnimatePresence>
+            {open && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Dokkai Corner - Wacana Modul"
+                    className="fixed inset-0 z-[10000] flex justify-end bg-black/50 backdrop-blur-xs transition-opacity"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) onClose();
+                    }}
+                >
+                    <motion.div
+                        initial={{ x: '100%' }}
+                        animate={{ x: 0 }}
+                        exit={{ x: '100%' }}
+                        transition={{ type: 'spring', damping: 30, stiffness: 280 }}
+                        className="relative flex h-full w-full max-w-lg flex-col bg-white shadow-2xl dark:bg-gray-900"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Drawer Header */}
+                        <div className="flex items-start justify-between border-b border-emerald-100 bg-emerald-50/90 p-4 sm:p-5 dark:border-emerald-900/50 dark:bg-emerald-950/40">
+                            <div className="flex items-start gap-3">
+                                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-[0_2px_0_#065f46]">
+                                    <FindInPageIcon sx={{ fontSize: 24 }} />
+                                </span>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="rounded-full bg-emerald-200/80 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-950 dark:bg-emerald-800 dark:text-emerald-50">
+                                            Dokkai Corner
+                                        </span>
+                                        <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                                            読解 · Pemahaman Teks
+                                        </span>
+                                    </div>
+                                    <h2 className="mt-1 text-base font-black text-gray-900 sm:text-lg dark:text-white">
+                                        Wacana Bacaan Modul
+                                    </h2>
+                                    <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300">
+                                        {completedCount} dari {totalCount} wacana selesai
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition hover:bg-white hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                                aria-label="Tutup"
+                            >
+                                <CloseIcon sx={{ fontSize: 20 }} />
+                            </button>
+                        </div>
+
+                        {/* Drawer Body - List Wacana */}
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
+                            {dokkaiItems.length === 0 ? (
+                                <div className="py-12 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">
+                                    Belum ada wacana Dokkai yang diterbitkan pada program ini.
+                                </div>
+                            ) : (
+                                dokkaiItems.map((item) => {
+                                    const isLoading = loadingId === item.id;
+                                    const isDone = item.done;
+                                    const isLocked = item.locked;
+
+                                    return (
+                                        <button
+                                            key={`dokkai-item-${item.id}`}
+                                            type="button"
+                                            disabled={isLocked || isLoading}
+                                            onClick={() => onSelectDokkai(item.id)}
+                                            className={`group relative flex w-full flex-col rounded-2xl border p-4 text-left transition ${
+                                                isLocked
+                                                    ? 'cursor-not-allowed border-gray-200 bg-gray-50/80 opacity-70 dark:border-gray-800 dark:bg-gray-800/40'
+                                                    : isDone
+                                                        ? 'border-emerald-200 bg-white hover:border-emerald-400 hover:shadow-md dark:border-emerald-900/60 dark:bg-gray-800'
+                                                        : 'border-emerald-300 bg-white shadow-xs hover:-translate-y-0.5 hover:border-emerald-500 hover:shadow-md dark:border-emerald-800 dark:bg-gray-800'
+                                            }`}
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                                                        Minggu {item.week_number} · Hari {item.day_number}
+                                                    </span>
+                                                    {item.jlpt_level && (
+                                                        <span className="rounded-md border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-black text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
+                                                            {item.jlpt_level}
+                                                        </span>
+                                                    )}
+                                                    {isDone && (
+                                                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                                                            Selesai ({item.best_score}%)
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+                                                    isLocked
+                                                        ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-400'
+                                                        : isDone
+                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                                                            : 'bg-emerald-500 text-white'
+                                                }`}>
+                                                    {isLoading ? (
+                                                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                                    ) : isLocked ? (
+                                                        <LockIcon sx={{ fontSize: 15 }} />
+                                                    ) : isDone ? (
+                                                        <CheckCircleIcon sx={{ fontSize: 17 }} />
+                                                    ) : (
+                                                        <ChevronRightIcon sx={{ fontSize: 18 }} />
+                                                    )}
+                                                </span>
+                                            </div>
+
+                                            <h3 className="mt-2 text-sm font-black text-gray-900 sm:text-base dark:text-white">
+                                                {item.title}
+                                            </h3>
+                                            {item.sub_title && (
+                                                <p className="mt-0.5 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
+                                                    {item.sub_title}
+                                                </p>
+                                            )}
+
+                                            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                                                {Number(item.estimated_reading_time) > 0 && (
+                                                    <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300">
+                                                        <AccessTimeIcon sx={{ fontSize: 13 }} />
+                                                        {item.estimated_reading_time} menit baca
+                                                    </span>
+                                                )}
+                                                <span className="font-bold text-amber-600 dark:text-amber-400">
+                                                    +{item.xp_reward || 80} XP
+                                                </span>
+                                                {isLocked && (
+                                                    <span className="text-[10px] text-rose-600 dark:text-rose-400">
+                                                        {item.lock_reason || 'Terkunci'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>,
+        document.body,
     );
 }
 
-function DesktopLibraryPanel({ program, open, onToggle }) {
-    if (!program?.resources?.vocabulary_url) return null;
+function LibraryShortcut({ program, onOpenDokkaiDrawer }) {
+    const hasVocab = Boolean(program?.resources?.vocabulary_url);
+    const dokkaiCount = Number(program?.resources?.dokkai_count || 0);
+    const dokkaiCompleted = Number(program?.resources?.dokkai_completed_count || 0);
+
+    if (!hasVocab && dokkaiCount === 0) return null;
+
+    return (
+        <div className="mb-5 grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2 xl:hidden">
+            {hasVocab && (
+                <Link
+                    href={program.resources.vocabulary_url}
+                    className="group flex min-h-[58px] items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/75 p-2.5 backdrop-blur-sm transition hover:border-amber-300 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/40 dark:border-amber-900/60 dark:bg-amber-950/25 dark:hover:border-amber-700 dark:hover:bg-amber-950/40"
+                >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-400 text-amber-950 shadow-[0_2px_0_#b45309]">
+                        <AutoStoriesIcon sx={{ fontSize: 20 }} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-black text-gray-900 dark:text-white">
+                            Pustaka Materi
+                        </span>
+                        <span className="block truncate text-[10px] font-semibold text-gray-600 dark:text-gray-400">
+                            Kosakata & Kanji ({program.resources.vocabulary_count || 0})
+                        </span>
+                    </span>
+                    <ChevronRightIcon
+                        className="text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-amber-600"
+                        sx={{ fontSize: 20 }}
+                    />
+                </Link>
+            )}
+
+            {dokkaiCount > 0 && (
+                <button
+                    type="button"
+                    onClick={onOpenDokkaiDrawer}
+                    className="group flex min-h-[58px] items-center gap-2.5 rounded-xl border border-emerald-200/80 bg-emerald-50/75 p-2.5 text-left backdrop-blur-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/40 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40"
+                >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500 text-white shadow-[0_2px_0_#047857]">
+                        <FindInPageIcon sx={{ fontSize: 20 }} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-black text-gray-900 dark:text-white">
+                            Dokkai Corner
+                        </span>
+                        <span className="block truncate text-[10px] font-semibold text-emerald-800 dark:text-emerald-300">
+                            {dokkaiCompleted > 0 ? `${dokkaiCompleted}/${dokkaiCount} Selesai` : `${dokkaiCount} Wacana`}
+                        </span>
+                    </span>
+                    <ChevronRightIcon
+                        className="text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600"
+                        sx={{ fontSize: 20 }}
+                    />
+                </button>
+            )}
+        </div>
+    );
+}
+
+function DesktopLibraryPanel({ program, open, onToggle, onOpenDokkaiDrawer }) {
+    const hasVocab = Boolean(program?.resources?.vocabulary_url);
+    const dokkaiCount = Number(program?.resources?.dokkai_count || 0);
+    const dokkaiCompleted = Number(program?.resources?.dokkai_completed_count || 0);
+
+    if (!hasVocab && dokkaiCount === 0) return null;
 
     return (
         <aside className="sticky top-20 hidden xl:block">
@@ -1561,69 +1805,88 @@ function DesktopLibraryPanel({ program, open, onToggle }) {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 12 }}
                         transition={{ duration: 0.2, ease: 'easeOut' }}
-                        className="overflow-hidden rounded-2xl border border-amber-200/80 bg-white/90 shadow-lg shadow-amber-950/5 backdrop-blur-md dark:border-amber-900/60 dark:bg-gray-900/90"
+                        className="w-[280px] overflow-hidden rounded-2xl border border-amber-200/80 bg-white/95 shadow-xl shadow-amber-950/5 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/95"
                     >
-                        <div className="flex items-start justify-between gap-3 border-b border-amber-100 bg-amber-50/80 p-4 dark:border-amber-900/50 dark:bg-amber-950/35">
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-amber-950 shadow-[0_2px_0_#b45309]">
-                                <AutoStoriesIcon sx={{ fontSize: 22 }} />
+                        <div className="flex items-start justify-between gap-3 border-b border-amber-100 bg-amber-50/80 p-3.5 dark:border-amber-900/50 dark:bg-amber-950/35">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-amber-950 shadow-[0_2px_0_#b45309]">
+                                <AutoStoriesIcon sx={{ fontSize: 20 }} />
                             </span>
                             <span className="min-w-0 flex-1">
                                 <span className="block truncate text-sm font-black text-gray-900 dark:text-white">
-                                    Pustaka Materi
+                                    Pustaka & Dokkai
                                 </span>
-                                <span className="mt-0.5 block text-[11px] font-semibold leading-4 text-gray-500 dark:text-gray-400">
-                                    Referensi pendukung roadmap
+                                <span className="mt-0.5 block text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                                    Pusat pengayaan materi
                                 </span>
                             </span>
                             <button
                                 type="button"
                                 onClick={onToggle}
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition hover:bg-white hover:text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300"
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-gray-500 transition hover:bg-white hover:text-amber-700 dark:text-gray-400 dark:hover:bg-gray-800"
                                 aria-label="Tutup Pustaka"
-                                aria-expanded="true"
                                 title="Tutup Pustaka"
                             >
-                                <ChevronRightIcon sx={{ fontSize: 20 }} />
+                                <ChevronRightIcon sx={{ fontSize: 18 }} />
                             </button>
                         </div>
 
-                        <div className="p-4">
-                            <div className="flex items-end justify-between gap-3">
-                                <div>
-                                    <p className="text-2xl font-black leading-none text-gray-900 dark:text-white">
-                                        {program.resources.vocabulary_count || 0}
-                                    </p>
-                                    <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
-                                        Entri tersedia
-                                    </p>
-                                </div>
-                                <span className="rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                                    Pendukung
-                                </span>
-                            </div>
-
-                            <div className="mt-4 flex flex-wrap gap-1.5" aria-label="Isi Pustaka">
-                                {['Kosakata', 'Kanji', 'Bunpo'].map((label) => (
-                                    <span
-                                        key={label}
-                                        className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-[10px] font-bold text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                        <div className="space-y-4 p-3.5">
+                            {/* Seksi 1: Pustaka Kosakata & Kanji */}
+                            {hasVocab && (
+                                <div className="rounded-xl border border-amber-200/70 bg-amber-50/40 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                                            Kosakata & Kanji
+                                        </span>
+                                        <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-black text-amber-900 shadow-xs dark:bg-gray-800 dark:text-amber-200">
+                                            {program.resources.vocabulary_count || 0} Entri
+                                        </span>
+                                    </div>
+                                    <div className="mt-2 flex flex-wrap gap-1">
+                                        {['Kosakata', 'Kanji', 'Bunpo'].map((label) => (
+                                            <span
+                                                key={label}
+                                                className="rounded-md border border-amber-200/80 bg-white/80 px-1.5 py-0.5 text-[9px] font-bold text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                                            >
+                                                {label}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <Link
+                                        href={program.resources.vocabulary_url}
+                                        className="mt-3 flex h-8.5 w-full items-center justify-center gap-1.5 rounded-lg bg-amber-400 px-3 text-xs font-black text-amber-950 shadow-[0_2px_0_#b45309] transition hover:bg-amber-300 active:translate-y-0.5 active:shadow-none"
                                     >
-                                        {label}
-                                    </span>
-                                ))}
-                            </div>
+                                        Buka Kosakata
+                                        <ChevronRightIcon sx={{ fontSize: 16 }} />
+                                    </Link>
+                                </div>
+                            )}
 
-                            <p className="mt-4 text-xs font-semibold leading-5 text-gray-500 dark:text-gray-400">
-                                Gunakan sebagai referensi saat mempelajari materi pada setiap Minggu.
-                            </p>
-
-                            <Link
-                                href={program.resources.vocabulary_url}
-                                className="mt-4 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-3 text-xs font-black text-amber-950 shadow-[0_3px_0_#b45309] transition hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/40 active:translate-y-0.5 active:shadow-[0_1px_0_#b45309]"
-                            >
-                                Buka Pustaka
-                                <ChevronRightIcon sx={{ fontSize: 18 }} />
-                            </Link>
+                            {/* Seksi 2: Dokkai Corner */}
+                            {dokkaiCount > 0 && (
+                                <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/40 p-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                                            <FindInPageIcon sx={{ fontSize: 14 }} />
+                                            Dokkai Corner
+                                        </span>
+                                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                                            {dokkaiCompleted}/{dokkaiCount} Selesai
+                                        </span>
+                                    </div>
+                                    <p className="mt-1.5 text-[11px] leading-4 text-gray-600 dark:text-gray-300">
+                                        Latihan pemahaman wacana, furigana interaktif, dan eviden teks.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={onOpenDokkaiDrawer}
+                                        className="mt-3 flex h-8.5 w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-black text-white shadow-[0_2px_0_#065f46] transition hover:bg-emerald-500 active:translate-y-0.5 active:shadow-none"
+                                    >
+                                        Buka Koleksi Dokkai
+                                        <ChevronRightIcon sx={{ fontSize: 16 }} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 ) : (
@@ -1635,19 +1898,21 @@ function DesktopLibraryPanel({ program, open, onToggle }) {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.92 }}
                         transition={{ duration: 0.16 }}
-                        className="group flex w-full flex-col items-center gap-2 rounded-2xl border border-amber-200/80 bg-white/90 px-1 py-3 text-amber-900 shadow-lg shadow-amber-950/5 backdrop-blur-md transition hover:border-amber-300 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/40 dark:border-amber-900/60 dark:bg-gray-900/90 dark:text-amber-200 dark:hover:border-amber-700 dark:hover:bg-amber-950/40"
-                        aria-label="Buka Pustaka Materi"
+                        className="group flex w-full flex-col items-center gap-2 rounded-2xl border border-amber-200/80 bg-white/95 px-1 py-3 text-amber-900 shadow-lg shadow-amber-950/5 backdrop-blur-md transition hover:border-amber-300 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/40 dark:border-amber-900/60 dark:bg-gray-900/95 dark:text-amber-200 dark:hover:border-amber-700 dark:hover:bg-amber-950/40"
+                        aria-label="Buka Pustaka & Dokkai"
                         aria-expanded="false"
-                        title="Buka Pustaka Materi"
+                        title="Buka Pustaka & Dokkai"
                     >
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400 text-amber-950 shadow-[0_2px_0_#b45309] transition-transform group-hover:-translate-y-0.5">
-                            <AutoStoriesIcon sx={{ fontSize: 20 }} />
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400 text-amber-950 shadow-[0_2px_0_#b45309] transition-transform group-hover:-translate-y-0.5">
+                            <AutoStoriesIcon sx={{ fontSize: 18 }} />
                         </span>
-                        <span className="text-[10px] font-black leading-none">
-                            {program.resources.vocabulary_count || 0}
-                        </span>
-                        <span className="[writing-mode:vertical-rl] text-[9px] font-black uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
-                            Pustaka
+                        {dokkaiCount > 0 && (
+                            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500 text-white shadow-[0_2px_0_#065f46]">
+                                <FindInPageIcon sx={{ fontSize: 16 }} />
+                            </span>
+                        )}
+                        <span className="[writing-mode:vertical-rl] text-[9px] font-black uppercase tracking-[0.14em] text-gray-600 dark:text-gray-300">
+                            Pustaka · Dokkai
                         </span>
                     </motion.button>
                 )}
@@ -1674,6 +1939,34 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
     const [checkoutProcessing, setCheckoutProcessing] = useState(false);
     const [checkoutError, setCheckoutError] = useState('');
     const [thumbnailFailed, setThumbnailFailed] = useState(false);
+    const [activeDokkaiQuiz, setActiveDokkaiQuiz] = useState(null);
+    const [activeGrammarQuiz, setActiveGrammarQuiz] = useState(null);
+    const [loadingDokkaiId, setLoadingDokkaiId] = useState(null);
+    const [dokkaiDrawerOpen, setDokkaiDrawerOpen] = useState(false);
+
+    const handleOpenDokkai = async (quizId) => {
+        setActiveGrammarQuiz(null);
+        try {
+            setLoadingDokkaiId(quizId);
+            const endpoint = typeof route !== 'undefined'
+                ? route('user.dokkai-quizzes.payload', { quiz: quizId })
+                : `/user/dokkai-quizzes/${quizId}`;
+            const { data } = await window.axios.get(endpoint);
+            setDokkaiDrawerOpen(false);
+            setActiveDokkaiQuiz(data);
+        } catch (err) {
+            console.error('Gagal memuat materi Dokkai:', err);
+        } finally {
+            setLoadingDokkaiId(null);
+        }
+    };
+
+    const handleOpenGrammarQuiz = (lesson) => {
+        setActiveDokkaiQuiz(null);
+        setActiveGrammarQuiz(lesson);
+    };
+
+    useScrollLock(Boolean(activeDokkaiQuiz));
     const completedWeekCount = displayWeeks.filter((week) => week.status === 'done').length;
     const roadmapProgress = displayWeeks.length > 0
         ? Math.round((completedWeekCount / displayWeeks.length) * 100)
@@ -1862,7 +2155,7 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                 <main id="roadmap" className="relative z-10 px-3 pb-8 pt-3 sm:px-6 sm:pb-14 sm:pt-5">
                     <div
                         className={`mx-auto max-w-7xl xl:grid xl:items-start xl:gap-5 ${
-                            program?.resources?.vocabulary_url
+                            program?.resources?.vocabulary_url || Number(program?.resources?.dokkai_count || 0) > 0
                                 ? libraryOpen
                                     ? 'xl:grid-cols-[minmax(0,1fr)_280px]'
                                     : 'xl:grid-cols-[minmax(0,1fr)_52px]'
@@ -1870,7 +2163,10 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                         }`}
                     >
                         <div className="min-w-0">
-                            <LibraryShortcut program={program} />
+                            <LibraryShortcut
+                                program={program}
+                                onOpenDokkaiDrawer={() => setDokkaiDrawerOpen(true)}
+                            />
 
                             {displayWeeks.map((week) => (
                                 <WeekRoadmapSection
@@ -1878,6 +2174,8 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                                     week={week}
                                     expanded={expandedWeekId === week.id}
                                     onToggle={() => setExpandedWeekId((current) => current === week.id ? null : week.id)}
+                                    onOpenDokkai={handleOpenDokkai}
+                                    onOpenGrammarQuiz={handleOpenGrammarQuiz}
                                 />
                             ))}
                         </div>
@@ -1886,9 +2184,58 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                             program={program}
                             open={libraryOpen}
                             onToggle={() => setLibraryOpen((current) => !current)}
+                            onOpenDokkaiDrawer={() => setDokkaiDrawerOpen(true)}
                         />
                     </div>
                 </main>
+
+                <DokkaiProgramDrawer
+                    open={dokkaiDrawerOpen}
+                    onClose={() => setDokkaiDrawerOpen(false)}
+                    dokkaiItems={program?.resources?.dokkai_items || []}
+                    onSelectDokkai={handleOpenDokkai}
+                    loadingId={loadingDokkaiId}
+                />
+
+                {activeDokkaiQuiz && typeof document !== 'undefined' && createPortal(
+                    <div role="dialog" aria-modal="true" aria-label="Kuis Dokkai" className="fixed inset-0 z-[10000] flex flex-col overflow-y-auto overscroll-contain bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white">
+                        <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm font-semibold">Memuat wacana Dokkai...</div>}>
+                            <DokkaiQuizRunner
+                                quiz={activeDokkaiQuiz.quiz}
+                                paragraphs={activeDokkaiQuiz.paragraphs}
+                                vocabularies={activeDokkaiQuiz.vocabularies}
+                                questions={activeDokkaiQuiz.questions}
+                                onClose={() => {
+                                    setActiveDokkaiQuiz(null);
+                                    router.reload({ only: ['weeks', 'program', 'auth', 'progress'] });
+                                }}
+                                onSubmitAttempt={async (attemptPayload) => {
+                                    const quizId = attemptPayload?.quiz_id || activeDokkaiQuiz?.quiz?.id;
+                                    const endpoint = typeof route !== 'undefined'
+                                        ? route('user.dokkai-quizzes.submit', { quiz: quizId })
+                                        : `/user/dokkai-quizzes/${quizId}/submit`;
+
+                                    const axiosClient = (typeof window !== 'undefined' && window.axios) ? window.axios : (await import('axios')).default;
+                                    const { data } = await axiosClient.post(endpoint, {
+                                        answers: attemptPayload.answers || {},
+                                        submission_token: attemptPayload.submission_token,
+                                    });
+
+                                    return data;
+                                }}
+                                persist={true}
+                            />
+                        </Suspense>
+                    </div>,
+                    document.body,
+                )}
+
+                <GrammarQuizPreviewDialog
+                    open={Boolean(activeGrammarQuiz)}
+                    quiz={activeGrammarQuiz}
+                    persist
+                    onClose={() => setActiveGrammarQuiz(null)}
+                />
             </div>
         </AuthenticatedLayout>
         </MotionConfig>
