@@ -131,6 +131,26 @@ composer dump-autoload
 php artisan db:seed --class=NewsPortalSeeder
 ```
 
+### `Permission denied` pada `storage/logs/laravel.log`
+
+Terjadi ketika CLI user (misal deployer) menjalankan perintah Artisan sementara file log dibuat oleh web server (`www-data:www-data`):
+
+```bash
+sudo chown -R $USER:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+[ -f storage/logs/laravel.log ] && sudo chmod 664 storage/logs/laravel.log
+sudo setfacl -R -m u:www-data:rwX -m u:$USER:rwX storage bootstrap/cache
+sudo setfacl -R -d -m u:www-data:rwX -m u:$USER:rwX storage bootstrap/cache
+```
+
+### `DemoDataSeeder resets demo data and cannot run in production`
+
+`DemoDataSeeder` sengaja diguard agar tidak mereset data di production. `DatabaseSeeder` secara otomatis hanya menjalankan seeder master (`GrammarBankSeeder`, `NewsPortalSeeder`, `AchievementSeeder`, `DokkaiSeeder`) ketika `APP_ENV=production`. Jalankan spesifik seeder bila memerlukan seeding data tertentu:
+
+```bash
+php artisan db:seed --class=GrammarBankSeeder
+```
+
 ## LiveKit dan Reverb
 
 ### WebSocket `ws://127.0.0.1:7880` gagal

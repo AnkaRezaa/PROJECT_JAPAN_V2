@@ -14,12 +14,17 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        if (! app()->environment('production')) {
+            $this->call([
+                DemoDataSeeder::class,
+                StandaloneExamDemoSeeder::class,
+            ]);
+        }
+
         $this->call([
-            DemoDataSeeder::class,
             GrammarBankSeeder::class,
             NewsPortalSeeder::class,
             AchievementSeeder::class,
-            StandaloneExamDemoSeeder::class,
             DokkaiSeeder::class,
         ]);
     }
