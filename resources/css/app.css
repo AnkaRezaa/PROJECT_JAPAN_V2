@@ -204,3 +204,61 @@ rt {
     display: none;
 }
 
+/* Global Website & Japanese Font Presets */
+:root {
+    --font-family-latin: "Plus Jakarta Sans";
+    --font-family-jp: "Noto Sans JP";
+    --font-generic-fallback: sans-serif;
+}
+html[data-font-preset="modern"] {
+    --font-family-latin: "Plus Jakarta Sans";
+    --font-family-jp: "Noto Sans JP";
+    --font-generic-fallback: sans-serif;
+}
+html[data-font-preset="textbook"] {
+    --font-family-latin: "Lexend";
+    --font-family-jp: "Klee One";
+    --font-generic-fallback: sans-serif;
+}
+html[data-font-preset="rounded"] {
+    --font-family-latin: "Nunito";
+    --font-family-jp: "Zen Maru Gothic";
+    --font-generic-fallback: sans-serif;
+}
+html[data-font-preset="traditional"] {
+    --font-family-latin: "Georgia";
+    --font-family-jp: "Yuji Syuku";
+    --font-generic-fallback: serif;
+}
+
+body,
+#app,
+.font-sans,
+button,
+input,
+select,
+textarea {
+    font-family: var(--font-family-latin), var(--font-family-jp), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, var(--font-generic-fallback) !important;
+}
+
+.font-japanese,
+:lang(ja),
+[lang="ja"],
+ruby,
+rt {
+    font-family: var(--font-family-jp), var(--font-family-latin), var(--font-generic-fallback) !important;
+}
+
+.font-pair-modern {
+    font-family: "Plus Jakarta Sans", "Noto Sans JP", sans-serif !important;
+}
+.font-pair-textbook {
+    font-family: "Lexend", "Klee One", sans-serif !important;
+}
+.font-pair-rounded {
+    font-family: "Nunito", "Zen Maru Gothic", sans-serif !important;
+}
+.font-pair-traditional {
+    font-family: "Georgia", "Yuji Syuku", serif !important;
+}
+

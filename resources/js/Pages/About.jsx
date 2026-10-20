@@ -80,23 +80,23 @@ export default function About({ seo = {} }) {
                     </div>
                 </section>
 
-                <section className="relative border-y border-slate-200 bg-white py-16 dark:border-slate-800 dark:bg-slate-900 sm:py-24">
-                    <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-[radial-gradient(circle_at_0%_0%,rgba(21,128,61,0.08),transparent_66%)] dark:bg-[radial-gradient(circle_at_0%_0%,rgba(34,197,94,0.12),transparent_66%)]" />
+                <section className="relative border-y border-slate-200 bg-white py-16 sm:py-24">
+                    <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-[radial-gradient(circle_at_0%_0%,rgba(21,128,61,0.08),transparent_66%)]" />
                     <div className="relative mx-auto grid max-w-7xl gap-12 px-5 sm:px-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:px-10">
                         <div className="max-w-lg">
-                            <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Tentang TOKU-UP</p>
-                            <h2 className="mt-3 text-3xl font-black leading-tight text-slate-950 dark:text-white sm:text-4xl">Kelas terarah dari materi konsep sampai latihan intensif.</h2>
-                            <p className="mt-5 text-base font-medium leading-7 text-slate-700 dark:text-slate-200">
+                            <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600">Tentang TOKU-UP</p>
+                            <h2 className="mt-3 text-3xl font-black leading-tight text-slate-950 sm:text-4xl">Kelas terarah dari materi konsep sampai latihan intensif.</h2>
+                            <p className="mt-5 text-base font-medium leading-7 text-slate-700">
                                 TOKU-UP menempatkan materi pengajar dan modul latihan dalam satu alur terpadu, sehingga pembelajar tidak perlu menebak langkah belajar berikutnya.
                             </p>
-                            <div className="mt-7 border-l-2 border-brand-500 pl-4 text-sm font-bold leading-6 text-slate-800 dark:text-slate-100">
+                            <div className="mt-7 border-l-2 border-brand-500 pl-4 text-sm font-bold leading-6 text-slate-800">
                                 Kurikulum terstandar untuk persiapan JLPT N5 hingga N2 berbasis kelas dan latihan mandiri.
                             </div>
                         </div>
 
                         <figure className="relative mx-auto w-full max-w-lg">
                             <div aria-hidden="true" className="absolute -bottom-5 -left-5 h-40 w-40 rounded-[2rem] bg-brand-600" />
-                            <div className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-950 shadow-2xl dark:border-slate-700">
+                            <div className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-950 shadow-2xl">
                                 <img src={studentImage} alt="Peserta belajar bahasa Jepang" className="h-72 w-full object-cover object-center sm:h-80" />
                                 <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-slate-950/35 via-transparent to-transparent" />
                             </div>
@@ -124,27 +124,27 @@ export default function About({ seo = {} }) {
                     </div>
                 </section>
 
-                <section className="bg-[#f7f8f8] py-16 dark:bg-slate-950 sm:py-20">
+                <section className="bg-[#f7f8f8] py-16 sm:py-20">
                     <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-                        <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-7 dark:border-slate-800 sm:flex-row sm:items-end">
+                        <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-7 sm:flex-row sm:items-end">
                             <div>
-                                <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Tim Akademik</p>
-                                <h2 className="mt-3 text-3xl font-black leading-tight text-slate-950 dark:text-white">Pengajar & Tim Akademik Bahasa Jepang.</h2>
+                                <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600">Tim Akademik</p>
+                                <h2 className="mt-3 text-3xl font-black leading-tight text-slate-950">Pengajar & Tim Akademik Bahasa Jepang.</h2>
                             </div>
-                            <p className="max-w-sm text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">Setiap peran memastikan kurikulum, latihan wacana, dan materi kelas selalu terarah dan terstandar.</p>
+                            <p className="max-w-sm text-sm font-medium leading-6 text-slate-600">Setiap peran memastikan kurikulum, latihan wacana, dan materi kelas selalu terarah dan terstandar.</p>
                         </div>
 
                         <div className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                             {teamMembers.map((member) => (
-                                <article key={member.name} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900">
+                                <article key={member.name} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
                                     <div className="relative overflow-hidden">
                                         <img src={member.image} alt={member.name} className="h-60 w-full object-cover object-center transition duration-500 group-hover:scale-105" />
                                         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/65 to-transparent" />
                                         <p className="absolute bottom-4 left-5 text-[10px] font-black uppercase tracking-[0.14em] text-amber-200">{member.role}</p>
                                     </div>
                                     <div className="p-5">
-                                        <h3 className="text-xl font-black text-slate-950 dark:text-white">{member.name}</h3>
-                                        <p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">{member.description}</p>
+                                        <h3 className="text-xl font-black text-slate-950">{member.name}</h3>
+                                        <p className="mt-2 text-sm font-medium leading-6 text-slate-600">{member.description}</p>
                                     </div>
                                 </article>
                             ))}

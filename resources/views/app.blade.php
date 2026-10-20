@@ -42,7 +42,17 @@
         @foreach ($seoStructuredData as $index => $schema)
             <script inertia="structured-data-{{ $index }}" type="application/ld+json">{!! json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
         @endforeach
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Yuji+Syuku&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Noto+Sans+JP:wght@400;500;700;900&family=Yuji+Syuku&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+        <script>
+            (function() {
+                try {
+                    var path = window.location.pathname;
+                    var isStudentWorkspace = path.startsWith('/user') || path.startsWith('/ujian');
+                    var preset = isStudentWorkspace ? (localStorage.getItem('tokuup_font_preset') || 'modern') : 'modern';
+                    document.documentElement.setAttribute('data-font-preset', preset);
+                } catch (e) {}
+            })();
+        </script>
 
         <!-- Favicon TOKU-UP -->
         <link rel="icon" type="image/png" href="{{ asset('images/logos/toku-up-mark.png') }}" />
@@ -52,7 +62,7 @@
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lexend:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
 
         @if (config('beta.google_tag_manager.enabled'))
             <link rel="preconnect" href="https://www.googletagmanager.com">
@@ -90,22 +100,9 @@
             ]);
             (() => {
                 const path = window.location.pathname;
-                const isGuestOrAdmin = path === '/' ||
-                    path.startsWith('/about') ||
-                    path.startsWith('/pricing') ||
-                    path.startsWith('/roadmap') ||
-                    path.startsWith('/login') ||
-                    path.startsWith('/register') ||
-                    path.startsWith('/forgot-password') ||
-                    path.startsWith('/reset-password') ||
-                    path.startsWith('/privacy-policy') ||
-                    path.startsWith('/terms') ||
-                    path.startsWith('/cookie-policy') ||
-                    path.startsWith('/kelas/') ||
-                    path.startsWith('/admin') ||
-                    path.startsWith('/superadmin');
+                const isStudentWorkspace = path.startsWith('/user') || path.startsWith('/ujian');
 
-                if (isGuestOrAdmin) {
+                if (!isStudentWorkspace) {
                     document.documentElement.classList.remove('dark');
                     return;
                 }

@@ -114,6 +114,53 @@ const transactionTone = (status) => {
     };
 };
 
+const FONT_PRESETS = [
+    {
+        key: 'modern',
+        name: 'Modern (Bawaan)',
+        pairLabel: 'Plus Jakarta Sans + Noto Sans JP',
+        sampleJp: '日本語の勉強',
+        sampleLatin: 'Konsistensi Belajar',
+        fontClass: 'font-pair-modern',
+        badge: 'Standar JLPT',
+    },
+    {
+        key: 'textbook',
+        name: 'Buku Teks',
+        pairLabel: 'Lexend + Klee One',
+        sampleJp: '日本語の勉強',
+        sampleLatin: 'Konsistensi Belajar',
+        fontClass: 'font-pair-textbook',
+        badge: 'Tulisan Tangan',
+    },
+    {
+        key: 'rounded',
+        name: 'Membulat',
+        pairLabel: 'Nunito + Zen Maru Gothic',
+        sampleJp: '日本語の勉強',
+        sampleLatin: 'Konsistensi Belajar',
+        fontClass: 'font-pair-rounded',
+        badge: 'Ramah di Mata',
+    },
+    {
+        key: 'traditional',
+        name: 'Klasik',
+        pairLabel: 'Plus Jakarta Sans + Yuji Syuku',
+        sampleJp: '日本語の勉強',
+        sampleLatin: 'Konsistensi Belajar',
+        fontClass: 'font-pair-traditional',
+        badge: 'Gaya Kuas',
+    },
+];
+
+const resolveFontPreset = () => {
+    if (typeof window === 'undefined') {
+        return 'modern';
+    }
+
+    return window.localStorage.getItem('tokuup_font_preset') || 'modern';
+};
+
 const resolveThemeLabel = () => {
     if (typeof window === 'undefined') {
         return 'System';
@@ -139,7 +186,22 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
     const [activeTab, setActiveTab] = useState(deletionAuth.open_dialog ? 'settings' : 'stats');
     const [deleteConfirm, setDeleteConfirm] = useState(Boolean(deletionAuth.open_dialog));
     const [themeLabel, setThemeLabel] = useState(resolveThemeLabel);
+    const [selectedFont, setSelectedFont] = useState(resolveFontPreset);
+    const [activeFontPreset, setActiveFontPreset] = useState(resolveFontPreset);
+    const [fontAppliedMessage, setFontAppliedMessage] = useState(false);
     const [soundEffectsEnabled, setSoundEffectsEnabledState] = useState(areSoundEffectsEnabled);
+
+    const applyFontPreset = (presetKey) => {
+        const key = presetKey || selectedFont;
+        setSelectedFont(key);
+        setActiveFontPreset(key);
+        try {
+            window.localStorage.setItem('tokuup_font_preset', key);
+            document.documentElement.setAttribute('data-font-preset', key);
+            setFontAppliedMessage(true);
+            setTimeout(() => setFontAppliedMessage(false), 3500);
+        } catch (e) {}
+    };
     const [learningPreferences, setLearningPreferences] = useState({
         show_romaji: Boolean(user.show_romaji),
         show_indonesian_translation: Boolean(user.show_indonesian_translation),
@@ -589,6 +651,94 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
                                                             <p lang="ja" className="mt-1 text-xs font-semibold text-sky-700 dark:text-sky-300">にほんごをべんきょうします</p>
                                                             {learningPreferences.show_romaji && <p className="mt-0.5 text-xs font-semibold text-gray-500 dark:text-gray-400">nihongo o benkyou shimasu</p>}
                                                             {learningPreferences.show_indonesian_translation && <p className="mt-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">Saya belajar bahasa Jepang.</p>}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Font Bahasa Jepang & Website */}
+                                                    <div className="mt-3 rounded-2xl border border-gray-100 bg-gray-50/50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div className="flex items-start gap-3">
+                                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-sm dark:bg-gray-800 dark:text-emerald-400">
+                                                                    <TranslateIcon sx={{ fontSize: 20 }} />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm font-bold text-gray-800 dark:text-gray-200">Gaya Font Website & Bahasa Jepang</p>
+                                                                    <p className="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">Pilih jenis font yang digunakan di seluruh tombol, menu, modul, dan kuis.</p>
+                                                                </div>
+                                                            </div>
+                                                            {fontAppliedMessage && (
+                                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                                                    <CheckCircleIcon sx={{ fontSize: 16 }} />
+                                                                    Tersimpan
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                                            {FONT_PRESETS.map((preset) => {
+                                                                const isSelected = selectedFont === preset.key;
+                                                                const isCurrentActive = activeFontPreset === preset.key;
+                                                                return (
+                                                                    <button
+                                                                        key={preset.key}
+                                                                        type="button"
+                                                                        onClick={() => setSelectedFont(preset.key)}
+                                                                        aria-pressed={isSelected}
+                                                                        className={`flex min-h-[4.75rem] flex-col justify-between rounded-xl border p-3.5 text-left transition ${isSelected
+                                                                            ? 'border-emerald-300 bg-emerald-50 text-emerald-900 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100'
+                                                                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'}`}
+                                                                    >
+                                                                        <div className="flex w-full items-center justify-between gap-2">
+                                                                            <span className="text-sm font-black truncate">{preset.name}</span>
+                                                                            <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                                                                {preset.badge}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="mt-2 flex w-full items-baseline justify-between gap-2">
+                                                                            <p className={`text-base font-black ${preset.fontClass}`} lang="ja">
+                                                                                {preset.sampleJp}
+                                                                            </p>
+                                                                            <p className={`text-xs font-bold text-slate-500 dark:text-slate-400 ${preset.fontClass}`}>
+                                                                                {preset.sampleLatin}
+                                                                            </p>
+                                                                        </div>
+                                                                        <p className="mt-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                                                                            {preset.pairLabel}
+                                                                        </p>
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+
+                                                        {/* Pratinjau Teks */}
+                                                        <div className="mt-3 rounded-xl border border-dashed border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Pratinjau Font Terpilih</p>
+                                                                <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                                                    {FONT_PRESETS.find(p => p.key === selectedFont)?.pairLabel}
+                                                                </span>
+                                                            </div>
+                                                            <p lang="ja" className={`mt-2 text-lg font-black leading-snug text-gray-900 dark:text-white font-pair-${selectedFont}`}>
+                                                                毎朝７時に起きて、朝ご飯を食べます。
+                                                            </p>
+                                                            <p className={`mt-1.5 text-sm font-bold text-slate-700 dark:text-slate-300 font-pair-${selectedFont}`}>
+                                                                Latihan Kosakata, Tata Bahasa & Ujian Harian JLPT
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Tombol Terapkan */}
+                                                        <div className="mt-4 flex items-center justify-end gap-3">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => applyFontPreset(selectedFont)}
+                                                                disabled={activeFontPreset === selectedFont && !fontAppliedMessage}
+                                                                className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-5 text-xs font-black uppercase tracking-wider transition ${activeFontPreset === selectedFont
+                                                                    ? 'bg-slate-100 text-slate-400 cursor-default dark:bg-slate-800 dark:text-slate-500'
+                                                                    : 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:scale-[0.98]'}`}
+                                                            >
+                                                                <CheckCircleIcon sx={{ fontSize: 18 }} />
+                                                                {activeFontPreset === selectedFont ? 'Font Sedang Aktif' : 'Terapkan Font ke Seluruh Website'}
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 </div>

@@ -23,23 +23,14 @@ router.on('navigate', () => {
 
     if (typeof window !== 'undefined') {
         const path = window.location.pathname;
-        const isGuestOrAdmin = path === '/' ||
-            path.startsWith('/about') ||
-            path.startsWith('/pricing') ||
-            path.startsWith('/roadmap') ||
-            path.startsWith('/login') ||
-            path.startsWith('/register') ||
-            path.startsWith('/forgot-password') ||
-            path.startsWith('/reset-password') ||
-            path.startsWith('/privacy-policy') ||
-            path.startsWith('/terms') ||
-            path.startsWith('/cookie-policy') ||
-            path.startsWith('/kelas/') ||
-            path.startsWith('/admin') ||
-            path.startsWith('/superadmin');
+        const isStudentWorkspace = path.startsWith('/user') || path.startsWith('/ujian');
 
-        if (isGuestOrAdmin) {
+        if (!isStudentWorkspace) {
             document.documentElement.classList.remove('dark');
+            document.documentElement.setAttribute('data-font-preset', 'modern');
+        } else {
+            const savedPreset = localStorage.getItem('tokuup_font_preset') || 'modern';
+            document.documentElement.setAttribute('data-font-preset', savedPreset);
         }
     }
 });

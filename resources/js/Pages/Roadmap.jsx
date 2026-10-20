@@ -38,37 +38,37 @@ const weeklyResources = [
         title: 'PPT & Materi Kelas',
         description: 'Presentasi pendukung pengajar untuk memahami materi dan pola kalimat baru.',
         icon: SlideshowIcon,
-        tone: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
+        tone: 'bg-rose-100 text-rose-700',
     },
     {
         title: 'Bank Kosakata',
         description: 'Daftar kata tematik audio native untuk memperkaya kosakata dan kanji.',
         icon: LocalLibraryIcon,
-        tone: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+        tone: 'bg-amber-100 text-amber-700',
     },
     {
         title: 'Flashcard SRS',
         description: 'Latihan pengulangan cerdas dengan evaluasi ingatan mandiri.',
         icon: StyleIcon,
-        tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+        tone: 'bg-emerald-100 text-emerald-700',
     },
     {
         title: 'Drill Grammar 3-Stage',
         description: 'Latihan tata bahasa bertahap: transformasi bentuk, susun kata, dan pilihan konteks.',
         icon: AutoAwesomeIcon,
-        tone: 'bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300',
+        tone: 'bg-purple-100 text-purple-700',
     },
     {
         title: 'Simulasi Dokkai Eviden',
         description: 'Latihan pemahaman wacana Jepang dengan penelusuran bukti teks dan bedah pengecoh.',
         icon: MenuBookIcon,
-        tone: 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300',
+        tone: 'bg-teal-100 text-teal-700',
     },
     {
         title: 'Kuis & Evaluasi XP',
         description: 'Uji pemahaman modul mingguan sekaligus mengumpulkan XP progres belajar.',
         icon: QuizIcon,
-        tone: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
+        tone: 'bg-sky-100 text-sky-700',
     },
 ];
 
@@ -86,12 +86,12 @@ function WeekNode({ week, index, selected, onSelect }) {
                 className="group flex w-28 flex-col items-center gap-2 rounded-2xl px-1 pb-1 pt-0 focus:outline-none focus-visible:ring-4 focus-visible:ring-focus/30"
             >
                 <span
-                    className={`relative flex h-20 w-20 items-center justify-center rounded-full border-4 border-white text-white transition duration-200 group-hover:-translate-y-1 group-hover:scale-105 dark:border-slate-900 ${isSelected ? 'ring-4 ring-brand-300 dark:ring-brand-500/40' : ''}`}
+                    className={`relative flex h-20 w-20 items-center justify-center rounded-full border-4 border-white text-white transition duration-200 group-hover:-translate-y-1 group-hover:scale-105 ${isSelected ? 'ring-4 ring-brand-300' : ''}`}
                     style={{ backgroundColor: colors.background, boxShadow: `0 7px 0 ${colors.shadow}` }}
                 >
                     <AutoStoriesIcon sx={{ fontSize: 34 }} />
                 </span>
-                <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.1em] ${isSelected ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 shadow-sm dark:bg-slate-800 dark:text-slate-200'}`}>
+                <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.1em] ${isSelected ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 shadow-sm'}`}>
                     Minggu {week.week_number}
                 </span>
             </button>
@@ -198,15 +198,15 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                     </div>
                 </section>
 
-                <section className="relative border-y border-slate-200 bg-white py-14 dark:border-slate-800 dark:bg-slate-900 sm:py-18">
-                    <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(190,24,93,0.035)_0_1px,transparent_1px_58px),repeating-linear-gradient(0deg,rgba(190,24,93,0.028)_0_1px,transparent_1px_58px)] dark:bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.022)_0_1px,transparent_1px_58px),repeating-linear-gradient(0deg,rgba(255,255,255,0.018)_0_1px,transparent_1px_58px)]" />
+                <section className="relative border-y border-slate-200 bg-white py-14 sm:py-18">
+                    <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(190,24,93,0.035)_0_1px,transparent_1px_58px),repeating-linear-gradient(0deg,rgba(190,24,93,0.028)_0_1px,transparent_1px_58px)]" />
                     <div className="relative mx-auto max-w-5xl px-5 sm:px-8">
                         <div className="mx-auto max-w-2xl text-center">
-                            <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Preview Kurikulum</p>
-                            <h2 className="mt-3 text-3xl font-black text-slate-950 dark:text-white">
+                            <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600">Preview Kurikulum</p>
+                            <h2 className="mt-3 text-3xl font-black text-slate-950">
                                 {selectedRoadmap ? `Roadmap ${selectedRoadmap.title}` : 'Roadmap kelas belum tersedia'}
                             </h2>
-                            <p className="mt-3 text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">
+                            <p className="mt-3 text-sm font-medium leading-6 text-slate-600">
                                 {selectedRoadmap
                                     ? `${selectedRoadmap.weeks_count} Minggu · ${selectedRoadmap.days_count} Hari. Lihat susunan materi kelas, bukan status progres akunmu.`
                                     : 'Admin belum memublikasikan roadmap kelas yang dapat ditampilkan.'}
@@ -220,23 +220,23 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                                     onClick={() => setIsClassMenuOpen((open) => !open)}
                                     aria-expanded={isClassMenuOpen}
                                     aria-haspopup="listbox"
-                                    className="flex min-h-16 w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-brand-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-slate-700 dark:bg-slate-800"
+                                    className="flex min-h-16 w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-brand-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                                 >
-                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
                                         <SchoolIcon sx={{ fontSize: 22 }} />
                                     </span>
                                     <span className="min-w-0 flex-1">
-                                        <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Roadmap yang dilihat</span>
-                                        <span className="mt-0.5 block truncate text-sm font-black text-slate-950 dark:text-white">{selectedRoadmap?.title}</span>
+                                        <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Roadmap yang dilihat</span>
+                                        <span className="mt-0.5 block truncate text-sm font-black text-slate-950">{selectedRoadmap?.title}</span>
                                     </span>
-                                    <span className="hidden shrink-0 text-xs font-black text-brand-700 dark:text-brand-300 sm:block">Ganti roadmap</span>
+                                    <span className="hidden shrink-0 text-xs font-black text-brand-700 sm:block">Ganti roadmap</span>
                                     <ExpandMoreIcon className={`shrink-0 text-slate-500 transition-transform ${isClassMenuOpen ? 'rotate-180' : ''}`} />
                                 </button>
 
                                 {isClassMenuOpen && (
-                                    <div role="listbox" aria-label="Pilih roadmap kelas" className="absolute inset-x-0 top-[calc(100%+0.5rem)] max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-800">
+                                    <div role="listbox" aria-label="Pilih roadmap kelas" className="absolute inset-x-0 top-[calc(100%+0.5rem)] max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
                                         {roadmapOptions.length > 6 && (
-                                            <label className="sticky top-0 z-10 mb-2 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+                                            <label className="sticky top-0 z-10 mb-2 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
                                                 <SearchIcon className="shrink-0 text-slate-400" sx={{ fontSize: 19 }} />
                                                 <span className="sr-only">Cari roadmap kelas</span>
                                                 <input
@@ -244,7 +244,7 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                                                     value={classSearch}
                                                     onChange={(event) => setClassSearch(event.target.value)}
                                                     placeholder="Cari kelas atau level"
-                                                    className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-semibold text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-0 focus:ring-0 dark:text-white"
+                                                    className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-semibold text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-0 focus:ring-0"
                                                 />
                                             </label>
                                         )}
@@ -259,21 +259,21 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                                                     role="option"
                                                     aria-selected={active}
                                                     onClick={() => changeRoadmap(roadmap)}
-                                                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-focus ${active ? 'bg-brand-50 dark:bg-brand-500/15' : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                                                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-focus ${active ? 'bg-brand-50' : 'hover:bg-slate-50'}`}
                                                 >
-                                                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300'}`}>
+                                                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
                                                         {active ? <CheckIcon sx={{ fontSize: 18 }} /> : <AutoStoriesIcon sx={{ fontSize: 18 }} />}
                                                     </span>
                                                     <span className="min-w-0 flex-1">
-                                                        <span className="block truncate text-sm font-black text-slate-950 dark:text-white">{roadmap.title}</span>
-                                                        <span className="mt-0.5 block text-xs font-semibold text-slate-500 dark:text-slate-400">{roadmap.weeks_count} Minggu · {roadmap.days_count} Hari{roadmap.level ? ` · ${roadmap.level}` : ''}</span>
+                                                        <span className="block truncate text-sm font-black text-slate-950">{roadmap.title}</span>
+                                                        <span className="mt-0.5 block text-xs font-semibold text-slate-500">{roadmap.weeks_count} Minggu · {roadmap.days_count} Hari{roadmap.level ? ` · ${roadmap.level}` : ''}</span>
                                                     </span>
                                                 </button>
                                             );
                                         })}
 
                                         {filteredRoadmapOptions.length === 0 && (
-                                            <p className="px-3 py-6 text-center text-sm font-semibold text-slate-500 dark:text-slate-300">Kelas tidak ditemukan.</p>
+                                            <p className="px-3 py-6 text-center text-sm font-semibold text-slate-500">Kelas tidak ditemukan.</p>
                                         )}
                                     </div>
                                 )}
@@ -281,7 +281,7 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                         )}
 
                         {isRoadmapLoading && (
-                            <div role="status" className="mx-auto mt-6 flex w-fit items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-lg dark:bg-white dark:text-slate-900">
+                            <div role="status" className="mx-auto mt-6 flex w-fit items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-lg">
                                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-r-transparent" />
                                 Menyiapkan roadmap kelas...
                             </div>
@@ -290,17 +290,17 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                         {selectedRoadmap && weeks.length > 0 ? (
                             <>
                                 {weekPageCount > 1 && (
-                                    <div className="mx-auto mt-8 flex max-w-md items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+                                    <div className="mx-auto mt-8 flex max-w-md items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                                         <button
                                             type="button"
                                             onClick={() => changeWeekPage(weekPage - 1)}
                                             disabled={weekPage === 0}
                                             aria-label="Lihat kelompok Minggu sebelumnya"
-                                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-35 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-35"
                                         >
                                             <ChevronLeftIcon sx={{ fontSize: 20 }} />
                                         </button>
-                                        <p className="text-center text-xs font-black text-slate-700 dark:text-slate-200">
+                                        <p className="text-center text-xs font-black text-slate-700">
                                             Minggu {(weekPage * weeksPerView) + 1}–{Math.min((weekPage + 1) * weeksPerView, weeks.length)} dari {weeks.length}
                                         </p>
                                         <button
@@ -308,7 +308,7 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                                             onClick={() => changeWeekPage(weekPage + 1)}
                                             disabled={weekPage >= weekPageCount - 1}
                                             aria-label="Lihat kelompok Minggu berikutnya"
-                                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-35 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-35"
                                         >
                                             <ChevronRightIcon sx={{ fontSize: 20 }} />
                                         </button>
@@ -328,51 +328,51 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                                 </div>
 
                                 {selectedWeek && (
-                                    <div className="mx-auto mt-3 max-w-2xl rounded-2xl border border-brand-100 bg-brand-50 p-5 shadow-sm dark:border-brand-900/40 dark:bg-brand-950/20 sm:p-6">
+                                    <div className="mx-auto mt-3 max-w-2xl rounded-2xl border border-brand-100 bg-brand-50 p-5 shadow-sm sm:p-6">
                                         <div className="text-center">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-700 dark:text-brand-300">Minggu {selectedWeek.week_number}</p>
-                                            <h3 className="mt-1 text-xl font-black text-slate-950 dark:text-white">{selectedWeek.title}</h3>
-                                            <p className="mx-auto mt-2 max-w-lg text-sm font-medium leading-6 text-slate-700 dark:text-slate-200">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-700">Minggu {selectedWeek.week_number}</p>
+                                            <h3 className="mt-1 text-xl font-black text-slate-950">{selectedWeek.title}</h3>
+                                            <p className="mx-auto mt-2 max-w-lg text-sm font-medium leading-6 text-slate-700">
                                                 {selectedWeek.description || 'Ringkasan materi untuk Minggu ini sedang disiapkan.'}
                                             </p>
                                         </div>
 
                                         <div className="mt-5 grid gap-2 sm:grid-cols-2">
                                             {selectedWeek.days.length > 0 ? selectedWeek.days.map((day) => (
-                                                <article key={day.id} className="rounded-xl border border-white bg-white/80 p-3.5 text-left dark:border-slate-700 dark:bg-slate-800/80">
-                                                    <p className="text-[10px] font-black uppercase tracking-[0.1em] text-brand-700 dark:text-brand-300">Hari {day.day_number}</p>
-                                                    <h4 className="mt-1 text-sm font-black text-slate-950 dark:text-white">{day.title || `Materi Hari ${day.day_number}`}</h4>
-                                                    {day.description && <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-slate-600 dark:text-slate-300">{day.description}</p>}
+                                                <article key={day.id} className="rounded-xl border border-white bg-white/80 p-3.5 text-left">
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.1em] text-brand-700">Hari {day.day_number}</p>
+                                                    <h4 className="mt-1 text-sm font-black text-slate-950">{day.title || `Materi Hari ${day.day_number}`}</h4>
+                                                    {day.description && <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-slate-600">{day.description}</p>}
                                                 </article>
                                             )) : (
-                                                <p className="col-span-full rounded-xl border border-dashed border-brand-200 bg-white/60 px-4 py-5 text-center text-sm font-semibold text-slate-600 dark:border-brand-800 dark:bg-slate-800/50 dark:text-slate-300">Rincian Hari untuk Minggu ini belum dipublikasikan.</p>
+                                                <p className="col-span-full rounded-xl border border-dashed border-brand-200 bg-white/60 px-4 py-5 text-center text-sm font-semibold text-slate-600">Rincian Hari untuk Minggu ini belum dipublikasikan.</p>
                                             )}
                                         </div>
                                     </div>
                                 )}
                             </>
                         ) : roadmapOptions.length > 0 ? (
-                            <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center dark:border-slate-700 dark:bg-slate-800">
-                                <h3 className="text-lg font-black text-slate-950 dark:text-white">Week belum tersedia</h3>
-                                <p className="mt-2 text-sm font-medium text-slate-600 dark:text-slate-300">Pilih roadmap lain atau kembali setelah admin memublikasikan susunan kelas.</p>
+                            <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
+                                <h3 className="text-lg font-black text-slate-950">Week belum tersedia</h3>
+                                <p className="mt-2 text-sm font-medium text-slate-600">Pilih roadmap lain atau kembali setelah admin memublikasikan susunan kelas.</p>
                             </div>
                         ) : (
-                            <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center dark:border-slate-700 dark:bg-slate-800">
-                                <h3 className="text-lg font-black text-slate-950 dark:text-white">Roadmap belum tersedia</h3>
-                                <p className="mt-2 text-sm font-medium text-slate-600 dark:text-slate-300">Pilihan roadmap akan muncul setelah kelas dan Week dipublikasikan.</p>
+                            <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
+                                <h3 className="text-lg font-black text-slate-950">Roadmap belum tersedia</h3>
+                                <p className="mt-2 text-sm font-medium text-slate-600">Pilihan roadmap akan muncul setelah kelas dan Week dipublikasikan.</p>
                             </div>
                         )}
                     </div>
                 </section>
 
-                <section className="bg-[#f7f8f8] py-16 dark:bg-slate-950 sm:py-20">
+                <section className="bg-[#f7f8f8] py-16 sm:py-20">
                     <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
                         <div className="grid gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
                             <div>
-                                <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Isi Modul Mingguan</p>
-                                <h2 className="mt-3 text-3xl font-black leading-tight text-slate-950 dark:text-white">Materi dan latihan tidak berjalan sendiri-sendiri.</h2>
-                                <p className="mt-4 text-sm font-medium leading-7 text-slate-600 dark:text-slate-300">Setiap modul dirancang sebagai jalur belajar: pahami dulu, ulangi seperlunya, lalu uji pemahamanmu.</p>
-                                <Link href="/pricing" className="mt-6 inline-flex min-h-11 items-center gap-1 text-sm font-black text-brand-600 transition hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
+                                <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600">Isi Modul Mingguan</p>
+                                <h2 className="mt-3 text-3xl font-black leading-tight text-slate-950">Materi dan latihan tidak berjalan sendiri-sendiri.</h2>
+                                <p className="mt-4 text-sm font-medium leading-7 text-slate-600">Setiap modul dirancang sebagai jalur belajar: pahami dulu, ulangi seperlunya, lalu uji pemahamanmu.</p>
+                                <Link href="/pricing" className="mt-6 inline-flex min-h-11 items-center gap-1 text-sm font-black text-brand-600 transition hover:text-brand-700">
                                     Lihat pilihan kelas <ChevronRightIcon sx={{ fontSize: 19 }} />
                                 </Link>
                             </div>
@@ -382,10 +382,10 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                                     const Icon = resource.icon;
 
                                     return (
-                                        <article key={resource.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+                                        <article key={resource.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                                             <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${resource.tone}`}><Icon sx={{ fontSize: 23 }} /></div>
-                                            <h3 className="mt-4 text-base font-black text-slate-950 dark:text-white">{resource.title}</h3>
-                                            <p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">{resource.description}</p>
+                                            <h3 className="mt-4 text-base font-black text-slate-950">{resource.title}</h3>
+                                            <p className="mt-2 text-sm font-medium leading-6 text-slate-600">{resource.description}</p>
                                         </article>
                                     );
                                 })}
@@ -394,7 +394,7 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                     </div>
                 </section>
 
-                <section className="border-y border-slate-200 bg-white py-16 dark:border-slate-800 dark:bg-slate-900 sm:py-20">
+                <section className="border-y border-slate-200 bg-white py-16 sm:py-20">
                     <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
                         <div className="rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white shadow-xl sm:p-8 lg:grid lg:grid-cols-[1fr_0.9fr] lg:items-center lg:gap-10">
                             <div>
