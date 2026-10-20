@@ -115,7 +115,7 @@ export default function Register() {
                         {errors.terms_accepted && <p className="mt-1 text-xs text-red-600">{errors.terms_accepted}</p>}
                     </div>
 
-                    <button type="submit" disabled={processing || !data.terms_accepted} className="w-full rounded-xl bg-brand-600 py-3 text-sm font-bold text-ink-900 transition-colors hover:bg-brand-700 hover:text-white disabled:opacity-50">
+                    <button type="submit" disabled={processing || !data.terms_accepted} className="flex min-h-[44px] w-full items-center justify-center rounded-xl bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
                         Daftar Akun (登録する)
                     </button>
 
@@ -125,7 +125,7 @@ export default function Register() {
                     </div>
 
                    <div>
-                        <a href={route('auth.google.redirect')} className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 py-2.5 text-sm font-bold text-gray-700 no-underline transition-all hover:bg-gray-50">
+                        <a href={route('auth.google.redirect')} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-2.5 text-sm font-bold text-gray-700 shadow-sm no-underline transition-all hover:border-gray-400 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
                             <img src="https://img.icons8.com/?size=100&id=V5cGWnc9R4xj&format=png&color=000000" className="w-5 h-5" alt="" />
                             <span>Daftar dengan Google</span>
                         </a>

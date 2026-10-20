@@ -1,18 +1,18 @@
 import { Link } from '@inertiajs/react';
 
 const variants = {
-    primary: 'bg-action-primary text-ink-900 hover:bg-action-primary-hover hover:text-white shadow-sm',
-    secondary: 'bg-ink-900 text-white hover:bg-ink-800 dark:bg-white dark:text-ink-900 dark:hover:bg-gray-100',
-    outline: 'border border-[var(--toku-border)] bg-transparent text-gray-700 hover:border-[var(--toku-primary)] hover:bg-[var(--toku-primary-soft)] dark:text-gray-200',
-    ghost: 'text-gray-600 hover:bg-[var(--toku-primary-soft)] hover:text-[var(--toku-primary-hover)] dark:text-gray-300',
-    danger: 'bg-state-danger text-white hover:bg-red-700',
-    success: 'bg-state-success text-white hover:bg-green-700',
+    primary: 'bg-brand-600 text-white hover:bg-brand-700 shadow-sm focus-visible:ring-brand-500',
+    secondary: 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100',
+    outline: 'border border-slate-300 bg-white text-slate-700 hover:border-brand-500 hover:bg-brand-50 hover:text-brand-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200',
+    ghost: 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800',
+    danger: 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm',
+    success: 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm',
 };
 
 const sizes = {
-    sm: 'min-h-[32px] px-3 py-1 text-xs rounded-lg',
-    md: 'min-h-[38px] px-4 py-2 text-xs sm:text-sm rounded-xl',
-    lg: 'min-h-11 px-6 py-2.5 text-sm sm:text-base rounded-xl',
+    sm: 'min-h-[36px] px-3.5 py-1.5 text-xs rounded-xl',
+    md: 'min-h-[40px] px-4 py-2 text-sm rounded-xl',
+    lg: 'min-h-[44px] px-6 py-2.5 text-sm sm:text-base rounded-xl',
 };
 
 export default function Button({ children, variant = 'primary', size = 'md', href, className = '', disabled, ...props }) {

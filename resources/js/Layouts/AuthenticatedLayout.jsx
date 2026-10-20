@@ -224,11 +224,14 @@ export default function AuthenticatedLayout({ children }) {
         const syncTheme = () => {
             if (isAdminSection) {
                 document.documentElement.classList.remove('dark');
+                document.documentElement.setAttribute('data-font-preset', 'modern');
                 return;
             }
             const mode = resolveThemeMode();
             setThemeMode(mode);
             applyDocumentTheme(mode);
+            const preset = window.localStorage.getItem('tokuup_font_preset') || 'modern';
+            document.documentElement.setAttribute('data-font-preset', preset);
         };
         const mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
 
@@ -901,7 +904,7 @@ export default function AuthenticatedLayout({ children }) {
                     </button>
                 </div>
 
-                <nav className={`hide-scrollbar min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pb-3 ${isUser && !navigationExpanded ? 'px-1' : 'px-3'}`}>
+                <nav className={`hide-scrollbar min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pb-3 ${navigationExpanded ? 'px-3' : 'px-2'}`}>
                     {activeMenu.map((item) => (
                         item.type === 'heading' ? (
                             navigationExpanded ? (
@@ -930,7 +933,7 @@ export default function AuthenticatedLayout({ children }) {
 
                 <div className={`relative mt-auto flex flex-col border-t border-gray-200/60 p-3 dark:border-gray-800 ${navigationExpanded ? 'gap-2 px-4' : 'items-center'}`} ref={menuRef}>
                     {/* Lonceng Notifikasi */}
-                    <Tooltip title={isUser && !navigationExpanded ? 'Notifikasi' : ''} placement="right" arrow>
+                    <Tooltip title={!navigationExpanded ? notificationContext.label : ''} placement="right" arrow>
                     <button
                         type="button"
                         onClick={() => {
@@ -940,7 +943,6 @@ export default function AuthenticatedLayout({ children }) {
                         aria-label={unreadCount > 0 ? `${notificationContext.label}, ${unreadCount} belum dibaca` : notificationContext.label}
                         aria-controls="sidebar-notification-menu"
                         aria-expanded={notificationOpen}
-                        title={!isUser && !navigationExpanded ? notificationContext.label : undefined}
                         className={`relative mb-2 flex min-h-11 w-full items-center rounded-xl text-[#55616D] transition-colors hover:bg-gray-200 hover:text-[#2D3742] focus:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white ${navigationExpanded ? 'justify-start px-3' : 'justify-center'}`}
                     >
                         <NotificationsOutlinedIcon sx={{ fontSize: 24 }} />
@@ -1010,7 +1012,7 @@ export default function AuthenticatedLayout({ children }) {
                     )}
 
                     {/* Avatar Pemicu Popup */}
-                    <Tooltip title={isUser && !navigationExpanded ? 'Akun saya' : ''} placement="right" arrow>
+                    <Tooltip title={!navigationExpanded ? 'Akun' : ''} placement="right" arrow>
                     <button
                         type="button"
                         onClick={() => {
@@ -1020,7 +1022,6 @@ export default function AuthenticatedLayout({ children }) {
                         aria-label="Buka menu akun"
                         aria-controls="sidebar-profile-menu"
                         aria-expanded={profileMenuOpen}
-                        title={!isUser && !navigationExpanded ? 'Akun' : undefined}
                         className={`relative flex ${isUser ? 'min-h-11' : 'min-h-[42px]'} w-full items-center overflow-hidden rounded-2xl ring-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
                             navigationExpanded
                                 ? 'gap-2.5 border border-gray-200 bg-white px-2 py-1 shadow-sm dark:border-gray-700 dark:bg-gray-800'

@@ -61,7 +61,7 @@ export default function GuestNavbar() {
                 }}
             />
             <div className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-2 sm:px-6 sm:py-2.5 lg:px-8">
-                <ApplicationLogo wordmarkClassName="dark:!invert-0 dark:!hue-rotate-0 dark:!brightness-100" />
+                <ApplicationLogo />
                 <ul className="hidden list-none items-center gap-6 md:flex lg:gap-7">
                     {navigationItems.map((item) => (
                         <li key={item.href}>
@@ -82,7 +82,7 @@ export default function GuestNavbar() {
                     {isAuthenticated ? (
                         <Button
                             href="/dashboard"
-                            className="!min-h-[34px] !h-[34px] !rounded-full !px-4 !py-1 !text-xs !font-bold hover:!translate-y-0 !bg-[#30C060] !text-[#122818] hover:!bg-[#22a44f] hover:!text-white shadow-sm"
+                            className="!h-[38px] !min-h-[38px] !rounded-xl !bg-brand-600 !px-4 !py-1.5 !text-xs !font-bold !text-white shadow-sm transition-colors hover:!bg-brand-700 hover:!translate-y-0 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
                         >
                             Buka Dashboard
                         </Button>
@@ -91,13 +91,13 @@ export default function GuestNavbar() {
                             <Button
                                 variant="ghost"
                                 href="/login"
-                                className="!min-h-[34px] !h-[34px] !text-[#2D3742] hover:!translate-y-0 hover:!bg-brand-50 hover:!text-brand-700 !font-bold !text-xs !px-3"
+                                className="!h-[38px] !min-h-[38px] !rounded-xl !px-3.5 !text-xs !font-bold !text-slate-700 transition-colors hover:!bg-brand-50 hover:!text-brand-700 hover:!translate-y-0 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
                             >
                                 Masuk
                             </Button>
                             <Button
                                 href="/register"
-                                className="!min-h-[34px] !h-[34px] !rounded-full !bg-[#30C060] !px-4 !py-1 !font-bold !text-xs !text-[#122818] !shadow-[0_8px_18px_rgba(48,192,96,0.22)] hover:!translate-y-0 hover:!bg-[#22a44f] hover:!text-white"
+                                className="!h-[38px] !min-h-[38px] !rounded-xl !bg-brand-600 !px-4 !py-1.5 !text-xs !font-bold !text-white shadow-sm transition-colors hover:!bg-brand-700 hover:!translate-y-0 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
                             >
                                 Daftar Gratis
                             </Button>
@@ -137,11 +137,11 @@ export default function GuestNavbar() {
                         </div>
                         <div className={`mt-3 border-t border-gray-100 pt-4 ${isAuthenticated ? '' : 'grid grid-cols-2 gap-3'}`}>
                             {isAuthenticated ? (
-                                <Button href="/dashboard" onClick={closeMenu} className="w-full !rounded-xl !bg-[#30C060] !text-[#122818] hover:!bg-[#22a44f] hover:!text-white">Buka Dashboard</Button>
+                                <Button href="/dashboard" onClick={closeMenu} className="w-full !min-h-[44px] !rounded-xl !bg-brand-600 !text-white shadow-sm transition-colors hover:!bg-brand-700 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">Buka Dashboard</Button>
                             ) : (
                                 <>
-                                    <Button variant="outline" href="/login" onClick={closeMenu} className="w-full !rounded-xl">Masuk</Button>
-                                    <Button href="/register" onClick={closeMenu} className="w-full !rounded-xl !bg-[#30C060] !text-[#122818] hover:!bg-[#22a44f] hover:!text-white">Daftar Gratis</Button>
+                                    <Button variant="outline" href="/login" onClick={closeMenu} className="w-full !min-h-[44px] !rounded-xl !border-slate-300 !text-slate-700 transition-colors hover:!border-brand-500 hover:!bg-brand-50 hover:!text-brand-700 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">Masuk</Button>
+                                    <Button href="/register" onClick={closeMenu} className="w-full !min-h-[44px] !rounded-xl !bg-brand-600 !text-white shadow-sm transition-colors hover:!bg-brand-700 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">Daftar Gratis</Button>
                                 </>
                             )}
                         </div>

@@ -188,7 +188,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
               </p>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <Button size="md" href="/register" className="!h-10 !min-h-[40px] !w-full !shrink-0 !whitespace-nowrap !rounded-xl !bg-[#15803D] !px-5 !text-sm !font-bold !text-white !shadow-[0_6px_16px_rgba(21,128,61,0.25)] hover:!translate-y-0 hover:!bg-[#166534] sm:!w-auto">
+                <Button size="md" href="/register" className="!h-11 !min-h-[44px] !w-full !shrink-0 !whitespace-nowrap !rounded-xl !bg-[#15803D] !px-5 !text-sm !font-bold !text-white shadow-sm hover:!bg-[#166534] hover:!translate-y-0 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 sm:!w-auto">
                   Mulai Belajar Gratis <ArrowForwardIcon aria-hidden="true" sx={{ fontSize: 18 }} />
                 </Button>
               </div>
