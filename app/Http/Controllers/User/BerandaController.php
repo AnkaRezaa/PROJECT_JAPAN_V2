@@ -22,6 +22,7 @@ use App\Services\AksesKuisPenggunaService;
 use App\Services\AksesLanggananService;
 use App\Services\AksesPremiumService;
 use App\Services\KloterBelajarService;
+use App\Services\KuisCampuranService;
 use App\Services\NotifikasiPenggunaService;
 use App\Services\QuickQuizSessionService;
 use Illuminate\Http\Request;
@@ -37,7 +38,8 @@ class BerandaController extends Controller
         AksesKuisPenggunaService $aksesKuis,
         AksesPremiumService $aksesPremium,
         KloterBelajarService $kloterBelajar,
-        QuickQuizSessionService $quickQuiz
+        QuickQuizSessionService $quickQuiz,
+        KuisCampuranService $kuisCampuranService
     ) {
         $user = Auth::user();
 
@@ -111,6 +113,7 @@ class BerandaController extends Controller
                 ->latest('end_date')
                 ->first(),
             'quickQuiz' => $quickQuiz->summary($user),
+            'dashboardMixedQuiz' => $kuisCampuranService->dashboardSummary($user),
             'lastCompletedQuiz' => $this->lastCompletedQuizPayload($user->id),
             'dailyGoal' => $this->dailyGoalPayload($user->id),
             'weakspotSummary' => $this->weakspotSummaryPayload($user->id),
@@ -252,8 +255,7 @@ class BerandaController extends Controller
             ->whereDate('completed_at', $today)
             ->count();
 
-        $defaultDay = HariModul::query()->where('status', 'published')->orderBy('id')->first();
-        $mixedQuizUrl = $defaultDay ? route('user.kuis-campuran.show', $defaultDay->id) : route('user.quizzes.index');
+        $mixedQuizUrl = route('user.kuis-campuran.dashboard');
 
         return [
             'xp_target' => $xpTarget,
@@ -282,7 +284,7 @@ class BerandaController extends Controller
             return [
                 'has_weakspot' => $failedCount > 0,
                 'count' => $failedCount,
-                'url' => route('user.weakspot.show'),
+                'url' => route('user.weakspot.show', ['from' => 'beranda']),
             ];
         });
     }

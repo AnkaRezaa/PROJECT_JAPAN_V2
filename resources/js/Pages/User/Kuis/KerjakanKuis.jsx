@@ -15,6 +15,7 @@ import { loadStrokeCharacter, resolveAvailableCharacters } from '@/Components/Fe
 import HighlightedLearningText from '@/Components/Features/Learning/HighlightedLearningText';
 import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
 import ContextualFeedbackPrompt from '@/Components/Features/Feedback/ContextualFeedbackPrompt';
+import { UniversalFeedbackWidget } from '@/Components/Features/UniversalFeedback';
 import { pushAnalyticsEvent } from '@/lib/analytics';
 import useQuizCheckpoint from '@/Hooks/useQuizCheckpoint';
 import ResumeQuizModal from '@/Components/Features/Quiz/ResumeQuizModal';
@@ -122,7 +123,17 @@ function StrokeGuideGallery({ text }) {
     );
 }
 
-export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = [], module_flow = false, back_url = null, finish_url = null, learning_feedback = null }) {
+export default function Quiz({
+    quiz,
+    questions: rawQuestions = [],
+    flashcards = [],
+    module_flow = false,
+    back_url = null,
+    finish_url = null,
+    learning_feedback = null,
+    preview = false,
+    onClose = null,
+}) {
     const prefersReducedMotion = useReducedMotion();
     const [soundEnabled, setSoundEnabled] = useQuizSoundPreference();
     const [sessionFlashcards] = useState(() => flashcards);
@@ -130,11 +141,14 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
         rawQuestions
             .map((q, index) => ({
                 ...q,
+                id: q.id || index + 1,
+                question: q.question || q.question_text || '',
+                question_text: q.question_text || q.question || '',
                 originalIndex: index,
-                originalQuestionId: q.originalQuestionId ?? q.id,
+                originalQuestionId: q.originalQuestionId ?? (q.id || index + 1),
                 type: normalizeQuestionType(q.type),
                 options: Array.isArray(q.options) ? q.options : [],
-                attemptKey: `${q.id}-${index}-0`,
+                attemptKey: `${q.id || index + 1}-${index}-0`,
                 repeatCount: 0,
             }))
             .sort((a, b) => reviewPriority(a) - reviewPriority(b) || a.originalIndex - b.originalIndex)
@@ -185,8 +199,8 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
         formattedSavedTime,
     } = useQuizCheckpoint({
         quizType: 'vocab',
-        quizId: isWeakspotQuiz ? null : quiz?.id,
-        enabled: Boolean(quiz?.id) && !isWeakspotQuiz,
+        quizId: isWeakspotQuiz || preview ? null : quiz?.id,
+        enabled: !preview && Boolean(quiz?.id) && !isWeakspotQuiz,
     });
 
     const [isResumeModalOpen, setIsResumeModalOpen] = useState(() => {
@@ -307,6 +321,58 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
 
         answerPendingRef.current = true;
 
+        if (preview) {
+            const normalizedAnswer = String(answerValue ?? '').trim().toLowerCase();
+            const normalizedCorrect = String(currentQ.correct_answer ?? '').trim().toLowerCase();
+            const isCorrect = normalizedAnswer === normalizedCorrect;
+            const explanation = currentQ.explanation || (isCorrect ? 'Jawaban Anda benar!' : `Jawaban yang benar: ${currentQ.correct_answer || '-'}`);
+            const explanationReading = currentQ.explanation_reading || null;
+
+            const answerEvent = {
+                question_id: currentQ.id,
+                answer_text: answerValue,
+                answer_payload: {
+                    ...answerPayload,
+                    is_correct: isCorrect,
+                    attempt_key: currentQ.attemptKey,
+                    repeat_count: currentQ.repeatCount || 0,
+                },
+            };
+            answerLogRef.current[currentQ.id] = answerEvent;
+            answerEventsRef.current.push(answerEvent);
+            correctMapRef.current[currentQ.id] = isCorrect;
+            setSelectedAnswer(selectedIndex ?? answerValue);
+
+            if (isCorrect) {
+                playSoundEffect('correct');
+                setScore(Object.values({ ...correctMapRef.current, [currentQ.id]: true }).filter(Boolean).length);
+                setCompletedOriginalQuestionIds((items) => {
+                    const next = new Set(items);
+                    next.add(currentQ.originalQuestionId ?? currentQ.id);
+                    return next;
+                });
+                setAnswerFeedback({
+                    status: 'correct',
+                    title: currentQ.isRepeat ? 'Mantap, sudah membaik!' : 'Benar!',
+                    message: currentQ.isRepeat ? 'Soal yang tadi sulit sudah berhasil kamu jawab.' : 'Jawaban ini masuk ke progres pratinjau.',
+                    reading: null,
+                });
+            } else {
+                playSoundEffect('incorrect');
+                setLives((value) => Math.max(0, value - 1));
+                setShakeKey((value) => value + 1);
+                repeatWrongQuestion(currentQ);
+                setAnswerFeedback({
+                    status: 'wrong',
+                    title: 'Belum tepat',
+                    message: explanation,
+                    reading: explanationReading,
+                });
+            }
+            answerPendingRef.current = false;
+            return;
+        }
+
         try {
             const response = await window.axios.post(route('user.questions.check', currentQ.id), {
                 answer: answerValue,
@@ -404,10 +470,31 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
     };
 
     const submitAttempt = async ({ timeout = false } = {}) => {
-        if (submitted.current || !quiz?.id) return;
+        if (submitted.current || (!quiz?.id && !preview)) return;
         submitted.current = true;
         setIsSubmittingAttempt(true);
         setAttemptError(null);
+
+        if (preview) {
+            const finalCorrectCount = Object.values(correctMapRef.current).filter(Boolean).length;
+            const finalScore = scoredQuestionCount > 0 ? Math.round((finalCorrectCount / scoredQuestionCount) * 100) : 0;
+            const passed = (!timeout && lives > 0 && finalScore >= passingScore);
+
+            setAttemptResult({
+                score: finalScore,
+                passed,
+                total_questions: scoredQuestionCount,
+                correct_answers: finalCorrectCount,
+                wrong_answers: scoredQuestionCount - finalCorrectCount,
+                xp_earned: 0,
+                is_preview: true,
+                message: passed
+                    ? 'Pratinjau tuntas: skor memenuhi target kuis.'
+                    : `Pratinjau selesai: skor belum mencapai passing score (${passingScore}%).`,
+            });
+            setIsSubmittingAttempt(false);
+            return;
+        }
 
         try {
             const response = await window.axios.post(route('user.attempts.store'), {
@@ -484,15 +571,17 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
 
         const nextIdx = currentIndex + 1;
         setCurrentIndex(nextIdx);
-        saveCheckpoint({
-            currentIndex: nextIdx,
-            lives,
-            score,
-            completedIds: Array.from(completedOriginalQuestionIds),
-            answerEvents: answerEventsRef.current,
-            answerLog: answerLogRef.current,
-            correctMap: correctMapRef.current,
-        });
+        if (!preview) {
+            saveCheckpoint({
+                currentIndex: nextIdx,
+                lives,
+                score,
+                completedIds: Array.from(completedOriginalQuestionIds),
+                answerEvents: answerEventsRef.current,
+                answerLog: answerLogRef.current,
+                correctMap: correctMapRef.current,
+            });
+        }
         setSelectedAnswer(null);
         setTextAnswer('');
         setAnswerFeedback(null);
@@ -515,15 +604,17 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
 
         const nextIdx = Math.min(currentIndex + 1, questions.length - 1);
         setCurrentIndex(nextIdx);
-        saveCheckpoint({
-            currentIndex: nextIdx,
-            lives,
-            score,
-            completedIds: Array.from(completedOriginalQuestionIds),
-            answerEvents: answerEventsRef.current,
-            answerLog: answerLogRef.current,
-            correctMap: correctMapRef.current,
-        });
+        if (!preview) {
+            saveCheckpoint({
+                currentIndex: nextIdx,
+                lives,
+                score,
+                completedIds: Array.from(completedOriginalQuestionIds),
+                answerEvents: answerEventsRef.current,
+                answerLog: answerLogRef.current,
+                correctMap: correctMapRef.current,
+            });
+        }
     };
 
     const continueWithHandwriting = async () => {
@@ -557,7 +648,7 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
     };
 
     const recordHandwritingReview = (isKnown, onSuccess) => {
-        if (handwritingReviewRecordedRef.current || !handwritingPractice?.flashcard_id) {
+        if (preview || handwritingReviewRecordedRef.current || !handwritingPractice?.flashcard_id) {
             onSuccess?.();
             return;
         }
@@ -621,8 +712,8 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
 
         playSoundEffect(action === 'known' ? 'correct' : 'select');
 
-        if (!activeFlashcard?.id) {
-            continueAfterFlashcard();
+        if (preview || !activeFlashcard?.id) {
+            continueWithHandwriting();
             return;
         }
 
@@ -639,7 +730,12 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
     };
 
     const confirmExit = (e) => {
-        e.preventDefault();
+        if (e?.preventDefault) e.preventDefault();
+        if (preview) {
+            onClose?.();
+            return;
+        }
+
         openConfirm({
             variant: 'warning',
             presentation: 'quiz-exit',
@@ -661,6 +757,11 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
     );
 
     const continueAfterResult = async (continueLearning = true) => {
+        if (preview) {
+            onClose?.();
+            return;
+        }
+
         if (!learningFeedback && feedbackRating) {
             setFeedbackSubmitting(true);
             setFeedbackError(null);
@@ -686,7 +787,6 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
         router.get(attemptResult?.next_url || finish_url || route('user.dashboard'));
     };
 
-    // Jika tidak ada soal dari DB
     if (questions.length === 0) {
         return (
             <div className="relative flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-brand-50 via-white to-learning-50 px-4 py-8 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900 sm:p-6">
@@ -703,7 +803,6 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
         );
     }
 
-    // === TAMPILAN HASIL (SUMMARY SCREEN) ===
     if (showResult) {
         const answeredCount = Object.keys(answerLogRef.current).length;
         const finalCorrectCount = Object.values(correctMapRef.current).filter(Boolean).length;
@@ -715,6 +814,25 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
             : (!finishedByTimeout && lives > 0 && hasAnsweredAll && finalScore >= passingScore);
         const resultTotalQuestions = attemptResult?.total_questions ?? totalQuestionCount;
         const retryQuiz = () => {
+            if (preview) {
+                submitted.current = false;
+                answerLogRef.current = {};
+                answerEventsRef.current = [];
+                correctMapRef.current = {};
+                setCurrentIndex(0);
+                setSelectedAnswer(null);
+                setTextAnswer('');
+                setAnswerFeedback(null);
+                setLives(5);
+                setScore(0);
+                setCompletedOriginalQuestionIds(new Set());
+                setSecondsLeft(Number(quiz?.time_limit || 0));
+                setFinishedByTimeout(false);
+                setAttemptResult(null);
+                setShowResult(false);
+                return;
+            }
+
             clearCheckpoint();
             if (typeof window !== 'undefined') {
                 router.get(window.location.href);
@@ -736,13 +854,12 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                 >
                     <RewardSummary
                         status={isSuccess ? 'success' : 'review'}
-                        title={finishedByTimeout ? 'Waktu Habis!' : (isSuccess ? 'Quest Kuis Selesai!' : 'Belum Lulus')}
+                        title={finishedByTimeout ? 'Waktu Habis!' : (isSuccess ? (preview ? 'Pratinjau Selesai - Target Tercapai!' : 'Quest Kuis Selesai!') : 'Belum Lulus')}
                         message={finishedByTimeout
-                            ? 'Jawaban yang sudah dikerjakan tetap dikirim, tetapi week belum selesai karena waktu habis.'
+                            ? 'Waktu pengerjaan telah habis.'
                             : isSuccess
-                                ? (attemptResult?.message || 'Skor cukup dan mastery naik. Week ini selesai, lanjutkan momentum ke roadmap.')
-                                : (attemptResult?.message || `Target lulus ${passingScore}%. Soal yang salah masuk repetisi, ulangi sampai cukup kuat.`)
-                        }
+                                ? (attemptResult?.message || 'Skor mencukupi target passing score.')
+                                : (attemptResult?.message || `Target lulus ${passingScore}%. Silakan ulangi untuk melatih pemahaman.`)}
                         stats={[
                             { label: 'Skor', value: `${finalScore}%` },
                             { label: 'Benar', value: `${finalCorrectCount}/${resultTotalQuestions}` },
@@ -750,35 +867,21 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                         ]}
                     />
                     <QuizErrorMessage className="mt-4">{attemptError}</QuizErrorMessage>
-                    {isSuccess && !attemptError && (
-                        <section className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-left dark:border-amber-900/50 dark:bg-amber-950/20">
-                            <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700 dark:text-amber-300">Feedback sesi</p>
-                            <h2 className="mt-1 text-base font-black text-gray-900 dark:text-white">Bagaimana intensitas sesi ini?</h2>
-                            <p className="mt-1 text-xs font-semibold leading-5 text-gray-600 dark:text-gray-300">Jawabanmu membantu sensei melihat materi yang perlu diperkuat.</p>
-                            <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                                {[
-                                    ['repeat', 'Perlu diulang'],
-                                    ['just_right', 'Pas'],
-                                    ['easy', 'Terlalu mudah'],
-                                ].map(([value, label]) => (
-                                    <button
-                                        key={value}
-                                        type="button"
-                                        disabled={Boolean(learningFeedback)}
-                                        onClick={() => setFeedbackRating(value)}
-                                        className={`min-h-10 rounded-xl border px-3 py-2 text-xs font-black transition ${feedbackRating === value
-                                            ? 'border-amber-500 bg-amber-400 text-gray-950'
-                                            : 'border-amber-200 bg-white text-gray-700 hover:border-amber-400 dark:border-amber-900/50 dark:bg-gray-900 dark:text-gray-200'}`}
-                                    >
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
-                            {learningFeedback && <p className="mt-3 text-xs font-bold text-emerald-700 dark:text-emerald-300">Feedback hari ini sudah tersimpan.</p>}
-                            <QuizErrorMessage className="mt-3 text-xs">{feedbackError}</QuizErrorMessage>
-                        </section>
+                    {!preview && isSuccess && !attemptError && (
+                        <div className="mt-4">
+                            <UniversalFeedbackWidget
+                                mode="pedagogic"
+                                contextType="quiz"
+                                contextId={quiz?.id}
+                                initialRating={feedbackRating}
+                                onRatingSelect={(val) => setFeedbackRating(val)}
+                                disabled={Boolean(learningFeedback)}
+                            />
+                            {learningFeedback && <p className="mt-2 text-xs font-bold text-emerald-700 dark:text-emerald-300">Feedback hari ini sudah tersimpan.</p>}
+                            <QuizErrorMessage className="mt-2 text-xs">{feedbackError}</QuizErrorMessage>
+                        </div>
                     )}
-                    {!attemptError && attemptResult?.attempt_id && (
+                    {!preview && !attemptError && attemptResult?.attempt_id && (
                         <ContextualFeedbackPrompt
                             feature="quiz"
                             contextId={attemptResult.attempt_id}
@@ -788,6 +891,15 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                     )}
                     <button 
                         onClick={() => {
+                            if (preview) {
+                                if (!isSuccess) {
+                                    retryQuiz();
+                                } else {
+                                    onClose?.();
+                                }
+                                return;
+                            }
+
                             if (attemptError) {
                                 retrySubmit();
                                 return;
@@ -809,9 +921,11 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                         className="mt-4 w-full rounded-2xl py-4 text-lg font-black uppercase tracking-wide text-gray-950 shadow-lg transition-all hover:brightness-110 active:translate-y-1 active:shadow-none"
                         style={{ backgroundColor: theme.doneColor, boxShadow: `0 4px 0 0 ${theme.doneShadow}` }}
                     >
-                        {isSubmittingAttempt || feedbackSubmitting ? 'MENYIMPAN...' : (attemptError ? 'KIRIM ULANG HASIL' : (isSuccess ? 'SIMPAN & LANJUTKAN' : 'ULANGI KUIS'))}
+                        {preview
+                            ? (isSuccess ? 'TUTUP PRATINJAU' : 'ULANGI PRATINJAU')
+                            : (isSubmittingAttempt || feedbackSubmitting ? 'MENYIMPAN...' : (attemptError ? 'KIRIM ULANG HASIL' : (isSuccess ? 'SIMPAN & LANJUTKAN' : 'ULANGI KUIS')))}
                     </button>
-                    {isSuccess && !attemptError && !learningFeedback && feedbackRating && (
+                    {!preview && isSuccess && !attemptError && !learningFeedback && feedbackRating && (
                         <button
                             type="button"
                             onClick={() => continueAfterResult(false)}
@@ -1059,6 +1173,11 @@ export default function Quiz({ quiz, questions: rawQuestions = [], flashcards = 
                         transition={{ duration: 0.5, ease: "easeOut" }}
                     />
                 </div>
+                {preview && (
+                    <span className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider text-amber-700 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-300">
+                        Pratinjau
+                    </span>
+                )}
                 {hasTimeLimit ? (
                     <div className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-black tabular-nums ${secondsLeft <= 10 ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-200' : 'bg-white text-gray-700 dark:bg-gray-900 dark:text-gray-200'}`}>
                         {formatTime(secondsLeft)}

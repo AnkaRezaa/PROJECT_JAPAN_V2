@@ -11,8 +11,11 @@ use App\Models\Kuis;
 use App\Models\LogReward;
 use App\Models\PengerjaanKuis;
 use App\Models\Pengguna;
+use App\Models\ProgramPembelajaran;
 use App\Models\ReviewSoal;
 use App\Models\Soal;
+use App\Services\AksesKuisPenggunaService;
+use App\Services\AksesPremiumService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -21,7 +24,9 @@ class KuisCampuranService
 {
     public function __construct(
         private readonly RingkasanProgresPenggunaService $summaryService,
-        private readonly RepetisiPembelajaranService $repetisiService
+        private readonly RepetisiPembelajaranService $repetisiService,
+        private readonly AksesKuisPenggunaService $aksesKuis,
+        private readonly AksesPremiumService $aksesPremium
     ) {}
 
     public function generatePayload(HariModul $day, Pengguna $user): array
@@ -441,6 +446,279 @@ class KuisCampuranService
                 'breakdown' => $evaluated['breakdown'],
                 'weakspot_category' => $evaluated['weakspot_category'],
                 'is_weakspot' => true,
+            ];
+        });
+    }
+
+    public function dashboardSummary(Pengguna $user): array
+    {
+        $allowedQuizzes = Kuis::query()
+            ->with(['module.programPembelajaran:id,title'])
+            ->where('status', 'published')
+            ->whereHas('questions')
+            ->whereHas('module', fn ($query) => $query->where('status', 'published'))
+            ->get()
+            ->filter(fn (Kuis $quiz) => $quiz->module?->program_pembelajaran_id
+                && $this->aksesPremium->bolehAksesModul($user, $quiz->module)
+                && $this->aksesKuis->status($user, $quiz)['allowed']);
+
+        $programs = $allowedQuizzes
+            ->filter(fn (Kuis $quiz) => $quiz->module?->program_pembelajaran_id)
+            ->groupBy(fn (Kuis $quiz) => $quiz->module->program_pembelajaran_id)
+            ->map(fn (Collection $items) => [
+                'id' => (int) $items->first()->module->program_pembelajaran_id,
+                'title' => $items->first()->module->programPembelajaran?->title ?? 'Kelas',
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'available' => $allowedQuizzes->isNotEmpty(),
+            'program_count' => count($programs),
+            'programs' => $programs,
+            'start_url' => route('user.kuis-campuran.dashboard'),
+            'target_count' => 10,
+            'xp_reward' => 30,
+        ];
+    }
+
+    public function generateDashboardPayload(Pengguna $user, ?int $programId = null): array
+    {
+        $allowedQuizzes = Kuis::query()
+            ->with(['module.programPembelajaran:id,title'])
+            ->where('status', 'published')
+            ->whereHas('module', fn ($query) => $query->where('status', 'published'))
+            ->when($programId, fn ($query) => $query->whereHas(
+                'module',
+                fn ($mQuery) => $mQuery->where('program_pembelajaran_id', $programId)
+            ))
+            ->get()
+            ->filter(fn (Kuis $quiz) => $quiz->module?->program_pembelajaran_id
+                && $this->aksesPremium->bolehAksesModul($user, $quiz->module)
+                && $this->aksesKuis->status($user, $quiz)['allowed']);
+
+        abort_if($allowedQuizzes->isEmpty(), 404, 'Belum ada materi atau kuis yang terbuka untuk dikerjakan.');
+
+        $allowedQuizIds = $allowedQuizzes->pluck('id')->all();
+
+        $weakspotIds = ReviewSoal::query()
+            ->where('user_id', $user->id)
+            ->where('wrong_count', '>', 0)
+            ->pluck('question_id')
+            ->flip()
+            ->all();
+
+        // 1. Ambil Pool ID Dokkai
+        $dokkaiPool = DokkaiQuestion::query()
+            ->whereHas('passage.quiz', fn ($q) => $q->whereIn('id', $allowedQuizIds)->where('status', 'published'))
+            ->pluck('id')
+            ->all();
+        $sampledDokkaiIds = $this->sampleWeightedIds($dokkaiPool, 3);
+
+        // 2. Ambil Pool ID Bunpo
+        $bunpoPool = Soal::query()
+            ->whereIn('quiz_id', $allowedQuizIds)
+            ->whereHas('quiz', fn ($q) => $q->where('type', 'grammar')->where('status', 'published'))
+            ->pluck('id')
+            ->all();
+        $sampledBunpoIds = $this->sampleWeightedIds($bunpoPool, 3, $weakspotIds);
+
+        // 3. Fallback kuota ke Kosakata
+        $targetKosakata = 10 - (count($sampledDokkaiIds) + count($sampledBunpoIds));
+        $kosakataPool = Soal::query()
+            ->whereIn('quiz_id', $allowedQuizIds)
+            ->whereHas('quiz', fn ($q) => $q->where('type', '!=', 'grammar')->where('status', 'published'))
+            ->pluck('id')
+            ->all();
+        $sampledKosakataIds = $this->sampleWeightedIds($kosakataPool, $targetKosakata, $weakspotIds);
+
+        // 4. Backfill jika total masih < 10 butir
+        $currentTotal = count($sampledDokkaiIds) + count($sampledBunpoIds) + count($sampledKosakataIds);
+        if ($currentTotal < 10) {
+            $remainingBunpo = array_diff($bunpoPool, $sampledBunpoIds);
+            if (! empty($remainingBunpo)) {
+                $extraBunpo = $this->sampleWeightedIds($remainingBunpo, 10 - $currentTotal, $weakspotIds);
+                $sampledBunpoIds = array_merge($sampledBunpoIds, $extraBunpo);
+                $currentTotal = count($sampledDokkaiIds) + count($sampledBunpoIds) + count($sampledKosakataIds);
+            }
+        }
+        if ($currentTotal < 10) {
+            $remainingDokkai = array_diff($dokkaiPool, $sampledDokkaiIds);
+            if (! empty($remainingDokkai)) {
+                $extraDokkai = $this->sampleWeightedIds($remainingDokkai, 10 - $currentTotal);
+                $sampledDokkaiIds = array_merge($sampledDokkaiIds, $extraDokkai);
+            }
+        }
+
+        // 5. Hydrate Soal & Normalisasi
+        $soalPool = Soal::query()
+            ->whereIn('id', array_merge($sampledKosakataIds, $sampledBunpoIds))
+            ->get()
+            ->keyBy('id');
+
+        $kosakataItems = collect($sampledKosakataIds)
+            ->map(fn ($id) => isset($soalPool[$id]) ? $this->normalizeSoal($soalPool[$id], 'kosakata', 'Kosakata') : null)
+            ->filter()
+            ->values()
+            ->all();
+
+        $bunpoItems = collect($sampledBunpoIds)
+            ->map(fn ($id) => isset($soalPool[$id]) ? $this->normalizeSoal($soalPool[$id], 'bunpo', 'Bunpo') : null)
+            ->filter()
+            ->values()
+            ->all();
+
+        $dokkaiItems = DokkaiQuestion::query()
+            ->whereIn('id', $sampledDokkaiIds)
+            ->with(['passage.paragraphs:id,dokkai_passage_id,paragraph_number,content_raw', 'evidenceParagraph'])
+            ->get()
+            ->map(fn (DokkaiQuestion $d) => $this->normalizeDokkai($d))
+            ->all();
+
+        $sequencedQuestions = $this->interleaveQuestions($kosakataItems, $bunpoItems, $dokkaiItems);
+
+        $fallbackQuizId = $allowedQuizIds[0] ?? 1;
+        $programTitle = null;
+        if ($programId) {
+            $program = ProgramPembelajaran::find($programId);
+            $programTitle = $program?->title;
+        }
+
+        return [
+            'quiz_id' => $fallbackQuizId,
+            'title' => $programTitle ? "Kuis Campuran: {$programTitle}" : 'Kuis Campuran: Seluruh Kelas Aktif',
+            'module_title' => $programTitle ?? 'Latihan Harian Dashboard',
+            'time_limit' => 600,
+            'session_token' => (string) Str::uuid(),
+            'total_questions' => count($sequencedQuestions),
+            'questions' => $sequencedQuestions,
+            'is_dashboard' => true,
+            'program_id' => $programId,
+        ];
+    }
+
+    public function submitDashboardAttempt(Pengguna $user, array $data): array
+    {
+        $submissionToken = $data['submission_token'] ?? (string) Str::uuid();
+
+        return DB::transaction(function () use ($user, $data, $submissionToken) {
+            $existing = PengerjaanKuis::where('user_id', $user->id)
+                ->where('submission_token', $submissionToken)
+                ->first();
+
+            if ($existing) {
+                return [
+                    'score' => $existing->score,
+                    'xp_earned' => $existing->xp_earned,
+                    'passed' => $existing->score >= 70,
+                    'idempotent' => true,
+                ];
+            }
+
+            $submittedAnswers = collect($data['answers'] ?? []);
+            $evaluated = $this->evaluateAnswers($submittedAnswers, null, $user->id);
+
+            $score = $evaluated['score'];
+            $passed = $score >= 70;
+
+            $firstQuestionRawId = $submittedAnswers->first()['raw_id'] ?? null;
+            $firstSourceType = $submittedAnswers->first()['source_type'] ?? null;
+            $resolvedQuizId = null;
+
+            if ($firstSourceType === 'dokkai' && $firstQuestionRawId) {
+                $resolvedQuizId = DokkaiQuestion::find($firstQuestionRawId)?->passage?->quiz_id;
+            } elseif ($firstQuestionRawId) {
+                $resolvedQuizId = Soal::find($firstQuestionRawId)?->quiz_id;
+            }
+
+            $fallbackQuiz = $resolvedQuizId ? Kuis::find($resolvedQuizId) : Kuis::where('status', 'published')->first();
+            $quizId = $fallbackQuiz?->id ?? 1;
+
+            $attempt = PengerjaanKuis::create([
+                'user_id' => $user->id,
+                'quiz_id' => $quizId,
+                'submission_token' => $submissionToken,
+                'status' => 'completed',
+                'score' => $score,
+                'xp_earned' => 0,
+                'started_at' => now(),
+                'completed_at' => now(),
+                'attempted_at' => now(),
+            ]);
+
+            $correctSoalIds = collect($evaluated['details'])
+                ->where('source_type', '!=', 'dokkai')
+                ->where('is_correct', true)
+                ->pluck('raw_id')
+                ->all();
+
+            $soalMap = ! empty($correctSoalIds) ? Soal::whereIn('id', $correctSoalIds)->get()->keyBy('id') : collect();
+            $reviewMap = ! empty($correctSoalIds) ? ReviewSoal::where('user_id', $user->id)->whereIn('question_id', $correctSoalIds)->get()->keyBy('question_id') : collect();
+
+            foreach ($evaluated['details'] as $item) {
+                if ($item['source_type'] === 'dokkai') {
+                    DokkaiAttemptAnswer::create([
+                        'attempt_id' => $attempt->id,
+                        'dokkai_question_id' => $item['raw_id'],
+                        'selected_option' => mb_substr((string) ($item['user_answer'] ?? ''), 0, 5),
+                        'is_correct' => $item['is_correct'],
+                    ]);
+                } else {
+                    JawabanPengerjaanKuis::create([
+                        'attempt_id' => $attempt->id,
+                        'question_id' => $item['raw_id'],
+                        'answer_text' => $item['user_answer'],
+                        'is_correct' => $item['is_correct'],
+                        'earned_points' => $item['is_correct'] ? 1 : 0,
+                    ]);
+
+                    if ($item['is_correct'] && ($soal = $soalMap->get($item['raw_id']))) {
+                        $this->repetisiService->catatJawabanSoal($user, $soal, true);
+                        if ($review = $reviewMap->get($soal->id)) {
+                            $review->update([
+                                'wrong_count' => max(0, (int) $review->wrong_count - 1),
+                                'last_result' => 'correct',
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            // Gamifikasi & Anti-Farming Policy: Sesi pertama = 30 XP, pengulangan = 5 XP
+            $xpEarned = 0;
+            if ($passed) {
+                $todayAttemptsCount = PengerjaanKuis::where('user_id', $user->id)
+                    ->whereDate('created_at', now()->toDateString())
+                    ->where('quiz_id', $quizId)
+                    ->count();
+
+                $xpEarned = ($todayAttemptsCount <= 1) ? 30 : 5;
+
+                $user->increment('xp', $xpEarned);
+                LogReward::create([
+                    'user_id' => $user->id,
+                    'source_type' => 'quiz',
+                    'source_id' => $quizId,
+                    'xp_amount' => $xpEarned,
+                    'description' => 'Menyelesaikan Kuis Campuran Harian (Dashboard)',
+                ]);
+
+                $attempt->update(['xp_earned' => $xpEarned]);
+            }
+
+            event(new KuisSelesai($user, $quizId, $score, $xpEarned));
+            $this->summaryService->forget($user);
+
+            return [
+                'score' => $score,
+                'passed' => $passed,
+                'xp_earned' => $xpEarned,
+                'attempt_id' => $attempt->id,
+                'correct_count' => $evaluated['correct_count'],
+                'total_questions' => $evaluated['total_questions'],
+                'breakdown' => $evaluated['breakdown'],
+                'weakspot_category' => $evaluated['weakspot_category'],
+                'is_dashboard' => true,
             ];
         });
     }

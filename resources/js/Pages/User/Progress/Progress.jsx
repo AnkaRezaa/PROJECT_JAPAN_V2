@@ -26,19 +26,107 @@ const THEME_MAP = {
     sky: {
         avatar: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700',
         bar: 'bg-sky-500',
+        ringColor: '#0284c7',
         btn: 'bg-sky-600 hover:bg-sky-700 text-white',
     },
     emerald: {
         avatar: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700',
         bar: 'bg-emerald-500',
+        ringColor: '#059669',
         btn: 'bg-emerald-600 hover:bg-emerald-700 text-white',
     },
     amber: {
         avatar: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700',
         bar: 'bg-amber-500',
+        ringColor: '#d97706',
         btn: 'bg-amber-600 hover:bg-amber-700 text-white',
     },
 };
+
+function CategoryDonutAvatar({ kanji, pct = 0, ringColor = '#059669', size = 48, strokeWidth = 3.5 }) {
+    const clampedPct = clamp(pct);
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (clampedPct / 100) * circumference;
+
+    return (
+        <div className="relative flex shrink-0 items-center justify-center" style={{ width: size, height: size }}>
+            <svg className="-rotate-90 transform" width={size} height={size} aria-hidden="true">
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="transparent"
+                    stroke="currentColor"
+                    strokeWidth={strokeWidth}
+                    className="text-slate-200 dark:stroke-slate-700"
+                />
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="transparent"
+                    stroke={ringColor}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    strokeLinecap="round"
+                    className="transition-all duration-500 ease-out"
+                />
+            </svg>
+            <div className="absolute inset-1 flex items-center justify-center rounded-full bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100">
+                <span className="font-japanese text-base font-black leading-none" lang="ja">
+                    {kanji}
+                </span>
+            </div>
+        </div>
+    );
+}
+
+function TotalProgressDonutGauge({ pct = 0, xp = 0, targetXp = 3200, size = 144, strokeWidth = 10 }) {
+    const clampedPct = clamp(pct);
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (clampedPct / 100) * circumference;
+
+    return (
+        <div className="relative flex shrink-0 items-center justify-center" style={{ width: size, height: size }}>
+            <svg className="-rotate-90 transform" width={size} height={size} aria-hidden="true">
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="transparent"
+                    stroke="rgba(255, 255, 255, 0.2)"
+                    strokeWidth={strokeWidth}
+                />
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="transparent"
+                    stroke="#34d399"
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    strokeLinecap="round"
+                    className="transition-all duration-700 ease-out"
+                />
+            </svg>
+            <div className="absolute flex flex-col items-center justify-center text-center">
+                <span className="text-3xl font-black tabular-nums leading-none tracking-tight text-white">
+                    {clampedPct}%
+                </span>
+                <span className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-emerald-100">
+                    Total Progress
+                </span>
+                <span className="mt-0.5 text-[10px] font-bold tabular-nums text-emerald-200">
+                    {(Number(xp) || 0).toLocaleString()} / {targetXp.toLocaleString()} XP
+                </span>
+            </div>
+        </div>
+    );
+}
 
 function WeakspotCategoryCard({ category }) {
     const {
@@ -57,25 +145,22 @@ function WeakspotCategoryCard({ category }) {
     return (
         <div className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
             <div>
-                {/* Header Kartu: Kotak Kanji & Tingkat Penguasaan */}
+                {/* Header Kartu: Avatar Kanji Berbalut Donut Ring Gauge & Info Penguasaan */}
                 <div className="flex items-center gap-3">
-                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border text-base font-black ${style.avatar}`}>
-                        {kanji_char}
-                    </div>
+                    <CategoryDonutAvatar
+                        kanji={kanji_char}
+                        pct={pct}
+                        ringColor={style.ringColor}
+                    />
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                            <h3 className="text-base font-black text-slate-950 dark:text-white truncate">{title}</h3>
-                            <span className="text-xs font-black tabular-nums text-slate-700 dark:text-slate-200">{clamp(pct)}%</span>
+                            <h3 className="truncate text-base font-black text-slate-950 dark:text-white">{title}</h3>
+                            <span className="shrink-0 text-xs font-black tabular-nums text-slate-700 dark:text-slate-200">{clamp(pct)}%</span>
                         </div>
                         <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                             Tingkat Penguasaan
                         </p>
                     </div>
-                </div>
-
-                {/* Progress Bar Horizontal */}
-                <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                    <div className={`h-full rounded-full transition-all duration-500 ${style.bar}`} style={{ width: `${clamp(pct)}%` }} />
                 </div>
 
                 {/* Status Badge Weakspot */}
@@ -279,17 +364,12 @@ export default function Progress({
                             <div className="relative flex min-h-64 items-center justify-center overflow-hidden bg-emerald-700 p-6 text-white dark:bg-emerald-900">
                                 <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,_white_1px,_transparent_0)] [background-size:18px_18px]" />
                                 <div className="relative flex flex-col items-center text-center">
-                                    <div
-                                        className="flex h-36 w-36 items-center justify-center rounded-full border-[10px] border-white/20 bg-emerald-800/30 shadow-xl"
-                                        style={{ background: `conic-gradient(#34d399 ${Math.max(5, totalProgressPct)}%, rgba(255,255,255,0.18) 0)` }}
-                                    >
-                                        <div className="flex h-[104px] w-[104px] flex-col items-center justify-center rounded-full bg-emerald-700 dark:bg-emerald-900">
-                                            <span className="text-2xl font-black">{totalProgressPct}%</span>
-                                            <span className="mt-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-100">Total Progress</span>
-                                            <span className="text-[10px] font-bold text-emerald-200">{(Number(stats.xp) || 0).toLocaleString()} / 3,200 XP</span>
-                                        </div>
-                                    </div>
-                                    <p className="mt-4 text-xs font-black tracking-wide text-emerald-100">「コツコツが勝つコツだ。」</p>
+                                    <TotalProgressDonutGauge
+                                        pct={totalProgressPct}
+                                        xp={stats.xp}
+                                        targetXp={3200}
+                                    />
+                                    <p className="mt-4 font-japanese text-xs font-black tracking-wide text-emerald-100" lang="ja">「コツコツが勝つコツだ。」</p>
                                     <p className="mt-0.5 text-[11px] font-medium text-emerald-200">"Konsistensi kecil tetap berarti."</p>
                                 </div>
                             </div>

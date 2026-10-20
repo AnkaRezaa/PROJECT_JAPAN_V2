@@ -410,6 +410,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/dokkai-quizzes/{quiz}/submit', [DokkaiController::class, 'submit'])->middleware('throttle:learning-actions')->name('dokkai-quizzes.submit');
         Route::get('/module-days/{moduleDay}/kuis-campuran', [KuisCampuranController::class, 'show'])->name('kuis-campuran.show');
         Route::post('/module-days/{moduleDay}/kuis-campuran/submit', [KuisCampuranController::class, 'submit'])->middleware('throttle:learning-actions')->name('kuis-campuran.submit');
+        Route::get('/dashboard-quiz/mixed', [KuisCampuranController::class, 'showDashboard'])->name('kuis-campuran.dashboard');
+        Route::post('/dashboard-quiz/mixed/submit', [KuisCampuranController::class, 'submitDashboard'])->middleware('throttle:learning-actions')->name('kuis-campuran.dashboard.submit');
         Route::get('/weakspot-quiz', [KuisCampuranController::class, 'showWeakspot'])->name('weakspot.show');
         Route::post('/weakspot-quiz/submit', [KuisCampuranController::class, 'submitWeakspot'])->middleware('throttle:learning-actions')->name('weakspot.submit');
         Route::get('/exams', [ExamPortalController::class, 'index'])->name('exams.index');

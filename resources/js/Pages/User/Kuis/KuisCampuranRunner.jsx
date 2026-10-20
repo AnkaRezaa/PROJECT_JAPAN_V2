@@ -12,6 +12,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import useQuizCheckpoint from '@/Hooks/useQuizCheckpoint';
 import ResumeQuizModal from '@/Components/Features/Quiz/ResumeQuizModal';
 import SentenceBuilder from '@/Components/Features/Quiz/SentenceBuilder';
+import { UniversalFeedbackWidget } from '@/Components/Features/UniversalFeedback';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 
 const PILLAR_CONFIG = {
@@ -90,7 +91,7 @@ function DonutScoreGauge({ score = 0, correctCount = 0, totalQuestions = 10 }) {
     );
 }
 
-export default function KuisCampuranRunner({ quiz, submitUrl, backUrl }) {
+export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspot = false, isDashboard = false }) {
     const questions = useMemo(() => quiz?.questions || [], [quiz]);
     const totalQuestions = questions.length || 10;
 
@@ -216,7 +217,7 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl }) {
                             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 px-4 text-sm font-bold text-white shadow-md hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition"
                         >
                             <ArrowBackIcon sx={{ fontSize: 18 }} />
-                            Kembali ke Progres
+                            <span>{backUrl?.includes('beranda') ? 'Kembali ke Beranda' : 'Kembali ke Progres'}</span>
                         </Link>
                     </div>
                 </div>
@@ -349,6 +350,12 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl }) {
                                     <span>·</span>
                                     <span className="text-rose-600 dark:text-rose-400">Remedial</span>
                                 </>
+                            ) : (quiz?.is_dashboard || isDashboard) ? (
+                                <>
+                                    <span>Dashboard</span>
+                                    <span>·</span>
+                                    <span>Latihan Harian</span>
+                                </>
                             ) : (
                                 <>
                                     <span>Hari {quiz?.day_number || '1'}</span>
@@ -428,7 +435,6 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl }) {
             {/* Main Content Area */}
             <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-6 flex flex-col justify-between">
                 {resultData ? (
-                    /* ================= RESULT SCREEN ================= */
                     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 py-4">
                         <div className="text-center space-y-2">
                             <span className="text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
@@ -506,6 +512,14 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl }) {
                             </div>
                         </div>
 
+                        <UniversalFeedbackWidget
+                            variant="inline"
+                            mode="experience"
+                            contextType="quiz"
+                            contextId={resultData?.attempt_id || quiz?.id}
+                            collapsibleLabel="Ada masukan untuk materi kuis ini?"
+                        />
+
                         {/* Action Buttons */}
                         <div className="flex flex-col sm:flex-row gap-3 pt-2">
                             {resultData.weakspot_category && (
@@ -521,7 +535,7 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl }) {
                                 href={backUrl || route('user.dashboard')}
                                 className="flex-1 flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-[0.98] transition"
                             >
-                                <span>Kembali ke Modul</span>
+                                <span>{(isDashboard || quiz?.is_dashboard || backUrl?.includes('beranda')) ? 'Kembali ke Beranda' : (isWeakspot || quiz?.is_weakspot) ? 'Selesai' : 'Kembali ke Modul'}</span>
                             </Link>
 
                             <button
@@ -535,7 +549,6 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl }) {
                         </div>
                     </div>
                 ) : (
-                    /* ================= QUIZ RUNNER SCREEN ================= */
                     <div className="space-y-5">
                         {/* Pre-Header Morphing Pill */}
                         <div className="flex items-center justify-between">
@@ -545,9 +558,18 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl }) {
                                     <span>{config.label}</span>
                                 </span>
                             </div>
-                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                                Soal {currentIndex + 1} dari {totalQuestions}
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <UniversalFeedbackWidget
+                                    variant="trigger_button"
+                                    mode="issue"
+                                    contextType="question"
+                                    contextId={currentQuestion?.raw_id || currentQuestion?.id}
+                                    title="Lapor"
+                                />
+                                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                                    Soal {currentIndex + 1} dari {totalQuestions}
+                                </span>
+                            </div>
                         </div>
 
                         {/* Sticky Mini-Passage View (Khusus Dokkai) */}

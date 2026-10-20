@@ -59,12 +59,17 @@ class KuisCampuranController extends Controller
     public function showWeakspot(Request $request): Response
     {
         $category = $request->query('category');
+        $from = $request->query('from');
+        $backUrl = ($from === 'beranda' || $from === 'dashboard')
+            ? route('user.dashboard')
+            : route('user.progress');
+
         $payload = $this->kuisCampuranService->generateWeakspotPayload($request->user(), $category);
 
         return Inertia::render('User/Kuis/KuisCampuranRunner', [
             'quiz' => $payload,
             'submitUrl' => route('user.weakspot.submit'),
-            'backUrl' => route('user.progress'),
+            'backUrl' => $backUrl,
             'isWeakspot' => true,
         ]);
     }
@@ -81,6 +86,35 @@ class KuisCampuranController extends Controller
         ]);
 
         $result = $this->kuisCampuranService->submitWeakspotAttempt($request->user(), $validated);
+
+        return response()->json($result);
+    }
+
+    public function showDashboard(Request $request): Response
+    {
+        $programId = $request->query('program_id') ? (int) $request->query('program_id') : null;
+        $payload = $this->kuisCampuranService->generateDashboardPayload($request->user(), $programId);
+
+        return Inertia::render('User/Kuis/KuisCampuranRunner', [
+            'quiz' => $payload,
+            'submitUrl' => route('user.kuis-campuran.dashboard.submit'),
+            'backUrl' => route('user.dashboard'),
+            'isDashboard' => true,
+        ]);
+    }
+
+    public function submitDashboard(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'submission_token' => ['required', 'string'],
+            'answers' => ['present', 'array'],
+            'answers.*.raw_id' => ['required', 'integer'],
+            'answers.*.source_type' => ['required', 'string', 'in:kosakata,bunpo,dokkai'],
+            'answers.*.answer' => ['nullable'],
+            'answers.*.ordered_token_ids' => ['nullable', 'array'],
+        ]);
+
+        $result = $this->kuisCampuranService->submitDashboardAttempt($request->user(), $validated);
 
         return response()->json($result);
     }

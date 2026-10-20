@@ -68,7 +68,7 @@ export default function DaftarKuis({ quizzes = [] }) {
                     <div className="relative z-10 mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-14">
                         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
                             className={`mb-5 inline-flex items-center gap-2 rounded-full ${theme.landingBadgeBg} dark:bg-brand-500/20 border dark:border-brand-500/30 px-4 py-1.5 text-xs font-black uppercase tracking-[0.2em] ${theme.landingBadgeText} dark:text-brand-400 transition-colors duration-300`}>
-                            <span className={`w-2 h-2 rounded-full ${theme.landingBadgeDot} dark:bg-brand-400 animate-pulse transition-colors duration-300`} />
+                            <span className={`w-2 h-2 rounded-full ${theme.landingBadgeDot} dark:bg-brand-400 transition-colors duration-300`} />
                                     ARENA EVALUASI
                         </motion.div>
 
@@ -163,14 +163,9 @@ export default function DaftarKuis({ quizzes = [] }) {
                                             className={`relative group rounded-3xl border overflow-hidden transition-all duration-300
                                                 ${isLocked
                                                     ? 'border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50'
-                                                    : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:-translate-y-1.5 hover:shadow-2xl hover:border-transparent'
+                                                    : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:-translate-y-1 hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-700'
                                                 }`}
-                                            style={!isLocked && isHovered ? {
-                                                boxShadow: `0 20px 60px -15px rgba(220,38,38,0.25)`
-                                            } : {}}
                                         >
-                                            {/* Top accent bar */}
-                                            <div className={`h-1 w-full bg-gradient-to-r transition-colors duration-300 ${isLocked ? 'from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800' : meta.color}`} />
 
                                             <div className={`p-4 sm:p-6 transition-opacity duration-300 ${isLocked ? 'opacity-70' : ''}`}>
 

@@ -178,7 +178,7 @@ export default function BerandaUser({
     rewardHistory = [],
     news = [],
     activeSubscription = null,
-    quickQuiz = null,
+    dashboardMixedQuiz = { available: false, program_count: 0, programs: [], start_url: '', target_count: 10, xp_reward: 30 },
     lastCompletedQuiz = null,
     dailyGoal = {},
     weakspotSummary = { has_weakspot: false, count: 0, url: '' },
@@ -186,8 +186,7 @@ export default function BerandaUser({
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
-    const [isStartingQuickQuiz, setIsStartingQuickQuiz] = useState(false);
-    const [quickQuizProgramId, setQuickQuizProgramId] = useState('');
+    const [selectedMixedProgramId, setSelectedMixedProgramId] = useState('');
 
     const authUser = usePage().props.auth?.user || {};
     const accessStatus = authUser.access_status || user.access_status || {};
@@ -282,20 +281,9 @@ export default function BerandaUser({
         }
     };
 
-    const openQuickQuiz = () => {
-        if (quickQuiz?.active && quickQuiz?.resume_url) {
-            router.visit(quickQuiz.resume_url);
-            return;
-        }
-
-        if (!quickQuiz?.available || !quickQuiz?.start_url || isStartingQuickQuiz) return;
-
-        setIsStartingQuickQuiz(true);
-        router.post(quickQuiz.start_url, {
-            program_id: quickQuizProgramId || null,
-        }, {
-            onFinish: () => setIsStartingQuickQuiz(false),
-        });
+    const handleStartMixedQuiz = () => {
+        const query = selectedMixedProgramId ? { program_id: selectedMixedProgramId } : {};
+        router.visit(route('user.kuis-campuran.dashboard', query));
     };
 
     return (
@@ -377,114 +365,158 @@ export default function BerandaUser({
                     <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
                         {/* Kolom Kiri: Jalur Belajar (lg:col-span-8) */}
                         <div className="space-y-8 lg:col-span-8">
-                            {/* 1. Quick Quiz - Energetic Action Card */}
-                            <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-800 to-emerald-900 p-6 text-white shadow-sm sm:p-7">
-                                <span aria-hidden="true" className="pointer-events-none absolute -bottom-6 right-3 select-none text-9xl font-black text-white/[0.08]">
-                                    問
-                                </span>
-                                <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                                    <div className="flex items-start gap-4 sm:gap-5">
-                                        <div className="hidden sm:flex h-24 w-24 sm:h-28 sm:w-28 shrink-0 items-center justify-center rounded-3xl bg-white/10 p-1 shadow-inner backdrop-blur-sm">
-                                            <img
-                                                src="/images/quick_quiz_anime.svg"
-                                                alt="Quick Quiz Mascot Anime"
-                                                className="h-full w-full object-contain filter drop-shadow"
-                                            />
+                            {/* 1. Hub Latihan Harian - Grid 2 Kolom: Kuis Campuran & Pemulihan Titik Lemah */}
+                            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                                {/* Kartu 1: Kuis Campuran Harian (10 Soal Komprehensif) */}
+                                <section className="relative flex flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-800 to-emerald-950 p-6 text-white shadow-sm sm:p-7 border border-emerald-700/40">
+                                    <span aria-hidden="true" className="pointer-events-none absolute -bottom-6 right-2 select-none text-9xl font-black text-white/[0.07]">
+                                        混
+                                    </span>
+                                    <div className="relative z-10">
+                                        <div className="mb-3 flex items-center justify-between gap-2">
+                                            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-emerald-100">
+                                                Latihan Terpadu
+                                            </span>
+                                            <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-bold text-emerald-200">
+                                                +30 XP
+                                            </span>
                                         </div>
-                                        <div className="min-w-0">
-                                            <div className="mb-1 flex items-center gap-2">
-                                                <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-emerald-100">
-                                                    Latihan Cepat
-                                                </span>
-                                                {quickQuiz?.active && (
-                                                    <span className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
-                                                        <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" /> Sesi Sedang Berjalan
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <h2 className="text-xl font-semibold text-white sm:text-2xl">
-                                                {quickQuiz?.active ? 'Lanjutkan Sesi Latihan' : (quickQuiz?.available ? 'Asah Refleks Kosakata & Tata Bahasa' : 'Quick Quiz Siap')}
-                                            </h2>
-                                            <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-emerald-50/90">
-                                                {quickQuiz?.active
-                                                    ? `Tersisa ${quickQuiz.remaining_count} pertanyaan dalam sesi ini. Berlaku selama 30 menit.`
-                                                    : (quickQuiz?.available
-                                                        ? 'Ulangi materi yang sudah terbuka dari seluruh kelasmu. Jawaban yang belum tepat akan muncul kembali.'
-                                                        : 'Selesaikan materi pertama di roadmap agar Quick Quiz dapat menyusun latihan harianmu.')}
-                                            </p>
-                                            {quickQuiz?.available && (
-                                                <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold text-white/90">
-                                                    <span className="rounded-xl bg-white/15 px-3 py-1 backdrop-blur-sm">
-                                                        {quickQuiz.target_count} Target Soal
-                                                    </span>
-                                                    <span className="rounded-xl bg-white/15 px-3 py-1 backdrop-blur-sm">
-                                                        {quickQuiz.program_count} Kelas Aktif
-                                                    </span>
-                                                    {!quickQuiz.active && quickQuiz.programs?.length > 1 && (
-                                                        <label className="flex items-center gap-1.5 rounded-xl bg-white/20 px-3 py-1 text-xs font-bold text-white">
-                                                            <span className="text-emerald-200">Filter:</span>
-                                                            <select
-                                                                value={quickQuizProgramId}
-                                                                onChange={(event) => setQuickQuizProgramId(event.target.value)}
-                                                                className="cursor-pointer border-0 bg-transparent py-0.5 pr-6 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                                                            >
-                                                                <option value="" className="text-gray-900">Semua Kelas</option>
-                                                                {quickQuiz.programs.map((program) => (
-                                                                    <option key={program.id} value={program.id} className="text-gray-900">
-                                                                        {program.title}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                        </label>
-                                                    )}
-                                                </div>
-                                            )}
+                                        <h2 className="text-xl font-semibold text-white sm:text-2xl">
+                                            Kuis Campuran Harian
+                                        </h2>
+                                        <p className="mt-1.5 text-sm leading-relaxed text-emerald-50/90">
+                                            10 soal pilihan dari seluruh materi yang sudah terbuka. Uji penguasaan Kosakata, Tata Bahasa, dan Wacana.
+                                        </p>
+                                        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold text-white/90">
+                                            <span className="rounded-xl bg-white/15 px-2.5 py-1 backdrop-blur-sm">
+                                                4 Kosakata
+                                            </span>
+                                            <span className="rounded-xl bg-white/15 px-2.5 py-1 backdrop-blur-sm">
+                                                3 Bunpo
+                                            </span>
+                                            <span className="rounded-xl bg-white/15 px-2.5 py-1 backdrop-blur-sm">
+                                                3 Dokkai
+                                            </span>
                                         </div>
                                     </div>
+                                    <div className="relative z-10 mt-6 space-y-2.5 pt-2">
+                                        {dashboardMixedQuiz?.programs?.length > 1 && (
+                                            <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-bold text-white backdrop-blur-sm">
+                                                <span className="shrink-0 text-emerald-200">Kelas:</span>
+                                                <select
+                                                    value={selectedMixedProgramId}
+                                                    onChange={(event) => setSelectedMixedProgramId(event.target.value)}
+                                                    className="w-full cursor-pointer truncate border-0 bg-transparent py-0 pr-6 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white"
+                                                >
+                                                    <option value="" className="text-gray-900">Semua Kelas Aktif</option>
+                                                    {dashboardMixedQuiz.programs.map((program) => (
+                                                        <option key={program.id} value={program.id} className="text-gray-900">
+                                                            {program.title}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
 
-                                    <div className="flex shrink-0 flex-col gap-2.5 w-full sm:w-auto">
-                                        {quickQuiz?.available ? (
+                                        {dashboardMixedQuiz?.available ? (
                                             <button
                                                 type="button"
-                                                onClick={openQuickQuiz}
-                                                disabled={isStartingQuickQuiz}
-                                                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-emerald-900 shadow-sm transition-colors hover:bg-emerald-50 hover:shadow-sm disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                                                onClick={handleStartMixedQuiz}
+                                                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-900 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-emerald-950 shadow-sm transition hover:bg-emerald-50 active:scale-[0.99]"
                                             >
-                                                {isStartingQuickQuiz ? 'Menyiapkan...' : (quickQuiz.active ? 'Lanjutkan Kuis' : 'Mulai Latihan')}
-                                                <ArrowRightAltIcon sx={{ fontSize: 22 }} />
+                                                <span>Mulai Kuis Campuran</span>
+                                                <ArrowRightAltIcon sx={{ fontSize: 20 }} />
                                             </button>
                                         ) : (
                                             <Link
                                                 href={activeLearning?.roadmap_url || route('user.kelas.index')}
-                                                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-emerald-900 shadow-sm transition-colors hover:bg-emerald-50 sm:w-auto"
+                                                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-900 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-emerald-950 shadow-sm transition hover:bg-emerald-50"
                                             >
-                                                Buka Roadmap <ArrowRightAltIcon sx={{ fontSize: 22 }} />
+                                                <span>Buka Roadmap Belajar</span>
+                                                <ArrowRightAltIcon sx={{ fontSize: 20 }} />
                                             </Link>
                                         )}
+                                    </div>
+                                </section>
 
-                                        <Link
-                                            href={weakspotSummary?.url || route('user.weakspot.show')}
-                                            className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all sm:w-auto ${
+                                {/* Kartu 2: Pemulihan Titik Lemah (Weakspot Recovery) */}
+                                <section className={`relative flex flex-col justify-between overflow-hidden rounded-3xl p-6 shadow-sm sm:p-7 border transition-all ${
+                                    weakspotSummary?.has_weakspot
+                                        ? 'bg-gradient-to-br from-amber-900 via-amber-950 to-orange-950 text-white border-amber-700/50'
+                                        : 'bg-white dark:bg-gray-900 border-slate-200/80 dark:border-gray-800 text-gray-900 dark:text-white'
+                                }`}>
+                                    <span aria-hidden="true" className={`pointer-events-none absolute -bottom-6 right-2 select-none text-9xl font-black ${
+                                        weakspotSummary?.has_weakspot ? 'text-white/[0.06]' : 'text-gray-900/[0.03] dark:text-white/[0.03]'
+                                    }`}>
+                                        練
+                                    </span>
+                                    <div className="relative z-10">
+                                        <div className="mb-3 flex items-center justify-between gap-2">
+                                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider ${
                                                 weakspotSummary?.has_weakspot
-                                                    ? 'bg-amber-400 text-amber-950 hover:bg-amber-300 shadow-sm hover:shadow active:scale-[0.98]'
-                                                    : 'border border-emerald-400/40 bg-emerald-950/40 text-emerald-100 hover:bg-emerald-900/60 backdrop-blur-xs'
+                                                    ? 'bg-amber-500/25 text-amber-200'
+                                                    : 'bg-slate-100 text-slate-700 dark:bg-gray-800 dark:text-gray-300'
+                                            }`}>
+                                                Pemulihan Materi
+                                            </span>
+                                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                                                weakspotSummary?.has_weakspot
+                                                    ? 'bg-amber-400 text-amber-950'
+                                                    : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300'
+                                            }`}>
+                                                {weakspotSummary?.has_weakspot ? '+20 XP' : 'Materi Bersih'}
+                                            </span>
+                                        </div>
+                                        <h2 className="text-xl font-semibold sm:text-2xl">
+                                            Pemulihan Titik Lemah
+                                        </h2>
+                                        <p className={`mt-1.5 text-sm leading-relaxed ${
+                                            weakspotSummary?.has_weakspot
+                                                ? 'text-amber-100/90'
+                                                : 'text-gray-600 dark:text-gray-300'
+                                        }`}>
+                                            {weakspotSummary?.has_weakspot
+                                                ? `Ditemukan ${weakspotSummary.count} butir soal yang pernah kamu jawab keliru. Latih kembali untuk menutup celah pemahaman.`
+                                                : 'Hebat! Seluruh titik lemah sudah dibersihkan. Kerjakan kuis campuran atau lanjutkan materi untuk mendeteksi area baru.'}
+                                        </p>
+                                        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold">
+                                            {weakspotSummary?.has_weakspot ? (
+                                                <span className="flex items-center gap-1.5 rounded-xl bg-amber-400/20 px-2.5 py-1 text-amber-200 backdrop-blur-sm">
+                                                    <span className="h-2 w-2 rounded-full bg-amber-400" />
+                                                    <span>{weakspotSummary.count} Soal Butuh Review</span>
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center gap-1.5 rounded-xl bg-emerald-50 px-2.5 py-1 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                                    <CheckCircleIcon sx={{ fontSize: 15 }} />
+                                                    <span>0 Kesalahan Aktif</span>
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="relative z-10 mt-6 pt-2">
+                                        <Link
+                                            href={weakspotSummary?.url || route('user.weakspot.show', { from: 'beranda' })}
+                                            className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold shadow-sm transition active:scale-[0.99] ${
+                                                weakspotSummary?.has_weakspot
+                                                    ? 'bg-amber-400 text-amber-950 hover:bg-amber-300 focus-visible:ring-amber-400 focus-visible:ring-offset-amber-950'
+                                                    : 'border border-slate-300 bg-white text-gray-800 hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 focus-visible:ring-blue-600 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900'
                                             }`}
                                         >
                                             {weakspotSummary?.has_weakspot ? (
                                                 <>
-                                                    <span className="h-2 w-2 rounded-full bg-rose-600 animate-pulse" />
-                                                    <span>Latih Titik Lemah ({weakspotSummary.count} Soal · +20 XP)</span>
+                                                    <span>Latih Titik Lemah ({weakspotSummary.count})</span>
+                                                    <ArrowRightAltIcon sx={{ fontSize: 20 }} />
                                                 </>
                                             ) : (
                                                 <>
-                                                    <CheckCircleIcon sx={{ fontSize: 16 }} className="text-emerald-300" />
-                                                    <span>Latih Titik Lemah (Semua Aman)</span>
+                                                    <span>Tinjau Riwayat Soal</span>
+                                                    <ArrowRightAltIcon sx={{ fontSize: 20 }} />
                                                 </>
                                             )}
                                         </Link>
                                     </div>
-                                </div>
-                            </section>
+                                </section>
+                            </div>
 
                             {/* 2. Belajar Hari Ini - Clean Educational Card with Study Desk Visual */}
                             <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-7 dark:border-gray-800 dark:bg-gray-900">

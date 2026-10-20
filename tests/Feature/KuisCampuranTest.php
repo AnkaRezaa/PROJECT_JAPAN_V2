@@ -343,3 +343,49 @@ test('kuis campuran mendukung soal tipe sentence_builder dengan evaluasi array t
     $evaluatedItem = collect($details)->firstWhere('raw_id', $sentenceBuilderSoal->id);
     expect($evaluatedItem['is_correct'])->toBeTrue();
 });
+
+it('renders dashboard mixed quiz and submits answer successfully', function () {
+    $f = kuisCampuranFixture();
+
+    $this->actingAs($f['user'])
+        ->get(route('user.kuis-campuran.dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->component('User/Kuis/KuisCampuranRunner')
+            ->has('quiz.questions')
+            ->where('quiz.is_dashboard', true)
+            ->where('isDashboard', true));
+
+    $soal = $f['vocabQuiz']->questions()->first();
+    $submitResponse = $this->actingAs($f['user'])
+        ->postJson(route('user.kuis-campuran.dashboard.submit'), [
+            'submission_token' => (string) Str::uuid(),
+            'answers' => [
+                [
+                    'raw_id' => $soal->id,
+                    'source_type' => 'kosakata',
+                    'answer' => $soal->correct_answer,
+                ],
+            ],
+        ]);
+
+    $submitResponse->assertOk()
+        ->assertJson([
+            'passed' => true,
+            'is_dashboard' => true,
+        ]);
+});
+
+it('exposes dashboardMixedQuiz summary in Beranda page', function () {
+    $f = kuisCampuranFixture();
+
+    $this->actingAs($f['user'])
+        ->get(route('user.dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->component('User/Beranda/Beranda')
+            ->has('dashboardMixedQuiz')
+            ->where('dashboardMixedQuiz.available', true)
+            ->has('weakspotSummary'));
+});
+
