@@ -41,6 +41,15 @@ const accessMeta = (item) => {
         };
     }
 
+    if (!item.has_class_access) {
+        return {
+            key: 'trial',
+            label: 'Trial Minggu 1',
+            icon: PlayArrowIcon,
+            className: 'bg-sky-50 text-sky-700 dark:bg-sky-900/25 dark:text-sky-300',
+        };
+    }
+
     return {
         key: 'active',
         label: 'Kelas aktif',
@@ -132,7 +141,7 @@ function OwnedCourseCard({ item }) {
                     href={item.href}
                     className={`relative z-10 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r ${theme.ctaBg} px-4 text-sm font-black text-white shadow-sm transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600`}
                 >
-                    Lanjutkan
+                    {item.has_class_access ? 'Lanjutkan' : (item.progress > 0 ? 'Lanjutkan Trial' : 'Mulai Trial Week 1')}
                     <PlayArrowIcon sx={{ fontSize: 18 }} />
                 </Link>
             )}
@@ -141,25 +150,34 @@ function OwnedCourseCard({ item }) {
 }
 
 export default function KelasPage({ programs = [] }) {
-    const ownedCourses = useMemo(
+    const enrolledCourses = useMemo(
         () => programs.filter((item) => item.has_class_access || item.waiting_for_approval || item.refund_required),
         [programs],
     );
 
-    const activeCourses = useMemo(
-        () => ownedCourses.filter((item) => !item.waiting_for_approval && !item.refund_required),
-        [ownedCourses],
+    const trialCourses = useMemo(
+        () => programs.filter((item) => !item.has_class_access && !item.waiting_for_approval && !item.refund_required),
+        [programs],
     );
 
-    const waitingCourses = useMemo(
-        () => ownedCourses.filter((item) => item.waiting_for_approval || item.refund_required),
-        [ownedCourses],
+    const activeEnrolled = useMemo(
+        () => enrolledCourses.filter((item) => !item.waiting_for_approval && !item.refund_required),
+        [enrolledCourses],
     );
 
-    const primaryCourse = useMemo(
-        () => [...activeCourses].sort((left, right) => clampProgress(right.progress) - clampProgress(left.progress))[0] ?? null,
-        [activeCourses],
+    const waitingEnrolled = useMemo(
+        () => enrolledCourses.filter((item) => item.waiting_for_approval || item.refund_required),
+        [enrolledCourses],
     );
+
+    const primaryCourse = useMemo(() => {
+        if (activeEnrolled.length > 0) {
+            return [...activeEnrolled].sort((left, right) => clampProgress(right.progress) - clampProgress(left.progress))[0] ?? null;
+        }
+        return [...trialCourses].sort((left, right) => clampProgress(right.progress) - clampProgress(left.progress))[0] ?? null;
+    }, [activeEnrolled, trialCourses]);
+
+    const totalActiveCount = enrolledCourses.length > 0 ? enrolledCourses.length : trialCourses.length;
 
     return (
         <AuthenticatedLayout header={false}>
@@ -180,9 +198,9 @@ export default function KelasPage({ programs = [] }) {
                                 <p className="text-xs font-black uppercase tracking-[0.18em] text-rose-600 dark:text-rose-300">Pusat Belajar Siswa</p>
                                 <h1 className="mt-2 text-2xl font-black leading-tight text-slate-950 sm:text-3xl dark:text-white">Kelas Saya</h1>
                                 <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-gray-300">
-                                    {ownedCourses.length > 0
-                                        ? `Kelola dan lanjutkan progres dari ${ownedCourses.length} kelas aktif di akun Anda.`
-                                        : 'Ruang belajar pribadi Anda untuk mengikuti roadmap dan materi terstruktur.'}
+                                    {enrolledCourses.length > 0
+                                        ? `Kelola dan lanjutkan progres dari ${enrolledCourses.length} kelas aktif di akun Anda.`
+                                        : 'Ruang belajar pribadi Anda dengan akses uji coba gratis Week 1 untuk seluruh program.'}
                                 </p>
                             </div>
 
@@ -215,29 +233,75 @@ export default function KelasPage({ programs = [] }) {
                     </div>
                 </section>
 
-                <div className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-                    <section aria-labelledby="kelas-saya-title">
-                        <div className="mb-5 flex items-center justify-between">
-                            <div>
-                                <h2 id="kelas-saya-title" className="text-xl font-black text-slate-950 dark:text-white">Program Pembelajaran Terdaftar</h2>
-                                <p className="text-xs text-slate-500 dark:text-gray-400">Pilih program untuk membuka bab harian dan evaluasi kuis.</p>
+                <div className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+                    {enrolledCourses.length === 0 && trialCourses.length > 0 && (
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-sky-200/80 bg-sky-50/80 p-5 dark:border-sky-900/60 dark:bg-sky-950/20">
+                            <div className="flex items-start gap-3">
+                                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-600 text-white shadow-sm">
+                                    <PlayArrowIcon sx={{ fontSize: 20 }} />
+                                </div>
+                                <div>
+                                    <h2 className="text-sm font-black text-slate-950 dark:text-white">Akses Uji Coba Week 1 Aktif</h2>
+                                    <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                                        Seluruh materi, latihan flashcard, dan kuis Hari 1–7 (Week 1) terbuka penuh untuk dicoba gratis. Selesaikan materi awal atau buka akses penuh kapan saja.
+                                    </p>
+                                </div>
                             </div>
-                            <span className="text-xs font-bold text-slate-400">{ownedCourses.length} kelas</span>
+                            <Link
+                                href={route('katalog')}
+                                className="shrink-0 inline-flex h-9 items-center justify-center rounded-lg border border-sky-300 bg-white px-3.5 text-xs font-bold text-sky-800 shadow-sm transition hover:bg-sky-50 dark:border-sky-800 dark:bg-sky-900/50 dark:text-sky-200 dark:hover:bg-sky-900"
+                            >
+                                Lihat Paket Berlangganan
+                            </Link>
                         </div>
+                    )}
 
-                        {ownedCourses.length > 0 ? (
-                            <div className="space-y-4">
-                                {activeCourses.map((item) => <OwnedCourseCard key={item.id} item={item} />)}
-                                {waitingCourses.map((item) => <OwnedCourseCard key={item.id} item={item} />)}
+                    {enrolledCourses.length > 0 && (
+                        <section aria-labelledby="kelas-terdaftar-title">
+                            <div className="mb-4 flex items-center justify-between">
+                                <div>
+                                    <h2 id="kelas-terdaftar-title" className="text-xl font-black text-slate-950 dark:text-white">Program Pembelajaran Terdaftar</h2>
+                                    <p className="text-xs text-slate-500 dark:text-gray-400">Kelas aktif dan program bimbingan mentor yang Anda ikuti.</p>
+                                </div>
+                                <span className="text-xs font-bold text-slate-400">{enrolledCourses.length} kelas</span>
                             </div>
-                        ) : (
+
+                            <div className="space-y-4">
+                                {activeEnrolled.map((item) => <OwnedCourseCard key={item.id} item={item} />)}
+                                {waitingEnrolled.map((item) => <OwnedCourseCard key={item.id} item={item} />)}
+                            </div>
+                        </section>
+                    )}
+
+                    {trialCourses.length > 0 && (
+                        <section aria-labelledby="kelas-trial-title">
+                            <div className="mb-4 flex items-center justify-between">
+                                <div>
+                                    <h2 id="kelas-trial-title" className="text-xl font-black text-slate-950 dark:text-white">
+                                        {enrolledCourses.length > 0 ? 'Program Lainnya (Uji Coba Minggu 1)' : 'Program Pembelajaran (Uji Coba Minggu 1)'}
+                                    </h2>
+                                    <p className="text-xs text-slate-500 dark:text-gray-400">
+                                        Pilih program untuk membuka materi Hari 1 s.d. 7 dan evaluasi kuis secara gratis.
+                                    </p>
+                                </div>
+                                <span className="text-xs font-bold text-slate-400">{trialCourses.length} kelas</span>
+                            </div>
+
+                            <div className="space-y-4">
+                                {trialCourses.map((item) => <OwnedCourseCard key={item.id} item={item} />)}
+                            </div>
+                        </section>
+                    )}
+
+                    {programs.length === 0 && (
+                        <section aria-labelledby="kelas-kosong-title">
                             <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center dark:border-gray-800 dark:bg-gray-900">
                                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
                                     <SchoolIcon sx={{ fontSize: 32 }} />
                                 </div>
-                                <h3 className="mt-4 text-xl font-black text-slate-950 dark:text-white">Belum Ada Kelas Terdaftar</h3>
+                                <h3 id="kelas-kosong-title" className="mt-4 text-xl font-black text-slate-950 dark:text-white">Belum Ada Program Pembelajaran</h3>
                                 <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-gray-400">
-                                    Mulai langkah belajar bahasa Jepang Anda dengan memilih kelas mandiri fleksibel atau bimbingan mentor intensif di katalog.
+                                    Materi kelas sedang disiapkan oleh tim pengajar. Silakan cek kembali nanti atau buka katalog program.
                                 </p>
                                 <Link
                                     href={route('katalog')}
@@ -247,8 +311,8 @@ export default function KelasPage({ programs = [] }) {
                                     Buka Katalog Program
                                 </Link>
                             </div>
-                        )}
-                    </section>
+                        </section>
+                    )}
                 </div>
             </main>
         </AuthenticatedLayout>

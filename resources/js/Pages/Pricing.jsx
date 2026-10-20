@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { motion, useReducedMotion } from 'framer-motion';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CheckIcon from '@mui/icons-material/Check';
 import GroupsIcon from '@mui/icons-material/Groups';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SchoolIcon from '@mui/icons-material/School';
 import { SeigaihaBand } from '@/Components/JapaneseIcons';
 import Button from '@/Components/UI/Button';
@@ -75,25 +76,28 @@ function PlanRow({ plan, auth, programSlug }) {
     : route('register');
 
   return (
-    <div className="border-t border-slate-800 py-5 first:border-t-0 first:pt-0 last:pb-0">
-      <div className="flex items-start justify-between gap-4">
+    <div className="py-3.5 first:pt-1 last:pb-0">
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-black text-white">{plan.name}</h3>
-            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${isMentored ? 'border-achievement-400/[0.35] bg-achievement-400/10 text-achievement-100' : 'border-brand-300/[0.35] bg-brand-300/10 text-brand-300'}`}>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h4 className="text-xs font-bold text-white">{plan.name}</h4>
+            <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-bold ${isMentored ? 'border-achievement-400/35 bg-achievement-400/10 text-achievement-100' : 'border-brand-300/35 bg-brand-300/10 text-brand-300'}`}>
               {plan.scope_label}
             </span>
           </div>
-          {plan.description && <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-300">{plan.description}</p>}
+          <p className="mt-0.5 text-[11px] font-semibold text-slate-400">{formatDuration(plan.duration_days)}</p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-base font-black text-white">{plan.price_formatted}</p>
-          <p className="text-[11px] font-semibold text-slate-400">{formatDuration(plan.duration_days)}</p>
+          <p className="text-sm font-black text-white">{plan.price_formatted}</p>
         </div>
       </div>
-
-      <Button href={targetHref} className="mt-4 min-h-10 w-full !rounded-xl !bg-brand-600 !text-white hover:!bg-brand-500">
-        {auth?.user ? (isMentored ? 'Pilih Kloter & Daftar' : 'Beli & Mulai Belajar') : 'Daftar dan pilih kelas'}
+      {plan.description && <p className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-slate-300">{plan.description}</p>}
+      <Button
+        href={targetHref}
+        variant="outline"
+        className="mt-2.5 min-h-10 w-full !rounded-xl !border-slate-700 !py-1.5 !text-xs !text-slate-200 hover:!border-brand-400 hover:!bg-slate-800 hover:!text-white"
+      >
+        {auth?.user ? (isMentored ? 'Pilih Kloter & Daftar' : 'Beli Akses Mandiri') : 'Daftar untuk Beli'}
       </Button>
     </div>
   );
@@ -132,6 +136,9 @@ function ClassCard({ program, auth }) {
   const cheapestPlan = plans[0];
   const hasMentoredPlan = plans.some((p) => p.scope_type === 'kloter');
   const hasIndependentPlan = plans.some((p) => p.scope_type !== 'kloter');
+  const trialHref = auth?.user
+    ? route('user.modul.program', program.slug)
+    : route('register');
 
   return (
     <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-800/40 transition-colors duration-300 hover:border-brand-400/40">
@@ -157,30 +164,53 @@ function ClassCard({ program, auth }) {
         <h2 className="mt-4 text-xl font-black leading-snug text-white">{program.title}</h2>
         {program.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-300">{program.description}</p>}
 
-        <Button variant="outline" href={route('public.classes.show', program.slug)} className="mt-5 w-full !border-slate-700 !text-slate-200 hover:!border-brand-400 hover:!bg-slate-800 hover:!text-brand-300">
-          Lihat silabus lengkap
-        </Button>
+        <div className="mt-4 flex items-center gap-2 rounded-xl border border-brand-400/20 bg-brand-400/5 px-3 py-2 text-xs font-semibold text-brand-200">
+          <CheckIcon sx={{ fontSize: 16 }} className="text-brand-300" />
+          <span>Trial 7 Hari Tersedia · Week 1 Terbuka Penuh</span>
+        </div>
 
-        <div className="mt-6 border-t border-slate-800 pt-5"><ClassContents modules={program.preview_modules} /></div>
+        <div className="mt-5 border-t border-slate-800 pt-4"><ClassContents modules={program.preview_modules} /></div>
 
-        <div className="mt-6 border-t border-slate-800 pt-5">
+        <div className="mt-5 flex flex-1 flex-col justify-end border-t border-slate-800 pt-5">
+          <Button
+            href={trialHref}
+            className="min-h-11 w-full !rounded-xl !bg-brand-600 !text-white hover:!bg-brand-500 shadow-sm"
+          >
+            <PlayArrowIcon sx={{ fontSize: 18 }} className="mr-1" />
+            {auth?.user ? 'Coba Gratis Week 1' : 'Daftar & Coba Gratis Week 1'}
+          </Button>
+          <p className="mt-2 text-center text-[11px] font-semibold text-slate-400">
+            Akses materi & latihan Hari 1–7 tanpa komitmen biaya
+          </p>
+
           {plans.length > 0 ? (
-            <details className="group/plans">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
-              <div><p className="text-[11px] font-black uppercase text-slate-400">Harga mulai</p><p className="mt-1 text-2xl font-black text-white">{cheapestPlan.price_formatted}</p></div>
-                <span className="text-right text-xs font-bold text-brand-300">{plans.length} pilihan paket<span className="ml-2 inline-block text-lg transition-transform group-open/plans:rotate-45">+</span></span>
+            <details className="group/plans mt-3 rounded-xl border border-slate-800/80 bg-slate-900/40 p-3.5 transition-colors">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-bold text-slate-300 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-400">
+                <div>
+                  <span className="text-slate-400">Beli Akses mulai </span>
+                  <span className="font-black text-white">{cheapestPlan.price_formatted}</span>
+                </div>
+                <span className="text-xs font-bold text-brand-300 transition-transform group-open/plans:rotate-45">+</span>
               </summary>
-              <div className="mt-5 border-t border-slate-800 pt-5">{plans.map((plan) => <PlanRow key={plan.id} plan={plan} auth={auth} programSlug={program.slug} />)}</div>
+              <div className="mt-3 divide-y divide-slate-800 border-t border-slate-800 pt-1">
+                {plans.map((plan) => (
+                  <PlanRow key={plan.id} plan={plan} auth={auth} programSlug={program.slug} />
+                ))}
+              </div>
             </details>
           ) : (
-            <div>
-              <p className="text-sm font-bold text-white">Harga belum tersedia</p>
-              <p className="mt-1 text-sm leading-6 text-slate-300">Kelas tetap dapat dilihat sebagai preview sambil menunggu paket dibuka.</p>
-              <Button variant="outline" href={auth?.user ? route('user.kelas.index') : route('register')} className="mt-4 w-full !border-slate-700 !text-slate-200 sm:w-auto">
-                {auth?.user ? 'Buka preview kelas' : 'Daftar untuk preview'}
-              </Button>
+            <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900/40 p-3.5 text-center">
+              <p className="text-xs font-bold text-white">Paket berbayar segera dibuka</p>
+              <p className="mt-1 text-[11px] text-slate-400">Kamu tetap dapat menikmati preview Week 1 secara gratis.</p>
             </div>
           )}
+
+          <Link
+            href={route('public.classes.show', program.slug)}
+            className="mt-3 text-center text-xs font-bold text-slate-400 hover:text-brand-300"
+          >
+            Lihat silabus kurikulum lengkap →
+          </Link>
         </div>
       </div>
     </article>
@@ -301,7 +331,7 @@ export default function Pricing({ programs = [], seo = {} }) {
 
             <div className="mt-8 flex flex-col gap-4 border-t border-slate-800 pt-8 sm:flex-row sm:items-center sm:justify-between">
               <div><p className="font-black">Ingin mencoba materi terlebih dahulu?</p><p className="mt-1 text-sm text-slate-300">Daftar akun gratis untuk mengakses modul preview dan latihan dasar.</p></div>
-              <Button href={auth?.user ? route('user.kelas.index') : route('register')} className="w-full !rounded-xl !bg-brand-600 !text-white hover:!bg-brand-500 sm:w-auto">{auth?.user ? 'Buka materi preview' : 'Coba materi gratis'}</Button>
+              <Button href={auth?.user ? (programs[0]?.slug ? route('user.modul.program', programs[0].slug) : '#pilihan-kelas') : route('register')} className="w-full !rounded-xl !bg-brand-600 !text-white hover:!bg-brand-500 sm:w-auto">{auth?.user ? 'Mulai coba materi gratis' : 'Daftar & coba gratis'}</Button>
             </div>
           </div>
         </motion.section>

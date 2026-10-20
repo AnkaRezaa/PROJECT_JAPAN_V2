@@ -5,6 +5,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckIcon from '@mui/icons-material/Check';
 import GroupsIcon from '@mui/icons-material/Groups';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SchoolIcon from '@mui/icons-material/School';
 import Button from '@/Components/UI/Button';
 import GuestFooter from '@/Components/Layout/GuestFooter';
@@ -40,8 +41,11 @@ function ClassImage({ program }) {
   );
 }
 
-function PlanOption({ plan, auth }) {
+function PlanOption({ plan, auth, programSlug }) {
   const isMentored = plan.scope_type === 'kloter';
+  const targetHref = auth?.user
+    ? (programSlug ? route('user.modul.program', programSlug) : route('user.kelas.index'))
+    : route('register');
 
   return (
     <article className="flex h-full flex-col rounded-lg border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
@@ -73,10 +77,10 @@ function PlanOption({ plan, auth }) {
       )}
 
       <Button
-        href={auth?.user ? route('user.kelas.index', { plan: plan.id }) : route('register')}
+        href={targetHref}
         className="mt-auto w-full"
       >
-        {auth?.user ? 'Pilih paket ini' : 'Daftar dan pilih kelas'}
+        {auth?.user ? (isMentored ? 'Pilih Kloter & Daftar' : 'Beli & Mulai Belajar') : 'Daftar dan pilih kelas'}
       </Button>
     </article>
   );
@@ -116,6 +120,24 @@ export default function PublicClassShow({ program, seo = {} }) {
                   <GroupsIcon sx={{ fontSize: 20 }} className="text-brand-600" /> Pengajar: {program.instructor_name}
                 </p>
               )}
+
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <Button
+                  href={auth?.user ? route('user.modul.program', program.slug) : route('register')}
+                  className="min-h-11 !rounded-xl !bg-brand-600 !text-white hover:!bg-brand-500 shadow-sm"
+                >
+                  <PlayArrowIcon sx={{ fontSize: 18 }} className="mr-1" />
+                  {auth?.user ? 'Coba Gratis Week 1' : 'Daftar & Coba Gratis Week 1'}
+                </Button>
+                {plans.length > 0 && (
+                  <a
+                    href="#pilihan-akses"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-gray-300 bg-white px-5 text-sm font-bold text-gray-800 shadow-sm hover:border-gray-400 hover:bg-gray-50"
+                  >
+                    Lihat Pilihan Paket
+                  </a>
+                )}
+              </div>
             </div>
 
             <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -155,7 +177,7 @@ export default function PublicClassShow({ program, seo = {} }) {
           </div>
         </section>
 
-        <section className="border-t border-gray-200 bg-gray-50 px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+        <section id="pilihan-akses" className="border-t border-gray-200 bg-gray-50 px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="max-w-2xl">
               <p className="text-xs font-black uppercase text-brand-600">Pilihan akses</p>
@@ -165,14 +187,14 @@ export default function PublicClassShow({ program, seo = {} }) {
 
             {plans.length > 0 ? (
               <div className={`mt-8 grid gap-4 ${plans.length > 1 ? 'md:grid-cols-2' : 'max-w-xl'}`}>
-                {plans.map((plan) => <PlanOption key={plan.id} plan={plan} auth={auth} />)}
+                {plans.map((plan) => <PlanOption key={plan.id} plan={plan} auth={auth} programSlug={program.slug} />)}
               </div>
             ) : (
               <div className="mt-8 border border-dashed border-gray-300 bg-white px-6 py-10 text-center">
                 <h3 className="font-black text-gray-950">Paket kelas sedang disiapkan</h3>
                 <p className="mt-2 text-sm text-gray-600">Daftar untuk melihat preview yang tersedia.</p>
-                <Button href={auth?.user ? route('user.kelas.index') : route('register')} className="mt-5">
-                  {auth?.user ? 'Buka katalog saya' : 'Mulai gratis'}
+                <Button href={auth?.user ? route('user.modul.program', program.slug) : route('register')} className="mt-5">
+                  {auth?.user ? 'Coba Materi Gratis (Week 1)' : 'Mulai gratis'}
                 </Button>
               </div>
             )}

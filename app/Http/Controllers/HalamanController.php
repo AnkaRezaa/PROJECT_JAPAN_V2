@@ -10,6 +10,8 @@ use App\Models\Kosakata;
 use App\Models\Kuis;
 use App\Models\Modul;
 use App\Models\PaketPembayaran;
+use App\Models\PengerjaanKuis;
+use App\Models\ProgresHariModul;
 use App\Models\ProgramPembelajaran;
 use App\Models\Transaksi;
 use App\Services\AksesLanggananService;
@@ -434,6 +436,7 @@ class HalamanController extends Controller
         $programs = ProgramPembelajaran::with(['level', 'modules' => fn ($query) => $query
             ->where('status', 'published')
             ->withCount(['flashcardSets', 'quizzes'])
+            ->with(['days' => fn ($dQuery) => $dQuery->where('status', 'published')->select(['id', 'module_id'])])
             ->orderBy('week_number')
             ->orderBy('id')])
             ->with(['paymentPlans' => fn ($query) => $query
@@ -458,17 +461,29 @@ class HalamanController extends Controller
                         ->whereIn('module_id', $moduleIds)
                         ->whereNotNull('completed_at')
                         ->count();
+                $dayIds = $modules->flatMap->days->pluck('id');
+                $hasDayProgress = $dayIds->isNotEmpty() && ProgresHariModul::where('user_id', $user->id)
+                    ->whereIn('module_day_id', $dayIds)
+                    ->whereNotNull('completed_at')
+                    ->exists();
+                $hasQuizAttempt = $moduleIds->isNotEmpty() && PengerjaanKuis::where('user_id', $user->id)
+                    ->whereIn('quiz_id', Kuis::whereIn('module_id', $moduleIds)->pluck('id'))
+                    ->where('status', 'completed')
+                    ->exists();
+                $isTrialActive = $completedCount > 0 || $hasDayProgress || $hasQuizAttempt;
                 $classAccess = $kelasPayload->forProgram($user, $program);
 
                 return [
                     'id' => $program->id,
                     'title' => $program->title,
+                    'slug' => $program->slug,
                     'description' => $program->description,
                     'lessons' => $modules->count(),
                     'completed_lessons' => $completedCount,
                     'accessible_lessons' => $accessibleCount,
                     'progress' => $modules->count() > 0 ? (int) round(($completedCount / $modules->count()) * 100) : 0,
                     'href' => route('user.modul.program', $program->slug),
+                    'is_trial_active' => $isTrialActive,
                     ...$classAccess,
                     'resource_summary' => [
                         'presentations' => DeckPresentasi::whereIn('module_id', $moduleIds)->shared()->where('status', 'published')->count(),
@@ -485,7 +500,13 @@ class HalamanController extends Controller
                     ],
                 ];
             })
-            ->filter(fn ($item) => !empty($item['has_class_access']) || !empty($item['waiting_for_approval']) || !empty($item['refund_required']))
+            ->sortByDesc(function ($item) {
+                if (!empty($item['has_class_access'])) return 5;
+                if (!empty($item['waiting_for_approval'])) return 4;
+                if (!empty($item['refund_required'])) return 3;
+                if (!empty($item['is_trial_active']) || (!empty($item['progress']) && $item['progress'] > 0)) return 2;
+                return 1;
+            })
             ->values();
 
         return Inertia::render('User/Kelas/KelasPage', [
