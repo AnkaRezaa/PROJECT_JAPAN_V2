@@ -1,10 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useScrollLock } from '@/lib/scrollLock';
 import GrammarQuizRunner from './GrammarQuizRunner';
 
 export default function GrammarQuizPreviewDialog({ open, quiz, onClose, persist = false }) {
     useScrollLock(open);
+
+    useEffect(() => {
+        if (!open) return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [open, onClose]);
 
     if (!open || typeof document === 'undefined') return null;
 

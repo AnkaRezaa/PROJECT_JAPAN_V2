@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { useScrollLock } from '@/lib/scrollLock';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import QuizField from '@/Components/UI/QuizField';
+import { OptionEditorRow, QuestionNavItem, AudioAttachmentField, UnifiedQuizBuilderShell, UnifiedQuestionEditorCanvas } from '@/Components/Features/Quiz/Shared';
 import DokkaiBankPickerDialog from './DokkaiBankPickerDialog';
 import QuickQuestionParserDialog from './QuickQuestionParserDialog';
 import QuickVocabParserDialog from './QuickVocabParserDialog';
@@ -11,6 +11,8 @@ import DokkaiImportDialog from './DokkaiImportDialog';
 
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
@@ -25,6 +27,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import BoltIcon from '@mui/icons-material/Bolt';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 const inputClass = 'w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:focus:ring-indigo-900/30';
 
@@ -239,8 +242,52 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
     const [fieldErrors, setFieldErrors] = useState({});
     const [successMessage, setSuccessMessage] = useState('');
     const [savedAt, setSavedAt] = useState('');
+    const cleanSnapshotRef = useRef('');
+    const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
 
-    useScrollLock(open);
+    const currentSnapshot = useMemo(() => JSON.stringify(draft), [draft]);
+    const hasUnsavedChanges = Boolean(cleanSnapshotRef.current && currentSnapshot !== cleanSnapshotRef.current);
+
+    useEffect(() => {
+        const handleBeforeUnload = (event) => {
+            if (!hasUnsavedChanges) return;
+            event.preventDefault();
+            event.returnValue = '';
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [hasUnsavedChanges]);
+
+    const handleRequestClose = () => {
+        if (hasUnsavedChanges) {
+            openConfirm({
+                title: 'Tutup Builder Dokkai?',
+                message: 'Ada perubahan yang belum disimpan pada draf wacana Dokkai. Perubahan akan hilang jika Anda keluar sekarang.',
+                confirmLabel: 'Keluar Tanpa Menyimpan',
+                variant: 'danger',
+                onConfirm: () => {
+                    closeConfirm();
+                    onClose();
+                },
+            });
+            return;
+        }
+        onClose();
+    };
+
+
+    const fetchLessons = async () => {
+        if (!day?.id) return;
+        try {
+            const res = await window.axios.get(`/admin/module-days/${day.id}/dokkai-quizzes`);
+            const available = res.data.lessons || [];
+            setLessons(available);
+            return available;
+        } catch {
+            setError('Gagal memuat data wacana Dokkai.');
+        }
+    };
 
     useEffect(() => {
         if (!open || !day?.id) return;
@@ -249,21 +296,14 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
         setFieldErrors({});
         setSuccessMessage('');
 
-        window.axios
-            .get(`/admin/module-days/${day.id}/dokkai-quizzes`)
-            .then((res) => {
-                if (!active) return;
-                const available = res.data.lessons || [];
-                setLessons(available);
-                if (available.length > 0) {
-                    setDraft(normalizeDraft(available[0], day, defaultLevel));
-                } else {
-                    setDraft(makeDraft(day, defaultLevel));
-                }
-            })
-            .catch(() => {
-                if (active) setError('Gagal memuat data wacana Dokkai.');
-            });
+        fetchLessons().then((available) => {
+            if (!active || !available) return;
+            const initial = available.length > 0
+                ? normalizeDraft(available[0], day, defaultLevel)
+                : makeDraft(day, defaultLevel);
+            setDraft(initial);
+            cleanSnapshotRef.current = JSON.stringify(initial);
+        });
 
         return () => {
             active = false;
@@ -271,19 +311,55 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
     }, [open, day?.id, defaultLevel]);
 
     const handleCreateNew = () => {
-        setDraft(makeDraft(day, defaultLevel));
-        setActiveTab('metadata');
-        setError('');
-        setFieldErrors({});
-        setSuccessMessage('');
+        const create = () => {
+            const nextDraft = makeDraft(day, defaultLevel);
+            setDraft(nextDraft);
+            cleanSnapshotRef.current = JSON.stringify(nextDraft);
+            setActiveTab('metadata');
+            setError('');
+            setFieldErrors({});
+            setSuccessMessage('');
+        };
+        if (hasUnsavedChanges) {
+            openConfirm({
+                title: 'Buat Wacana Baru?',
+                message: 'Perubahan pada wacana saat ini belum disimpan dan akan hilang. Buat wacana baru?',
+                confirmLabel: 'Lanjutkan',
+                variant: 'warning',
+                onConfirm: () => {
+                    closeConfirm();
+                    create();
+                },
+            });
+            return;
+        }
+        create();
     };
 
     const handleSelectQuiz = (quizItem) => {
-        setDraft(normalizeDraft(quizItem, day, defaultLevel));
-        setActiveTab('metadata');
-        setError('');
-        setFieldErrors({});
-        setSuccessMessage('');
+        const select = () => {
+            const nextDraft = normalizeDraft(quizItem, day, defaultLevel);
+            setDraft(nextDraft);
+            cleanSnapshotRef.current = JSON.stringify(nextDraft);
+            setActiveTab('metadata');
+            setError('');
+            setFieldErrors({});
+            setSuccessMessage('');
+        };
+        if (hasUnsavedChanges) {
+            openConfirm({
+                title: 'Beralih ke Wacana Lain?',
+                message: 'Perubahan pada wacana saat ini belum disimpan dan akan hilang. Lanjutkan beralih?',
+                confirmLabel: 'Lanjutkan Beralih',
+                variant: 'warning',
+                onConfirm: () => {
+                    closeConfirm();
+                    select();
+                },
+            });
+            return;
+        }
+        select();
     };
 
     const [showBankPicker, setShowBankPicker] = useState(false);
@@ -294,8 +370,13 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
     const [showStudentPreview, setShowStudentPreview] = useState(false);
     const [openDistractorIndices, setOpenDistractorIndices] = useState({});
     const [localDraftAvailable, setLocalDraftAvailable] = useState(false);
+    const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
 
-    // --- AUTOSAVE LOCALSTORAGE ---
+    useEffect(() => {
+        if (activeQuestionIndex >= draft.questions.length) {
+            setActiveQuestionIndex(Math.max(0, draft.questions.length - 1));
+        }
+    }, [activeQuestionIndex, draft.questions.length]);
     const storageKey = useMemo(() => {
         if (!day?.id) return null;
         return `dokkai_autosave_${day.id}_${draft?.id || 'new'}`;
@@ -399,8 +480,6 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
     const toggleDistractors = (qIdx) => {
         setOpenDistractorIndices((prev) => ({ ...prev, [qIdx]: !prev[qIdx] }));
     };
-
-    // --- PARAGRAPH HELPERS ---
     const addParagraph = () => {
         const nextNum = draft.paragraphs.length + 1;
         setDraft({
@@ -425,13 +504,24 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
 
     const removeParagraph = (index) => {
         if (draft.paragraphs.length <= 1) return;
+        const removedNum = index + 1;
         const updated = draft.paragraphs
             .filter((_, idx) => idx !== index)
             .map((p, idx) => ({ ...p, paragraph_number: idx + 1, label: p.label || `Paragraf ${idx + 1}` }));
-        setDraft({ ...draft, paragraphs: updated });
-    };
 
-    // --- VOCABULARY HELPERS ---
+        const updatedQuestions = (draft.questions || []).map((q) => {
+            const currentEv = Number(q.evidence_paragraph_number || 1);
+            if (currentEv === removedNum) {
+                return { ...q, evidence_paragraph_number: 1 };
+            }
+            if (currentEv > removedNum) {
+                return { ...q, evidence_paragraph_number: currentEv - 1 };
+            }
+            return q;
+        });
+
+        setDraft({ ...draft, paragraphs: updated, questions: updatedQuestions });
+    };
     const addVocabulary = () => {
         setDraft({
             ...draft,
@@ -464,8 +554,6 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
         const updated = draft.vocabularies.filter((_, idx) => idx !== index);
         setDraft({ ...draft, vocabularies: updated });
     };
-
-    // --- QUESTION HELPERS ---
     const addQuestion = () => {
         const nextNum = draft.questions.length + 1;
         setDraft({
@@ -490,6 +578,19 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                 },
             ],
         });
+        setActiveQuestionIndex(draft.questions.length);
+    };
+
+    const duplicateQuestion = (index) => {
+        const item = draft.questions[index];
+        if (!item) return;
+        const copy = JSON.parse(JSON.stringify(item));
+        copy.id = null;
+        const nextQuestions = [...draft.questions];
+        nextQuestions.splice(index + 1, 0, copy);
+        const renumbered = nextQuestions.map((q, idx) => ({ ...q, question_number: idx + 1 }));
+        setDraft({ ...draft, questions: renumbered });
+        setActiveQuestionIndex(index + 1);
     };
 
     const updateQuestion = (index, field, value) => {
@@ -500,14 +601,10 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
 
     const updateQuestionOption = (qIndex, optIndex, field, value) => {
         const updated = [...draft.questions];
-        const options = [...updated[qIndex].options];
-        if (field === 'is_correct') {
-            options.forEach((opt, idx) => {
-                opt.is_correct = idx === optIndex;
-            });
-        } else {
-            options[optIndex] = { ...options[optIndex], [field]: value };
-        }
+        const currentOptions = updated[qIndex].options || [];
+        const options = field === 'is_correct'
+            ? currentOptions.map((opt, idx) => ({ ...opt, is_correct: idx === optIndex }))
+            : currentOptions.map((opt, idx) => (idx === optIndex ? { ...opt, [field]: value } : opt));
         updated[qIndex] = { ...updated[qIndex], options };
         setDraft({ ...draft, questions: updated });
     };
@@ -526,9 +623,21 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
             .filter((_, idx) => idx !== index)
             .map((q, idx) => ({ ...q, question_number: idx + 1 }));
         setDraft({ ...draft, questions: updated });
+        setActiveQuestionIndex((prev) => Math.max(0, Math.min(prev, updated.length - 1)));
     };
 
-    // --- SAVE / STATUS ---
+    const moveQuestion = (fromIndex, direction) => {
+        const toIndex = fromIndex + direction;
+        if (toIndex < 0 || toIndex >= draft.questions.length) return;
+        const nextQuestions = [...draft.questions];
+        const temp = nextQuestions[fromIndex];
+        nextQuestions[fromIndex] = nextQuestions[toIndex];
+        nextQuestions[toIndex] = temp;
+        const renumbered = nextQuestions.map((q, idx) => ({ ...q, question_number: idx + 1 }));
+        setDraft({ ...draft, questions: renumbered });
+        setActiveQuestionIndex(toIndex);
+    };
+
     const buildPayload = () => ({
         passing_score: Number(draft.passing_score || 70),
         time_limit: Number(draft.time_limit || 300),
@@ -609,6 +718,24 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
             return;
         }
 
+        for (let i = 0; i < (draft.questions || []).length; i += 1) {
+            const q = draft.questions[i];
+            const filledOptions = (q.options || []).filter((opt) => Boolean(opt.option_text?.trim()));
+            if (filledOptions.length < 2) {
+                setError(`Soal #${i + 1} wajib memiliki minimal 2 pilihan jawaban yang terisi.`);
+                setActiveTab('questions');
+                setActiveQuestionIndex(i);
+                return;
+            }
+            const hasCorrect = (q.options || []).some((opt) => Boolean(opt.is_correct));
+            if (!hasCorrect) {
+                setError(`Kunci jawaban untuk soal #${i + 1} belum dipilih.`);
+                setActiveTab('questions');
+                setActiveQuestionIndex(i);
+                return;
+            }
+        }
+
         setSaving(true);
         try {
             const payload = buildPayload();
@@ -619,6 +746,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
             const saved = res.data.lesson;
             const normalizedSaved = normalizeDraft(saved, day, defaultLevel);
             setDraft(normalizedSaved);
+            cleanSnapshotRef.current = JSON.stringify(normalizedSaved);
             setLessons((prev) => {
                 const targetId = normalizedSaved.id;
                 const filtered = prev.filter((item) => (item.id || item.quiz?.id) !== targetId);
@@ -640,6 +768,16 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
             const errData = err.response?.data;
             if (errData?.errors) {
                 setFieldErrors(errData.errors);
+                const firstErrKey = Object.keys(errData.errors)[0] || '';
+                if (firstErrKey.startsWith('questions')) {
+                    setActiveTab('questions');
+                } else if (firstErrKey.startsWith('paragraphs')) {
+                    setActiveTab('paragraphs');
+                } else if (firstErrKey.startsWith('vocabularies')) {
+                    setActiveTab('vocabularies');
+                } else {
+                    setActiveTab('metadata');
+                }
                 setError(Object.values(errData.errors).flat()[0] || 'Validasi data Dokkai gagal.');
             } else {
                 setError(errData?.message || 'Gagal menyimpan wacana Dokkai.');
@@ -673,28 +811,36 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
         }
     };
 
-    const handleDelete = async () => {
+    const handleDelete = () => {
         if (!draft.quiz?.id && !draft.id) return;
         const quizId = draft.quiz?.id || draft.id;
-        if (!window.confirm('Hapus wacana Dokkai ini beserta seluruh paragraf, kosakata, dan bank soalnya?')) return;
 
-        setSaving(true);
-        setError('');
-        try {
-            await window.axios.delete(`/admin/dokkai-quizzes/${quizId}`);
-            const remaining = lessons.filter((item) => (item.quiz?.id || item.id) !== quizId);
-            setLessons(remaining);
-            if (remaining.length > 0) {
-                setDraft(normalizeDraft(remaining[0], day, defaultLevel));
-            } else {
-                setDraft(makeDraft(day, defaultLevel));
-            }
-            setSuccessMessage('Wacana Dokkai berhasil dihapus.');
-        } catch (err) {
-            setError(err.response?.data?.message || 'Gagal menghapus wacana Dokkai.');
-        } finally {
-            setSaving(false);
-        }
+        openConfirm({
+            title: 'Hapus Wacana Dokkai?',
+            message: 'Hapus wacana Dokkai ini beserta seluruh paragraf, kosakata, dan bank soalnya? Tindakan ini tidak dapat dibatalkan.',
+            confirmLabel: 'Hapus Wacana',
+            variant: 'danger',
+            onConfirm: async () => {
+                closeConfirm();
+                setSaving(true);
+                setError('');
+                try {
+                    await window.axios.delete(`/admin/dokkai-quizzes/${quizId}`);
+                    const remaining = lessons.filter((item) => (item.quiz?.id || item.id) !== quizId);
+                    setLessons(remaining);
+                    if (remaining.length > 0) {
+                        setDraft(normalizeDraft(remaining[0], day, defaultLevel));
+                    } else {
+                        setDraft(makeDraft(day, defaultLevel));
+                    }
+                    setSuccessMessage('Wacana Dokkai berhasil dihapus.');
+                } catch (err) {
+                    setError(err.response?.data?.message || 'Gagal menghapus wacana Dokkai.');
+                } finally {
+                    setSaving(false);
+                }
+            },
+        });
     };
 
     if (!open) return null;
@@ -703,90 +849,36 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
     const currentStatus = draft.quiz?.status || draft.status || 'draft';
     const isPublished = currentStatus === 'published';
 
-    return createPortal(
-        <div className="fixed inset-0 z-[10000] flex flex-col bg-gray-950/80 backdrop-blur-sm">
-            <div className="flex h-full w-full flex-col bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
-                {/* TOP BAR */}
-                <header className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
-                        >
-                            <CloseIcon sx={{ fontSize: 18 }} />
-                        </button>
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                                <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-black uppercase text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
-                                    Dokkai Builder
-                                </span>
-                                <span className="text-xs font-semibold text-gray-400">
-                                    M{module?.week_number || 1} · H{day?.day_number || 1}: {day?.title}
-                                </span>
-                                <span
-                                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
-                                        isPublished
-                                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                            : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
-                                    }`}
-                                >
-                                    {isPublished ? 'Terbit' : 'Draf'}
-                                </span>
-                            </div>
-                            <h2 className="truncate text-base font-black text-gray-900 dark:text-white">
-                                {draft.passage?.title || 'Wacana Dokkai Baru'}
-                            </h2>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setShowStudentPreview(true)}
-                            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-700 shadow-2xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-                        >
-                            <VisibilityIcon sx={{ fontSize: 16 }} />
-                            <span className="hidden sm:inline">Pratinjau Siswa</span>
-                        </button>
-                        {quizId && (
-                            <>
-                                <button
-                                    type="button"
-                                    onClick={() => handleToggleStatus(isPublished ? 'draft' : 'published')}
-                                    disabled={saving}
-                                    className={`hidden sm:inline-flex h-9 items-center rounded-xl border px-3 text-xs font-bold transition disabled:opacity-50 ${
-                                        isPublished
-                                            ? 'border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-900/50 dark:text-amber-300'
-                                            : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/50 dark:text-emerald-300'
-                                    }`}
-                                >
-                                    {isPublished ? 'Jadikan Draf' : 'Terbitkan'}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleDelete}
-                                    disabled={saving}
-                                    title="Hapus Wacana"
-                                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/40 dark:text-rose-400"
-                                >
-                                    <DeleteOutlineIcon sx={{ fontSize: 17 }} />
-                                </button>
-                            </>
-                        )}
-                        <button
-                            type="button"
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-xs font-black text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
-                        >
-                            <SaveOutlinedIcon sx={{ fontSize: 16 }} />
-                            <span>{saving ? 'Menyimpan...' : 'Simpan Draf'}</span>
-                        </button>
-                    </div>
-                </header>
-
-                {/* LESSON SWITCHER BAR (Jika ada beberapa wacana di hari ini) */}
+    return (
+        <UnifiedQuizBuilderShell
+            open={open}
+            isModal={true}
+            title={draft.passage?.title || 'Wacana Dokkai Baru'}
+            subtitle={`M${module?.week_number || 1} · H${day?.day_number || 1}: ${day?.title || ''}`}
+            categoryBadge="Dokkai Builder"
+            status={isPublished ? 'published' : 'draft'}
+            savedAt={savedAt}
+            saving={saving}
+            hasUnsavedChanges={hasUnsavedChanges}
+            onBack={handleRequestClose}
+            onSave={handleSave}
+            onToggleStatus={quizId ? () => handleToggleStatus(isPublished ? 'draft' : 'published') : undefined}
+            onPreview={() => setShowStudentPreview(true)}
+            extraActions={
+                quizId && (
+                    <button
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={saving}
+                        title="Hapus Wacana"
+                        aria-label="Hapus Wacana"
+                        className="flex min-h-[44px] min-w-[44px] sm:h-9 sm:w-9 sm:min-h-0 sm:min-w-0 items-center justify-center rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/40 dark:text-rose-400"
+                    >
+                        <DeleteOutlineIcon sx={{ fontSize: 17 }} />
+                    </button>
+                )
+            }
+            subHeader={
                 <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-950/60 overflow-x-auto gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
                         <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider shrink-0 mr-1">
@@ -801,7 +893,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                                     onClick={() => handleSelectQuiz(item)}
                                     className={`truncate max-w-[200px] rounded-lg px-2.5 py-1 text-xs font-bold transition shrink-0 ${
                                         isCur
-                                            ? 'bg-indigo-600 text-white shadow-xs'
+                                            ? 'bg-emerald-600 text-white shadow-xs'
                                             : 'bg-white text-gray-600 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-300'
                                     }`}
                                 >
@@ -812,7 +904,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                         <button
                             type="button"
                             onClick={handleCreateNew}
-                            className="inline-flex items-center gap-1 rounded-lg border border-dashed border-gray-300 bg-white px-2.5 py-1 text-xs font-bold text-gray-600 hover:border-indigo-400 hover:text-indigo-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 shrink-0"
+                            className="inline-flex items-center gap-1 rounded-lg border border-dashed border-gray-300 bg-white px-2.5 py-1 text-xs font-bold text-gray-600 hover:border-emerald-400 hover:text-emerald-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 shrink-0"
                         >
                             <AddIcon sx={{ fontSize: 14 }} />
                             <span>Tambah Wacana</span>
@@ -820,7 +912,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                         <button
                             type="button"
                             onClick={() => setShowBankPicker(true)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-300 shrink-0"
+                            className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300 shrink-0"
                         >
                             <BoltIcon sx={{ fontSize: 14 }} />
                             <span>Salin dari Bank</span>
@@ -841,12 +933,72 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                         </span>
                     )}
                 </div>
+            }
+            tabs={[
+                { id: 'metadata', label: '1. Metadata Wacana', icon: AutoStoriesIcon },
+                { id: 'paragraphs', label: '2. Teks & Paragraf', icon: FormatListBulletedIcon, count: draft.paragraphs?.length || 0 },
+                { id: 'vocabularies', label: '3. Glosarium Kosakata', icon: MenuBookIcon, count: draft.vocabularies?.length || 0 },
+                { id: 'questions', label: '4. Bank Soal & Eviden', icon: QuizOutlinedIcon, count: draft.questions?.length || 0 },
+            ]}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            unstyled={true}
+            extraModals={
+                <>
+                    <DokkaiBankPickerDialog
+                        open={showBankPicker}
+                        onClose={() => setShowBankPicker(false)}
+                        onSelect={handleSelectFromBank}
+                        initialLevel={draft.passage?.jlpt_level || defaultLevel}
+                    />
 
+                    <DokkaiImportDialog
+                        open={showImportDialog}
+                        day={day}
+                        onClose={() => setShowImportDialog(false)}
+                        onImportSuccess={(data) => {
+                            fetchLessons();
+                            if (data?.message) {
+                                setSuccessMessage(data.message);
+                            }
+                        }}
+                    />
+
+                    <QuickQuestionParserDialog
+                        open={showQuestionParser}
+                        onClose={() => setShowQuestionParser(false)}
+                        onApply={handleApplyQuestions}
+                    />
+
+                    <QuickVocabParserDialog
+                        open={showVocabParser}
+                        onClose={() => setShowVocabParser(false)}
+                        onApply={handleApplyVocabularies}
+                        defaultLevel={draft.passage?.jlpt_level || defaultLevel}
+                    />
+
+                    <AutoSplitParagraphDialog
+                        open={showSplitParagraph}
+                        onClose={() => setShowSplitParagraph(false)}
+                        onApply={handleApplyParagraphs}
+                    />
+
+                    <DokkaiPreviewDialog
+                        open={showStudentPreview}
+                        onClose={() => setShowStudentPreview(false)}
+                        draft={draft}
+                    />
+                    <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
+                </>
+            }
+        >
+            <div className="space-y-6">
                 {/* NOTIFICATIONS */}
                 {localDraftAvailable && (
-                    <div className="flex items-center justify-between border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+                    <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
                         <div className="flex items-center gap-1.5">
-                            <span>⚠️ Ditemukan draf tersimpan lokal untuk wacana ini.</span>
+                            <WarningAmberIcon sx={{ fontSize: 16 }} className="text-amber-600 dark:text-amber-400" />
+                            <span>Ditemukan draf tersimpan lokal untuk wacana ini.</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -867,51 +1019,17 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                     </div>
                 )}
                 {error && (
-                    <div className="flex items-center gap-2 border-b border-rose-200 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
+                    <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
                         <ErrorOutlineRoundedIcon sx={{ fontSize: 16 }} />
                         <span>{error}</span>
                     </div>
                 )}
                 {successMessage && (
-                    <div className="flex items-center gap-2 border-b border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
                         <CheckCircleIcon sx={{ fontSize: 16 }} />
                         <span>{successMessage}</span>
                     </div>
                 )}
-
-                {/* TAB NAVIGATION */}
-                <div className="flex shrink-0 border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-gray-900">
-                    <nav className="flex space-x-4 overflow-x-auto">
-                        {[
-                            { key: 'metadata', label: '1. Metadata Wacana', icon: AutoStoriesIcon },
-                            { key: 'paragraphs', label: `2. Teks & Paragraf (${draft.paragraphs?.length || 0})`, icon: FormatListBulletedIcon },
-                            { key: 'vocabularies', label: `3. Glosarium Kosakata (${draft.vocabularies?.length || 0})`, icon: MenuBookIcon },
-                            { key: 'questions', label: `4. Bank Soal & Eviden (${draft.questions?.length || 0})`, icon: QuizOutlinedIcon },
-                        ].map((t) => {
-                            const Icon = t.icon;
-                            const isActive = activeTab === t.key;
-                            return (
-                                <button
-                                    key={t.key}
-                                    type="button"
-                                    onClick={() => setActiveTab(t.key)}
-                                    className={`flex items-center gap-1.5 border-b-2 py-3 px-2 text-xs font-bold transition whitespace-nowrap ${
-                                        isActive
-                                            ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                                            : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
-                                    }`}
-                                >
-                                    <Icon sx={{ fontSize: 16 }} />
-                                    <span>{t.label}</span>
-                                </button>
-                            );
-                        })}
-                    </nav>
-                </div>
-
-                {/* MAIN CONTENT AREA */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50/50 dark:bg-gray-950/40">
-                    <div className="mx-auto max-w-5xl space-y-6">
                         {/* TAB 1: METADATA */}
                         {activeTab === 'metadata' && (
                             <section className="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-gray-900">
@@ -1003,14 +1121,13 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                                     </QuizField>
                                 </div>
 
-                                <QuizField label="URL Audio Narasi (Opsional)" tooltip="Jika kosong, sistem akan menggunakan sintesis Web Speech API suara Jepang otomatis.">
-                                    <input
-                                        className={inputClass}
-                                        value={draft.passage?.audio_url || ''}
-                                        onChange={(e) => setDraft({ ...draft, passage: { ...draft.passage, audio_url: e.target.value } })}
-                                        placeholder="https://example.com/audio/dokkai_01.mp3"
-                                    />
-                                </QuizField>
+                                <AudioAttachmentField
+                                    value={draft.passage?.audio_url || ''}
+                                    onChange={(url) => setDraft({ ...draft, passage: { ...draft.passage, audio_url: url } })}
+                                    label="Berkas / URL Audio Pelafalan Wacana (Opsional)"
+                                    placeholder="https://... atau klik Unggah Audio MP3"
+                                    tooltip="Jika dikosongkan, murid dapat memanfaatkan pemutar pelafalan otomatis (Google Web Speech TTS) kalimat per kalimat."
+                                />
                             </section>
                         )}
 
@@ -1075,7 +1192,9 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                                                             type="button"
                                                             disabled={draft.paragraphs.length <= 1}
                                                             onClick={() => removeParagraph(index)}
-                                                            className="flex h-7 w-7 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 disabled:opacity-30 dark:hover:bg-rose-950/30"
+                                                            aria-label={`Hapus ${paragraph.label || `Paragraf ${index + 1}`}`}
+                                                            title={`Hapus ${paragraph.label || `Paragraf ${index + 1}`}`}
+                                                            className="flex min-h-[44px] min-w-[44px] sm:h-7 sm:w-7 sm:min-h-0 sm:min-w-0 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 disabled:opacity-30 dark:hover:bg-rose-950/30"
                                                         >
                                                             <DeleteOutlineIcon sx={{ fontSize: 16 }} />
                                                         </button>
@@ -1088,6 +1207,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                                                     onChange={(e) => updateParagraph(index, 'content_raw', e.target.value)}
                                                     placeholder="Ketik atau tempel teks bahasa Jepang untuk paragraf ini..."
                                                     className={`${inputClass} font-japanese leading-relaxed text-sm`}
+                                                    lang="ja"
                                                 />
                                             </div>
                                         );
@@ -1142,7 +1262,9 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                                                     type="button"
                                                     disabled={draft.vocabularies.length <= 1}
                                                     onClick={() => removeVocabulary(index)}
-                                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 disabled:opacity-30 dark:hover:bg-rose-950/30"
+                                                    aria-label={`Hapus kosakata #${index + 1}`}
+                                                    title={`Hapus kosakata #${index + 1}`}
+                                                    className="flex min-h-[44px] min-w-[44px] sm:h-7 sm:w-7 sm:min-h-0 sm:min-w-0 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 disabled:opacity-30 dark:hover:bg-rose-950/30"
                                                 >
                                                     <DeleteOutlineIcon sx={{ fontSize: 16 }} />
                                                 </button>
@@ -1155,6 +1277,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                                                         value={vocab.word || ''}
                                                         onChange={(e) => updateVocabulary(index, 'word', e.target.value)}
                                                         placeholder="桜"
+                                                        lang="ja"
                                                     />
                                                 </QuizField>
 
@@ -1164,6 +1287,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                                                         value={vocab.furigana || ''}
                                                         onChange={(e) => updateVocabulary(index, 'furigana', e.target.value)}
                                                         placeholder="さくら"
+                                                        lang="ja"
                                                     />
                                                 </QuizField>
 
@@ -1226,251 +1350,238 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                             </div>
                         )}
 
-                        {/* TAB 4: QUESTIONS */}
-                        {activeTab === 'questions' && (
-                            <div className="space-y-4">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <div>
-                                        <h3 className="text-sm font-black text-gray-900 dark:text-white">
-                                            Bank Soal & Eviden Wacana
-                                        </h3>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            Susun soal pilihan ganda, tandai kunci jawaban benar, kutipan eviden wacana, dan analisis pengecoh.
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowQuestionParser(true)}
-                                            className="inline-flex items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300"
-                                        >
-                                            <BoltIcon sx={{ fontSize: 16 }} />
-                                            <span>Tempel Soal Cepat</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={addQuestion}
-                                            className="inline-flex items-center gap-1 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-indigo-700"
-                                        >
-                                            <AddIcon sx={{ fontSize: 16 }} />
-                                            <span>Tambah Soal</span>
-                                        </button>
-                                    </div>
-                                </div>
+                        {/* TAB 4: QUESTIONS (MASTER-DETAIL 2-KOLOM SERAGAM) */}
+                        {activeTab === 'questions' && (() => {
+                            const activeQuestion = draft.questions[activeQuestionIndex] || draft.questions[0] || null;
+                            const currentQIndex = draft.questions[activeQuestionIndex] ? activeQuestionIndex : 0;
 
-                                <div className="space-y-6">
-                                    {draft.questions.map((question, qIdx) => (
-                                        <div
-                                            key={qIdx}
-                                            className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-gray-900 space-y-4"
-                                        >
-                                            <div className="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-600 text-xs font-black text-white">
-                                                        Q{qIdx + 1}
-                                                    </span>
-                                                    <span className="text-xs font-black text-gray-900 dark:text-white">
-                                                        Soal Nomor {qIdx + 1}
-                                                    </span>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    disabled={draft.questions.length <= 1}
-                                                    onClick={() => removeQuestion(qIdx)}
-                                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 disabled:opacity-30 dark:hover:bg-rose-950/30"
+                            return (
+                                <div className="space-y-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3 dark:border-gray-800">
+                                        <div>
+                                            <h3 className="text-sm font-black text-gray-900 dark:text-white">
+                                                Bank Soal Pemahaman Dokkai ({draft.questions.length} Butir Soal)
+                                            </h3>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                Kelola pertanyaan pilihan ganda, rujukan paragraf eviden wacana, dan analisis logika jebakan.
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowQuestionParser(true)}
+                                                className="inline-flex items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300"
+                                            >
+                                                <BoltIcon sx={{ fontSize: 16 }} />
+                                                <span>Tempel Soal Cepat</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={addQuestion}
+                                                className="inline-flex items-center gap-1 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-indigo-700"
+                                            >
+                                                <AddIcon sx={{ fontSize: 16 }} />
+                                                <span>Tambah Soal</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid gap-6 lg:grid-cols-12 items-start">
+                                        {/* Kolom Kiri: Sidebar Navigator Soal (4 cols) */}
+                                        <div className="lg:col-span-4 rounded-2xl border border-gray-200 bg-white p-3 shadow-xs dark:border-gray-800 dark:bg-gray-900">
+                                            <div className="flex items-center justify-between border-b border-gray-100 pb-2.5 px-1 dark:border-gray-800">
+                                                <span className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                    Daftar Soal ({draft.questions.length})
+                                                </span>
+                                                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                                                    {draft.questions.filter(q => q.question_text?.trim() && (q.options || []).some(o => o.is_correct && o.option_text?.trim())).length}/{draft.questions.length} Siap
+                                                </span>
+                                            </div>
+                                            <div className="mt-2.5 max-h-[620px] space-y-2 overflow-y-auto pr-1">
+                                                {draft.questions.map((q, idx) => {
+                                                    const correctOpt = (q.options || []).find(o => o.is_correct);
+                                                    const isReady = Boolean(q.question_text?.trim()) && Boolean(correctOpt?.option_text?.trim());
+                                                    return (
+                                                        <QuestionNavItem
+                                                            key={idx}
+                                                            index={idx}
+                                                            isSelected={idx === currentQIndex}
+                                                            isReady={isReady}
+                                                            title={q.question_text || ''}
+                                                            subtitle={correctOpt ? `Kunci: Opsi ${correctOpt.option_label}` : 'Kunci belum dipilih'}
+                                                            typeLabel={`P${q.evidence_paragraph_number || 1}`}
+                                                            canMoveUp={idx > 0}
+                                                            canMoveDown={idx < draft.questions.length - 1}
+                                                            canDuplicate={true}
+                                                            canDelete={draft.questions.length > 1}
+                                                            onSelect={() => setActiveQuestionIndex(idx)}
+                                                            onMoveUp={() => moveQuestion(idx, -1)}
+                                                            onMoveDown={() => moveQuestion(idx, 1)}
+                                                            onDuplicate={() => duplicateQuestion(idx)}
+                                                            onDelete={() => removeQuestion(idx)}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Kolom Kanan: Form Editor In-Place Soal Aktif (8 cols) */}
+                                        <div className="lg:col-span-8">
+                                            {activeQuestion ? (
+                                                <UnifiedQuestionEditorCanvas
+                                                    questionNumber={currentQIndex + 1}
+                                                    title={`Editor Soal Nomor ${currentQIndex + 1}`}
+                                                    subtitle={`Eviden Paragraf ${activeQuestion.evidence_paragraph_number || 1}`}
+                                                    speechText={activeQuestion?.question_text}
+                                                    canDelete={draft.questions.length > 1}
+                                                    onDuplicate={() => duplicateQuestion(currentQIndex)}
+                                                    onDelete={() => removeQuestion(currentQIndex)}
                                                 >
-                                                    <DeleteOutlineIcon sx={{ fontSize: 16 }} />
-                                                </button>
-                                            </div>
 
-                                            <div className="grid gap-3 sm:grid-cols-2">
-                                                <QuizField label="Pertanyaan (Bahasa Jepang)" required tooltip="Teks pertanyaan dalam bahasa Jepang.">
-                                                    <textarea
-                                                        rows={2}
-                                                        className={`${inputClass} font-japanese`}
-                                                        value={question.question_text || ''}
-                                                        onChange={(e) => updateQuestion(qIdx, 'question_text', e.target.value)}
-                                                        placeholder="本文の内容と合っているものはどれか。"
-                                                    />
-                                                </QuizField>
-
-                                                <QuizField label="Terjemahan Pertanyaan (Indonesia)" tooltip="Bantuan terjemahan pertanyaan saat mode review.">
-                                                    <textarea
-                                                        rows={2}
-                                                        className={inputClass}
-                                                        value={question.question_translation || ''}
-                                                        onChange={(e) => updateQuestion(qIdx, 'question_translation', e.target.value)}
-                                                        placeholder="Manakah pernyataan yang sesuai dengan isi bacaan?"
-                                                    />
-                                                </QuizField>
-                                            </div>
-
-                                            {/* PILIHAN GANDA */}
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-700 dark:text-gray-300">
-                                                    Pilihan Jawaban (Klik radio button untuk memilih kunci jawaban benar)
-                                                </label>
-                                                <div className="grid gap-2 sm:grid-cols-2">
-                                                    {(question.options || []).map((opt, optIdx) => (
-                                                        <div
-                                                            key={optIdx}
-                                                            className={`flex items-center gap-2 rounded-xl border p-2.5 transition ${
-                                                                opt.is_correct
-                                                                    ? 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-500 dark:border-emerald-700 dark:bg-emerald-950/30'
-                                                                    : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
-                                                            }`}
-                                                        >
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => updateQuestionOption(qIdx, optIdx, 'is_correct', true)}
-                                                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black transition ${
-                                                                    opt.is_correct
-                                                                        ? 'bg-emerald-600 text-white'
-                                                                        : 'border border-gray-300 text-gray-400 hover:border-gray-400'
-                                                                }`}
-                                                            >
-                                                                {opt.option_label}
-                                                            </button>
-                                                            <input
-                                                                className="w-full bg-transparent text-xs font-japanese font-semibold text-gray-900 outline-none dark:text-white"
-                                                                value={opt.option_text || ''}
-                                                                onChange={(e) => updateQuestionOption(qIdx, optIdx, 'option_text', e.target.value)}
-                                                                placeholder={`Pernyataan opsi ${opt.option_label}...`}
-                                                            />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* EVIDEN & PEMBAHASAN */}
-                                            <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/20 space-y-3">
-                                                <div className="grid gap-3 sm:grid-cols-3">
-                                                    <QuizField label="Rujukan Paragraf Eviden" tooltip="Paragraf di mana kalimat bukti ditemukan.">
-                                                        <select
-                                                            className={inputClass}
-                                                            value={question.evidence_paragraph_number || 1}
-                                                            onChange={(e) => updateQuestion(qIdx, 'evidence_paragraph_number', Number(e.target.value))}
-                                                        >
-                                                            {draft.paragraphs.map((p, idx) => (
-                                                                <option key={idx} value={p.paragraph_number || idx + 1}>
-                                                                    {p.label || `Paragraf ${idx + 1}`}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </QuizField>
-
-                                                    <div className="sm:col-span-2">
-                                                        <QuizField label="Kutipan Kalimat Eviden (Evidence Quote)" tooltip="Potongan kalimat persis dari teks wacana yang menjadi alasan pembenar.">
-                                                            <input
+                                                    <div className="grid gap-3 sm:grid-cols-2">
+                                                        <QuizField label="Pertanyaan (Bahasa Jepang)" required tooltip="Teks pertanyaan dalam bahasa Jepang.">
+                                                            <textarea
+                                                                rows={2}
                                                                 className={`${inputClass} font-japanese`}
-                                                                value={question.evidence_quote || ''}
-                                                                onChange={(e) => updateQuestion(qIdx, 'evidence_quote', e.target.value)}
-                                                                placeholder="Kutipan kalimat bukti dari paragraf..."
+                                                                value={activeQuestion.question_text || ''}
+                                                                onChange={(e) => updateQuestion(currentQIndex, 'question_text', e.target.value)}
+                                                                placeholder="本文の内容と合っているものはどれか。"
+                                                                lang="ja"
+                                                            />
+                                                        </QuizField>
+
+                                                        <QuizField label="Terjemahan Pertanyaan (Indonesia)" tooltip="Bantuan terjemahan pertanyaan saat mode review.">
+                                                            <textarea
+                                                                rows={2}
+                                                                className={inputClass}
+                                                                value={activeQuestion.question_translation || ''}
+                                                                onChange={(e) => updateQuestion(currentQIndex, 'question_translation', e.target.value)}
+                                                                placeholder="Manakah pernyataan yang sesuai dengan isi bacaan?"
                                                             />
                                                         </QuizField>
                                                     </div>
-                                                </div>
 
-                                                <QuizField label="Pembahasan Mengapa Jawaban Benar" tooltip="Penjelasan rinci teknik parafrasa atau penalaran logika jawaban benar.">
-                                                    <textarea
-                                                        rows={2}
-                                                        className={inputClass}
-                                                        value={question.explanation_correct || ''}
-                                                        onChange={(e) => updateQuestion(qIdx, 'explanation_correct', e.target.value)}
-                                                        placeholder="Penjelasan mengapa opsi ini benar berdasarkan teks wacana..."
-                                                    />
-                                                </QuizField>
-
-                                                {/* ALASAN PENGECOH / DISTRACTOR TRAPS (OPSIONAL & COLLAPSIBLE) */}
-                                                <div className="border-t border-indigo-100/60 pt-2 dark:border-indigo-900/40">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => toggleDistractors(qIdx)}
-                                                        className="flex items-center gap-1 text-[11px] font-black uppercase text-indigo-700 dark:text-indigo-300 hover:underline"
-                                                    >
-                                                        <ExpandMoreIcon
-                                                            sx={{ fontSize: 16 }}
-                                                            className={`transition-transform duration-200 ${openDistractorIndices[qIdx] ? 'rotate-180' : ''}`}
-                                                        />
-                                                        <span>
-                                                            Alasan Jebakan Pengecoh (Opsional)
-                                                            {Object.values(question.explanation_distractors || {}).some(Boolean) ? ' • Terisi' : ''}
-                                                        </span>
-                                                    </button>
-
-                                                    {openDistractorIndices[qIdx] && (
-                                                        <div className="grid gap-2 sm:grid-cols-2 pt-2">
-                                                            {['A', 'B', 'C', 'D'].map((lbl) => (
-                                                                <div key={lbl} className="flex items-center gap-2">
-                                                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-gray-200 text-[10px] font-black text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                                                                        {lbl}
-                                                                    </span>
-                                                                    <input
-                                                                        className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none focus:border-indigo-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-                                                                        value={question.explanation_distractors?.[lbl] || ''}
-                                                                        onChange={(e) => updateQuestionDistractor(qIdx, lbl, e.target.value)}
-                                                                        placeholder={`Alasan pengecoh opsi ${lbl}...`}
-                                                                    />
-                                                                </div>
+                                                    {/* PILIHAN GANDA (DENGAN SHARED ATOMS OptionEditorRow) */}
+                                                    <div className="space-y-2.5">
+                                                        <div className="flex items-center justify-between">
+                                                            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                                                Pilihan Jawaban (Klik bulatan untuk memilih kunci jawaban benar)
+                                                            </label>
+                                                            {activeQuestion.options?.find(o => o.is_correct)?.option_text && (
+                                                                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                                    Kunci: {activeQuestion.options.find(o => o.is_correct).option_label}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="space-y-2.5">
+                                                            {(activeQuestion.options || []).map((opt, optIdx) => (
+                                                                <OptionEditorRow
+                                                                    key={optIdx}
+                                                                    index={optIdx}
+                                                                    label={opt.option_label}
+                                                                    value={opt.option_text || ''}
+                                                                    reading=""
+                                                                    isCorrect={Boolean(opt.is_correct)}
+                                                                    showReading={false}
+                                                                    accent="indigo"
+                                                                    placeholder={`Pernyataan pilihan ${opt.option_label}...`}
+                                                                    onTextChange={(val) => updateQuestionOption(currentQIndex, optIdx, 'option_text', val)}
+                                                                    onSelectCorrect={() => updateQuestionOption(currentQIndex, optIdx, 'is_correct', true)}
+                                                                />
                                                             ))}
                                                         </div>
-                                                    )}
+                                                    </div>
+
+                                                    {/* EVIDEN & PEMBAHASAN */}
+                                                    <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/20 space-y-3">
+                                                        <div className="grid gap-3 sm:grid-cols-3">
+                                                            <QuizField label="Rujukan Paragraf Eviden" tooltip="Paragraf di mana kalimat bukti ditemukan.">
+                                                                <select
+                                                                    className={inputClass}
+                                                                    value={activeQuestion.evidence_paragraph_number || 1}
+                                                                    onChange={(e) => updateQuestion(currentQIndex, 'evidence_paragraph_number', Number(e.target.value))}
+                                                                >
+                                                                    {draft.paragraphs.map((p, idx) => (
+                                                                        <option key={idx} value={p.paragraph_number || idx + 1}>
+                                                                            {p.label || `Paragraf ${idx + 1}`}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </QuizField>
+
+                                                            <div className="sm:col-span-2">
+                                                                <QuizField label="Kutipan Kalimat Eviden (Evidence Quote)" tooltip="Potongan kalimat persis dari teks wacana yang menjadi alasan pembenar.">
+                                                                    <input
+                                                                        className={`${inputClass} font-japanese`}
+                                                                        value={activeQuestion.evidence_quote || ''}
+                                                                        onChange={(e) => updateQuestion(currentQIndex, 'evidence_quote', e.target.value)}
+                                                                        placeholder="Kutipan kalimat bukti dari paragraf..."
+                                                                        lang="ja"
+                                                                    />
+                                                                </QuizField>
+                                                            </div>
+                                                        </div>
+
+                                                        <QuizField label="Pembahasan Mengapa Jawaban Benar" tooltip="Penjelasan rinci teknik parafrasa atau penalaran logika jawaban benar.">
+                                                            <textarea
+                                                                rows={2}
+                                                                className={inputClass}
+                                                                value={activeQuestion.explanation_correct || ''}
+                                                                onChange={(e) => updateQuestion(currentQIndex, 'explanation_correct', e.target.value)}
+                                                                placeholder="Penjelasan mengapa opsi ini benar berdasarkan teks wacana..."
+                                                            />
+                                                        </QuizField>
+
+                                                        {/* ALASAN PENGECOH / DISTRACTOR TRAPS (OPSIONAL & COLLAPSIBLE) */}
+                                                        <div className="border-t border-indigo-100/60 pt-2 dark:border-indigo-900/40">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => toggleDistractors(currentQIndex)}
+                                                                aria-expanded={Boolean(openDistractorIndices[currentQIndex])}
+                                                                aria-controls={`distractor-panel-${currentQIndex}`}
+                                                                className="flex items-center gap-1 text-[11px] font-black uppercase text-indigo-700 dark:text-indigo-300 hover:underline min-h-[44px] sm:min-h-0 py-1"
+                                                            >
+                                                                <ExpandMoreIcon
+                                                                    sx={{ fontSize: 16 }}
+                                                                    className={`transition-transform duration-200 ${openDistractorIndices[currentQIndex] ? 'rotate-180' : ''}`}
+                                                                />
+                                                                <span>
+                                                                    Alasan Jebakan Pengecoh (Opsional)
+                                                                    {Object.values(activeQuestion.explanation_distractors || {}).some(Boolean) ? ' · Terisi' : ''}
+                                                                </span>
+                                                            </button>
+
+                                                            {openDistractorIndices[currentQIndex] && (
+                                                                <div id={`distractor-panel-${currentQIndex}`} className="grid gap-2 sm:grid-cols-2 pt-2">
+                                                                    {['A', 'B', 'C', 'D'].map((lbl) => (
+                                                                        <div key={lbl} className="flex items-center gap-2">
+                                                                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-gray-200 text-[10px] font-black text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                                                                {lbl}
+                                                                            </span>
+                                                                            <input
+                                                                                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none focus:border-indigo-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                                                                value={activeQuestion.explanation_distractors?.[lbl] || ''}
+                                                                                onChange={(e) => updateQuestionDistractor(currentQIndex, lbl, e.target.value)}
+                                                                                placeholder={`Alasan pengecoh opsi ${lbl}...`}
+                                                                            />
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </UnifiedQuestionEditorCanvas>
+                                            ) : (
+                                                <div className="flex h-64 flex-col items-center justify-center text-center">
+                                                    <p className="text-sm font-bold text-gray-400">Pilih butir soal dari sidebar atau klik Tambah Soal.</p>
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
-                                    ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
+                            );
+                        })()}
                 </div>
-
-                {/* MODAL DIALOG HELPERS */}
-                <DokkaiBankPickerDialog
-                    open={showBankPicker}
-                    onClose={() => setShowBankPicker(false)}
-                    onSelect={handleSelectFromBank}
-                    initialLevel={draft.passage?.jlpt_level || defaultLevel}
-                />
-
-                <DokkaiImportDialog
-                    open={showImportDialog}
-                    day={day}
-                    onClose={() => setShowImportDialog(false)}
-                    onImportSuccess={(data) => {
-                        fetchLessons();
-                        if (data?.message) {
-                            setSuccessMessage(data.message);
-                        }
-                    }}
-                />
-
-                <QuickQuestionParserDialog
-                    open={showQuestionParser}
-                    onClose={() => setShowQuestionParser(false)}
-                    onApply={handleApplyQuestions}
-                />
-
-                <QuickVocabParserDialog
-                    open={showVocabParser}
-                    onClose={() => setShowVocabParser(false)}
-                    onApply={handleApplyVocabularies}
-                    defaultLevel={draft.passage?.jlpt_level || defaultLevel}
-                />
-
-                <AutoSplitParagraphDialog
-                    open={showSplitParagraph}
-                    onClose={() => setShowSplitParagraph(false)}
-                    onApply={handleApplyParagraphs}
-                />
-
-                <DokkaiPreviewDialog
-                    open={showStudentPreview}
-                    onClose={() => setShowStudentPreview(false)}
-                    draft={draft}
-                />
-            </div>
-        </div>,
-        document.body
-    );
+            </UnifiedQuizBuilderShell>
+        );
 }

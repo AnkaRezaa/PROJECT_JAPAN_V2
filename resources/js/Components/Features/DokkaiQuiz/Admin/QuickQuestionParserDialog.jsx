@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useScrollLock } from '@/lib/scrollLock';
 import CloseIcon from '@mui/icons-material/Close';
 import BoltIcon from '@mui/icons-material/Bolt';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -188,6 +189,19 @@ export default function QuickQuestionParserDialog({ open, onClose, onApply }) {
     const [rawInput, setRawInput] = useState('');
     const [replaceMode, setReplaceMode] = useState(false);
 
+    useScrollLock(open);
+
+    useEffect(() => {
+        if (!open) return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [open, onClose]);
+
     if (!open) return null;
 
     const parsed = parseRawQuestionBlock(rawInput);
@@ -232,7 +246,7 @@ Pembahasan: Kalimat terakhir menegaskan hati yang merasakan keindahan alam mempe
             aria-labelledby="quick-question-parser-title"
             className="fixed inset-0 z-[10050] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs"
         >
-            <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col rounded-2xl bg-white shadow-2xl dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col rounded-2xl bg-white shadow-xl dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-gray-800">
                     <div className="flex items-center gap-2">
@@ -241,7 +255,7 @@ Pembahasan: Kalimat terakhir menegaskan hati yang merasakan keindahan alam mempe
                         </span>
                         <div>
                             <h3 id="quick-question-parser-title" className="text-sm font-black text-gray-900 dark:text-white">
-                                ⚡ Tempel Soal Cepat (Quick Question Parser)
+                                Tempel Soal Cepat (Quick Question Parser)
                             </h3>
                             <p className="text-[11px] text-gray-400">
                                 Tempel teks soal berformat atau tabel TSV dari Excel. Gunakan tanda bintang (*) di depan opsi untuk menandai kunci benar.

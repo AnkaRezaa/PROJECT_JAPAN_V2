@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import QuizField, { TooltipHelp } from '@/Components/UI/QuizField';
 
@@ -14,6 +13,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import MicNoneOutlinedIcon from '@mui/icons-material/MicNoneOutlined';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import ShuffleIcon from '@mui/icons-material/Shuffle';
@@ -23,6 +24,9 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined';
 import DrawOutlinedIcon from '@mui/icons-material/DrawOutlined';
 import StyleOutlinedIcon from '@mui/icons-material/StyleOutlined';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import KosakataQuizPreviewDialog from '@/Components/Features/Quiz/KosakataQuizPreviewDialog';
+import { OptionEditorRow, QuestionNavItem, AudioAttachmentField, UnifiedQuizBuilderShell, UnifiedQuestionEditorCanvas } from '@/Components/Features/Quiz/Shared';
 import HandwritingFlashcardWorkspace from '@/Components/Features/Handwriting/HandwritingFlashcardWorkspace';
 import { FlashcardEditorWorkspace } from '@/Pages/Admin/Flashcard/BuilderFlashcard';
 import {
@@ -39,6 +43,9 @@ export default function QuizBuilder({
     quiz,
     questions: initialQuestions = [],
     flashcardWorkspace = null,
+    open = true,
+    isModal = false,
+    onClose = null,
 }) {
     const builderReturnUrl = quiz?.module?.program_pembelajaran_id
         ? route('admin.modules.index', {
@@ -64,8 +71,6 @@ export default function QuizBuilder({
     const [vocabularyGeneratorError, setVocabularyGeneratorError] = useState('');
     const [vocabularyGeneratorLoading, setVocabularyGeneratorLoading] = useState(false);
     const [showStudentPreview, setShowStudentPreview] = useState(false);
-    const [previewIndex, setPreviewIndex] = useState(0);
-    const [previewAnswers, setPreviewAnswers] = useState({});
     const [showValidation, setShowValidation] = useState(false);
     const importInputRef = useRef(null);
     const initialForm = {
@@ -140,18 +145,29 @@ export default function QuizBuilder({
         setData('questions', updated);
     };
 
+    const moveQuestion = (fromIndex, direction) => {
+        const toIndex = fromIndex + direction;
+        if (toIndex < 0 || toIndex >= data.questions.length) return;
+        const nextQuestions = [...data.questions];
+        const temp = nextQuestions[fromIndex];
+        nextQuestions[fromIndex] = nextQuestions[toIndex];
+        nextQuestions[toIndex] = temp;
+        setData('questions', nextQuestions);
+        setActiveIndex(toIndex);
+    };
+
+
     const updateOption = (qIndex, optIndex, value) => {
         clearErrors();
         const updated = [...data.questions];
         const opts = [...(updated[qIndex].options || ['', '', '', ''])];
         const previousValue = opts[optIndex];
         opts[optIndex] = value;
+        const shouldUpdateCorrect = Boolean(previousValue?.trim()) && updated[qIndex].correct_answer === previousValue;
         updated[qIndex] = {
             ...updated[qIndex],
             options: opts,
-            correct_answer: updated[qIndex].correct_answer === previousValue
-                ? value
-                : updated[qIndex].correct_answer,
+            correct_answer: shouldUpdateCorrect ? value : updated[qIndex].correct_answer,
         };
         setData('questions', updated);
     };
@@ -203,6 +219,18 @@ export default function QuizBuilder({
         const updated = data.questions.filter((_, i) => i !== index);
         setData('questions', updated);
         if (activeIndex >= updated.length) setActiveIndex(updated.length - 1);
+    };
+
+    const duplicateQuestion = (index) => {
+        clearErrors();
+        const target = data.questions[index];
+        if (!target) return;
+        const cloned = JSON.parse(JSON.stringify(target));
+        delete cloned.id;
+        const nextQuestions = [...data.questions];
+        nextQuestions.splice(index + 1, 0, cloned);
+        setData('questions', nextQuestions.map((q, idx) => ({ ...q, order: idx })));
+        setActiveIndex(index + 1);
     };
 
     const handleSave = () => {
@@ -276,8 +304,6 @@ export default function QuizBuilder({
     };
 
     const openStudentPreview = () => {
-        setPreviewIndex(activeIndex);
-        setPreviewAnswers({});
         setShowStudentPreview(true);
     };
 
@@ -412,35 +438,33 @@ export default function QuizBuilder({
         (total, question) => total + Math.max(1, Number(question.points || 1)),
         0,
     );
-
-    // ─── RENDER: QUESTION EDITOR (by type) ──────────────────
     const renderEditor = () => {
         const qType = activeQ.type || 'multiple_choice';
 
         return (
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 border-l-4 border-l-brand-600 overflow-hidden">
-                {/* Editor Header */}
-                <div className="flex flex-col gap-3 p-4 border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-                            <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
-                        </div>
-                        <h2 className="font-black text-gray-900 dark:text-white">Q{activeIndex + 1}</h2>
+            <UnifiedQuestionEditorCanvas
+                questionNumber={activeIndex + 1}
+                title={`Editor Soal Q${activeIndex + 1}`}
+                subtitle={`${activeQ.points || 1} poin · ${TYPE_LABELS[qType] || qType}`}
+                speechText={activeQ.question_reading || activeQ.question_text}
+                canDelete={data.questions.length > 1}
+                onDuplicate={() => duplicateQuestion(activeIndex)}
+                onDelete={() => removeQuestion(activeIndex)}
+                extraActions={
+                    <div className="flex flex-wrap items-center gap-2">
                         {questionErrors[activeIndex] && (
                             <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-black uppercase text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">Belum lengkap</span>
                         )}
                         <select
                             value={qType}
                             onChange={(e) => changeQuestionType(activeIndex, e.target.value)}
-                            className="bg-transparent font-medium text-sm text-gray-600 dark:text-gray-400 focus:outline-none cursor-pointer"
+                            className="rounded-xl border border-gray-200 bg-white px-2.5 py-1 text-xs font-bold text-gray-700 focus:outline-none cursor-pointer dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
                         >
                             {QUESTION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                         </select>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-4">
-                        <label className="flex items-center gap-2">
-                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                                <span>Bobot</span>
+                        <label className="flex items-center gap-1.5">
+                            <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                                <span>Poin</span>
                                 <TooltipHelp text="Bobot poin nilai yang didapatkan siswa jika menjawab soal ini dengan benar." />
                             </span>
                             <input
@@ -449,16 +473,12 @@ export default function QuizBuilder({
                                 max="1000"
                                 value={activeQ.points || 1}
                                 onChange={(event) => updateQuestion(activeIndex, 'points', Number(event.target.value))}
-                                className="h-8 w-20 rounded-lg border border-gray-200 bg-white px-2 text-sm font-black text-gray-800 outline-none focus:border-focus dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                                className="h-8 w-16 rounded-xl border border-gray-200 bg-white px-2 text-xs font-black text-gray-800 outline-none focus:border-emerald-400 dark:border-gray-700 dark:bg-gray-950 dark:text-white"
                             />
                         </label>
-                        <button onClick={() => removeQuestion(activeIndex)} className="text-gray-300 hover:text-brand-500 transition-colors">
-                            <DeleteOutlineIcon sx={{ fontSize: 20 }} />
-                        </button>
                     </div>
-                </div>
-
-                <div className="p-4 space-y-6 sm:p-8 sm:space-y-8">
+                }
+            >
                     {errors.questions && (
                         <div className="rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm font-bold text-brand-700 dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-300">
                             {errors.questions}
@@ -466,31 +486,10 @@ export default function QuizBuilder({
                     )}
                     {/* ─── Listening: Audio URL ─── */}
                     {qType === 'listening' && (
-                        <div>
-                            <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                                <MicNoneOutlinedIcon sx={{ fontSize: 14 }} />
-                                <span>Audio URL</span>
-                                <TooltipHelp text="URL file audio soal listening (format mp3/wav/ogg) yang akan diputar oleh siswa." />
-                            </label>
-                            <input
-                                type="text"
-                                value={activeQ.audio_url || ''}
-                                onChange={(e) => updateQuestion(activeIndex, 'audio_url', e.target.value)}
-                                placeholder="https://example.com/audio.mp3"
-                                className="w-full rounded-xl border border-transparent bg-gray-50 p-4 text-sm font-medium text-gray-900 outline-none transition-all focus:border-brand-100 focus:bg-white focus:ring-4 focus:ring-focus/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-brand-900/30 dark:focus:bg-gray-950"
-                            />
-                            {activeQ.audio_url && (
-                                <div className="mt-3 bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-xl p-3 flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white shrink-0">
-                                        <MicNoneOutlinedIcon sx={{ fontSize: 20 }} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-black text-green-700 dark:text-green-400 truncate">{activeQ.audio_url}</p>
-                                        <audio controls className="w-full mt-2 h-8" src={activeQ.audio_url} />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        <AudioAttachmentField
+                            audioUrl={activeQ.audio_url || ''}
+                            onChange={(url) => updateQuestion(activeIndex, 'audio_url', url)}
+                        />
                     )}
 
                     {/* ─── Question Text ─── */}
@@ -513,7 +512,8 @@ export default function QuizBuilder({
                                             ? 'Contoh: 音声で言っていることは何ですか？'
                                             : 'Contoh: Pilih cara baca yang benar untuk 経済'
                                     }
-                                    className={`w-full min-h-[100px] rounded-xl border p-4 text-base font-medium outline-none transition-all resize-none ${
+                                    lang="ja"
+                                    className={`w-full min-h-[100px] rounded-xl border p-4 text-base font-japanese font-medium outline-none transition-all resize-none ${
                                         (errors[`questions.${activeIndex}.question_text`] || (showValidation && !activeQ.question_text?.trim()))
                                             ? 'border-rose-400 bg-rose-50/40 text-rose-900 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 dark:bg-rose-950/20 dark:text-rose-200'
                                             : 'border-transparent bg-gray-50 text-gray-900 focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-emerald-500 dark:focus:bg-gray-950'
@@ -532,7 +532,8 @@ export default function QuizBuilder({
                             value={activeQ.question_reading || ''}
                             onChange={(e) => updateQuestion(activeIndex, 'question_reading', e.target.value)}
                             placeholder="Cara baca kana (opsional), contoh: けいざい"
-                            className="mt-2 h-11 w-full rounded-xl border border-sky-100 bg-sky-50/60 px-4 text-sm font-medium text-sky-900 outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-500/10 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-200"
+                            lang="ja"
+                            className="mt-2 h-11 w-full rounded-xl border border-sky-100 bg-sky-50/60 px-4 text-sm font-japanese font-medium text-sky-900 outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-500/10 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-200"
                         />
                     </div>
 
@@ -558,41 +559,20 @@ export default function QuizBuilder({
                                 ) : null
                             )}
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            {(activeQ.options || ['', '', '', '']).map((opt, optIdx) => {
-                                const isCorrect = activeQ.correct_answer === opt && opt !== '';
-                                return (
-                                    <div key={optIdx} className="relative group">
-                                        <div className={`absolute left-4 top-7 -translate-y-1/2 w-6 h-6 rounded flex items-center justify-center text-xs font-bold z-10 ${isCorrect ? 'bg-green-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 group-hover:bg-gray-200'}`}>
-                                            {optLabels[optIdx]}
-                                        </div>
-                                        <input
-                                            type="text"
-                                            value={opt}
-                                            onChange={(e) => updateOption(activeIndex, optIdx, e.target.value)}
-                                            placeholder={`Opsi ${optLabels[optIdx]}`}
-                                            className={`w-full h-14 rounded-xl pl-14 pr-12 text-sm font-medium focus:outline-none ${
-                                                isCorrect
-                                                    ? 'bg-green-50 dark:bg-green-900/20 border border-green-500 text-green-900 dark:text-green-200 font-bold focus:ring-4 focus:ring-green-500/20'
-                                                    : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 focus:border-gray-400'
-                                            }`}
-                                        />
-                                        <input
-                                            type="text"
-                                            value={activeQ.option_readings?.[optIdx] || ''}
-                                            onChange={(e) => updateOptionReading(activeIndex, optIdx, e.target.value)}
-                                            placeholder="Cara baca kana (opsional)"
-                                            className="mt-2 h-10 w-full rounded-lg border border-sky-100 bg-sky-50/60 px-3 text-xs font-medium text-sky-900 outline-none focus:border-sky-300 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-200"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setCorrectAnswer(activeIndex, opt)}
-                                            className={`absolute right-4 top-7 -translate-y-1/2 ${isCorrect ? 'text-green-500' : 'text-gray-300 hover:text-gray-400 dark:text-gray-500'}`}
-                                        >
-                                            {isCorrect ? <CheckCircleIcon sx={{ fontSize: 22 }} /> : <RadioButtonUncheckedIcon sx={{ fontSize: 22 }} />}
-                                        </button>
-                                    </div>
-                                );
-                            })}
+                                {(activeQ.options || ['', '', '', '']).map((opt, optIdx) => (
+                                    <OptionEditorRow
+                                        key={optIdx}
+                                        index={optIdx}
+                                        label={optLabels[optIdx]}
+                                        value={opt}
+                                        reading={activeQ.option_readings?.[optIdx] || ''}
+                                        isCorrect={Boolean(activeQ.correct_answer && activeQ.correct_answer === opt && opt.trim() !== '')}
+                                        showReading={true}
+                                        onTextChange={(val) => updateOption(activeIndex, optIdx, val)}
+                                        onReadingChange={(val) => updateOptionReading(activeIndex, optIdx, val)}
+                                        onSelectCorrect={() => setCorrectAnswer(activeIndex, opt)}
+                                    />
+                                ))}
                             </div>
                         </div>
                     )}
@@ -662,13 +642,6 @@ export default function QuizBuilder({
                                     placeholder="e.g. がっこう (petunjuk membaca)"
                                     className="w-full h-12 rounded-xl border border-transparent bg-gray-50 px-4 text-sm font-medium text-gray-600 outline-none focus:border-gray-300 focus:bg-white focus:ring-4 focus:ring-gray-500/10 dark:bg-gray-800/50 dark:text-gray-300 dark:focus:border-gray-600 dark:focus:bg-gray-950"
                                 />
-                                <input
-                                    type="text"
-                                    value={activeQ.correct_answer_reading || ''}
-                                    onChange={(e) => updateQuestion(activeIndex, 'correct_answer_reading', e.target.value)}
-                                    placeholder="Cara baca kana (opsional)"
-                                    className="mt-2 h-11 w-full rounded-xl border border-sky-100 bg-sky-50/60 px-4 text-sm font-medium text-sky-900 outline-none focus:border-sky-300 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-200"
-                                />
                             </div>
                         </div>
                     )}
@@ -692,14 +665,14 @@ export default function QuizBuilder({
                                         className={`w-full h-14 rounded-xl px-4 text-lg font-bold focus:outline-none focus:ring-4 ${
                                             (errors[`questions.${activeIndex}.correct_answer`] || (showValidation && !activeQ.correct_answer?.trim()))
                                                 ? 'border-2 border-rose-400 bg-rose-50/40 text-rose-900 focus:border-rose-500 focus:ring-rose-500/20'
-                                                : 'border-2 border-green-300 dark:border-green-800 bg-white dark:bg-gray-950 text-green-900 dark:text-green-200 focus:border-green-500 focus:ring-green-500/20'
+                                                : 'border-2 border-emerald-300 dark:border-emerald-800 bg-white dark:bg-gray-950 text-emerald-900 dark:text-emerald-200 focus:border-emerald-500 focus:ring-emerald-500/20'
                                         }`}
                                     />
                                 </QuizField>
                             </div>
-                            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-                                <HelpOutlineIcon className="text-green-500" sx={{ fontSize: 18 }} />
-                                <p className="text-xs text-green-700 dark:text-green-400 font-medium">Siswa akan mendengarkan audio, lalu mengetikkan jawaban. Cocok untuk latihan <strong>dictation</strong> atau <strong>comprehension</strong>.</p>
+                            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
+                                <HelpOutlineIcon className="text-emerald-500" sx={{ fontSize: 18 }} />
+                                <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Siswa akan mendengarkan audio, lalu mengetikkan jawaban. Cocok untuk latihan <strong>dictation</strong> atau <strong>comprehension</strong>.</p>
                             </div>
                         </div>
                     )}
@@ -724,13 +697,10 @@ export default function QuizBuilder({
                             placeholder="Cara baca kana untuk teks Jepang pada pembahasan (opsional)"
                             className="mt-2 h-11 w-full rounded-xl border border-sky-100 bg-sky-50/60 px-4 text-sm font-medium text-sky-900 outline-none focus:border-sky-300 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-200"
                         />
-                    </div>
                 </div>
-            </div>
+            </UnifiedQuestionEditorCanvas>
         );
     };
-
-    // ─── RENDER: SETTINGS PANEL ─────────────────────────────
     const renderSettings = () => (
         <div className="max-w-3xl mx-auto space-y-6">
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 space-y-6">
@@ -740,12 +710,13 @@ export default function QuizBuilder({
                     <div>
                         <label className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
                             <TimerOutlinedIcon sx={{ fontSize: 12 }} />
-                            <span>Batas Waktu (detik)</span>
-                            <TooltipHelp text="Alokasi batas waktu pengerjaan kuis dalam detik. Kosongkan untuk tanpa batas waktu." />
+                            <span>Batas Waktu (Menit)</span>
+                            <TooltipHelp text="Alokasi batas waktu pengerjaan kuis dalam menit (maksimal 1440 menit / 24 jam). Kosongkan untuk tanpa batas waktu." />
                         </label>
                         <input
                             type="number"
                             min="0"
+                            max="1440"
                             value={data.time_limit ?? ''}
                             onChange={(e) => setData('time_limit', e.target.value)}
                             className="w-full h-12 rounded-xl border border-transparent bg-gray-50 px-4 text-sm font-bold text-gray-900 outline-none focus:border-brand-100 focus:bg-white focus:ring-4 focus:ring-focus/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-brand-900/30 dark:focus:bg-gray-950"
@@ -810,8 +781,6 @@ export default function QuizBuilder({
             </div>
         </div>
     );
-
-    // ─── RENDER: ANALYSIS PANEL ─────────────────────────────
     const renderAnalysis = () => {
         const qCount = data.questions.length;
         const mcCount = data.questions.filter(q => (q.type || 'multiple_choice') === 'multiple_choice').length;
@@ -827,7 +796,7 @@ export default function QuizBuilder({
                         { label: 'Total Soal', value: qCount, color: 'text-brand-700' },
                         { label: 'Multiple Choice', value: mcCount, color: 'text-brand-600 dark:text-brand-400' },
                         { label: 'Fill in Blank', value: fillCount, color: 'text-purple-600' },
-                        { label: 'Listening', value: listenCount, color: 'text-green-600' },
+                        { label: 'Listening', value: listenCount, color: 'text-emerald-600' },
                     ].map((item, i) => (
                         <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 text-center">
                             <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">{item.label}</p>
@@ -840,7 +809,7 @@ export default function QuizBuilder({
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
                     <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2"><BarChartIcon sx={{ fontSize: 18 }} className="text-brand-700" /> Kelengkapan Soal</h3>
                     <div className="w-full h-3 bg-gray-100 dark:bg-gray-800 rounded-full mb-3">
-                        <div className="h-3 bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all" style={{ width: `${qCount > 0 ? (filledCount / qCount) * 100 : 0}%` }}></div>
+                        <div className="h-3 bg-brand-600 rounded-full transition-all" style={{ width: `${qCount > 0 ? (filledCount / qCount) * 100 : 0}%` }}></div>
                     </div>
                     <p className="text-xs font-bold text-gray-500 dark:text-gray-400">{filledCount}/{qCount} soal terisi lengkap ({qCount > 0 ? Math.round((filledCount / qCount) * 100) : 0}%)</p>
                 </div>
@@ -849,7 +818,7 @@ export default function QuizBuilder({
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                     <div className="p-5 border-b border-gray-100 dark:border-gray-800">
                         <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2"><TrendingUpIcon sx={{ fontSize: 18 }} className="text-brand-700" /> Item Analysis</h3>
-                        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Analisis tiap soal — data akan terisi setelah ada percobaan siswa</p>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Analisis tiap soal: data akan terisi setelah ada percobaan siswa</p>
                     </div>
                     <div className="overflow-x-auto">
                     <table className="w-full min-w-[760px] text-sm">
@@ -877,11 +846,11 @@ export default function QuizBuilder({
                                             {q.correct_rate === null || q.correct_rate === undefined ? '-' : `${q.correct_rate}%`}
                                         </td>
                                         <td className="px-5 py-3 text-center font-bold text-gray-600 dark:text-gray-300">
-                                            {q.attempts_count ? `${q.correct_count}/${q.attempts_count}` : '—'}
+                                            {q.attempts_count ? `${q.correct_count}/${q.attempts_count}` : '-'}
                                         </td>
                                         <td className="px-5 py-3 text-center">
                                             {isFilled
-                                                ? <span className="text-[10px] font-black text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded">Siap</span>
+                                                ? <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded">Siap</span>
                                                 : <span className="text-[10px] font-black text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded">Belum Lengkap</span>
                                             }
                                         </td>
@@ -896,9 +865,9 @@ export default function QuizBuilder({
                 <div className="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 rounded-2xl p-5 flex items-start gap-3">
                     <HelpOutlineIcon className="text-brand-500 shrink-0 mt-0.5" sx={{ fontSize: 18 }} />
                     <div>
-                        <p className="text-sm font-bold text-brand-900">Tentang Item Analysis</p>
+                        <p className="text-sm font-bold text-brand-900 dark:text-emerald-300">Tentang Item Analysis</p>
                         <p className="text-xs text-brand-700 dark:text-brand-400 mt-1 leading-relaxed">
-                            <strong>Difficulty (p-value)</strong>: Proporsi siswa yang menjawab benar. Rentang 0.0 (semua salah) — 1.0 (semua benar). Ideal: 0.3–0.7.<br />
+                            <strong>Difficulty (p-value)</strong>: Proporsi siswa yang menjawab benar. Rentang 0.0 (semua salah) sampai 1.0 (semua benar). Ideal: 0.3 hingga 0.7.<br />
                             <strong>Discrimination</strong>: Seberapa baik soal membedakan siswa pintar vs kurang. Positif = baik. Nol/negatif = soal perlu direvisi.
                         </p>
                     </div>
@@ -907,155 +876,50 @@ export default function QuizBuilder({
         );
     };
 
-    // ─── RENDER: STUDENT PREVIEW ────────────────────────────
-    const renderPreview = (question = activeQ, index = activeIndex, fullScreen = false) => {
-        const qType = question.type || 'multiple_choice';
-        return (
-            <div className={`relative flex flex-col overflow-hidden border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900 ${fullScreen ? 'h-full min-h-0 rounded-2xl' : 'h-[500px] rounded-[2rem]'}`}>
-                <div className="bg-orange-600 h-12 flex items-center px-4 justify-between shrink-0">
-                    <span className="text-[10px] font-black !text-white uppercase tracking-widest">Pratinjau Siswa</span>
-                    <div className="w-2 h-2 rounded-full bg-white dark:bg-gray-900/50"></div>
-                </div>
-                <div className="flex-1 p-6 flex flex-col overflow-y-auto">
-                    <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full mb-6">
-                        <div className="h-1.5 bg-orange-600 rounded-full transition-all duration-300" style={{ width: `${data.questions.length > 0 ? ((index + 1) / data.questions.length) * 100 : 0}%` }}></div>
-                    </div>
-
-                    {qType === 'listening' && question.audio_url && (
-                        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-xl p-3 mb-4 flex items-center gap-2">
-                            <MicNoneOutlinedIcon className="text-green-600" sx={{ fontSize: 16 }} />
-                            <span className="text-[10px] font-black text-green-700 dark:text-green-400 uppercase">Audio</span>
-                        </div>
-                    )}
-
-                    <div className="text-center mb-6">
-                        <p className="text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-widest mb-2">Soal {index + 1}</p>
-                        <h3 className="text-base font-black text-gray-900 dark:text-white leading-tight">
-                            {question.question_text || <span className="text-gray-300">...</span>}
-                        </h3>
-                    </div>
-
-                    {qType === 'multiple_choice' && (
-                        <div className="space-y-2 mb-auto">
-                            {(question.options || []).map((opt, i) => (
-                                <button type="button" key={i} onClick={() => setPreviewAnswers((answers) => ({ ...answers, [index]: opt }))} className={`w-full border rounded-xl px-4 py-2.5 text-center text-xs font-bold ${
-                                    previewAnswers[index] === opt && opt !== '' ? 'border-orange-500 bg-orange-50 text-orange-950 ring-2 ring-orange-500/20 dark:border-orange-500 dark:bg-orange-950/40 dark:text-orange-200' : 'border-gray-200 bg-white text-gray-800 hover:border-orange-300 hover:bg-orange-50/30 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-orange-700'
-                                }`}>
-                                    {opt || <span className="text-gray-300">-</span>}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    {qType === 'fill_blank' && (
-                        <div className="mb-auto">
-                            <div className="border-2 border-dashed border-purple-300 bg-purple-50/40 rounded-xl px-4 py-3 text-center dark:border-purple-800 dark:bg-purple-950/20">
-                                <input type="text" value={previewAnswers[index] || ''} onChange={(event) => setPreviewAnswers((answers) => ({ ...answers, [index]: event.target.value }))} placeholder="Ketik jawaban siswa" className="w-full border-none bg-transparent text-center text-sm font-bold text-purple-700 placeholder-purple-400 focus:outline-none dark:text-purple-300" />
-                            </div>
-                        </div>
-                    )}
-
-                    {qType === 'listening' && (
-                        <div className="mb-auto">
-                            <div className="border-2 border-dashed border-emerald-300 bg-emerald-50/40 rounded-xl px-4 py-3 text-center dark:border-emerald-800 dark:bg-emerald-950/20">
-                                <input type="text" value={previewAnswers[index] || ''} onChange={(event) => setPreviewAnswers((answers) => ({ ...answers, [index]: event.target.value }))} placeholder="Ketik jawaban siswa" className="w-full border-none bg-transparent text-center text-sm font-bold text-emerald-700 placeholder-emerald-400 focus:outline-none dark:text-emerald-300" />
-                            </div>
-                        </div>
-                    )}
-
-                    <p className="mt-4 text-center text-xs font-bold text-gray-400">Mode pratinjau tidak menyimpan jawaban, attempt, nilai, atau XP.</p>
-                </div>
-                <div className="h-10 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between px-4">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Waktu: {data.time_limit ? `${data.time_limit} detik` : 'Tanpa batas'}</span>
-                    <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Lulus: {data.passing_score || 70}%</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Poin: {totalPoints}</span>
-                </div>
-            </div>
-        );
-    };
-    const previewQuestion = data.questions[previewIndex] || emptyQuestion(quiz?.type || 'multiple_choice');
-
     return (
-        <AuthenticatedLayout>
-            <div className="min-h-screen bg-surface-muted flex flex-col font-sans">
-            <Head title="Editor Kuis & Repetisi - TOKU-UP" />
-
-            {/* Top Nav */}
-            <header className="sticky top-16 z-40 shrink-0 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900 lg:top-0 lg:min-h-16 lg:px-6">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex min-w-0 items-center gap-4">
-                    <button type="button" onClick={() => requestUnsavedAction(() => router.visit(builderReturnUrl), { title: 'Keluar dari Builder?', message: 'Perubahan terakhir belum dipublish. Keluar sekarang?' })} className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                    </button>
-                    <div className="h-6 w-px bg-gray-200"></div>
-                    <div className="flex min-w-0 items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-xs font-bold text-white">JP</div>
-                        <div className="min-w-0">
-                            <h1 className="truncate text-sm font-black leading-none tracking-tight text-gray-900 dark:text-white">Editor Kuis &amp; Repetisi</h1>
-                            <p className="mt-0.5 truncate text-[11px] font-medium text-gray-400 dark:text-gray-500">
-                                Minggu {quiz?.module?.week_number || '-'} / Hari {quiz?.day?.day_number || '-'} / {quiz?.type}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="-mx-1 flex w-[calc(100%+0.5rem)] items-center gap-1 overflow-x-auto px-1 pb-1 lg:mx-0 lg:w-auto lg:pb-0">
-                    {[
-                        { value: 'flashcards', label: 'Materi Repetisi', icon: <StyleOutlinedIcon sx={{ fontSize: 16 }} /> },
-                        { value: 'handwriting', label: 'Handwriting', icon: <DrawOutlinedIcon sx={{ fontSize: 16 }} /> },
-                        { value: 'questions', label: 'Soal', icon: <FormatListBulletedIcon sx={{ fontSize: 16 }} /> },
-                        { value: 'settings', label: 'Pengaturan', icon: <SettingsIcon sx={{ fontSize: 16 }} /> },
-                        { value: 'analysis', label: 'Analisis', icon: <AssessmentIcon sx={{ fontSize: 16 }} /> },
-                    ].map(tab => (
-                        <button
-                            key={tab.value}
-                            onClick={() => {
-                                const leavesQuestionForm = ['questions', 'settings', 'analysis'].includes(activeTab)
-                                    && ['flashcards', 'handwriting'].includes(tab.value);
-
-                                if (leavesQuestionForm) {
-                                    requestUnsavedAction(() => setActiveTab(tab.value), {
-                                        title: `Buka ${tab.label}?`,
-                                        message: 'Simpan perubahan soal terlebih dahulu agar tidak hilang.',
-                                        confirmLabel: 'Lanjutkan',
-                                    });
-                                    return;
-                                }
-
-                                setActiveTab(tab.value);
-                            }}
-                            className={`flex h-9 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-bold transition-colors ${
-                                activeTab === tab.value ? 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white'
-                            }`}
-                        >
-                            {tab.icon}
-                            {tab.label}
-                            {tab.value === 'flashcards' && (
-                                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] dark:bg-gray-800">
-                                    {flashcardSets.reduce((total, set) => total + (set.flashcards?.length || 0), 0)}
-                                </span>
-                            )}
-                        </button>
-                    ))}
-                </div>
-
-                {['questions', 'settings'].includes(activeTab) && (
-                <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-                    {hasUnsavedChanges && <span className="text-xs font-bold text-yellow-600">Belum disimpan</span>}
-                    {recentlySuccessful && <span className="text-xs font-bold text-green-600 animate-pulse">Tersimpan!</span>}
-                    {importError && <span className="max-w-xs text-xs font-bold text-red-600">{importError}</span>}
-                    {activeTab === 'questions' && <div className="relative">
+        <UnifiedQuizBuilderShell
+            open={open}
+            isModal={isModal}
+            title={quiz?.title || 'Editor Kuis Kosakata'}
+            subtitle={`Minggu ${quiz?.module?.week_number || '-'} · Hari ${quiz?.day?.day_number || '-'} · ${quiz?.type || 'Kosakata'}`}
+            categoryBadge="Kosakata Builder"
+            status={quiz?.status || 'draft'}
+            savedAt={recentlySuccessful ? 'Baru saja' : ''}
+            saving={processing}
+            hasUnsavedChanges={hasUnsavedChanges}
+            onBack={() =>
+                requestUnsavedAction(() => {
+                    if (onClose) {
+                        onClose();
+                    } else {
+                        router.visit(builderReturnUrl);
+                    }
+                }, {
+                    title: 'Keluar dari Builder?',
+                    message: 'Perubahan terakhir belum dipublish. Keluar sekarang?',
+                })
+            }
+            onSave={handleSave}
+            onToggleStatus={toggleQuizStatus}
+            onPreview={openStudentPreview}
+            onImport={() => importInputRef.current?.click()}
+            importLabel={importProcessing ? 'Memeriksa File...' : 'Import XLSX / CSV'}
+            extraActions={
+                activeTab === 'questions' && (
+                    <div className="relative">
                         <button
                             type="button"
-                            onClick={() => setShowAddMenu(value => !value)}
-                            className="flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 transition-colors hover:border-brand-300 hover:text-brand-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                            onClick={() => setShowAddMenu((value) => !value)}
+                            className="flex h-9 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-black text-gray-700 transition hover:border-emerald-300 hover:text-emerald-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
                         >
-                            <AddIcon sx={{ fontSize: 18 }} />
-                            Tambah Soal
+                            <AddIcon sx={{ fontSize: 16 }} />
+                            <span>Tambah Soal</span>
                         </button>
                         {showAddMenu && (
                             <div className="absolute right-0 top-11 z-50 w-72 overflow-hidden rounded-2xl border border-gray-200 bg-white p-2 shadow-xl dark:border-gray-700 dark:bg-gray-900">
-                                <p className="px-3 pb-2 pt-1 text-[10px] font-black uppercase tracking-widest text-gray-400">Tambah soal</p>
+                                <p className="px-3 pb-2 pt-1 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                    Tambah soal
+                                </p>
                                 {QUESTION_TYPES.map((type) => (
                                     <button
                                         type="button"
@@ -1064,9 +928,9 @@ export default function QuizBuilder({
                                             addQuestion(type.value);
                                             setShowAddMenu(false);
                                         }}
-                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-bold text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
                                     >
-                                        <AddIcon sx={{ fontSize: 16 }} />
+                                        <AddIcon sx={{ fontSize: 15 }} />
                                         {type.label}
                                     </button>
                                 ))}
@@ -1077,40 +941,84 @@ export default function QuizBuilder({
                                         setShowAddMenu(false);
                                         setShowVocabularyGenerate(true);
                                     }}
-                                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-bold text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+                                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
                                 >
-                                    <ShuffleIcon sx={{ fontSize: 16 }} />
+                                    <ShuffleIcon sx={{ fontSize: 15 }} />
                                     Generate dari Kosakata
                                 </button>
                                 <div className="my-2 border-t border-gray-100 dark:border-gray-800" />
                                 <a
-                                    href={route('admin.quizzes.questions.template', { quiz: quiz.id, format: 'xlsx' })}
+                                    href={route('admin.quizzes.questions.template', {
+                                        quiz: quiz.id,
+                                        format: 'xlsx',
+                                    })}
                                     onClick={() => setShowAddMenu(false)}
-                                    className="block rounded-xl px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+                                    className="block rounded-xl px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
                                 >
                                     Unduh Template Excel
                                 </a>
                                 <a
-                                    href={route('admin.quizzes.questions.template', { quiz: quiz.id, format: 'csv' })}
+                                    href={route('admin.quizzes.questions.template', {
+                                        quiz: quiz.id,
+                                        format: 'csv',
+                                    })}
                                     onClick={() => setShowAddMenu(false)}
-                                    className="block rounded-xl px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+                                    className="block rounded-xl px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
                                 >
                                     Unduh Template CSV
                                 </a>
                             </div>
                         )}
-                    </div>}
-                    {activeTab === 'questions' && (
-                        <button
-                            type="button"
-                            onClick={() => importInputRef.current?.click()}
-                            disabled={importProcessing}
-                            className="flex h-9 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-bold text-emerald-800 transition-colors hover:border-emerald-400 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
-                        >
-                            <UploadFileIcon sx={{ fontSize: 18 }} />
-                            {importProcessing ? 'Memeriksa File...' : 'Import Excel / CSV'}
-                        </button>
-                    )}
+                    </div>
+                )
+            }
+            tabs={[
+                {
+                    id: 'questions',
+                    label: 'Soal Kuis',
+                    icon: FormatListBulletedIcon,
+                    count: data.questions.length,
+                },
+                {
+                    id: 'flashcards',
+                    label: 'Materi Repetisi',
+                    icon: StyleOutlinedIcon,
+                    count: flashcardSets.reduce((total, set) => total + (set.flashcards?.length || 0), 0),
+                },
+                {
+                    id: 'handwriting',
+                    label: 'Handwriting',
+                    icon: DrawOutlinedIcon,
+                },
+                {
+                    id: 'settings',
+                    label: 'Pengaturan',
+                    icon: SettingsIcon,
+                },
+                {
+                    id: 'analysis',
+                    label: 'Analisis',
+                    icon: AssessmentIcon,
+                },
+            ]}
+            activeTab={activeTab}
+            onTabChange={(newTab) => {
+                const leavesQuestionForm =
+                    ['questions', 'settings', 'analysis'].includes(activeTab) &&
+                    ['flashcards', 'handwriting'].includes(newTab);
+                if (leavesQuestionForm) {
+                    requestUnsavedAction(() => setActiveTab(newTab), {
+                        title: `Buka ${newTab}?`,
+                        message: 'Simpan perubahan soal terlebih dahulu agar tidak hilang.',
+                        confirmLabel: 'Lanjutkan',
+                    });
+                    return;
+                }
+                setActiveTab(newTab);
+            }}
+            unstyled={true}
+            extraModals={
+                <>
                     <input
                         ref={importInputRef}
                         type="file"
@@ -1118,80 +1026,82 @@ export default function QuizBuilder({
                         className="hidden"
                         onChange={handleImportQuestions}
                     />
-                    {activeTab === 'questions' && <button
-                        type="button"
-                        onClick={openStudentPreview}
-                        className="flex h-9 items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 text-sm font-bold text-orange-700 transition-colors hover:border-orange-300 hover:bg-orange-100 dark:border-orange-900/40 dark:bg-orange-900/20 dark:text-orange-300"
-                    >
-                        <VisibilityIcon sx={{ fontSize: 18 }} />
-                        Pratinjau Siswa
-                    </button>}
-                    <button onClick={handleSave} disabled={processing} className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl px-6 h-9 shadow-md shadow-brand-500/20 text-sm font-bold flex items-center gap-2 transition-colors">
-                        <SaveOutlinedIcon sx={{ fontSize: 18 }} />
-                        {processing ? 'Menyimpan...' : 'Simpan & Publish'}
-                    </button>
-                </div>
-                )}
-                </div>
-            </header>
-
-            {/* Workspace */}
-            {!['flashcards', 'handwriting'].includes(activeTab) ? (
-            <main className="flex-1 flex flex-col overflow-hidden lg:flex-row">
-
-                {/* Left Panel (only on questions tab) */}
-                {activeTab === 'questions' && (
-                    <aside className="flex w-full shrink-0 flex-col border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 lg:w-72 lg:border-b-0 lg:border-r">
-                        <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
-                            <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Questions ({data.questions.length})</span>
-                            <span className="text-xs font-bold text-brand-600 dark:text-brand-400">Points: {totalPoints}</span>
-                        </div>
-                        <div className="flex-1 overflow-x-auto p-3 lg:overflow-y-auto">
-                            <div className="flex min-w-max gap-2 lg:min-w-0 lg:block lg:space-y-2">
-                            {data.questions.map((q, i) => {
-                                const tLabel = TYPE_LABELS[q.type || 'multiple_choice'];
-                                const tColor = TYPE_COLORS[q.type || 'multiple_choice'];
-                                const itemError = questionErrors[i];
-                                return (
-                                    <button
-                                        key={i}
-                                        onClick={() => setActiveIndex(i)}
-                                        className={`w-56 shrink-0 rounded-xl border p-3 text-left transition-all lg:w-full ${
-                                            activeIndex === i ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 shadow-sm ring-1 ring-brand-500' : 'border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-[10px] font-black uppercase tracking-widest ${activeIndex === i ? 'text-brand-700 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'}`}>Q{i + 1}</span>
-                                            <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${tColor}`}>{tLabel}</span>
-                                            {itemError && <span className="ml-auto h-2 w-2 rounded-full bg-yellow-500" title={itemError}></span>}
-                                        </div>
-                                        <p className={`text-sm font-bold truncate ${activeIndex === i ? 'text-brand-900 dark:text-brand-100' : 'text-gray-700 dark:text-gray-300'}`}>
-                                            {q.question_text || 'Pertanyaan baru...'}
-                                        </p>
-                                    </button>
-                                );
-                            })}
+                    <KosakataQuizPreviewDialog
+                        open={showStudentPreview}
+                        onClose={() => setShowStudentPreview(false)}
+                        quiz={{
+                            id: quiz?.id || 'draft-preview',
+                            title: quiz?.title || 'Kuis Kosakata',
+                            time_limit: data.time_limit,
+                            passing_score: data.passing_score,
+                        }}
+                        questions={data.questions}
+                        flashcards={activeFlashcardSet?.cards || []}
+                    />
+                    <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
+                </>
+            }
+        >
+            <Head title="Editor Kuis & Repetisi - TOKU-UP" />
+            <div className="space-y-6">
+                {activeTab === 'questions' ? (
+                    <div className="grid gap-6 lg:grid-cols-12 items-start">
+                        {/* Kolom Kiri: Sidebar Navigator (4 cols) */}
+                        <div className="lg:col-span-4 rounded-2xl border border-gray-200 bg-white p-3 shadow-xs dark:border-gray-800 dark:bg-gray-900">
+                            <div className="flex items-center justify-between border-b border-gray-100 pb-2.5 px-1 dark:border-gray-800">
+                                <span className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                    Daftar Soal ({data.questions.length})
+                                </span>
+                                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                    Total Poin: {totalPoints}
+                                </span>
+                            </div>
+                            <div className="mt-3 max-h-[640px] space-y-2 overflow-y-auto pr-1">
+                                {data.questions.map((q, i) => {
+                                    const tLabel = TYPE_LABELS[q.type || 'multiple_choice'];
+                                    const itemError = questionErrors[i];
+                                    const isReady = !itemError && Boolean(q.question_text?.trim()) && Boolean(q.correct_answer);
+                                    return (
+                                        <QuestionNavItem
+                                            key={i}
+                                            index={i}
+                                            isSelected={activeIndex === i}
+                                            isReady={isReady}
+                                            title={q.question_text || 'Pertanyaan baru...'}
+                                            subtitle={`${q.points || 10} poin`}
+                                            typeLabel={tLabel}
+                                            canMoveUp={i > 0}
+                                            canMoveDown={i < data.questions.length - 1}
+                                            canDuplicate={true}
+                                            canDelete={data.questions.length > 1}
+                                            onSelect={() => setActiveIndex(i)}
+                                            onMoveUp={() => moveQuestion(i, -1)}
+                                            onMoveDown={() => moveQuestion(i, 1)}
+                                            onDuplicate={() => duplicateQuestion(i)}
+                                            onDelete={() => removeQuestion(i)}
+                                        />
+                                    );
+                                })}
                             </div>
                         </div>
-                    </aside>
-                )}
 
-                {/* Center */}
-                <section className="relative flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-                    {activeTab === 'questions' && renderEditor()}
-                    {activeTab === 'settings' && renderSettings()}
-                    {activeTab === 'analysis' && renderAnalysis()}
-
-                </section>
-            </main>
-            ) : activeTab === 'handwriting' ? (
-                <HandwritingFlashcardWorkspace
-                    sets={flashcardSets}
-                    module={quiz?.module}
-                    day={quiz?.day}
-                />
-            ) : (
-                <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8">
+                        {/* Kolom Kanan: Editor Kanvas In-Place (8 cols) */}
+                        <div className="lg:col-span-8">
+                            {renderEditor()}
+                        </div>
+                    </div>
+                ) : activeTab === 'settings' ? (
+                    renderSettings()
+                ) : activeTab === 'analysis' ? (
+                    renderAnalysis()
+                ) : activeTab === 'handwriting' ? (
+                    <HandwritingFlashcardWorkspace
+                        sets={flashcardSets}
+                        module={quiz?.module}
+                        day={quiz?.day}
+                    />
+                ) : (
+                <div className="space-y-4">
                     <div className="mx-auto max-w-7xl">
                         {flashcardSets.length > 1 && (
                             <div className="flex gap-2 overflow-x-auto border-b border-gray-200 py-3 dark:border-gray-800">
@@ -1202,7 +1112,7 @@ export default function QuizBuilder({
                                         onClick={() => setActiveFlashcardSetId(set.id)}
                                         className={`shrink-0 rounded-xl px-4 py-2 text-sm font-black ${
                                             activeFlashcardSet?.id === set.id
-                                                ? 'bg-brand-600 text-white'
+                                                ? 'bg-emerald-600 text-white'
                                                 : 'border border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'
                                         }`}
                                     >
@@ -1231,60 +1141,18 @@ export default function QuizBuilder({
                                 <button
                                     type="button"
                                     onClick={() => router.visit(builderReturnUrl)}
-                                    className="mt-5 rounded-xl bg-brand-600 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-brand-700"
+                                    className="mt-5 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-emerald-700"
                                 >
                                     Kembali ke Roadmap
                                 </button>
                             </div>
                         )}
                     </div>
-                </main>
-            )}
-            {showStudentPreview && (
-                <div className="fixed inset-0 z-[90] flex flex-col bg-[#f5f8f6] p-3 text-gray-900 antialiased dark:bg-gray-950 dark:text-white sm:p-5">
-                    <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 pb-3">
-                        <div className="min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-600 dark:text-orange-300">Pratinjau Siswa</p>
-                            <h2 className="truncate text-base font-black text-gray-950 dark:text-white">Draft saat ini - tidak membuat pengerjaan atau XP</h2>
-                        </div>
-                        <button type="button" onClick={() => setShowStudentPreview(false)} className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-xs hover:bg-gray-50 dark:border-white/20 dark:bg-gray-900 dark:text-white dark:hover:bg-white/10">
-                            Tutup
-                        </button>
-                    </div>
-                    <div className="mx-auto min-h-0 w-full max-w-5xl flex-1">
-                        {renderPreview(previewQuestion, previewIndex, true)}
-                    </div>
-                    <div className="mx-auto grid w-full max-w-5xl grid-cols-2 gap-3 pt-3 sm:flex sm:justify-between">
-                        <button
-                            type="button"
-                            onClick={() => setPreviewIndex((index) => Math.max(0, index - 1))}
-                            disabled={previewIndex === 0}
-                            className="h-11 rounded-xl border border-gray-300 bg-white px-5 text-sm font-black text-gray-700 shadow-xs hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/20 dark:bg-gray-900 dark:text-white dark:hover:bg-white/10"
-                        >
-                            Sebelumnya
-                        </button>
-                        <span className="hidden self-center text-sm font-bold text-gray-600 dark:text-gray-300 sm:block">
-                            {previewIndex + 1} dari {data.questions.length}
-                        </span>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                if (previewIndex >= data.questions.length - 1) {
-                                    setShowStudentPreview(false);
-                                    return;
-                                }
-                                setPreviewIndex((index) => index + 1);
-                            }}
-                            className="h-11 rounded-xl bg-orange-600 px-5 text-sm font-black !text-white shadow-sm hover:bg-orange-700 active:translate-y-0.5 transition"
-                        >
-                            {previewIndex >= data.questions.length - 1 ? 'Selesai' : 'Berikutnya'}
-                        </button>
-                    </div>
                 </div>
             )}
             {showVocabularyGenerate && (
                 <div className="fixed inset-0 z-[110] flex items-end overflow-y-auto bg-gray-950/50 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4">
-                    <form onSubmit={handleGenerateVocabularyQuestions} className="w-full max-w-lg rounded-t-3xl bg-white p-4 shadow-2xl dark:bg-gray-900 sm:rounded-3xl sm:p-6">
+                    <form onSubmit={handleGenerateVocabularyQuestions} className="w-full max-w-lg rounded-t-3xl bg-white p-4 shadow-xl border border-gray-200 dark:border-gray-800 dark:bg-gray-900 sm:rounded-3xl sm:p-6">
                         <div className="mb-5">
                         <p className="text-xs font-black uppercase tracking-[0.25em] text-orange-600">Bank Konten</p>
                         <h2 className="text-xl font-black text-gray-900 dark:text-white">Generate Soal dari Materi</h2>
@@ -1391,7 +1259,7 @@ export default function QuizBuilder({
             )}
             {importPreview && (
                 <div className="fixed inset-0 z-[110] flex items-end overflow-y-auto bg-gray-950/60 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4">
-                    <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-gray-900">
+                    <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-xl border border-gray-200 dark:border-gray-800 dark:bg-gray-900">
                         <div className="border-b border-gray-100 p-5 dark:border-gray-800 sm:p-6">
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
@@ -1414,9 +1282,9 @@ export default function QuizBuilder({
                                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Baris</p>
                                     <p className="mt-1 text-2xl font-black text-gray-900 dark:text-white">{importPreview.total_rows}</p>
                                 </div>
-                                <div className="rounded-2xl bg-green-50 p-4 dark:bg-green-900/20">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-green-600">Valid</p>
-                                    <p className="mt-1 text-2xl font-black text-green-700 dark:text-green-300">{importPreview.valid_count}</p>
+                                <div className="rounded-2xl bg-emerald-50 p-4 dark:bg-emerald-900/20">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Valid</p>
+                                    <p className="mt-1 text-2xl font-black text-emerald-700 dark:text-emerald-300">{importPreview.valid_count}</p>
                                 </div>
                                 <div className="rounded-2xl bg-brand-50 p-4 dark:bg-brand-900/20">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-red-600">Error</p>
@@ -1446,9 +1314,9 @@ export default function QuizBuilder({
                                                 </span>
                                             </div>
                                             <p className="text-sm font-black text-gray-900 dark:text-white">{row.question_text}</p>
-                                            <p className="mt-1 text-xs font-bold text-green-700 dark:text-green-300">Jawaban: {row.correct_answer}</p>
+                                            <p className="mt-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">Jawaban: {row.correct_answer}</p>
                                             {Array.isArray(row.options) && row.options.length > 0 && (
-                                                <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">Opsi: {row.options.join(' | ')}</p>
+                                                 <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">Opsi: {row.options.join(' | ')}</p>
                                             )}
                                         </div>
                                     ))}
@@ -1462,7 +1330,7 @@ export default function QuizBuilder({
                                 </div>
                                 <div className="space-y-2">
                                     {(importPreview.errors || []).length === 0 && (
-                                        <div className="rounded-2xl bg-green-50 p-4 text-sm font-bold text-green-700 dark:bg-green-900/20 dark:text-green-300">
+                                        <div className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
                                             Tidak ada error. File siap diimport.
                                         </div>
                                     )}
@@ -1502,8 +1370,7 @@ export default function QuizBuilder({
                     </div>
                 </div>
             )}
-            <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
             </div>
-        </AuthenticatedLayout>
+        </UnifiedQuizBuilderShell>
     );
 }

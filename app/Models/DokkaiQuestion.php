@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DokkaiQuestion extends Model
 {
@@ -40,5 +41,10 @@ class DokkaiQuestion extends Model
     public function evidenceParagraph(): BelongsTo
     {
         return $this->belongsTo(DokkaiParagraph::class, 'evidence_paragraph_id');
+    }
+
+    public function attemptAnswers(): HasMany
+    {
+        return $this->hasMany(DokkaiAttemptAnswer::class, 'dokkai_question_id');
     }
 }

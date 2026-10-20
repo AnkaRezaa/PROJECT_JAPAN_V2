@@ -392,7 +392,7 @@ class AdminGrammarQuizController extends Controller
             'stages.*.questions.*.tokens.*.id' => ['required_with:stages.*.questions.*.tokens', 'string', 'max:80'],
             'stages.*.questions.*.tokens.*.text' => ['required_with:stages.*.questions.*.tokens', 'string', 'max:1000'],
             'stages.*.questions.*.tokens.*.reading' => ['nullable', 'string', 'max:1000'],
-            'stages.*.questions.*.distractor' => ['nullable', 'boolean'],
+            'stages.*.questions.*.tokens.*.distractor' => ['nullable', 'boolean'],
             'stages.*.questions.*.correctOrder' => ['nullable', 'array', 'min:1', 'max:20'],
             'stages.*.questions.*.correctOrder.*' => ['string', 'max:80'],
             'stages.*.questions.*.explanation' => ['nullable', 'string', 'max:5000'],

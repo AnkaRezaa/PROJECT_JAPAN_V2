@@ -25,18 +25,17 @@ export default function DokkaiResultView({
     return (
         <div className="mx-auto max-w-2xl w-full">
             <div className="rounded-3xl border border-gray-200/90 bg-white p-6 sm:p-10 shadow-sm dark:border-gray-800 dark:bg-gray-900 text-center transition-all animate-in fade-in duration-300">
-                {/* Trophy or Badge Icon with Celebratory Animation */}
-                <div className={`mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-3xl shadow-md transition-transform animate-in zoom-in-75 duration-300 ${
+                <div className={`mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border transition-colors ${
                     isPassed
-                        ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 text-white ring-8 ring-emerald-100 dark:ring-emerald-950/60'
-                        : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300'
+                        : 'border-gray-200 bg-gray-100 text-gray-500 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-400'
                 }`}>
-                    <EmojiEventsIcon sx={{ fontSize: 52 }} className={isPassed ? 'animate-bounce' : ''} />
+                    <EmojiEventsIcon sx={{ fontSize: 44 }} />
                 </div>
 
                 <div className="mb-2 inline-flex items-center gap-2">
                     <Badge color={isPassed ? 'green' : 'gray'} className="text-xs font-bold py-1 px-3">
-                        {preview ? 'Pratinjau selesai' : isPassed ? '🎉 Selesai & Lulus' : 'Selesai'}
+                        {preview ? 'Pratinjau selesai' : isPassed ? 'Selesai & Lulus' : 'Selesai'}
                     </Badge>
                     {quiz?.jlpt_level && (
                         <Badge color="brand" className="text-xs font-bold py-1 px-3">
@@ -52,7 +51,6 @@ export default function DokkaiResultView({
                     Kamu telah menyelesaikan seluruh pertanyaan untuk wacana <span className="font-bold font-japanese text-gray-950 dark:text-white">{quiz?.title}</span>.
                 </p>
 
-                {/* Main Score Board with Staggered Visual Feel */}
                 <div className="mb-8 grid grid-cols-3 gap-3 sm:gap-4 animate-in slide-in-from-bottom-2 duration-300">
                     <div className="rounded-2xl bg-gray-50/90 p-4 dark:bg-gray-800/60 border border-gray-200/80 dark:border-gray-800">
                         <div className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">
@@ -82,7 +80,6 @@ export default function DokkaiResultView({
                     </div>
                 </div>
 
-                {/* Action CTAs */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                     <button
                         type="button"

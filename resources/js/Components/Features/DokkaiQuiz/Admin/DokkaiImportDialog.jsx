@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useScrollLock } from '@/lib/scrollLock';
 
@@ -9,6 +9,7 @@ import ErrorOutlineRoundedIcon from '@mui/icons-material/ErrorOutlineRounded';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 const EXPECTED_COLUMNS = [
     { key: 'judul_wacana', label: 'Judul Wacana', desc: 'Isi pada baris pertama wacana' },
@@ -25,6 +26,17 @@ const EXPECTED_COLUMNS = [
 
 export default function DokkaiImportDialog({ open, day, onClose, onImportSuccess }) {
     useScrollLock(open);
+
+    useEffect(() => {
+        if (!open) return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [open, onClose]);
 
     const [selectedFile, setSelectedFile] = useState(null);
     const [preview, setPreview] = useState(null);
@@ -115,7 +127,7 @@ export default function DokkaiImportDialog({ open, day, onClose, onImportSuccess
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onClick={handleClose} />
 
-            <div className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
+            <div className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900">
                 {/* HEADER */}
                 <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-800">
                     <div className="flex items-center gap-3">
@@ -182,8 +194,9 @@ export default function DokkaiImportDialog({ open, day, onClose, onImportSuccess
 
                             {showGuide && (
                                 <div className="mt-3 pt-3 border-t border-emerald-200/60 dark:border-emerald-900/60 text-xs text-gray-700 dark:text-gray-300 space-y-2">
-                                    <p className="font-semibold text-emerald-950 dark:text-emerald-200">
-                                        💡 Aturan Praktis Pengisian 1-Sheet:
+                                    <p className="font-semibold text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
+                                        <InfoOutlinedIcon sx={{ fontSize: 16 }} className="text-emerald-700 dark:text-emerald-300" />
+                                        <span>Aturan Praktis Pengisian 1-Sheet:</span>
                                     </p>
                                     <ul className="list-disc pl-5 space-y-1 text-[11px]">
                                         <li><strong>Auto-Inherit</strong>: Kolom <code>judul_wacana</code> dan <code>teks_bacaan</code> cukup diisi di baris pertama wacana. Baris soal berikutnya untuk wacana yang sama boleh dikosongkan.</li>
@@ -220,7 +233,7 @@ export default function DokkaiImportDialog({ open, day, onClose, onImportSuccess
                             </p>
                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                 {selectedFile
-                                    ? `${(selectedFile.size / 1024).toFixed(1)} KB — Klik untuk ganti file`
+                                    ? `${(selectedFile.size / 1024).toFixed(1)} KB · Klik untuk ganti file`
                                     : 'Mendukung file Excel (.xlsx) atau file teks CSV (Maks 5 MB)'}
                             </p>
                         </div>
@@ -253,7 +266,7 @@ export default function DokkaiImportDialog({ open, day, onClose, onImportSuccess
                                     <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-200">
                                         <CheckCircleOutlinedIcon sx={{ fontSize: 20 }} className="text-emerald-600" />
                                         <span className="text-xs font-black uppercase tracking-wider">
-                                            Validasi Sukses — Siap Diimpor
+                                            Validasi Berhasil: Siap Diimpor
                                         </span>
                                     </div>
                                     <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
@@ -292,7 +305,7 @@ export default function DokkaiImportDialog({ open, day, onClose, onImportSuccess
                                     <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200">
                                         <ErrorOutlineRoundedIcon sx={{ fontSize: 20 }} className="text-rose-600" />
                                         <span className="text-xs font-black uppercase tracking-wider">
-                                            Validasi Gagal — Ditemukan {preview.errors?.length || 0} Kesalahan
+                                            Validasi Gagal: Ditemukan {preview.errors?.length || 0} Kesalahan
                                         </span>
                                     </div>
                                     <p className="mt-1 text-xs text-rose-700 dark:text-rose-300">

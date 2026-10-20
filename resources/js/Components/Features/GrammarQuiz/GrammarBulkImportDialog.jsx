@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useScrollLock } from '@/lib/scrollLock';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
@@ -66,6 +67,19 @@ function SheetGuide({ sheet }) {
 }
 
 export default function GrammarBulkImportDialog({ open, program, onClose }) {
+    useScrollLock(open);
+
+    useEffect(() => {
+        if (!open) return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [open, onClose]);
+
     const [activeSheet, setActiveSheet] = useState('materi');
     const [showSample, setShowSample] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);

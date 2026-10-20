@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useScrollLock } from '@/lib/scrollLock';
 import CloseIcon from '@mui/icons-material/Close';
 import BoltIcon from '@mui/icons-material/Bolt';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -31,6 +32,19 @@ export default function AutoSplitParagraphDialog({ open, onClose, onApply }) {
     const [rawText, setRawText] = useState('');
     const [splitMode, setSplitMode] = useState('double_newline');
 
+    useScrollLock(open);
+
+    useEffect(() => {
+        if (!open) return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [open, onClose]);
+
     if (!open) return null;
 
     const parsed = splitParagraphs(rawText, splitMode);
@@ -58,7 +72,7 @@ export default function AutoSplitParagraphDialog({ open, onClose, onApply }) {
             aria-labelledby="auto-split-paragraph-title"
             className="fixed inset-0 z-[10050] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs"
         >
-            <div className="relative flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div className="relative flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-gray-800">
                     <div className="flex items-center gap-2">
@@ -67,7 +81,7 @@ export default function AutoSplitParagraphDialog({ open, onClose, onApply }) {
                         </span>
                         <div>
                             <h3 id="auto-split-paragraph-title" className="text-sm font-black text-gray-900 dark:text-white">
-                                ⚡ Pecah Teks Menjadi Paragraf Otomatis
+                                Pecah Teks Menjadi Paragraf Otomatis
                             </h3>
                             <p className="text-[11px] text-gray-400">
                                 Tempel seluruh teks wacana bacaan dan sistem akan memecahnya menjadi blok paragraf terpisah.

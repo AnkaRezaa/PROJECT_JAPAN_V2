@@ -13,7 +13,7 @@ class AdminUnggahController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:jpeg,jpg,png,gif,webp,mp3,wav|max:5120', // Limit 5MB
+            'file' => 'required|file|mimes:jpeg,jpg,png,gif,webp,mp3,wav,m4a,ogg|max:20480', // Limit 20MB
         ]);
 
         $file = $request->file('file');

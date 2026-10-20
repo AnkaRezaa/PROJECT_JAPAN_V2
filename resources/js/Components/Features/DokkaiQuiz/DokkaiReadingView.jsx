@@ -267,7 +267,7 @@ export default function DokkaiReadingView({
                                             onClick={audioState?.onPlayToggle}
                                             className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white shadow-xs transition active:scale-95 cursor-pointer ${
                                                 audioState?.isPlaying
-                                                    ? 'bg-amber-600 hover:bg-amber-700 animate-pulse'
+                                                    ? 'bg-amber-600 hover:bg-amber-700'
                                                     : 'bg-emerald-600 hover:bg-emerald-700'
                                             }`}
                                             title={audioState?.isPlaying ? 'Jeda Suara Narator' : 'Dengarkan Narator Wacana (Suara Jepang)'}
@@ -307,7 +307,7 @@ export default function DokkaiReadingView({
                         <div className="mb-3.5 flex items-center gap-2 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 px-3 py-1.5 border border-emerald-200/70 dark:border-emerald-800/50 text-xs text-emerald-900 dark:text-emerald-200">
                             <LightbulbOutlinedIcon sx={{ fontSize: 16 }} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                             <span className="font-medium">
-                                💡 <strong>Tips Membaca:</strong> Ketuk kata yang bergaris hijau putus-putus untuk memunculkan arti kontekstual & aksen nada.
+                                <strong>Tips Membaca:</strong> Ketuk kata yang bergaris hijau putus-putus untuk memunculkan arti kontekstual & aksen nada.
                             </span>
                         </div>
 

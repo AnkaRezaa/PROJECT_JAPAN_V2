@@ -69,10 +69,20 @@ class SoalKuisService
                 $questionIds[] = $question->id;
             }
 
-            $quiz->questions()
+            $questionsToDelete = $quiz->questions()
                 ->where('type', '!=', 'handwriting')
                 ->whereNotIn('id', $questionIds)
-                ->delete();
+                ->get();
+
+            foreach ($questionsToDelete as $qToDelete) {
+                if ($qToDelete->attemptAnswers()->exists()) {
+                    $qNum = ((int) $qToDelete->order) + 1;
+                    throw ValidationException::withMessages([
+                        'questions' => "Soal nomor {$qNum} ('{$qToDelete->question_text}') tidak dapat dihapus karena sudah memiliki riwayat pengerjaan murid. Silakan perbarui konten soal atau nonaktifkan kuis.",
+                    ]);
+                }
+                $qToDelete->delete();
+            }
         });
     }
 

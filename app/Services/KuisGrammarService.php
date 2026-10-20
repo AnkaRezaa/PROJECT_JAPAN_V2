@@ -50,7 +50,18 @@ class KuisGrammarService
                 }
             }
 
-            $quiz->questions()->whereNotIn('id', $kept)->delete();
+            $questionsToDelete = $quiz->questions()
+                ->whereNotIn('id', $kept)
+                ->get();
+
+            foreach ($questionsToDelete as $qToDelete) {
+                if ($qToDelete->attemptAnswers()->exists()) {
+                    throw ValidationException::withMessages([
+                        'stages' => "Soal grammar '{$qToDelete->question_text}' tidak dapat dihapus karena sudah memiliki riwayat pengerjaan murid. Silakan perbarui konten soal atau jadikan draf.",
+                    ]);
+                }
+                $qToDelete->delete();
+            }
 
             return $quiz->fresh(['grammarLesson', 'questions']);
         });

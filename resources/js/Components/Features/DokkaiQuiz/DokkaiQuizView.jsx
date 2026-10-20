@@ -8,6 +8,7 @@ import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 function renderPassageWithFurigana(text, vocabs, isFuriganaEnabled) {
     if (!text) return null;
@@ -309,10 +310,7 @@ export default function DokkaiQuizView({
                                         >
                                             {q.question_number || idx + 1}
                                             {isFlagged && (
-                                                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-                                                </span>
+                                                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-gray-900" />
                                             )}
                                         </button>
                                     );
@@ -324,10 +322,11 @@ export default function DokkaiQuizView({
                             {initialTime > 0 && (
                                 <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-mono font-bold ${
                                     timeLeft < 60
-                                        ? 'bg-rose-100 text-rose-700 animate-pulse dark:bg-rose-950/60 dark:text-rose-300'
+                                        ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-200'
                                         : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
                                 }`}>
-                                    ⏱️ {formatTimer(timeLeft)}
+                                    <AccessTimeIcon sx={{ fontSize: 13 }} />
+                                    <span>{formatTimer(timeLeft)}</span>
                                 </span>
                             )}
                             <span className="text-xs font-bold text-gray-400">

@@ -119,7 +119,7 @@ export default function DokkaiGlossaryView({
                                             : 'text-gray-500 hover:text-gray-900 dark:text-gray-400'
                                     }`}
                                 >
-                                    🎴 Flashcard
+                                    Flashcard
                                 </button>
                                 <button
                                     type="button"
@@ -130,7 +130,7 @@ export default function DokkaiGlossaryView({
                                             : 'text-gray-500 hover:text-gray-900 dark:text-gray-400'
                                     }`}
                                 >
-                                    📝 Kuis Pilihan
+                                    Kuis Pilihan
                                 </button>
                             </div>
                         </div>
@@ -260,7 +260,7 @@ export default function DokkaiGlossaryView({
                                     className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300 font-bold text-xs transition"
                                     title="Lupa arti kata ini"
                                 >
-                                    🔴 Lupa
+                                    Lupa
                                 </button>
                                 <button
                                     type="button"
@@ -268,7 +268,7 @@ export default function DokkaiGlossaryView({
                                     className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300 font-bold text-xs transition"
                                     title="Masih ragu / sulit"
                                 >
-                                    🟡 Ragu
+                                    Ragu
                                 </button>
                                 <button
                                     type="button"
@@ -276,7 +276,7 @@ export default function DokkaiGlossaryView({
                                     className="px-3 sm:px-4 py-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-xs shadow-xs transition"
                                     title="Sudah hafal / paham"
                                 >
-                                    🟢 Paham →
+                                    Paham
                                 </button>
                             </div>
                         ) : (
@@ -285,7 +285,7 @@ export default function DokkaiGlossaryView({
                                 onClick={nextDrill}
                                 className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-xs hover:bg-emerald-700 active:scale-[0.99] transition"
                             >
-                                Kata Berikutnya →
+                                Kata Berikutnya
                             </button>
                         )}
                     </div>

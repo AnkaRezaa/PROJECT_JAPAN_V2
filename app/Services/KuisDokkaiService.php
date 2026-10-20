@@ -121,6 +121,7 @@ class KuisDokkaiService
                 'audio_url' => $passage->audio_url,
                 'status' => $quiz->status,
                 'passing_score' => (int) ($quiz->passing_score ?? 70),
+                'time_limit' => (int) ($quiz->time_limit ?? 300),
             ],
             'paragraphs' => $paragraphs,
             'vocabularies' => $vocabularies,
@@ -215,6 +216,9 @@ class KuisDokkaiService
                     if (! $evidenceParagraphId && isset($qData['evidence_paragraph_number'])) {
                         $evidenceParagraphId = $paragraphMapByNumber[$qData['evidence_paragraph_number']] ?? null;
                     }
+                    if (! $evidenceParagraphId && ! empty($paragraphMapByNumber)) {
+                        $evidenceParagraphId = reset($paragraphMapByNumber) ?: null;
+                    }
 
                     $question = $passage->questions()->updateOrCreate(
                         ['id' => $qData['id'] ?? null],
@@ -233,7 +237,15 @@ class KuisDokkaiService
                     $keptQuestionIds[] = $question->id;
                 }
             }
-            $passage->questions()->whereNotIn('id', $keptQuestionIds)->delete();
+            $questionsToDelete = $passage->questions()->whereNotIn('id', $keptQuestionIds)->get();
+            foreach ($questionsToDelete as $qToDelete) {
+                if ($qToDelete->attemptAnswers()->exists()) {
+                    throw ValidationException::withMessages([
+                        'questions' => "Soal Dokkai nomor {$qToDelete->question_number} tidak dapat dihapus karena sudah memiliki riwayat pengerjaan murid. Silakan perbarui konten soal atau jadikan draf.",
+                    ]);
+                }
+                $qToDelete->delete();
+            }
 
             return $quiz->fresh([
                 'dokkaiPassage.paragraphs',
