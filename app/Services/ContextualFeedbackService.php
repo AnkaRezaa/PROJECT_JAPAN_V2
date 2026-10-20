@@ -16,6 +16,7 @@ class ContextualFeedbackService
         'exam' => ['clear_instructions', 'clear_results', 'confusing_time', 'difficult_navigation', 'technical_issue'],
         'lesson_day' => ['easy_to_understand', 'too_dense', 'needs_examples', 'unclear_media', 'technical_issue'],
         'live_class' => ['easy_to_understand', 'too_dense', 'needs_examples', 'unclear_media', 'technical_issue'],
+        'question' => ['typo_kanji', 'wrong_answer_key', 'unclear_prompt', 'audio_issue', 'other'],
     ];
 
     public function resolve(Pengguna $user, string $feature, int $contextId): array
@@ -25,6 +26,7 @@ class ContextualFeedbackService
             'exam' => $this->exam($user, $contextId),
             'lesson_day' => $this->lessonDay($user, $contextId),
             'live_class' => $this->liveClass($user, $contextId),
+            'question' => $this->question($user, $contextId),
             default => throw ValidationException::withMessages(['feature' => 'Fitur feedback tidak dikenal.']),
         };
     }
@@ -76,6 +78,22 @@ class ContextualFeedbackService
             ->first();
 
         return $this->resolvedOrFail($participant, 'live_session', $sessionId, 'class_session_completed');
+    }
+
+    private function question(Pengguna $user, int $questionId): array
+    {
+        if ($questionId <= 0) {
+            throw ValidationException::withMessages([
+                'context_id' => 'ID butir soal tidak valid.',
+            ]);
+        }
+
+        return [
+            'context_type' => 'question',
+            'context_id' => $questionId,
+            'context_key' => 'question:'.$questionId,
+            'trigger' => 'question_in_situ_report',
+        ];
     }
 
     private function resolvedOrFail(mixed $record, string $type, int $id, string $trigger): array

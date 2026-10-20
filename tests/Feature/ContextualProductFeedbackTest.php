@@ -199,3 +199,34 @@ it('keeps contextual feedback disabled by default', function () {
         'rating' => 5,
     ])->assertNotFound();
 });
+
+it('records an in-situ question issue report successfully', function () {
+    config()->set('beta.contextual_feedback_enabled', true);
+    $user = Pengguna::factory()->create(['role' => 'user']);
+
+    $payload = [
+        'feature' => 'question',
+        'context_id' => 1234,
+        'response_type' => 'submitted',
+        'rating' => 5,
+        'reason' => 'typo_kanji',
+        'message' => 'Kanji baris kedua salah ketik radikal.',
+        'page_url' => '/user/kuis-campuran',
+    ];
+
+    $this->actingAs($user)
+        ->postJson(route('contextual-feedback.store'), $payload)
+        ->assertCreated();
+
+    $this->assertDatabaseHas('product_feedback', [
+        'user_id' => $user->id,
+        'source' => 'contextual',
+        'feature' => 'question',
+        'context_type' => 'question',
+        'context_id' => 1234,
+        'context_key' => 'question:1234',
+        'trigger' => 'question_in_situ_report',
+        'reason' => 'typo_kanji',
+        'status' => 'new',
+    ]);
+});
