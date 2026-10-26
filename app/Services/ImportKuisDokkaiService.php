@@ -55,7 +55,7 @@ class ImportKuisDokkaiService
 
             $judul = trim((string) ($row['judul_wacana'] ?? ''));
             $teksBacaan = trim((string) ($row['teks_bacaan'] ?? ''));
-            $level = strtoupper(trim((string) ($row['level'] ?? '')));
+            $level = preg_replace('/^JLPT\s*/i', '', strtoupper(trim((string) ($row['level'] ?? ''))));
             $pertanyaan = trim((string) ($row['pertanyaan'] ?? ''));
             $opsiA = trim((string) ($row['opsi_a'] ?? ''));
             $opsiB = trim((string) ($row['opsi_b'] ?? ''));

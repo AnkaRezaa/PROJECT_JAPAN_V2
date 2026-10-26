@@ -237,7 +237,8 @@ function SentenceBuilderQuestion({ question, selectedIds, disabled, onChange }) 
 
 function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, onContinue, processing, soundEnabled, narrationRevision, persist }) {
     const meta = STAGE_META[stage?.id] || STAGE_META.transformation;
-    const canCheck = question?.type === 'sentence_builder' ? answer.length > 0 : Boolean(answer);
+    const canCheck = question?.type === 'sentence_builder'
+        ? Array.isArray(answer) && answer.length > 0 : typeof answer === 'string' && Boolean(answer);
     const narrationText = japaneseSpeechText(question?.japanese || question?.prompt);
     const narrationAudioUrl = isStreamableAudio(question?.audio_url) ? question.audio_url : null;
     const narrationKey = `grammar-question-${stage?.id}-${question?.id || question?.prompt}-${narrationRevision}`;
@@ -245,7 +246,8 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
     const targetSentence = useMemo(() => {
         if (!question) return '';
         if (question.type === 'sentence_builder') {
-            const tokenIds = question.correctOrder || (feedback?.correct ? answer : []);
+            const tokenIds = Array.isArray(question.correctOrder)
+                ? question.correctOrder : (feedback?.correct && Array.isArray(answer) ? answer : []);
             return tokenIds.map((id) => question.tokens?.find((t) => t.id === id)?.text).filter(Boolean).join('');
         }
         return question.correctAnswer || (feedback?.correct ? answer : '');
@@ -382,8 +384,8 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
                                     <JapaneseSpeechButton text={targetSentence} size="small" className="shrink-0 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" />
                                 </div>
                             )}
-                            {question.explanation && (
-                                <p className="mt-1 text-xs font-semibold leading-5 text-gray-600 dark:text-gray-300">{question.explanation}</p>
+                            {(feedback?.explanation || question.explanation) && (
+                                <p className="mt-1 text-xs font-semibold leading-5 text-gray-600 dark:text-gray-300">{feedback?.explanation || question.explanation}</p>
                             )}
                         </div>
                     ) : (
@@ -511,6 +513,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
     const [narrationRevision, setNarrationRevision] = useState(0);
     const correctQuestionIds = useRef(new Set());
     const firstAttemptedIds = useRef(new Set());
+    const restoredDraftRef = useRef(null);
     const stages = quiz?.stages || [];
     const totalQuestions = useMemo(() => stages.reduce((total, s) => total + (s?.questions?.length || 0), 0), [stages]);
     const stage = stages[stageIndex];
@@ -531,7 +534,8 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
     });
 
     const [isResumeModalOpen, setIsResumeModalOpen] = useState(() => {
-        return Boolean(hasCheckpoint && persist && (initialCheckpointData?.stageIndex > 0 || initialCheckpointData?.questionIndex > 0));
+        return Boolean(hasCheckpoint && persist && (initialCheckpointData?.stageIndex > 0
+            || initialCheckpointData?.questionIndex > 0 || initialCheckpointData?.draft));
     });
 
     const handleResumeCheckpoint = () => {
@@ -539,6 +543,13 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
             setStageIndex(initialCheckpointData.stageIndex || 0);
             setQuestionIndex(initialCheckpointData.questionIndex || 0);
             if (initialCheckpointData.session) setSession(initialCheckpointData.session);
+            const savedQuestion = stages[initialCheckpointData.stageIndex || 0]?.questions?.[initialCheckpointData.questionIndex || 0];
+            const draft = initialCheckpointData.draft;
+            const validDraft = savedQuestion?.type === 'sentence_builder' ? Array.isArray(draft?.answer) : typeof draft?.answer === 'string';
+            if (savedQuestion && draft?.questionId === savedQuestion.id && validDraft) {
+                restoredDraftRef.current = draft;
+                setAnswer(draft.answer);
+            }
             setScreen('question');
         }
         setIsResumeModalOpen(false);
@@ -578,7 +589,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
             variant: 'warning',
             presentation: 'quiz-exit',
             title: 'Mau jeda dulu?',
-            message: 'Progres kuis saat ini belum tersimpan. Kamu bisa melanjutkan sesi ini kapan saja.',
+            message: persist ? 'Jawaban sementara disimpan agar kamu bisa melanjutkan sesi ini.' : 'Hasil pratinjau tidak disimpan. Keluar dari sesi ini?',
             cancelLabel: 'Lanjutkan kuis',
             confirmLabel: 'Keluar sesi',
             details: [
@@ -597,7 +608,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
                 onClose();
             },
         });
-    }, [closeConfirm, onClose, openConfirm, quiz?.pattern, screen, stageIndex, stages.length]);
+    }, [closeConfirm, onClose, openConfirm, persist, quiz?.pattern, screen, stageIndex, stages.length]);
 
     useEffect(() => {
         const onKeyDown = (event) => {
@@ -627,9 +638,18 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
     }, [handleRequestExit, onClose, screen]);
 
     useEffect(() => {
-        setAnswer(question?.type === 'sentence_builder' ? [] : '');
+        const draft = restoredDraftRef.current;
+        setAnswer(draft?.questionId === question?.id ? draft.answer : (question?.type === 'sentence_builder' ? [] : ''));
+        restoredDraftRef.current = null;
         setFeedback(null);
     }, [question?.id]);
+
+    const handleAnswerChange = (nextAnswer) => {
+        setAnswer(nextAnswer);
+        if (persist && session && !processing && !feedback) {
+            saveCheckpoint({ stageIndex, questionIndex, session, draft: { questionId: question.id, answer: nextAnswer } });
+        }
+    };
 
     const startLesson = async () => {
         setRequestError('');
@@ -642,6 +662,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
             const submissionToken = crypto.randomUUID();
             const { data } = await window.axios.post(`/user/quizzes/${quiz.id}/attempts/start`, { submission_token: submissionToken });
             setSession(data);
+            saveCheckpoint({ stageIndex: 0, questionIndex: 0, session: data });
             setScreen('question');
         } catch (error) {
             setRequestError(error.response?.data?.message || 'Sesi Grammar gagal dimulai.');
@@ -654,6 +675,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
         setProcessing(true);
         setRequestError('');
         let correct;
+        let explanation = question?.explanation || '';
         let recorded = !firstAttemptedIds.current.has(question.id);
         try {
             if (persist) {
@@ -668,6 +690,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
                 });
                 correct = data.correct;
                 recorded = data.recorded;
+                if (data.explanation) explanation = data.explanation;
             } else {
                 correct = question.type === 'sentence_builder'
                     ? arraysEqual(answer, question.correctOrder)
@@ -687,7 +710,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
             total: current.total + (recorded ? 1 : 0),
             xp: current.xp,
         }));
-        setFeedback({ correct });
+        setFeedback({ correct, explanation });
         playSoundEffect(correct ? 'correct' : 'incorrect');
         setProcessing(false);
     };
@@ -790,7 +813,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
             ) : (
                 <>
                     <ProgressHeader quiz={quiz} stageIndex={stageIndex} questionIndex={questionIndex} totalAnswered={answeredBeforeCurrent + (feedback ? 1 : 0)} totalQuestions={totalQuestions} onClose={handleRequestExit} persist={persist} soundEnabled={soundEnabled} onToggleSound={() => setSoundEnabled((value) => !value)} />
-                    <QuestionScreen stage={stage} question={question} answer={answer} feedback={feedback} onAnswer={setAnswer} onCheck={checkAnswer} onContinue={continueLesson} processing={processing} soundEnabled={soundEnabled} narrationRevision={narrationRevision} persist={persist} />
+                    <QuestionScreen stage={stage} question={question} answer={answer} feedback={feedback} onAnswer={handleAnswerChange} onCheck={checkAnswer} onContinue={continueLesson} processing={processing} soundEnabled={soundEnabled} narrationRevision={narrationRevision} persist={persist} />
                 </>
             )}
             <QuizErrorMessage className="fixed bottom-20 left-1/2 z-[170] w-[min(90vw,28rem)] -translate-x-1/2 shadow-lg">{requestError}</QuizErrorMessage>

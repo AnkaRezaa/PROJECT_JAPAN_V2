@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import QuizField, { TooltipHelp } from '@/Components/UI/QuizField';
+import UnifiedQuizGeneratorModal from '@/Components/Features/Quiz/Shared/UnifiedQuizGeneratorModal';
+import { vocabularyQuestionsFromDraft } from '@/Components/Features/Quiz/Shared/generatorDraftAdapters';
 
 import SettingsIcon from '@mui/icons-material/Settings';
 import AssessmentIcon from '@mui/icons-material/Assessment';
@@ -67,9 +69,6 @@ export default function QuizBuilder({
     const [importError, setImportError] = useState('');
     const [showAddMenu, setShowAddMenu] = useState(false);
     const [showVocabularyGenerate, setShowVocabularyGenerate] = useState(false);
-    const [vocabularyPreview, setVocabularyPreview] = useState(null);
-    const [vocabularyGeneratorError, setVocabularyGeneratorError] = useState('');
-    const [vocabularyGeneratorLoading, setVocabularyGeneratorLoading] = useState(false);
     const [showStudentPreview, setShowStudentPreview] = useState(false);
     const [showValidation, setShowValidation] = useState(false);
     const importInputRef = useRef(null);
@@ -81,14 +80,6 @@ export default function QuizBuilder({
     const cleanSnapshotRef = useRef(JSON.stringify(initialForm));
 
     const { data, setData, post, processing, recentlySuccessful, errors, clearErrors } = useForm(initialForm);
-    const vocabularyForm = useForm({
-        content_type: 'all',
-        jlpt_level: quiz?.module?.level?.level_name || 'all',
-        category: 'all',
-        count: 10,
-        mode: 'word_to_meaning',
-        status: 'published',
-    });
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
 
     const activeQ = data.questions[activeIndex] || data.questions[0] || emptyQuestion(quiz?.type || 'multiple_choice');
@@ -377,62 +368,8 @@ export default function QuizBuilder({
         });
     };
 
-    useEffect(() => {
-        setVocabularyPreview(null);
-        setVocabularyGeneratorError('');
-    }, [
-        vocabularyForm.data.content_type,
-        vocabularyForm.data.jlpt_level,
-        vocabularyForm.data.category,
-        vocabularyForm.data.count,
-        vocabularyForm.data.mode,
-        vocabularyForm.data.status,
-    ]);
 
-    const handleGenerateVocabularyQuestions = async (event) => {
-        event.preventDefault();
 
-        setVocabularyGeneratorLoading(true);
-        setVocabularyGeneratorError('');
-
-        try {
-            const response = await window.axios.post(
-                route('admin.quizzes.questions.generate-vocabulary.preview', quiz.id),
-                vocabularyForm.data,
-            );
-            setVocabularyPreview(response.data);
-        } catch (error) {
-            setVocabularyGeneratorError(
-                error.response?.data?.errors?.generate?.[0]
-                || error.response?.data?.message
-                || 'Preview soal tidak dapat dibuat.',
-            );
-        } finally {
-            setVocabularyGeneratorLoading(false);
-        }
-    };
-
-    const confirmGenerateVocabularyQuestions = () => {
-        if (!vocabularyPreview?.vocabulary_ids?.length) return;
-
-        requestUnsavedAction(() => {
-            router.post(route('admin.quizzes.questions.generate-vocabulary', quiz.id), {
-                ...vocabularyForm.data,
-                vocabulary_ids: vocabularyPreview.vocabulary_ids,
-            }, {
-                preserveScroll: true,
-                preserveState: false,
-                onSuccess: () => {
-                    setShowVocabularyGenerate(false);
-                    setVocabularyPreview(null);
-                },
-            });
-        }, {
-            title: 'Generate Soal Kosakata?',
-            message: `${vocabularyPreview.count} soal pada preview akan ditambahkan ke editor.`,
-            confirmLabel: 'Tambahkan Soal',
-        });
-    };
 
     const totalPoints = data.questions.reduce(
         (total, question) => total + Math.max(1, Number(question.points || 1)),
@@ -887,7 +824,7 @@ export default function QuizBuilder({
             savedAt={recentlySuccessful ? 'Baru saja' : ''}
             saving={processing}
             hasUnsavedChanges={hasUnsavedChanges}
-            onBack={() =>
+            onBack={showVocabularyGenerate ? undefined : () =>
                 requestUnsavedAction(() => {
                     if (onClose) {
                         onClose();
@@ -944,7 +881,7 @@ export default function QuizBuilder({
                                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
                                 >
                                     <ShuffleIcon sx={{ fontSize: 15 }} />
-                                    Generate dari Kosakata
+                                    Generator Soal
                                 </button>
                                 <div className="my-2 border-t border-gray-100 dark:border-gray-800" />
                                 <a
@@ -1150,113 +1087,9 @@ export default function QuizBuilder({
                     </div>
                 </div>
             )}
-            {showVocabularyGenerate && (
-                <div className="fixed inset-0 z-[110] flex items-end overflow-y-auto bg-gray-950/50 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4">
-                    <form onSubmit={handleGenerateVocabularyQuestions} className="w-full max-w-lg rounded-t-3xl bg-white p-4 shadow-xl border border-gray-200 dark:border-gray-800 dark:bg-gray-900 sm:rounded-3xl sm:p-6">
-                        <div className="mb-5">
-                        <p className="text-xs font-black uppercase tracking-[0.25em] text-orange-600">Bank Konten</p>
-                        <h2 className="text-xl font-black text-gray-900 dark:text-white">Generate Soal dari Materi</h2>
-                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Soal baru akan ditambahkan ke akhir quiz ini.</p>
-                        </div>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <label className="space-y-1 sm:col-span-2">
-                                <span className="flex items-center gap-1.5 text-xs font-black text-gray-500 dark:text-gray-400">
-                                    <span>Tipe Konten</span>
-                                    <TooltipHelp text="Pilih jenis materi dari bank konten yang akan disaring (Kosakata, Kanji, atau Bunpo)." />
-                                </span>
-                                <select value={vocabularyForm.data.content_type} onChange={(e) => vocabularyForm.setData('content_type', e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white">
-                                    <option value="all">Semua tipe</option>
-                                    <option value="kosakata">Kosakata</option>
-                                    <option value="kanji">Kanji</option>
-                                    <option value="bunpo">Bunpo</option>
-                                </select>
-                            </label>
-                            <label className="space-y-1">
-                                <span className="flex items-center gap-1.5 text-xs font-black text-gray-500 dark:text-gray-400">
-                                    <span>Level</span>
-                                    <TooltipHelp text="Pilih tingkat kemahiran JLPT kosakata sasaran (N5 hingga N1)." />
-                                </span>
-                                <select value={vocabularyForm.data.jlpt_level} onChange={(e) => vocabularyForm.setData('jlpt_level', e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white">
-                                    <option value="all">Semua Level</option>
-                                    <option value="N5">N5</option>
-                                    <option value="N4">N4</option>
-                                    <option value="N3">N3</option>
-                                    <option value="N2">N2</option>
-                                    <option value="N1">N1</option>
-                                </select>
-                            </label>
-                            <label className="space-y-1">
-                                <span className="flex items-center gap-1.5 text-xs font-black text-gray-500 dark:text-gray-400">
-                                    <span>Jumlah</span>
-                                    <TooltipHelp text="Berapa butir soal baru yang ingin digenerate dari bank materi." />
-                                </span>
-                                <input type="number" min="1" max="50" value={vocabularyForm.data.count} onChange={(e) => vocabularyForm.setData('count', e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
-                            </label>
-                            <label className="space-y-1 sm:col-span-2">
-                                <span className="flex items-center gap-1.5 text-xs font-black text-gray-500 dark:text-gray-400">
-                                    <span>Mode Soal</span>
-                                    <TooltipHelp text="Format pengujian: Kata Jepang ke arti, Arti ke kata Jepang, atau Cara baca (Reading) ke kata Jepang." />
-                                </span>
-                                <select value={vocabularyForm.data.mode} onChange={(e) => vocabularyForm.setData('mode', e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white">
-                                    <option value="word_to_meaning">Kata Jepang ke arti</option>
-                                    <option value="meaning_to_word">Arti ke kata Jepang</option>
-                                    <option value="reading_to_word">Reading ke kata Jepang</option>
-                                </select>
-                            </label>
-                            <label className="space-y-1 sm:col-span-2">
-                                <span className="flex items-center gap-1.5 text-xs font-black text-gray-500 dark:text-gray-400">
-                                    <span>Kategori</span>
-                                    <TooltipHelp text="Filter kategori kata (misal: noun, verb, counter). Kosongkan jika ingin mencakup seluruh kategori." />
-                                </span>
-                                <input
-                                    type="text"
-                                    value={vocabularyForm.data.category === 'all' ? '' : vocabularyForm.data.category}
-                                    onChange={(e) => vocabularyForm.setData('category', e.target.value.trim() || 'all')}
-                                    placeholder="Kosongkan untuk semua kategori"
-                                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white"
-                                />
-                                <p className="text-[11px] font-medium text-gray-400">Contoh: noun, verb, counter. Kosongkan jika ingin acak semua kategori.</p>
-                            </label>
-                            <label className="space-y-1 sm:col-span-2">
-                                <span className="flex items-center gap-1.5 text-xs font-black text-gray-500 dark:text-gray-400">
-                                    <span>Sumber Data</span>
-                                    <TooltipHelp text="Saring materi dari database yang berstatus Published saja atau termasuk draf." />
-                                </span>
-                                <select value={vocabularyForm.data.status} onChange={(e) => vocabularyForm.setData('status', e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white">
-                                    <option value="published">Published saja</option>
-                                    <option value="draft">Draft saja</option>
-                                    <option value="all">Semua status</option>
-                                </select>
-                            </label>
-                        </div>
-                        {vocabularyPreview && (
-                            <div className="mt-4 max-h-52 space-y-2 overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-950">
-                                {vocabularyPreview.questions.slice(0, 8).map((question, index) => (
-                                    <div key={`${question.question_text}-${index}`} className="rounded-xl bg-white p-3 dark:bg-gray-900">
-                                        <p className="text-xs font-black text-gray-900 dark:text-white">{index + 1}. {question.question_text}</p>
-                                        <p className="mt-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">Jawaban: {question.correct_answer}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        {(vocabularyForm.errors.generate || vocabularyGeneratorError) && (
-                            <p className="mt-3 text-sm font-bold text-red-600">{vocabularyForm.errors.generate || vocabularyGeneratorError}</p>
-                        )}
-                        <div className="mt-6 flex justify-end gap-3">
-                            <button type="button" onClick={() => setShowVocabularyGenerate(false)} className="rounded-xl border border-gray-200 px-5 py-3 text-sm font-black text-gray-600 dark:border-gray-700 dark:text-gray-300">Batal</button>
-                            {vocabularyPreview ? (
-                                <button type="button" onClick={confirmGenerateVocabularyQuestions} className="rounded-xl bg-orange-600 px-6 py-3 text-sm font-black !text-white hover:bg-orange-700 transition">
-                                    Tambahkan {vocabularyPreview.count} Soal
-                                </button>
-                            ) : (
-                                <button disabled={vocabularyGeneratorLoading} className="rounded-xl bg-orange-600 px-6 py-3 text-sm font-black !text-white hover:bg-orange-700 transition disabled:opacity-50">
-                                    {vocabularyGeneratorLoading ? 'Membuat Preview...' : 'Pratinjau'}
-                                </button>
-                            )}
-                        </div>
-                    </form>
-                </div>
-            )}
+<UnifiedQuizGeneratorModal open={showVocabularyGenerate} onClose={() => setShowVocabularyGenerate(false)} type="vocab"
+                initialData={{ quizId: quiz.id, level: quiz?.module?.level?.level_name, hasContent: data.questions.some(q => q.question_text?.trim()) }}
+                onApplyDraft={generated => { setData('questions', normalizeQuestions(vocabularyQuestionsFromDraft(generated), quiz?.type)); setActiveIndex(0); setActiveTab('questions'); clearErrors(); }} />
             {importPreview && (
                 <div className="fixed inset-0 z-[110] flex items-end overflow-y-auto bg-gray-950/60 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4">
                     <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-xl border border-gray-200 dark:border-gray-800 dark:bg-gray-900">

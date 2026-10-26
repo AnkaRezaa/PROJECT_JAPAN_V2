@@ -148,7 +148,7 @@ class KuisDokkaiService
                 'title' => trim($passageData['title'] ?? 'Wacana Dokkai'),
                 'sub_title' => isset($passageData['sub_title']) ? trim($passageData['sub_title']) : null,
                 'theme_category' => trim($passageData['theme_category'] ?? 'Budaya & Tradisi'),
-                'jlpt_level' => $passageData['jlpt_level'] ?? 'N3',
+                'jlpt_level' => preg_replace('/^JLPT\s*/i', '', (string) ($passageData['jlpt_level'] ?? 'N3')) ?: 'N3',
                 'estimated_reading_time' => (int) ($passageData['estimated_reading_time'] ?? 5),
                 'xp_reward' => (int) ($passageData['xp_reward'] ?? 80),
                 'audio_url' => $passageData['audio_url'] ?? null,
@@ -187,14 +187,16 @@ class KuisDokkaiService
                     $vocab = $passage->vocabularies()->updateOrCreate(
                         ['id' => $vData['id'] ?? null],
                         [
-                            'paragraph_id' => $vData['paragraph_id'] ?? null,
+                            'paragraph_id' => isset($vData['paragraph_number']) ? ($paragraphMapByNumber[$vData['paragraph_number']] ?? null) : ($vData['paragraph_id'] ?? null),
                             'word' => trim($vData['word'] ?? ''),
                             'furigana' => trim($vData['furigana'] ?? ''),
                             'romaji' => isset($vData['romaji']) ? trim($vData['romaji']) : null,
                             'meaning' => trim($vData['meaning'] ?? ''),
                             'pitch_accent' => $vData['pitch_accent'] ?? null,
                             'part_of_speech' => $vData['part_of_speech'] ?? null,
-                            'jlpt_level' => $vData['jlpt_level'] ?? $passage->jlpt_level,
+                            'jlpt_level' => ! empty($vData['jlpt_level'])
+                                ? (preg_replace('/^JLPT\s*/i', '', (string) $vData['jlpt_level']) ?: $passage->jlpt_level)
+                                : $passage->jlpt_level,
                             'example_sentence' => $vData['example_sentence'] ?? null,
                             'example_translation' => $vData['example_translation'] ?? null,
                             'audio_url' => $vData['audio_url'] ?? null,
@@ -260,6 +262,39 @@ class KuisDokkaiService
      */
     public function evaluateAttempt(Kuis $quiz, Pengguna $user, array $submittedAnswers, ?string $submissionToken = null): array
     {
+        $submissionToken ??= Str::uuid()->toString();
+
+        return DB::transaction(function () use ($quiz, $user, $submittedAnswers, $submissionToken) {
+            $lockedUser = Pengguna::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            $existing = PengerjaanKuis::where('user_id', $user->id)
+                ->where('quiz_id', $quiz->id)
+                ->where('submission_token', $submissionToken)
+                ->first();
+
+            if ($existing) {
+                $answers = DokkaiAttemptAnswer::where('attempt_id', $existing->id)->get();
+
+                return [
+                    'result' => [
+                        'attempt_id' => $existing->id,
+                        'score' => $existing->score,
+                        'correct_count' => $answers->where('is_correct', true)->count(),
+                        'total_questions' => $answers->count(),
+                        'is_passed' => $existing->score >= (int) ($quiz->passing_score ?? 70),
+                        'xp_earned' => $existing->xp_earned,
+                        'user_answers' => $answers->pluck('selected_option', 'dokkai_question_id')->all(),
+                    ],
+                    'questions' => $this->payload($quiz, true, $user)['questions'],
+                    'idempotent' => true,
+                ];
+            }
+
+            return $this->recordAttempt($quiz, $lockedUser, $submittedAnswers, $submissionToken);
+        });
+    }
+
+    private function recordAttempt(Kuis $quiz, Pengguna $user, array $submittedAnswers, string $submissionToken): array
+    {
         $quiz->loadMissing(['dokkaiPassage.questions.evidenceParagraph', 'module']);
         $passage = $quiz->dokkaiPassage;
         abort_unless($passage, 404, 'Materi wacana Dokkai tidak ditemukan.');
@@ -309,65 +344,62 @@ class KuisDokkaiService
 
         // DB Transaction for attempt saving and XP
         $xpEarned = 0;
-        DB::transaction(function () use ($user, $quiz, $passage, $score, $isPassed, $answerRecords, $submissionToken, &$xpEarned) {
-            $attempt = PengerjaanKuis::create([
+        $attempt = PengerjaanKuis::create([
+            'user_id' => $user->id,
+            'quiz_id' => $quiz->id,
+            'submission_token' => $submissionToken,
+            'status' => 'completed',
+            'score' => $score,
+            'xp_earned' => 0,
+            'started_at' => now(),
+            'completed_at' => now(),
+            'attempted_at' => now(),
+        ]);
+
+        foreach ($answerRecords as $rec) {
+            DokkaiAttemptAnswer::create([
+                'attempt_id' => $attempt->id,
+                'dokkai_question_id' => $rec['dokkai_question_id'],
+                'selected_option' => $rec['selected_option'],
+                'is_correct' => $rec['is_correct'],
+            ]);
+        }
+
+        $alreadyRewarded = LogReward::query()
+            ->where('user_id', $user->id)
+            ->where('source_type', 'quiz')
+            ->where('source_id', $quiz->id)
+            ->exists();
+
+        if ($isPassed && ! $alreadyRewarded) {
+            $xpReward = (int) ($passage->xp_reward ?? 80);
+            $xpEarned = $xpReward;
+            $user->increment('xp', $xpEarned);
+
+            LogReward::create([
                 'user_id' => $user->id,
-                'quiz_id' => $quiz->id,
-                'submission_token' => $submissionToken ?: Str::uuid()->toString(),
-                'status' => 'completed',
-                'score' => $score,
-                'xp_earned' => 0,
-                'started_at' => now(),
-                'completed_at' => now(),
-                'attempted_at' => now(),
+                'source_type' => 'quiz',
+                'source_id' => $quiz->id,
+                'xp_amount' => $xpEarned,
+                'description' => "Menyelesaikan Kuis Dokkai: {$passage->title}",
             ]);
 
-            foreach ($answerRecords as $rec) {
-                DokkaiAttemptAnswer::create([
-                    'attempt_id' => $attempt->id,
-                    'dokkai_question_id' => $rec['dokkai_question_id'],
-                    'selected_option' => $rec['selected_option'],
-                    'is_correct' => $rec['is_correct'],
-                ]);
-            }
+            $attempt->update(['xp_earned' => $xpEarned]);
+        }
 
-            // Anti-Exploit Idempotency: Lock user untuk proteksi race condition konkuren
-            $lockedUser = Pengguna::where('id', $user->id)->lockForUpdate()->first();
-
-            $alreadyRewarded = LogReward::query()
-                ->where('user_id', $user->id)
-                ->where('source_type', 'quiz')
-                ->where('source_id', $quiz->id)
-                ->exists();
-
-            if ($isPassed && ! $alreadyRewarded && $lockedUser) {
-                $xpReward = (int) ($passage->xp_reward ?? 80);
-                $xpEarned = $xpReward;
-                $lockedUser->increment('xp', $xpEarned);
-
-                LogReward::create([
-                    'user_id' => $user->id,
-                    'source_type' => 'quiz',
-                    'source_id' => $quiz->id,
-                    'xp_amount' => $xpEarned,
-                    'description' => "Menyelesaikan Kuis Dokkai: {$passage->title}",
-                ]);
-
-                $attempt->update(['xp_earned' => $xpEarned]);
-            }
-
-            if (class_exists(KuisSelesai::class)) {
-                event(new KuisSelesai($user, $quiz->id, $score, $xpEarned));
-            }
-        });
+        if (class_exists(KuisSelesai::class)) {
+            event(new KuisSelesai($user, $quiz->id, $score, $xpEarned));
+        }
 
         return [
             'result' => [
+                'attempt_id' => $attempt->id,
                 'score' => $score,
                 'correct_count' => $correctCount,
                 'total_questions' => $totalQuestions,
                 'is_passed' => $isPassed,
                 'xp_earned' => $xpEarned,
+                'user_answers' => array_column($answerRecords, 'selected_option', 'dokkai_question_id'),
             ],
             'questions' => $detailedQuestions,
         ];

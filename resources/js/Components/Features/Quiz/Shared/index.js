@@ -4,3 +4,4 @@ export { default as AudioAttachmentField } from './AudioAttachmentField';
 export { default as QuizBuilderHeader } from './QuizBuilderHeader';
 export { default as UnifiedQuizBuilderShell } from './UnifiedQuizBuilderShell';
 export { default as UnifiedQuestionEditorCanvas } from './UnifiedQuestionEditorCanvas';
+export { default as UnifiedQuizGeneratorModal } from './UnifiedQuizGeneratorModal';

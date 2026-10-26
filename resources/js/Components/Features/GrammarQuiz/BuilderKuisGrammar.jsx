@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
+import UnifiedQuizGeneratorModal from '@/Components/Features/Quiz/Shared/UnifiedQuizGeneratorModal';
+import { grammarQuestionsToDraft, grammarStagesFromDraft } from '@/Components/Features/Quiz/Shared/generatorDraftAdapters';
 import GrammarQuizPreviewDialog from './GrammarQuizPreviewDialog';
 import GrammarBulkImportDialog from './GrammarBulkImportDialog';
 import GrammarBankPickerDialog from './GrammarBankPickerDialog';
@@ -120,124 +122,7 @@ function makeQuestion(type, index) {
 
 
 
-function GenerationSettings({ settings, onChange, onGenerate, isGenerating = false, onSaveDraft, saving = false }) {
-    return (
-        <div className="space-y-4">
-            <div className="grid gap-2.5 sm:grid-cols-3">
-                {Object.entries(stageMeta).map(([key, meta]) => (
-                    <div key={key} className="rounded-xl border border-gray-200 bg-gray-50/70 p-3 dark:border-gray-800 dark:bg-gray-950/40">
-                        <span className="block text-xs font-black text-gray-900 dark:text-white">{meta.label}</span>
-                        <div className="mt-2 flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold text-gray-500">Soal</span>
-                            <input
-                                type="number"
-                                min="1"
-                                max="20"
-                                value={settings.counts[key] || 5}
-                                onChange={(event) => onChange({
-                                    ...settings,
-                                    counts: {
-                                        ...settings.counts,
-                                        [key]: Math.max(1, Math.min(20, Number(event.target.value) || 1))
-                                    }
-                                })}
-                                className="h-8 w-16 rounded-lg border border-gray-200 bg-white px-1 text-center text-xs font-black dark:border-gray-700 dark:bg-gray-950 dark:text-white"
-                            />
-                        </div>
-                    </div>
-                ))}
-            </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-                <Field
-                    label="Tingkat Kesulitan"
-                    tooltip="Kombinasi kompleksitas kosakata dan pola pengecoh yang dihasilkan."
-                >
-                    <select
-                        className={inputClass}
-                        value={settings.difficulty}
-                        onChange={(event) => onChange({ ...settings, difficulty: event.target.value })}
-                    >
-                        <option value="mixed">Campuran (Mixed)</option>
-                        <option value="easy">Mudah (Easy)</option>
-                        <option value="medium">Sedang (Medium)</option>
-                        <option value="hard">Sulit (Hard)</option>
-                    </select>
-                </Field>
-                <Field
-                    label="Target Konjugasi (Stage 1)"
-                    tooltip="Pilih bentuk kata kerja target untuk soal transformasi. Pilih 'Otomatis' untuk deteksi dari rumus/pola."
-                >
-                    <select
-                        className={inputClass}
-                        value={settings.target_form || 'auto'}
-                        onChange={(event) => onChange({ ...settings, target_form: event.target.value })}
-                    >
-                        <option value="auto">Otomatis (Deteksi dari Pola/Rumus)</option>
-                        <option value="te">Bentuk ~て (Te-form)</option>
-                        <option value="ta">Bentuk ~た (Ta-form / Lampau)</option>
-                        <option value="nai">Bentuk ~ない (Nai-form / Negatif)</option>
-                        <option value="ba">Bentuk ~ば (Ba-form / Pengandaian)</option>
-                        <option value="stem">Bentuk ~ます / Stem</option>
-                        <option value="dict">Bentuk Kamus / Kamus (Jishokei)</option>
-                        <option value="potential">Bentuk Kesanggupan (Potential)</option>
-                        <option value="passive">Bentuk Pasif (Ukemi)</option>
-                        <option value="causative">Bentuk Kausatif (Shieki)</option>
-                    </select>
-                </Field>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-6 rounded-xl border border-gray-200 bg-gray-50/70 p-3 dark:border-gray-800 dark:bg-gray-950/40">
-                <label className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={settings.useDistractors}
-                        onChange={(event) => onChange({ ...settings, useDistractors: event.target.checked })}
-                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span>Pengecoh Partikel (Distractors)</span>
-                </label>
-                <label className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={settings.autoMeaning}
-                        onChange={(event) => onChange({ ...settings, autoMeaning: event.target.checked })}
-                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span>Auto-arti Indonesia</span>
-                </label>
-            </div>
-
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-[11px] leading-relaxed text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-200">
-                <p className="font-black">Smart Generator Terhubung</p>
-                <p className="mt-0.5 text-emerald-800/80 dark:text-emerald-300">
-                    Generator membedah kata kerja untuk Stage 1, partikel pengecoh untuk Stage 2, dan situasi kontekstual dari Bank Soal untuk Stage 3.
-                </p>
-            </div>
-
-            <div className="space-y-2 pt-1">
-                <button
-                    type="button"
-                    disabled={isGenerating}
-                    onClick={onGenerate}
-                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-xs font-black text-white shadow-xs transition hover:bg-emerald-700 disabled:opacity-50"
-                >
-                    <AutoAwesomeIcon sx={{ fontSize: 18 }} className={isGenerating ? 'animate-spin' : ''} />
-                    {isGenerating ? 'Meng-generate Soal Otomatis...' : 'Generate Lesson / Soal Otomatis'}
-                </button>
-                <button
-                    type="button"
-                    disabled={saving}
-                    onClick={onSaveDraft}
-                    className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-xs font-black text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
-                >
-                    <SaveOutlinedIcon sx={{ fontSize: 16 }} />
-                    {saving ? 'Menyimpan Draf...' : 'Simpan Draf'}
-                </button>
-            </div>
-        </div>
-    );
-}
 
 function questionReady(question) {
     if (!question.prompt?.trim() || !question.explanation?.trim()) return false;
@@ -536,13 +421,13 @@ function ReviewQuestions({
                             extraActions={
                                 <button
                                     type="button"
-                                    title="Regenerasi variasi soal ini dengan AI"
+                                    title="Buat variasi soal dari materi"
                                     disabled={Boolean(regeneratingKey)}
                                     onClick={() => onRegenerateSingle(currentStageId, activeIndex)}
                                     className="flex h-8 items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-black text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300 transition"
                                 >
                                     <RefreshIcon sx={{ fontSize: 14 }} className={regeneratingKey === `${currentStageId}-${activeIndex}` ? 'animate-spin' : ''} />
-                                    <span>Variasi AI</span>
+                                    <span>Variasi Baru</span>
                                 </button>
                             }
                         >
@@ -593,9 +478,9 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
         autoMeaning: true,
     });
     const [showBankPicker, setShowBankPicker] = useState(false);
+    const [showGenerator, setShowGenerator] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [showBulkImport, setShowBulkImport] = useState(false);
-    const [isGenerating, setIsGenerating] = useState(false);
     const [regeneratingKey, setRegeneratingKey] = useState(null);
     const [generatorSuccess, setGeneratorSuccess] = useState('');
     const [savedAt, setSavedAt] = useState('');
@@ -764,7 +649,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
 
         const totalQuestions = draft.stages.reduce((acc, stg) => acc + (stg.questions?.length || 0), 0);
         if (totalQuestions === 0) {
-            setError('Belum ada soal pada draf kuis. Klik "Generate Lesson / Soal Otomatis" atau tambahkan soal manual terlebih dahulu.');
+            setError('Belum ada soal pada draf kuis. Buat draf melalui Generator Soal atau tambahkan soal manual terlebih dahulu.');
             return;
         }
 
@@ -862,60 +747,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
         }
     };
 
-    const generateDraft = async () => {
-        setError('');
-        setGeneratorSuccess('');
-
-        if (!draft.pattern?.trim()) {
-            setError('Pola Grammar wajib diisi terlebih dahulu sebelum membuat soal.');
-            return;
-        }
-
-        setIsGenerating(true);
-        try {
-            const payload = {
-                lesson: {
-                    level: draft.level || 'JLPT N3',
-                    pattern: draft.pattern || '',
-                    title: draft.title || '',
-                    meaning: draft.intro?.meaning || '',
-                    formula: draft.intro?.formula || '',
-                    explanation: draft.intro?.explanation || '',
-                    examples: draft.intro?.examples || [],
-                },
-                settings: {
-                    counts: settings.counts,
-                    difficulty: settings.difficulty,
-                    target_form: settings.target_form || 'auto',
-                    useDistractors: settings.useDistractors,
-                    autoMeaning: settings.autoMeaning,
-                },
-            };
-
-            const response = await window.axios.post('/admin/grammar-quizzes/generate-draft', payload);
-            const { stages, message: apiMessage } = response.data;
-
-            setDraft((current) => ({
-                ...current,
-                stages: stages.map((stg) => ({
-                    ...stg,
-                    questions: (stg.questions || []).map((q, idx) => ({
-                        ...q,
-                        id: `gen-${stg.id}-${Date.now()}-${idx}`,
-                    })),
-                })),
-            }));
-
-            setError('');
-            setGeneratorSuccess(apiMessage || 'Draf kuis 3 stage berhasil dibuat secara otomatis!');
-        } catch (genError) {
-            setGeneratorSuccess('');
-            const apiErr = genError.response?.data?.message || 'Gagal meng-generate draf kuis.';
-            setError(apiErr);
-        } finally {
-            setIsGenerating(false);
-        }
-    };
+    const generateDraft = () => setShowGenerator(true);
 
     const handleRegenerateSingle = async (stageId, index) => {
         setError('');
@@ -930,18 +762,22 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
         setRegeneratingKey(key);
         try {
             const payload = {
-                stage: stageId,
-                index,
-                lesson: {
-                    level: draft.level || 'JLPT N3',
+                operation: 'regenerate',
+                quiz_id: draft.id && Number.isInteger(Number(draft.id)) ? Number(draft.id) : null,
+                module_day_id: day.id,
+                question_id: String(draft.stages.find(stage => stage.id === stageId).questions[index].id),
+                existing_questions: grammarQuestionsToDraft(draft.stages),
+                level: String(draft.level).match(/N[1-5]/)?.[0] || 'N5',
+                input: {
                     pattern: draft.pattern || '',
                     title: draft.title || '',
                     meaning: draft.intro?.meaning || '',
                     formula: draft.intro?.formula || '',
                     explanation: draft.intro?.explanation || '',
-                    examples: draft.intro?.examples || [],
+                    examples: (draft.intro?.examples || []).filter(example => example.japanese?.trim()),
                 },
                 settings: {
+                    count: Object.values(settings.counts).reduce((sum, count) => sum + Number(count), 0),
                     counts: settings.counts,
                     difficulty: settings.difficulty,
                     target_form: settings.target_form || 'auto',
@@ -949,8 +785,8 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                     autoMeaning: settings.autoMeaning,
                 },
             };
-            const response = await window.axios.post('/admin/grammar-quizzes/regenerate-question', payload);
-            const { question: newQuestion, message } = response.data;
+            const response = await window.axios.post(route('admin.quiz-generator', 'grammar'), payload);
+            const newQuestion = grammarStagesFromDraft(response.data.draft).find(stage => stage.id === stageId)?.questions[0];
             if (newQuestion) {
                 setDraft((current) => {
                     const stageIndex = current.stages.findIndex((s) => s.id === stageId);
@@ -968,7 +804,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                     return { ...current, stages: newStages };
                 });
                 setError('');
-                setGeneratorSuccess(message || 'Soal berhasil diperbarui dengan variasi baru.');
+                setGeneratorSuccess('Soal berhasil diperbarui dengan variasi baru.');
             }
         } catch (err) {
             setGeneratorSuccess('');
@@ -992,7 +828,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
             savedAt={savedAt}
             saving={saving}
             hasUnsavedChanges={hasUnsavedChanges}
-            onBack={handleRequestClose}
+            onBack={showGenerator ? undefined : handleRequestClose}
             onSave={saveDraft}
             onToggleStatus={Number.isInteger(Number(draft.id)) ? () => setStatus(draft.status === 'published' ? 'draft' : 'published') : undefined}
             onPreview={() => setShowPreview(true)}
@@ -1023,32 +859,36 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                     >
                         Lesson Baru
                     </button>
+                    <button type="button" onClick={generateDraft} className="inline-flex h-9 items-center gap-2 rounded-lg border border-emerald-300 px-3 text-xs font-bold text-emerald-800 dark:text-emerald-300"><AutoAwesomeIcon sx={{ fontSize: 16 }} />Generator Soal</button>
                 </>
             }
-            tabs={[
-                {
+            tabs={[{
                     id: 'questions',
                     label: 'Editor Soal Manual',
                     icon: FormatListBulletedIcon,
                     count: `${totals.ready}/${totals.total} Siap`,
-                },
-                {
+                },{
                     id: 'intro',
                     label: 'Materi & Pola Grammar',
                     icon: MenuBookIcon,
                     badge: draft.pattern || null,
-                },
-                {
-                    id: 'generator',
-                    label: 'Smart Generator (AI)',
-                    icon: AutoAwesomeIcon,
-                },
-            ]}
+                }]}
             activeTab={activeMainTab}
             onTabChange={setActiveMainTab}
             unstyled={true}
             extraModals={
                 <>
+                    <UnifiedQuizGeneratorModal open={showGenerator} onClose={() => setShowGenerator(false)} type="grammar"
+                        initialData={{ quizId: draft.id && Number.isInteger(Number(draft.id)) ? Number(draft.id) : null,
+                            moduleDayId: day.id, level: draft.level, hasContent: draft.stages.some(stage => stage.questions?.length), settings,
+                            input: { pattern: draft.pattern, title: draft.title, formula: draft.intro?.formula || '', meaning: draft.intro?.meaning || '', explanation: draft.intro?.explanation || '', examples: draft.intro?.examples || [] } }}
+                        onApplyDraft={(generated, appliedSettings) => {
+                            const lesson = generated.material.lesson;
+                            setDraft(current => ({ ...current, pattern: lesson.pattern, title: lesson.title || current.title, level: generated.level,
+                                intro: { ...current.intro, formula: lesson.formula, meaning: lesson.meaning, explanation: lesson.explanation, examples: lesson.examples }, stages: grammarStagesFromDraft(generated) }));
+                            setSettings(current => ({ ...current, ...appliedSettings, count: generated.questions.length, counts: Object.fromEntries(['transformation', 'sentence_builder', 'context_choice'].map(id => [id, generated.questions.filter(q => q.stage === id).length])) }));
+                            setActiveMainTab('questions'); setError(''); setGeneratorSuccess('Draf diterapkan ke editor.');
+                        }} />
                     <GrammarQuizPreviewDialog open={showPreview} quiz={draft} onClose={() => setShowPreview(false)} />
                     <GrammarBulkImportDialog open={showBulkImport} program={module?.program} onClose={() => setShowBulkImport(false)} />
                     <GrammarBankPickerDialog
@@ -1127,7 +967,6 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                             onRegenerateSingle={handleRegenerateSingle}
                             regeneratingKey={regeneratingKey}
                             onRegenerateAll={generateDraft}
-                            isGenerating={isGenerating}
                             onPreview={() => setShowPreview(true)}
                             onTogglePublish={() => setStatus(draft.status === 'published' ? 'draft' : 'published')}
                             saving={saving}
@@ -1165,29 +1004,6 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                     </div>
                 )}
 
-                {/* Tab 3: Smart Generator AI */}
-                {activeMainTab === 'generator' && (
-                    <div className="mx-auto max-w-3xl rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                        <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                            <div className="flex items-center gap-2">
-                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">2</span>
-                                <h2 className="text-base font-black text-gray-900 dark:text-white">Pengaturan Smart Generator AI</h2>
-                            </div>
-                            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-black text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">Smart Engine</span>
-                        </div>
-                        <GenerationSettings
-                            settings={settings}
-                            onChange={setSettings}
-                            onGenerate={async () => {
-                                await generateDraft();
-                                setActiveMainTab('questions');
-                            }}
-                            isGenerating={isGenerating}
-                            onSaveDraft={saveDraft}
-                            saving={saving}
-                        />
-                    </div>
-                )}
             </div>
         </UnifiedQuizBuilderShell>
     );

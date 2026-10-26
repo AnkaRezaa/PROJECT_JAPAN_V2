@@ -9,8 +9,9 @@ use App\Models\ProgramPembelajaran;
 use App\Services\ImportKuisGrammarService;
 use App\Services\ImportSpreadsheetService;
 use App\Services\KloterBelajarService;
-use App\Services\KuisGrammarGeneratorService;
 use App\Services\KuisGrammarService;
+use App\Services\QuizGenerator\QuizGeneratorDraft;
+use App\Services\QuizGenerator\QuizGeneratorManager;
 use App\Services\TemplateExcelService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -107,7 +108,7 @@ class AdminGrammarQuizController extends Controller
         return response()->json(['message' => 'Lesson Grammar berhasil dihapus.']);
     }
 
-    public function generateDraft(Request $request, KuisGrammarGeneratorService $generator)
+    public function generateDraft(Request $request, QuizGeneratorManager $generator)
     {
         if (empty(trim($request->input('lesson.pattern', '')))) {
             return response()->json([
@@ -124,6 +125,7 @@ class AdminGrammarQuizController extends Controller
             'lesson.explanation' => ['nullable', 'string', 'max:10000'],
             'lesson.level' => ['nullable', 'string', 'max:30'],
             'lesson.examples' => ['nullable', 'array', 'max:20'],
+            'lesson.examples.*' => ['required', 'array'],
             'lesson.examples.*.japanese' => ['nullable', 'string', 'max:5000'],
             'lesson.examples.*.reading' => ['nullable', 'string', 'max:5000'],
             'lesson.examples.*.translation' => ['nullable', 'string', 'max:5000'],
@@ -145,31 +147,8 @@ class AdminGrammarQuizController extends Controller
             'lesson.formula' => 'Rumus Pola',
         ]);
 
-        $stagesDraft = $generator->generateFromLesson(
-            $validated['lesson'] ?? [],
-            $validated['settings'] ?? []
-        );
-
-        $formattedStages = [
-            [
-                'id' => 'transformation',
-                'title' => 'Stage 1: Transformasi Pola',
-                'description' => 'Latihan perubahan bentuk kata kerja atau komponen grammar yang tepat.',
-                'questions' => $stagesDraft['transformation'] ?? [],
-            ],
-            [
-                'id' => 'sentence_builder',
-                'title' => 'Stage 2: Penyusunan Kalimat',
-                'description' => 'Susun kata acak menjadi kalimat utuh sesuai pola grammar.',
-                'questions' => $stagesDraft['sentence_builder'] ?? [],
-            ],
-            [
-                'id' => 'context_choice',
-                'title' => 'Stage 3: Pilihan Kontekstual',
-                'description' => 'Pilih kalimat yang paling tepat sesuai nuansa dan situasi yang diberikan.',
-                'questions' => $stagesDraft['context_choice'] ?? [],
-            ],
-        ];
+        $draft = $generator->generate('grammar', ['_quiz' => null, 'level' => preg_replace('/^JLPT\s*/i', '', $validated['lesson']['level'] ?? 'N3'), 'input' => $validated['lesson']], $validated['settings'] ?? []);
+        $formattedStages = QuizGeneratorDraft::grammarStages($draft);
 
         return response()->json([
             'message' => 'Draf kuis berhasil di-generate secara otomatis.',
@@ -179,7 +158,7 @@ class AdminGrammarQuizController extends Controller
 
     public function regenerateQuestion(
         Request $request,
-        KuisGrammarGeneratorService $generator
+        QuizGeneratorManager $generator
     ) {
         $validated = $request->validate([
             'stage' => ['required', 'string', 'in:transformation,sentence_builder,context_choice'],
@@ -189,16 +168,21 @@ class AdminGrammarQuizController extends Controller
             'lesson.formula' => ['nullable', 'string', 'max:5000'],
             'lesson.level' => ['nullable', 'string', 'max:30'],
             'lesson.examples' => ['nullable', 'array', 'max:20'],
+            'lesson.examples.*' => ['required', 'array'],
+            'lesson.examples.*.japanese' => ['required', 'string', 'max:5000'],
+            'lesson.examples.*.reading' => ['nullable', 'string', 'max:5000'],
+            'lesson.examples.*.translation' => ['nullable', 'string', 'max:5000'],
             'settings' => ['nullable', 'array'],
             'settings.target_form' => ['nullable', 'string', 'in:auto,te,ba,nai,ta,dict,stem,potential,passive,causative'],
         ]);
 
-        $question = $generator->regenerateSingleQuestion(
-            $validated['stage'],
-            $validated['lesson'] ?? [],
-            $validated['settings'] ?? [],
-            (int) ($validated['index'] ?? 0)
-        );
+        $payload = ['_quiz' => null, 'level' => preg_replace('/^JLPT\s*/i', '', $validated['lesson']['level'] ?? 'N3'), 'input' => $validated['lesson']];
+        $question = $generator->regenerate('grammar', 'legacy', [
+            'payload' => $payload, 'settings' => $validated['settings'] ?? [],
+            'existing_questions' => [['id' => 'legacy', 'stage' => $validated['stage']]],
+        ]);
+        $stages = QuizGeneratorDraft::grammarStages(QuizGeneratorDraft::pack('grammar', $payload['level'], [], [$question]));
+        $question = collect($stages)->firstWhere('id', $validated['stage'])['questions'][0];
 
         return response()->json([
             'message' => 'Soal berhasil diperbarui dengan variasi baru.',
@@ -224,7 +208,7 @@ class AdminGrammarQuizController extends Controller
 
             $tempPath = tempnam(sys_get_temp_dir(), 'grammar-csv-');
             $handle = fopen($tempPath, 'w');
-            fputs($handle, "\xEF\xBB\xBF");
+            fwrite($handle, "\xEF\xBB\xBF");
             fputcsv($handle, $headers);
             foreach ($sampleRows as $row) {
                 fputcsv($handle, $row);
@@ -281,10 +265,11 @@ class AdminGrammarQuizController extends Controller
 
         $file = $validated['import_file'];
         $extension = strtolower($file->getClientOriginalExtension());
-        $day = !empty($validated['module_day_id']) ? HariModul::find($validated['module_day_id']) : null;
+        $day = ! empty($validated['module_day_id']) ? HariModul::find($validated['module_day_id']) : null;
 
         if ($extension === 'csv' || $extension === 'txt') {
             $rows = $spreadsheets->parseCsvRows($file->getRealPath());
+
             return response()->json($importer->previewFlatCsv($program, $rows, $day));
         }
 
@@ -307,7 +292,7 @@ class AdminGrammarQuizController extends Controller
 
         $file = $validated['import_file'];
         $extension = strtolower($file->getClientOriginalExtension());
-        $day = !empty($validated['module_day_id']) ? HariModul::find($validated['module_day_id']) : null;
+        $day = ! empty($validated['module_day_id']) ? HariModul::find($validated['module_day_id']) : null;
 
         if ($extension === 'csv' || $extension === 'txt') {
             $rows = $spreadsheets->parseCsvRows($file->getRealPath());

@@ -175,7 +175,11 @@ class SoalKuisService
 
     public function generateFromVocabulary(Kuis $quiz, array $filters): int
     {
-        $generated = $this->vocabularyQuestionPayloads($quiz, $filters);
+        return $this->storeGeneratedQuestions($quiz, $this->vocabularyQuestionPayloads($quiz, $filters));
+    }
+
+    public function storeGeneratedQuestions(Kuis $quiz, array $generated): int
+    {
         $nextOrder = (int) $quiz->questions()->max('order') + 1;
         $created = 0;
 
@@ -227,6 +231,7 @@ class SoalKuisService
                 'option_readings' => $payload['option_readings'] ?? [],
                 'explanation' => $payload['explanation'],
                 'explanation_reading' => $payload['explanation_reading'] ?? null,
+                'audio_url' => $payload['audio_url'] ?? null,
             ])->values()->all(),
         ];
     }
@@ -307,6 +312,7 @@ class SoalKuisService
         }
 
         return $pool
+            ->reject(fn (Kosakata $word) => in_array($word->id, $filters['exclude_vocabulary_ids'] ?? [], false))
             ->take($count)
             ->map(function (Kosakata $vocabulary) use ($pool, $mode) {
                 $payload = $this->questionPayloadFromVocabulary($vocabulary, $pool, $mode);

@@ -129,8 +129,8 @@ class KuisGrammarService
         }
 
         $options = [
-            'source_text' => $this->nullableText($question['source_text'] ?? $question['japanese'] ?? null),
-            'source_reading' => $this->nullableText($question['source_reading'] ?? $question['reading'] ?? null),
+            'source_text' => $stage === 'transformation' ? $this->nullableText($question['source_text'] ?? $question['japanese'] ?? null) : null,
+            'source_reading' => $stage === 'transformation' ? $this->nullableText($question['source_reading'] ?? $question['reading'] ?? null) : null,
             'translation' => $this->nullableText($question['translation'] ?? null),
             'context' => $this->nullableText($question['context'] ?? null),
         ];
@@ -183,15 +183,16 @@ class KuisGrammarService
     private function questionPayload($question, bool $includeAnswers): array
     {
         $options = $question->options ?? [];
+        $isTransformation = $question->stage === 'transformation';
         $payload = [
             'id' => $question->id,
             'type' => $question->stage,
             'prompt' => $question->question_text,
-            'japanese' => Arr::get($options, 'source_text'),
-            'reading' => Arr::get($options, 'source_reading'),
+            'japanese' => ($includeAnswers || $isTransformation) ? Arr::get($options, 'source_text') : null,
+            'reading' => ($includeAnswers || $isTransformation) ? Arr::get($options, 'source_reading') : null,
             'translation' => Arr::get($options, 'translation'),
             'context' => Arr::get($options, 'context'),
-            'explanation' => $question->explanation,
+            'explanation' => $includeAnswers ? $question->explanation : null,
             'points' => max(1, (int) $question->points),
         ];
 

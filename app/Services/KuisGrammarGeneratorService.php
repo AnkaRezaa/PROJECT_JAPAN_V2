@@ -9,6 +9,21 @@ use Illuminate\Validation\ValidationException;
 
 class KuisGrammarGeneratorService
 {
+    private ?int $moduleId = null;
+
+    public function forModule(?int $moduleId): self
+    {
+        $generator = clone $this;
+        $generator->moduleId = $moduleId;
+
+        return $generator;
+    }
+
+    private function vocabularyQuery(string $level): \Illuminate\Database\Eloquent\Builder
+    {
+        return Kosakata::query()->where('jlpt_level', $level)->where(fn ($query) => $query->whereNull('module_id')
+            ->when($this->moduleId, fn ($q) => $q->orWhere('module_id', $this->moduleId)));
+    }
     private const COMMON_PARTICLE_DISTRACTORS = [
         'まで', 'のに', 'から', 'より', 'だけ', 'しか', 'には', 'でも', 'ほど', 'ばかり', 'こそ', 'へ', 'で'
     ];
@@ -52,7 +67,8 @@ class KuisGrammarGeneratorService
         int $targetCount = 5,
         string $difficulty = 'mixed',
         string $level = 'N3',
-        string $targetFormOverride = 'auto'
+        string $targetFormOverride = 'auto',
+        array $excludeVerbs = []
     ): array {
         $questions = [];
         $cleanExamples = array_values(array_filter($examples, fn ($ex) => !empty(trim($ex['japanese'] ?? ''))));
@@ -75,6 +91,13 @@ class KuisGrammarGeneratorService
                     }
                 }
             }
+        }
+
+        if (! empty($excludeVerbs)) {
+            $verbsPool = array_values(array_filter(
+                $verbsPool,
+                fn ($v) => ! in_array($v['base'], $excludeVerbs, true)
+            ));
         }
 
         if (empty($verbsPool)) {
@@ -229,6 +252,7 @@ class KuisGrammarGeneratorService
         }
 
         $bankDistractors = $this->fetchDistractorsFromDatabase($jlptLevel, $pattern);
+        $extraExamplesPool = null;
 
         for ($i = 0; $i < $targetCount; $i++) {
             $item = $sentencesPool[$i % max(1, count($sentencesPool))] ?? null;
@@ -267,27 +291,30 @@ class KuisGrammarGeneratorService
             }
 
             if (count($distractors) < 3) {
-                try {
-                    $extraExamples = Kosakata::query()
-                        ->whereNotNull('example_sentence')
-                        ->where('example_sentence', '!=', '')
-                        ->inRandomOrder()
-                        ->take(10)
-                        ->pluck('example_sentence')
-                        ->toArray();
-
-                    shuffle($extraExamples);
-                    foreach ($extraExamples as $ex) {
-                        $cleaned = str_replace('|', '', trim($ex));
-                        if ($cleaned !== '' && $cleaned !== $correctAnswer && !in_array($cleaned, $distractors, true)) {
-                            $distractors[] = $cleaned;
-                        }
-                        if (count($distractors) >= 3) {
-                            break;
-                        }
+                if ($extraExamplesPool === null) {
+                    try {
+                        $extraExamplesPool = $this->vocabularyQuery($jlptLevel)
+                            ->whereNotNull('example_sentence')
+                            ->where('example_sentence', '!=', '')
+                            ->inRandomOrder()
+                            ->take(20)
+                            ->pluck('example_sentence')
+                            ->toArray();
+                    } catch (\Throwable) {
+                        $extraExamplesPool = [];
                     }
-                } catch (\Throwable) {
-                    // Database query error handled silently
+                }
+
+                $availableDistractors = $extraExamplesPool;
+                shuffle($availableDistractors);
+                foreach ($availableDistractors as $ex) {
+                    $cleaned = str_replace('|', '', trim($ex));
+                    if ($cleaned !== '' && $cleaned !== $correctAnswer && !in_array($cleaned, $distractors, true)) {
+                        $distractors[] = $cleaned;
+                    }
+                    if (count($distractors) >= 3) {
+                        break;
+                    }
                 }
             }
 
@@ -325,7 +352,8 @@ class KuisGrammarGeneratorService
         $targetForm = $settings['target_form'] ?? 'auto';
 
         if ($stage === 'transformation') {
-            $list = $this->generateStage1Transformation($pattern, $formula, $examples, 1, $difficulty, $level, $targetForm);
+            $excludeVerbs = $settings['exclude_verbs'] ?? [];
+            $list = $this->generateStage1Transformation($pattern, $formula, $examples, 1, $difficulty, $level, $targetForm, $excludeVerbs);
             $q = $list[0] ?? [];
             $q['id'] = 'gen-trans-' . ($index + 1) . '-' . time();
             return $q;
@@ -571,7 +599,7 @@ class KuisGrammarGeneratorService
 
         // 1. Try pulling verbs from Kosakata table
         try {
-            $dbVerbs = Kosakata::query()
+            $dbVerbs = $this->vocabularyQuery($level)
                 ->where(function ($q) {
                     $q->where('category', 'like', '%verb%')
                       ->orWhere('category', 'like', '%kata kerja%')
@@ -584,7 +612,7 @@ class KuisGrammarGeneratorService
                 ->get();
 
             if ($dbVerbs->isEmpty()) {
-                $dbVerbs = Kosakata::query()
+                $dbVerbs = $this->vocabularyQuery($level)
                     ->whereNotNull('word')
                     ->whereNotNull('reading')
                     ->inRandomOrder()
@@ -649,7 +677,7 @@ class KuisGrammarGeneratorService
         // 2. Fallback to Kosakata example sentences if GrammarBank returned empty
         if (empty($results)) {
             try {
-                $vocabItems = Kosakata::query()
+                $vocabItems = $this->vocabularyQuery($level)
                     ->whereNotNull('example_sentence')
                     ->inRandomOrder()
                     ->take(5)
@@ -699,7 +727,7 @@ class KuisGrammarGeneratorService
         // Additional distractors from Kosakata examples
         if (count($distractors) < 5) {
             try {
-                $vocabExamples = Kosakata::query()
+                $vocabExamples = $this->vocabularyQuery($level)
                     ->whereNotNull('example_sentence')
                     ->inRandomOrder()
                     ->take(5)

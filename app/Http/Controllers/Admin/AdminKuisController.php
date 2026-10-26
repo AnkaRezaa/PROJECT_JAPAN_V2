@@ -10,10 +10,12 @@ use App\Models\Modul;
 use App\Models\SetFlashcard;
 use App\Models\Soal;
 use App\Services\ImportSpreadsheetService;
+use App\Services\KloterBelajarService;
 use App\Services\NotifikasiPenggunaService;
+use App\Services\QuizGenerator\QuizGeneratorDraft;
+use App\Services\QuizGenerator\QuizGeneratorManager;
 use App\Services\SoalKuisService;
 use App\Services\TemplateExcelService;
-use App\Services\KloterBelajarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -23,9 +25,7 @@ use Inertia\Inertia;
 
 class AdminKuisController extends Controller
 {
-    public function __construct(private readonly KloterBelajarService $kloterService)
-    {
-    }
+    public function __construct(private readonly KloterBelajarService $kloterService) {}
 
     public function store(
         KuisRequest $request,
@@ -247,6 +247,8 @@ class AdminKuisController extends Controller
 
     public function updateQuestions(Request $request, Kuis $quiz, SoalKuisService $questions)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $quiz->module_id);
+
         $validated = $request->validate([
             'time_limit' => ['nullable', 'integer', 'min:0', 'max:1440'],
             'passing_score' => ['nullable', 'integer', 'min:1', 'max:100'],
@@ -285,6 +287,8 @@ class AdminKuisController extends Controller
         ImportSpreadsheetService $spreadsheets,
         SoalKuisService $questions
     ) {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $quiz->module_id);
+
         $validated = $request->validate([
             'import_file' => ['required', 'file', 'max:2048'],
         ]);
@@ -317,6 +321,8 @@ class AdminKuisController extends Controller
         ImportSpreadsheetService $spreadsheets,
         SoalKuisService $questions
     ) {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $quiz->module_id);
+
         $validated = $request->validate([
             'import_file' => ['required', 'file', 'max:2048'],
         ]);
@@ -342,11 +348,14 @@ class AdminKuisController extends Controller
     }
 
     public function downloadImportTemplate(
+        Request $request,
         Kuis $quiz,
         string $format,
         TemplateExcelService $templates,
         SoalKuisService $questions
     ) {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $quiz->module_id);
+
         $format = strtolower($format);
 
         if (! in_array($format, ['csv', 'xlsx'], true)) {
@@ -370,24 +379,27 @@ class AdminKuisController extends Controller
             ->deleteFileAfterSend(true);
     }
 
-    public function generateVocabularyQuestions(Request $request, Kuis $quiz, SoalKuisService $questions)
+    public function generateVocabularyQuestions(Request $request, Kuis $quiz, SoalKuisService $questions, QuizGeneratorManager $generator)
     {
         $validated = $this->validateVocabularyGenerator($request, $quiz);
 
-        $created = $questions->generateFromVocabulary($quiz, $validated);
+        $draft = $generator->generate('vocab', ['_quiz' => $quiz, 'level' => $validated['jlpt_level'] ?? 'all', 'input' => $validated], ['count' => $validated['count']]);
+        $created = $questions->storeGeneratedQuestions($quiz, QuizGeneratorDraft::vocabularyQuestions($draft));
 
         return redirect()->back()->with('success', "{$created} soal berhasil dibuat dari bank konten.");
     }
 
-    public function previewVocabularyQuestions(Request $request, Kuis $quiz, SoalKuisService $questions)
+    public function previewVocabularyQuestions(Request $request, Kuis $quiz, SoalKuisService $questions, QuizGeneratorManager $generator)
     {
-        return response()->json(
-            $questions->previewFromVocabulary($quiz, $this->validateVocabularyGenerator($request, $quiz))
-        );
+        $validated = $this->validateVocabularyGenerator($request, $quiz);
+        $draft = $generator->generate('vocab', ['_quiz' => $quiz, 'level' => $validated['jlpt_level'] ?? 'all', 'input' => $validated], ['count' => $validated['count']]);
+
+        return response()->json(['count' => count($draft['questions']), 'vocabulary_ids' => array_column(array_column($draft['questions'], 'source'), 'id'), 'questions' => QuizGeneratorDraft::vocabularyQuestions($draft)]);
     }
 
     private function validateVocabularyGenerator(Request $request, Kuis $quiz): array
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $quiz->module_id);
         $validated = $request->validate([
             'jlpt_level' => ['nullable', 'string', 'max:8'],
             'category' => ['nullable', 'string', 'max:100'],

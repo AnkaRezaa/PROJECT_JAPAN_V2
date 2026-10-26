@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import QuizField from '@/Components/UI/QuizField';
+import UnifiedQuizGeneratorModal from '@/Components/Features/Quiz/Shared/UnifiedQuizGeneratorModal';
+import { dokkaiMaterialFromDraft } from '@/Components/Features/Quiz/Shared/generatorDraftAdapters';
 import { OptionEditorRow, QuestionNavItem, AudioAttachmentField, UnifiedQuizBuilderShell, UnifiedQuestionEditorCanvas } from '@/Components/Features/Quiz/Shared';
-import DokkaiBankPickerDialog from './DokkaiBankPickerDialog';
+
 import QuickQuestionParserDialog from './QuickQuestionParserDialog';
 import QuickVocabParserDialog from './QuickVocabParserDialog';
 import AutoSplitParagraphDialog from './AutoSplitParagraphDialog';
@@ -149,6 +151,7 @@ function normalizeDraft(item, day, defaultLevel = 'N3') {
     const vocabularies = (item.vocabularies || []).map((v) => ({
         id: v.id || null,
         paragraph_id: v.paragraph_id || null,
+        paragraph_number: v.paragraph_number || paragraphIdToNumber[v.paragraph_id] || null,
         word: v.word || '',
         furigana: v.furigana || '',
         romaji: v.romaji || '',
@@ -158,6 +161,7 @@ function normalizeDraft(item, day, defaultLevel = 'N3') {
         jlpt_level: v.jlpt_level || normalizedPassage.jlpt_level || 'N3',
         example_sentence: v.example_sentence || '',
         example_translation: v.example_translation || '',
+        audio_url: v.audio_url || '',
     }));
 
     const questions = (item.questions && item.questions.length > 0)
@@ -175,6 +179,7 @@ function normalizeDraft(item, day, defaultLevel = 'N3') {
                     id: opt.id || oIdx + 1,
                     option_label: opt.option_label || ['A', 'B', 'C', 'D'][oIdx] || 'A',
                     option_text: opt.option_text || '',
+                    option_translation: opt.option_translation || '',
                     is_correct: Boolean(opt.is_correct),
                 }))
                 : [
@@ -362,7 +367,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
         select();
     };
 
-    const [showBankPicker, setShowBankPicker] = useState(false);
+    const [showGenerator, setShowGenerator] = useState(false);
     const [showImportDialog, setShowImportDialog] = useState(false);
     const [showQuestionParser, setShowQuestionParser] = useState(false);
     const [showVocabParser, setShowVocabParser] = useState(false);
@@ -429,21 +434,6 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
             localStorage.removeItem(storageKey);
         }
         setLocalDraftAvailable(false);
-    };
-
-    const handleSelectFromBank = (selectedItem) => {
-        const copy = JSON.parse(JSON.stringify(selectedItem));
-        copy.id = null;
-        if (copy.quiz) copy.quiz.id = null;
-        if (copy.passage) copy.passage.id = null;
-        (copy.paragraphs || []).forEach((p) => { p.id = null; });
-        (copy.vocabularies || []).forEach((v) => { v.id = null; });
-        (copy.questions || []).forEach((q) => { q.id = null; });
-        const normalized = normalizeDraft(copy, day, defaultLevel);
-        normalized.id = null;
-        setDraft(normalized);
-        setActiveTab('metadata');
-        setSuccessMessage(`Berhasil menyalin wacana "${normalized.passage?.title || ''}" dari Bank. Silakan sesuaikan dan klik Simpan.`);
     };
 
     const handleApplyQuestions = (newQuestions, replace = false) => {
@@ -658,6 +648,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
         })),
         vocabularies: (draft.vocabularies || []).map((v) => ({
             id: v.id || undefined,
+            paragraph_number: v.paragraph_number || undefined,
             word: v.word?.trim() || '',
             furigana: v.furigana?.trim() || '',
             romaji: v.romaji?.trim() || null,
@@ -667,6 +658,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
             jlpt_level: v.jlpt_level || draft.passage.jlpt_level,
             example_sentence: v.example_sentence?.trim() || null,
             example_translation: v.example_translation?.trim() || null,
+            audio_url: v.audio_url?.trim() || null,
         })),
         questions: (draft.questions || []).map((q, idx) => ({
             id: q.id || undefined,
@@ -681,6 +673,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                 id: opt.id,
                 option_label: opt.option_label,
                 option_text: opt.option_text?.trim() || '',
+                option_translation: opt.option_translation?.trim() || null,
                 is_correct: Boolean(opt.is_correct),
             })),
         })),
@@ -860,7 +853,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
             savedAt={savedAt}
             saving={saving}
             hasUnsavedChanges={hasUnsavedChanges}
-            onBack={handleRequestClose}
+            onBack={showGenerator ? undefined : handleRequestClose}
             onSave={handleSave}
             onToggleStatus={quizId ? () => handleToggleStatus(isPublished ? 'draft' : 'published') : undefined}
             onPreview={() => setShowStudentPreview(true)}
@@ -911,11 +904,11 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                         </button>
                         <button
                             type="button"
-                            onClick={() => setShowBankPicker(true)}
+                            onClick={() => setShowGenerator(true)}
                             className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300 shrink-0"
                         >
                             <BoltIcon sx={{ fontSize: 14 }} />
-                            <span>Salin dari Bank</span>
+                            <span>Generator Soal</span>
                         </button>
                         <button
                             type="button"
@@ -945,13 +938,14 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
             unstyled={true}
             extraModals={
                 <>
-                    <DokkaiBankPickerDialog
-                        open={showBankPicker}
-                        onClose={() => setShowBankPicker(false)}
-                        onSelect={handleSelectFromBank}
-                        initialLevel={draft.passage?.jlpt_level || defaultLevel}
-                    />
-
+                    <UnifiedQuizGeneratorModal open={showGenerator} onClose={() => setShowGenerator(false)} type="dokkai"
+                        initialData={{ quizId: draft.id ? Number(draft.id) : null, moduleDayId: day.id, level: draft.passage?.jlpt_level,
+                            hasContent: Boolean(draft.passage?.title?.trim() || draft.questions.some(q => q.question_text?.trim())) }}
+                        onApplyDraft={generated => {
+                            const material = dokkaiMaterialFromDraft(generated);
+                            setDraft(current => normalizeDraft({ ...current, ...material, passage: { ...current.passage, ...material.passage, xp_reward: current.passage.xp_reward } }, day, defaultLevel));
+                            setActiveTab('questions'); setActiveQuestionIndex(0); setError(''); setSuccessMessage('Draf diterapkan ke editor.');
+                        }} />
                     <DokkaiImportDialog
                         open={showImportDialog}
                         day={day}

@@ -35,14 +35,31 @@ class AdminDokkaiController extends Controller
                 'moduleDay.module.programPembelajaran',
             ]);
 
+        $programIds = $this->kloter->programIdsDikelola($request->user());
+        if ($programIds !== null) {
+            $query->whereHas('module', fn ($q) => $q->whereIn('program_pembelajaran_id', $programIds));
+        }
+
         if ($request->filled('level') && $request->string('level') !== 'all') {
-            $level = (string) $request->string('level');
-            $query->whereHas('dokkaiPassage', fn ($q) => $q->where('jlpt_level', $level));
+            $level = preg_replace('/^JLPT\s*/i', '', (string) $request->string('level'));
+            $query->whereHas('dokkaiPassage', fn ($q) => $q->where(fn ($sub) => $sub->where('jlpt_level', $level)->orWhere('jlpt_level', 'JLPT '.$level)));
         }
 
         if ($request->filled('search')) {
             $search = (string) $request->string('search');
-            $query->whereHas('dokkaiPassage', fn ($q) => $q->where('title', 'like', "%{$search}%"));
+            $query->whereHas('dokkaiPassage', fn ($q) => $q->where(fn ($p) => $p->where('title', 'like', "%{$search}%")->orWhere('theme_category', 'like', "%{$search}%")));
+        }
+
+        if ($request->boolean('summary')) {
+            $page = $query->setEagerLoads([])->with(['dokkaiPassage' => fn ($q) => $q->select('id', 'quiz_id', 'title', 'jlpt_level')->withCount('questions')])->latest('id')->paginate(20);
+
+            return response()->json([
+                'data' => $page->getCollection()->map(fn ($quiz) => [
+                    'id' => $quiz->id, 'title' => $quiz->dokkaiPassage?->title,
+                    'level' => $quiz->dokkaiPassage?->jlpt_level,
+                    'question_count' => $quiz->dokkaiPassage?->questions_count ?? 0,
+                ]), 'has_more' => $page->hasMorePages(),
+            ]);
         }
 
         $items = $query->latest('id')
@@ -186,7 +203,7 @@ class AdminDokkaiController extends Controller
         if ($format === 'csv') {
             $tempPath = tempnam(sys_get_temp_dir(), 'dokkai-csv-');
             $handle = fopen($tempPath, 'w');
-            fputs($handle, "\xEF\xBB\xBF");
+            fwrite($handle, "\xEF\xBB\xBF");
             fputcsv($handle, $headers);
             foreach ($sampleRows as $row) {
                 fputcsv($handle, $row);
@@ -274,6 +291,7 @@ class AdminDokkaiController extends Controller
             'paragraphs.*.content_raw' => ['required', 'string'],
             'vocabularies' => ['nullable', 'array'],
             'vocabularies.*.id' => ['nullable', 'integer'],
+            'vocabularies.*.paragraph_number' => ['nullable', 'integer', 'min:1'],
             'vocabularies.*.word' => ['required', 'string', 'max:255'],
             'vocabularies.*.furigana' => ['required', 'string', 'max:255'],
             'vocabularies.*.romaji' => ['nullable', 'string', 'max:255'],
