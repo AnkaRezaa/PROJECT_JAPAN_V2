@@ -2219,7 +2219,7 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                                     const { data } = await axiosClient.post(endpoint, {
                                         answers: attemptPayload.answers || {},
                                         submission_token: attemptPayload.submission_token,
-                                    });
+                                    }, { timeout: 20000 });
 
                                     return data;
                                 }}

@@ -3,8 +3,16 @@ import { Link } from '@inertiajs/react';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+
+const PANDUAN_DEEPLINKS = {
+    vocabulary: { page: 4, label: 'Panduan Kosakata' },
+    grammar: { page: 10, label: 'Panduan Grammar' },
+    exams: { page: 22, label: 'Panduan CBT' },
+};
 
 export default function BankSoalNavbar({ activeTab = 'grammar', stats = {}, action = null }) {
+    const panduan = PANDUAN_DEEPLINKS[activeTab] || PANDUAN_DEEPLINKS.grammar;
     const tabs = [
         {
             key: 'grammar',
@@ -76,11 +84,20 @@ export default function BankSoalNavbar({ activeTab = 'grammar', stats = {}, acti
                 </div>
             </nav>
 
-            {action && (
-                <div className="flex shrink-0 items-center gap-2">
-                    {action}
-                </div>
-            )}
+            <div className="flex shrink-0 items-center gap-2">
+                <a
+                    href={`/docs/panduan_tokuup.pdf#page=${panduan.page}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-emerald-200/90 bg-emerald-50/70 px-3 py-2 text-xs font-bold text-emerald-800 shadow-xs transition hover:bg-emerald-100 hover:text-emerald-950 dark:border-emerald-800/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
+                    title={`Buka Buku Panduan Resmi: ${panduan.label} (PDF)`}
+                >
+                    <MenuBookIcon sx={{ fontSize: 16 }} />
+                    <span className="hidden sm:inline">{panduan.label}</span>
+                    <span className="sm:hidden">Panduan</span>
+                </a>
+                {action}
+            </div>
         </div>
     );
 }

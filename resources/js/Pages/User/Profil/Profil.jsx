@@ -22,6 +22,7 @@ import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import TranslateIcon from '@mui/icons-material/Translate';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import {
     areSoundEffectsEnabled,
     playSoundEffect,
@@ -389,6 +390,19 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
                                             {item.label}
                                         </button>
                                     ))}
+                                    <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
+                                    <a
+                                        href="/docs/panduan_tokuup.pdf#page=28"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-3 w-full px-5 py-3.5 rounded-2xl text-sm font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors border border-emerald-200/70 dark:border-emerald-800/60"
+                                        title="Buka Buku Panduan Belajar Siswa (PDF)"
+                                    >
+                                        <span className="text-emerald-600 dark:text-emerald-400">
+                                            <MenuBookIcon sx={{ fontSize: 20 }} />
+                                        </span>
+                                        Buku Panduan Belajar
+                                    </a>
                                 </nav>
                             </div>
 

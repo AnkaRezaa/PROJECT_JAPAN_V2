@@ -47,6 +47,7 @@
         "livekit-client": "^2.21.0",
         "pdfjs-dist": "^6.1.200",
         "pusher-js": "^8.6.0",
+        "qrcode": "1.5.4",
         "react-confetti": "^6.4.0",
         "recharts": "^3.10.1",
         "tiny-segmenter": "^0.2.0"

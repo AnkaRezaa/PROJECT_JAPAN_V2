@@ -286,10 +286,22 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                 </div>
                             </div>
 
-                            <button onClick={openCreate} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-brand-600 px-5 text-sm font-black text-white shadow-sm shadow-brand-500/20 transition-colors hover:bg-brand-700">
-                                <AddIcon sx={{ fontSize: 18 }} />
-                                Tambah Kelas
-                            </button>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <a
+                                    href="/docs/panduan_tokuup.pdf#page=16"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-bold text-gray-700 shadow-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                                    title="Buka Bab 3: Buku Panduan Alur Kurikulum & Modul (PDF)"
+                                >
+                                    <MenuBookIcon sx={{ fontSize: 18 }} />
+                                    <span>Panduan Modul</span>
+                                </a>
+                                <button onClick={openCreate} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-brand-600 px-5 text-sm font-black text-white shadow-sm shadow-brand-500/20 transition-colors hover:bg-brand-700">
+                                    <AddIcon sx={{ fontSize: 18 }} />
+                                    Tambah Kelas
+                                </button>
+                            </div>
                         </div>
                     </section>
 

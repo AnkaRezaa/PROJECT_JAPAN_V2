@@ -788,6 +788,16 @@ export default function AuthenticatedLayout({ children }) {
                     <SettingsOutlinedIcon sx={{ fontSize: 18 }} className="text-gray-700 dark:text-gray-300" />
                     Pengaturan profil
                 </Link>
+                <a
+                    href={isUser ? '/docs/panduan_tokuup.pdf#page=28' : '/docs/panduan_tokuup.pdf#page=4'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus dark:text-gray-300 dark:hover:bg-gray-800"
+                    title={isUser ? 'Buka Buku Panduan Belajar Siswa (PDF)' : 'Buka Buku Panduan Sistem Admin (PDF)'}
+                >
+                    <MenuBookIcon sx={{ fontSize: 18 }} className="text-gray-700 dark:text-gray-300" />
+                    Buku Panduan PDF
+                </a>
             </div>
 
             <div className="border-t border-gray-100 py-1 dark:border-gray-800">
