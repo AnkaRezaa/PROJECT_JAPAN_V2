@@ -43,7 +43,7 @@ it('renders the admin exam management pages', function (string $routeName, strin
             ->has('results', 0));
 })->with([
     ['admin.exams.index', 'Admin/Ujian/Index'],
-    ['admin.exams.create', 'Admin/Ujian/Editor'],
+    ['admin.exams.create', 'Admin/Ujian/BuilderUjian'],
     ['admin.exams.sessions', 'Admin/Ujian/Sessions'],
     ['admin.exams.results', 'Admin/Ujian/Results'],
 ]);
@@ -55,7 +55,7 @@ it('renders known edit and preview pages and rejects unknown exams', function ()
         ->get(route('admin.exams.edit', $slug))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->component('Admin/Ujian/Editor')
+            ->component('Admin/Ujian/BuilderUjian')
             ->where('mode', 'edit')
             ->where('exam.slug', $slug));
 

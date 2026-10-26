@@ -44,7 +44,7 @@ test('WB-DB-002: module_days enforces unique constraint on module_id and day_num
     );
     $module = Modul::firstOrCreate(
         ['title' => 'Modul WB DB', 'program_pembelajaran_id' => $program->id],
-        ['week_number' => 99, 'status' => 'published']
+        ['week_number' => 99, 'status' => 'published', 'level_id' => $level->id]
     );
 
     HariModul::create([
@@ -70,7 +70,7 @@ test('WB-DB-003: deleting a module_day cascades and removes pivot rows in module
     );
     $module = Modul::firstOrCreate(
         ['title' => 'Modul WB Cascade', 'program_pembelajaran_id' => $program->id],
-        ['week_number' => 98, 'status' => 'published']
+        ['week_number' => 98, 'status' => 'published', 'level_id' => $level->id]
     );
 
     $day = HariModul::create([
@@ -143,7 +143,7 @@ test('WB-ACID-003: ProgresController session start prevents concurrent duplicate
     );
     $module = Modul::firstOrCreate(
         ['title' => 'Modul WB ACID', 'program_pembelajaran_id' => $program->id],
-        ['week_number' => 97, 'status' => 'published']
+        ['week_number' => 97, 'status' => 'published', 'level_id' => $level->id]
     );
     $day = HariModul::firstOrCreate(
         ['module_id' => $module->id, 'day_number' => 86],
@@ -250,7 +250,7 @@ test('WB-ACID-005: GrammarBankService assignToDay prevents duplicate quiz creati
     );
     $module = Modul::firstOrCreate(
         ['title' => 'Modul WB Grammar', 'program_pembelajaran_id' => $program->id],
-        ['week_number' => 96, 'status' => 'published']
+        ['week_number' => 96, 'status' => 'published', 'level_id' => $level->id]
     );
     $day = HariModul::firstOrCreate(
         ['module_id' => $module->id, 'day_number' => 85],

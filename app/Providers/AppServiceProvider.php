@@ -2,8 +2,12 @@
 
 namespace App\Providers;
 
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -24,6 +28,26 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        Event::listen(Login::class, static function (Login $event): void {
+            $request = request();
+            $guard = Auth::guard($event->guard);
+
+            if (! $request->hasSession() || ! $guard instanceof SessionGuard) {
+                return;
+            }
+
+            // Bind immediately, even if the browser never follows the login redirect.
+            $request->session()->put(
+                'password_hash_'.$event->guard,
+                $guard->hashPasswordForCookie($event->user->getAuthPassword())
+            );
+        });
+
+        RateLimiter::for('login', fn (Request $request) => Limit::perSecond(
+            (int) config('auth.login_limits.ip.attempts'),
+            (int) config('auth.login_limits.ip.decay_seconds')
+        )->by('login-ip:'.hash('sha256', (string) $request->ip())));
 
         RateLimiter::for('access-keys', fn (Request $request) => Limit::perMinute(5)
             ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));

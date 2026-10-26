@@ -67,6 +67,7 @@ Route::get('/privacy-policy', [HalamanController::class, 'privacyPolicy'])->name
 Route::get('/terms', [HalamanController::class, 'terms'])->name('terms');
 Route::get('/cookie-policy', [HalamanController::class, 'cookiePolicy'])->name('cookie-policy');
 Route::get('/dokkai/preview', [DokkaiController::class, 'show'])->name('dokkai.preview');
+Route::redirect('/quick-quiz', '/user/dashboard-quiz/mixed');
 Route::get('/support/chat', [SupportChatController::class, 'state'])->middleware('throttle:support-chat-read')->name('support.chat.state');
 Route::post('/support/chat', [SupportChatController::class, 'start'])->middleware('throttle:support-chat-start')->name('support.chat.start');
 Route::post('/support/chat/messages', [SupportChatController::class, 'send'])->middleware('throttle:support-chat-send')->name('support.chat.send');
@@ -85,7 +86,6 @@ Route::get('/exams', function (Request $request) {
     };
 })->name('exams');
 
-Route::get('/dokkai/preview', [DokkaiController::class, 'show'])->name('dokkai.preview');
 
 // Authenticated Routes
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -112,11 +112,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return response()->json($aksesPremium->statusAkses($request->user()));
     })->middleware('role:user')->name('user.access-status');
 
-    Route::post('/payments/midtrans/checkout', [PembayaranMidtransController::class, 'checkout'])->middleware('throttle:payments-checkout')->name('payments.midtrans.checkout');
-    Route::post('/payments/midtrans/{transactionCode}/snap', [PembayaranMidtransController::class, 'snap'])->middleware('throttle:payments-sync')->name('payments.midtrans.snap');
-    Route::post('/payments/midtrans/{transactionCode}/charge', [PembayaranMidtransController::class, 'charge'])->middleware('throttle:payments-checkout')->name('payments.midtrans.charge');
-    Route::post('/payments/midtrans/{transactionCode}/sync', [PembayaranMidtransController::class, 'sync'])->middleware('throttle:payments-sync')->name('payments.midtrans.sync');
-    Route::post('/payments/midtrans/{transactionCode}/cancel', [PembayaranMidtransController::class, 'cancel'])->middleware('throttle:payments-cancel')->name('payments.midtrans.cancel');
+    Route::middleware('role:user')->group(function () {
+        Route::post('/payments/midtrans/checkout', [PembayaranMidtransController::class, 'checkout'])->middleware('throttle:payments-checkout')->name('payments.midtrans.checkout');
+        Route::post('/payments/midtrans/{transactionCode}/snap', [PembayaranMidtransController::class, 'snap'])->middleware('throttle:payments-sync')->name('payments.midtrans.snap');
+        Route::post('/payments/midtrans/{transactionCode}/charge', [PembayaranMidtransController::class, 'charge'])->middleware('throttle:payments-checkout')->name('payments.midtrans.charge');
+        Route::post('/payments/midtrans/{transactionCode}/sync', [PembayaranMidtransController::class, 'sync'])->middleware('throttle:payments-sync')->name('payments.midtrans.sync');
+        Route::post('/payments/midtrans/{transactionCode}/cancel', [PembayaranMidtransController::class, 'cancel'])->middleware('throttle:payments-cancel')->name('payments.midtrans.cancel');
+    });
     Route::get('/presentations/{presentationDeck}/content-stream', [AdminPresentasiController::class, 'pdfContent'])
         ->middleware('throttle:30,1')
         ->name('presentations.pdf.content');
@@ -202,6 +204,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Admin Routes
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::post('/quiz-generator/{type}', \App\Http\Controllers\Admin\AdminQuizGeneratorController::class)
+            ->whereIn('type', ['vocab', 'grammar', 'dokkai'])->middleware('throttle:admin-generator')->name('quiz-generator');
         Route::get('/dashboard', [AdminBerandaController::class, 'index'])->name('dashboard');
         Route::get('/exams', [AdminExamPortalController::class, 'index'])->name('exams.index');
         Route::get('/exams/create', [AdminExamPortalController::class, 'create'])->name('exams.create');
@@ -409,8 +413,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dokkai/{quiz}', [DokkaiController::class, 'show'])->name('dokkai.show');
         Route::post('/dokkai-quizzes/{quiz}/submit', [DokkaiController::class, 'submit'])->middleware('throttle:learning-actions')->name('dokkai-quizzes.submit');
         Route::get('/module-days/{moduleDay}/kuis-campuran', [KuisCampuranController::class, 'show'])->name('kuis-campuran.show');
+        Route::post('/module-days/{moduleDay}/kuis-campuran/restart', [KuisCampuranController::class, 'restart'])->middleware('throttle:learning-actions')->name('kuis-campuran.restart');
         Route::post('/module-days/{moduleDay}/kuis-campuran/submit', [KuisCampuranController::class, 'submit'])->middleware('throttle:learning-actions')->name('kuis-campuran.submit');
         Route::get('/dashboard-quiz/mixed', [KuisCampuranController::class, 'showDashboard'])->name('kuis-campuran.dashboard');
+        Route::post('/dashboard-quiz/mixed/restart', [KuisCampuranController::class, 'restartDashboard'])->middleware('throttle:learning-actions')->name('kuis-campuran.dashboard.restart');
         Route::post('/dashboard-quiz/mixed/submit', [KuisCampuranController::class, 'submitDashboard'])->middleware('throttle:learning-actions')->name('kuis-campuran.dashboard.submit');
         Route::get('/weakspot-quiz', [KuisCampuranController::class, 'showWeakspot'])->name('weakspot.show');
         Route::post('/weakspot-quiz/submit', [KuisCampuranController::class, 'submitWeakspot'])->middleware('throttle:learning-actions')->name('weakspot.submit');
@@ -424,6 +430,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/exam-attempts/{attempt}/submit', [ExamPortalController::class, 'submit'])->middleware('throttle:exam-submit')->name('exam-attempts.submit');
         Route::get('/exam-attempts/{attempt}/result', [ExamPortalController::class, 'result'])->name('exam-attempts.result');
         Route::get('/exams/{exam}', [ExamPortalController::class, 'show'])->name('exams.show');
+        Route::redirect('/quick-quiz', '/user/dashboard-quiz/mixed')->name('quick-quiz.legacy');
+        Route::get('/quick-quiz/start', static fn () => redirect()->route('user.kuis-campuran.dashboard'));
         Route::post('/quick-quiz/start', [QuickQuizController::class, 'start'])->middleware('throttle:quick-quiz')->name('quick-quiz.start');
         Route::get('/quick-quiz/{session}', [QuickQuizController::class, 'show'])->name('quick-quiz.show');
         Route::post('/quick-quiz/{session}/answer', [QuickQuizController::class, 'answer'])->middleware('throttle:quick-quiz')->name('quick-quiz.answer');

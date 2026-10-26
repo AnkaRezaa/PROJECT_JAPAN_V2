@@ -114,4 +114,10 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    'login_limits' => [
+        'email_ip' => ['attempts' => 5, 'decay_seconds' => 60],
+        'account' => ['attempts' => 20, 'decay_seconds' => 900],
+        'ip' => ['attempts' => 60, 'decay_seconds' => 60],
+    ],
+
 ];

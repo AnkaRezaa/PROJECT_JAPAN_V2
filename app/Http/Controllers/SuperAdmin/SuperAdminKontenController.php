@@ -116,7 +116,7 @@ class SuperAdminKontenController extends SuperAdminDasarController
 
         $news = Berita::create([
             ...$this->prepareNewsAttributes($validated),
-            'slug' => $this->uniqueSlug($validated['slug'] ?: $validated['title']),
+            'slug' => $this->uniqueSlug(($validated['slug'] ?? null) ?: $validated['title']),
             'cover_image_path' => $coverImagePath,
             'created_by' => $request->user()->id,
             'updated_by' => $request->user()->id,
@@ -134,7 +134,7 @@ class SuperAdminKontenController extends SuperAdminDasarController
 
         $news->update([
             ...$this->prepareNewsAttributes($validated, $news),
-            'slug' => $this->uniqueSlug($validated['slug'] ?: $validated['title'], $news),
+            'slug' => $this->uniqueSlug(($validated['slug'] ?? null) ?: $validated['title'], $news),
             'cover_image_path' => $coverImagePath,
             'updated_by' => $request->user()->id,
         ]);

@@ -21,7 +21,8 @@ Route::middleware('guest')->group(function () {
     Route::get('login', [SesiAutentikasiController::class, 'create'])
         ->name('login');
 
-    Route::post('login', [SesiAutentikasiController::class, 'store']);
+    Route::post('login', [SesiAutentikasiController::class, 'store'])
+        ->middleware('throttle:login');
 
     Route::get('auth/google/redirect', [LoginSosialController::class, 'redirectToGoogle'])
         ->name('auth.google.redirect');

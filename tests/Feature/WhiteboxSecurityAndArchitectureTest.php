@@ -35,6 +35,7 @@ test('WB-SEC-002: mentor scope boundary prevents accessing modules outside their
     $module = Modul::create([
         'title' => 'Modul Mentor Asing',
         'program_pembelajaran_id' => $program->id,
+        'level_id' => $level->id,
         'week_number' => 94,
         'status' => 'published',
     ]);
@@ -52,7 +53,7 @@ test('WB-SEC-003: student quiz payload omits raw correct answer from serialized 
     );
     $module = Modul::firstOrCreate(
         ['title' => 'Modul WB Payload', 'program_pembelajaran_id' => $program->id],
-        ['week_number' => 93, 'status' => 'published']
+        ['week_number' => 93, 'status' => 'published', 'level_id' => $level->id]
     );
     $day = HariModul::firstOrCreate(
         ['module_id' => $module->id, 'day_number' => 83],
@@ -79,7 +80,7 @@ test('WB-SEC-003: student quiz payload omits raw correct answer from serialized 
     $student = Pengguna::factory()->create(['role' => 'user']);
     $payload = $learningService->quizPayload($student, $quiz);
 
-    $serializedQuestions = collect(data_get($payload, 'quiz.questions', []));
+    $serializedQuestions = collect(data_get($payload, 'questions', []));
     $firstQ = $serializedQuestions->firstWhere('id', $question->id);
 
     // Kunci jawaban tidak boleh bocor ke paket soal yang dikirim ke browser

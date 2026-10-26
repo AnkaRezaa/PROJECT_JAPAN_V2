@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Auth\LoginSosialController;
 use App\Models\Pengguna;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Socialite\Contracts\Provider;
@@ -123,13 +125,21 @@ test('new Google user is verified and logged in without email notification', fun
     Notification::assertNothingSent();
 });
 
-test('existing manual user can link Google and keeps password login enabled', function () {
+test('Google recovers an unverified manual account and replaces its old credentials', function () {
     Notification::fake();
     $user = Pengguna::factory()->unverified()->create([
         'email' => 'google@example.com',
         'password_login_enabled' => true,
         'auth_provider' => 'email',
         'google_id' => null,
+        'xp' => 120,
+        'remember_token' => 'old-remember-token',
+    ]);
+    $oldPasswordHash = $user->password;
+    DB::table('password_reset_tokens')->insert([
+        'email' => $user->email,
+        'token' => Hash::make('123456'),
+        'created_at' => now(),
     ]);
     mockGoogleUser();
 
@@ -139,13 +149,78 @@ test('existing manual user can link Google and keeps password login enabled', fu
 
     $user->refresh();
 
-    $response->assertRedirect(route('user.dashboard'));
+    $response->assertRedirect(route('user.dashboard'))
+        ->assertSessionHas('success');
     $this->assertAuthenticatedAs($user);
     expect($user->email_verified_at)->not->toBeNull()
         ->and($user->google_id)->toBe('google-user-123')
-        ->and($user->auth_provider)->toBe('email')
-        ->and($user->password_login_enabled)->toBeTrue();
+        ->and($user->auth_provider)->toBe('google')
+        ->and($user->password_login_enabled)->toBeFalse()
+        ->and($user->password)->not->toBe($oldPasswordHash)
+        ->and(Hash::check('password', $user->password))->toBeFalse()
+        ->and($user->remember_token)->not->toBe('old-remember-token')
+        ->and($user->xp)->toBe(120)
+        ->and(Pengguna::where('email', $user->email)->count())->toBe(1)
+        ->and(DB::table('password_reset_tokens')->where('email', $user->email)->exists())->toBeFalse();
     Notification::assertNothingSent();
+});
+
+test('verified manual account can link Google without replacing its password', function () {
+    Notification::fake();
+    $user = Pengguna::factory()->create([
+        'email' => 'google@example.com',
+        'password_login_enabled' => true,
+        'auth_provider' => 'email',
+        'google_id' => null,
+    ]);
+    $oldPasswordHash = $user->password;
+    mockGoogleUser();
+
+    $this->withSession([LoginSosialController::OAUTH_INTENT => LoginSosialController::OAUTH_INTENT_LOGIN])
+        ->get(route('auth.google.callback'))
+        ->assertRedirect(route('user.dashboard'));
+
+    expect($user->refresh()->password)->toBe($oldPasswordHash)
+        ->and($user->password_login_enabled)->toBeTrue()
+        ->and($user->auth_provider)->toBe('email');
+    $this->assertAuthenticatedAs($user);
+});
+
+test('Google does not mutate an inactive unverified account', function (string $status) {
+    Notification::fake();
+    $user = Pengguna::factory()->unverified()->create([
+        'email' => 'google@example.com',
+        'status' => $status,
+        'google_id' => null,
+        'avatar' => null,
+    ]);
+    $before = $user->refresh()->getAttributes();
+    mockGoogleUser();
+
+    $this->withSession([LoginSosialController::OAUTH_INTENT => LoginSosialController::OAUTH_INTENT_LOGIN])
+        ->get(route('auth.google.callback'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHasErrors('email');
+
+    expect($user->refresh()->getAttributes())->toBe($before);
+    $this->assertGuest();
+})->with(['suspended', 'anonymized']);
+
+test('Google rejects an email already bound to a different Google identity without changes', function () {
+    $user = Pengguna::factory()->create([
+        'email' => 'google@example.com',
+        'google_id' => 'another-google-identity',
+    ]);
+    $before = $user->refresh()->getAttributes();
+    mockGoogleUser();
+
+    $this->withSession([LoginSosialController::OAUTH_INTENT => LoginSosialController::OAUTH_INTENT_LOGIN])
+        ->get(route('auth.google.callback'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHasErrors('email');
+
+    expect($user->refresh()->getAttributes())->toBe($before);
+    $this->assertGuest();
 });
 
 test('Google account with unverified email is rejected', function () {

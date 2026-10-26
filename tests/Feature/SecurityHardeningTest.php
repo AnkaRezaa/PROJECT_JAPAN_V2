@@ -11,10 +11,189 @@ use App\Models\Pengguna;
 use App\Models\ProgramPembelajaran;
 use App\Models\SetFlashcard;
 use App\Models\Transaksi;
+use App\Services\AccountSuspensionService;
 use App\Services\AksesFlashcardPenggunaService;
 use App\Services\XpService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+
+function makeSecurityPaymentFixture(string $programStatus = 'published'): array
+{
+    config(['services.midtrans.server_key' => 'test-server-key', 'services.midtrans.is_production' => false]);
+    Http::preventStrayRequests();
+    Notification::fake();
+    $user = Pengguna::factory()->create(['role' => 'user', 'status' => 'active']);
+    $program = ProgramPembelajaran::create([
+        'title' => 'Payment security program', 'slug' => 'payment-security-'.Str::uuid(), 'status' => $programStatus,
+    ]);
+    $plan = PaketPembayaran::create([
+        'name' => 'Payment security plan', 'slug' => 'payment-security-'.Str::uuid(),
+        'scope_type' => 'program', 'program_pembelajaran_id' => $program->id,
+        'price' => 99000, 'duration_days' => 30, 'is_active' => true,
+    ]);
+    $transaction = Transaksi::create([
+        'transaction_code' => 'MID-'.Str::upper(Str::random(10)), 'checkout_request_key' => (string) Str::uuid(),
+        'user_id' => $user->id, 'payment_plan_id' => $plan->id,
+        'scope_type' => 'program', 'program_pembelajaran_id' => $program->id,
+        'amount' => $plan->price, 'payment_method' => 'midtrans', 'status' => 'pending',
+    ]);
+
+    return [$user, $program, $plan, $transaction];
+}
+
+it('rejects a previously authenticated suspended user on payment APIs and clears their session', function (string $endpoint) {
+    [$user, , $plan, $transaction] = makeSecurityPaymentFixture();
+    $this->post('/login', ['email' => $user->email, 'password' => 'password'])->assertRedirect();
+    app(AccountSuspensionService::class)->changeStatus($user, 'suspended', 'Payment security test');
+    Auth::forgetGuards();
+
+    $parameters = $endpoint === 'checkout' ? [] : [$transaction->transaction_code];
+    $this->postJson(route('payments.midtrans.'.$endpoint, $parameters), [
+        'payment_plan_id' => $plan->id, 'checkout_request_key' => (string) Str::uuid(), 'payment_channel' => 'qris',
+    ])->assertForbidden()->assertJsonStructure(['message']);
+
+    $this->assertGuest();
+    expect($transaction->fresh()->status)->toBe('pending')
+        ->and(Transaksi::count())->toBe(1);
+    Http::assertNothingSent();
+})->with(['checkout', 'snap', 'charge', 'sync', 'cancel']);
+
+it('preserves the login redirect for suspended users making page requests', function () {
+    [$user] = makeSecurityPaymentFixture();
+    $this->post('/login', ['email' => $user->email, 'password' => 'password'])->assertRedirect();
+    app(AccountSuspensionService::class)->changeStatus($user, 'suspended', null);
+    Auth::forgetGuards();
+
+    $this->get(route('user.kelas.index'))->assertRedirect(route('login'))->assertSessionHasErrors('email');
+    $this->assertGuest();
+    Http::assertNothingSent();
+});
+
+it('blocks payment initiation for draft programs without contacting Midtrans', function (string $endpoint) {
+    [$user, , $plan, $transaction] = makeSecurityPaymentFixture('draft');
+    $parameters = $endpoint === 'checkout' ? [] : [$transaction->transaction_code];
+
+    $this->actingAs($user)->postJson(route('payments.midtrans.'.$endpoint, $parameters), [
+        'payment_plan_id' => $plan->id, 'checkout_request_key' => (string) Str::uuid(), 'payment_channel' => 'qris',
+    ])->assertUnprocessable()->assertJsonPath('message', 'Kelas ini belum tersedia untuk pembayaran. Hubungi admin atau pilih kelas lain.');
+
+    expect(Transaksi::count())->toBe(1)
+        ->and($transaction->fresh()->status)->toBe('pending')
+        ->and($transaction->midtrans_snap_token)->toBeNull();
+    Http::assertNothingSent();
+})->with(['checkout', 'snap', 'charge']);
+
+it('does not expose draft transaction details through another users payment APIs', function (string $endpoint) {
+    [, , , $transaction] = makeSecurityPaymentFixture('draft');
+    $otherUser = Pengguna::factory()->create();
+
+    $this->actingAs($otherUser)->postJson(route('payments.midtrans.'.$endpoint, $transaction->transaction_code), [
+        'payment_channel' => 'qris',
+    ])->assertNotFound();
+    Http::assertNothingSent();
+})->with(['snap', 'charge', 'sync']);
+
+it('rejects inactive payment plans even when their program is published', function () {
+    [$user, , $plan] = makeSecurityPaymentFixture();
+    $plan->update(['is_active' => false]);
+
+    $this->actingAs($user)->postJson(route('payments.midtrans.checkout'), [
+        'payment_plan_id' => $plan->id, 'checkout_request_key' => (string) Str::uuid(),
+    ])->assertNotFound();
+    Http::assertNothingSent();
+});
+
+it('uses the database price for published program checkout regardless of client amounts', function () {
+    [$user, , $plan, $transaction] = makeSecurityPaymentFixture();
+    Http::fake([
+        'https://app.sandbox.midtrans.com/snap/v1/transactions' => Http::response([
+            'token' => 'price-test-token', 'redirect_url' => 'https://app.sandbox.midtrans.com/price-test',
+        ]),
+    ]);
+
+    $this->actingAs($user)->postJson(route('payments.midtrans.checkout'), [
+        'payment_plan_id' => $plan->id, 'checkout_request_key' => (string) Str::uuid(), 'amount' => 1, 'price' => 1,
+    ])->assertOk();
+
+    expect($transaction->fresh()->amount)->toBe(99000);
+    Http::assertSent(fn ($request) => $request['transaction_details']['gross_amount'] === 99000);
+    Http::assertSentCount(1);
+});
+
+it('preserves QR string instructions and does not charge a second time', function () {
+    [$user, , , $transaction] = makeSecurityPaymentFixture();
+    $transaction->update(['payment_channel' => 'qris', 'payment_payload' => ['qr_string' => 'existing-payment-qr']]);
+
+    $this->actingAs($user)->postJson(route('payments.midtrans.charge', $transaction->transaction_code), [
+        'payment_channel' => 'qris',
+    ])->assertOk()->assertJsonPath('payment_payload.qr_string', 'existing-payment-qr');
+    Http::assertNothingSent();
+});
+
+it('keeps historical checkout and payment sync available after a program becomes draft', function () {
+    [$user, , , $transaction] = makeSecurityPaymentFixture('draft');
+    Http::fake([
+        'https://api.sandbox.midtrans.com/v2/*/status' => Http::response([
+            'order_id' => $transaction->transaction_code, 'gross_amount' => '99000.00', 'transaction_status' => 'pending',
+        ]),
+    ]);
+
+    $this->actingAs($user)->get(route('user.checkout', $transaction->transaction_code))->assertOk();
+    $this->postJson(route('payments.midtrans.sync', $transaction->transaction_code))
+        ->assertOk()->assertJsonPath('status', 'pending');
+    Http::assertSentCount(1);
+});
+
+it('allows an owner to cancel a pending payment for a draft program', function () {
+    [$user, , , $transaction] = makeSecurityPaymentFixture('draft');
+    Http::fake([
+        'https://api.sandbox.midtrans.com/v2/*/status' => Http::response([
+            'order_id' => $transaction->transaction_code, 'gross_amount' => '99000.00', 'transaction_status' => 'pending',
+        ]),
+        'https://api.sandbox.midtrans.com/v2/*/cancel' => Http::response([
+            'order_id' => $transaction->transaction_code, 'gross_amount' => '99000.00', 'transaction_status' => 'cancel',
+        ]),
+    ]);
+
+    $this->actingAs($user)->postJson(route('payments.midtrans.cancel', $transaction->transaction_code))
+        ->assertOk()->assertJsonPath('status', 'canceled');
+    expect($transaction->fresh()->status)->toBe('canceled');
+});
+
+it('still records an authentic successful webhook for a suspended user and a draft program', function () {
+    [$user, , , $transaction] = makeSecurityPaymentFixture('draft');
+    app(AccountSuspensionService::class)->changeStatus($user, 'suspended', null);
+    $payload = [
+        'order_id' => $transaction->transaction_code, 'gross_amount' => '99000.00',
+        'status_code' => '200', 'transaction_status' => 'settlement',
+    ];
+    $payload['signature_key'] = hash('sha512', $payload['order_id'].$payload['status_code'].$payload['gross_amount'].'test-server-key');
+
+    $this->postJson(route('payments.midtrans.notification'), $payload)->assertOk();
+    $this->postJson(route('payments.midtrans.notification'), $payload)->assertOk();
+    expect($transaction->fresh()->status)->toBe('success')
+        ->and(Langganan::where('user_id', $user->id)->count())->toBe(1);
+    Http::assertNothingSent();
+});
+
+it('leaves QR generation to the browser without third party image URLs', function (string $channel, array $payload) {
+    $method = new ReflectionMethod(PembayaranMidtransController::class, 'formatChargeResponse');
+    $result = $method->invoke(app(PembayaranMidtransController::class), $channel, $payload, 'MID-QR-TEST');
+
+    expect($result['qr_url'])->toBeNull();
+    if (isset($payload['qr_string'])) {
+        expect($result['qr_string'])->toBe($payload['qr_string']);
+    }
+    if (isset($payload['actions'][0]['url'])) {
+        expect($result['deeplink_url'])->toBe($payload['actions'][0]['url']);
+    }
+})->with([
+    'QRIS' => ['qris', ['qr_string' => 'payment-qr-reference']],
+    'GoPay' => ['gopay', ['actions' => [['name' => 'deeplink-redirect', 'url' => 'gojek://payment/reference']]]],
+]);
 
 it('blocks direct flashcard access outside the allowed module access', function () {
     $user = Pengguna::factory()->create(['role' => 'user']);
@@ -122,6 +301,13 @@ it('reuses one pending Midtrans checkout for the same checkout intent', function
             'token' => 'snap-token-idempotent',
             'redirect_url' => 'https://app.sandbox.midtrans.com/snap/v2/vtweb/snap-token-idempotent',
         ]),
+        'https://api.sandbox.midtrans.com/v2/*/status' => function () use ($checkoutRequestKey) {
+            $transaction = Transaksi::where('checkout_request_key', $checkoutRequestKey)->firstOrFail();
+
+            return Http::response([
+                'order_id' => $transaction->transaction_code, 'gross_amount' => '99000.00', 'transaction_status' => 'pending',
+            ]);
+        },
     ]);
 
     $first = $this->actingAs($user)->postJson(route('payments.midtrans.checkout'), [
@@ -137,7 +323,8 @@ it('reuses one pending Midtrans checkout for the same checkout intent', function
         ->and(Transaksi::where('checkout_request_key', $checkoutRequestKey)->count())->toBe(1)
         ->and(Transaksi::where('checkout_request_key', $checkoutRequestKey)->value('midtrans_snap_token'))->toBe('snap-token-idempotent');
 
-    Http::assertSentCount(1);
+    Http::assertSentCount(2);
+    expect(Http::recorded(fn ($request) => $request->method() === 'POST')->count())->toBe(1);
 });
 
 it('expires a stale Midtrans checkout and allows a fresh order', function () {

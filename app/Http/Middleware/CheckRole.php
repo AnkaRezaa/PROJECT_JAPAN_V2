@@ -11,11 +11,11 @@ class CheckRole
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
-        if (! $request->user() || !in_array($request->user()->role, $roles)) {
+        if (! $request->user() || ! in_array($request->user()->role, $roles)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -25,8 +25,14 @@ class CheckRole
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
+            $message = "Akun Anda telah ditangguhkan (disuspend).{$reason} Silakan hubungi admin jika merasa ini adalah kekeliruan.";
+
+            if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+                return response()->json(['message' => $message], 403);
+            }
+
             return redirect()->route('login')->withErrors([
-                'email' => "Akun Anda telah ditangguhkan (disuspend).{$reason} Silakan hubungi admin jika merasa ini adalah kekeliruan.",
+                'email' => $message,
             ]);
         }
 

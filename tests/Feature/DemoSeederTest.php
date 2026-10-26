@@ -62,7 +62,7 @@ it('rejects demo seeding in production before changing accounts or deleting demo
     expect(Pengguna::orderBy('id')->get()->map->getRawOriginal()->all())->toBe($users)
         ->and(ProgramPembelajaran::orderBy('id')->get()->map->getRawOriginal()->all())->toBe($programs)
         ->and(\App\Models\Transaksi::orderBy('id')->get()->map->getRawOriginal()->all())->toBe($transactions);
-})->with([PenggunaSeeder::class, DemoDataSeeder::class, DatabaseSeeder::class]);
+})->with([PenggunaSeeder::class, DemoDataSeeder::class]);
 
 it('builds the complete two-class demo dataset idempotently', function () {
     $this->seed(DemoDataSeeder::class);

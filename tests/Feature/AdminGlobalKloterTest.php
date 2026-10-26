@@ -1,17 +1,24 @@
 <?php
 
 use App\Models\AnggotaKloter;
+use App\Models\HariModul;
 use App\Models\KloterBelajar;
+use App\Models\Kuis;
 use App\Models\Langganan;
 use App\Models\LevelPembelajaran;
+use App\Models\Modul;
 use App\Models\PaketPembayaran;
 use App\Models\Pengguna;
 use App\Models\ProgramPembelajaran;
+use App\Models\Soal;
 use App\Models\Transaksi;
 use App\Services\AksesLanggananService;
+use App\Services\ImportSpreadsheetService;
 use App\Services\KloterBelajarService;
+use App\Services\TemplateExcelService;
 use Database\Seeders\DemoDataSeeder;
 use Database\Seeders\PenggunaSeeder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
@@ -100,15 +107,130 @@ function createAdminGlobalKloterFixture(): array
     );
 }
 
+function quizAuthoringScopeFixture(): array
+{
+    $fixture = createAdminGlobalKloterFixture();
+    $module = Modul::create([
+        'level_id' => $fixture['level']->id,
+        'program_pembelajaran_id' => $fixture['programA']->id,
+        'title' => 'Quiz scope week',
+        'week_number' => 1,
+        'status' => 'published',
+    ]);
+    $day = HariModul::create([
+        'module_id' => $module->id, 'day_number' => 1, 'title' => 'Quiz scope day', 'status' => 'published',
+    ]);
+    $otherModule = Modul::create([
+        'level_id' => $fixture['level']->id, 'program_pembelajaran_id' => $fixture['programB']->id,
+        'title' => 'Other program week', 'week_number' => 1, 'status' => 'published',
+    ]);
+    $quiz = Kuis::create([
+        'module_id' => $module->id, 'module_day_id' => $day->id, 'type' => 'multiple_choice',
+        'passing_score' => 70, 'time_limit' => 120, 'status' => 'published',
+    ]);
+    $question = Soal::create([
+        'quiz_id' => $quiz->id, 'type' => 'multiple_choice', 'question_text' => 'Original question',
+        'correct_answer' => 'A', 'options' => ['A', 'B'], 'order' => 1, 'points' => 1,
+    ]);
+    $sameProgramMentor = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => Pengguna::ADMIN_SCOPE_KLOTER]);
+    KloterBelajar::create([
+        'program_pembelajaran_id' => $fixture['programA']->id, 'admin_id' => $sameProgramMentor->id,
+        'nama' => 'Other cohort in program A', 'kode' => 'KLT-QUIZ-SHARED', 'status' => 'active',
+        'tanggal_mulai' => now()->subWeek(), 'tanggal_selesai' => now()->addMonth(),
+    ]);
+    $unassignedMentor = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => Pengguna::ADMIN_SCOPE_KLOTER]);
+    $legacyGlobalAdmin = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => null]);
+
+    return [...$fixture, ...compact('module', 'otherModule', 'quiz', 'question', 'sameProgramMentor', 'unassignedMentor', 'legacyGlobalAdmin')];
+}
+
+it('allows quiz authoring scope for global admins and mentors sharing the assigned program', function (string $actorKey) {
+    $fixture = quizAuthoringScopeFixture();
+    $quiz = $fixture['quiz'];
+    $this->actingAs($fixture[$actorKey]);
+
+    $this->post(route('admin.quizzes.builder.update', $quiz), [
+        'passing_score' => 80, 'time_limit' => 90,
+        'questions' => [[
+            'id' => $fixture['question']->id, 'type' => 'multiple_choice', 'question_text' => 'Updated question',
+            'correct_answer' => 'A', 'options' => ['A', 'B'], 'points' => 1,
+        ]],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+    expect($quiz->fresh()->passing_score)->toBe(80)
+        ->and($quiz->fresh()->time_limit)->toBe(90)
+        ->and($fixture['question']->fresh()->question_text)->toBe('Updated question');
+
+    $snapshot = fn () => [$quiz->fresh()->getAttributes(), $quiz->questions()->get()->toArray()];
+    $before = $snapshot();
+    $csv = "type,question_text,correct_answer,options,explanation,audio_url,points\nmultiple_choice,Imported question,A,A|B,Explanation,,1\n";
+    $this->post(route('admin.quizzes.questions.import.preview', $quiz), [
+        'import_file' => UploadedFile::fake()->createWithContent('quiz.csv', $csv),
+    ])->assertOk()->assertJsonPath('valid_count', 1);
+    expect($snapshot())->toBe($before);
+
+    foreach (['csv', 'xlsx'] as $format) {
+        $this->get(route('admin.quizzes.questions.template', ['quiz' => $quiz, 'format' => $format]))
+            ->assertOk()->assertDownload('toku-up-quiz-import-template-v1.'.$format);
+        expect($snapshot())->toBe($before);
+    }
+
+    $this->post(route('admin.quizzes.questions.import', $quiz), [
+        'import_file' => UploadedFile::fake()->createWithContent('quiz.csv', $csv),
+    ])->assertRedirect()->assertSessionHasNoErrors();
+    expect($quiz->questions()->count())->toBe(2)
+        ->and($fixture['question']->fresh()->question_text)->toBe('Updated question')
+        ->and($quiz->questions()->where('question_text', 'Imported question')->exists())->toBeTrue()
+        ->and($quiz->fresh()->getAttributes())->toBe($before[0]);
+})->with(['globalAdmin', 'kloterAdmin', 'sameProgramMentor', 'legacyGlobalAdmin']);
+
+it('rejects quiz authoring scope outside the assigned program without mutations', function (string $actorKey) {
+    $fixture = quizAuthoringScopeFixture();
+    $quiz = $fixture['quiz'];
+    $snapshot = fn () => [$quiz->fresh()->getAttributes(), $quiz->questions()->get()->toArray()];
+    $before = $snapshot();
+    $this->actingAs($fixture[$actorKey]);
+    $this->mock(ImportSpreadsheetService::class)->shouldNotReceive('rows');
+    $this->mock(TemplateExcelService::class)->shouldNotReceive('csvResponse', 'xlsxPath');
+
+    foreach ([[], [[
+        'id' => $fixture['question']->id, 'type' => 'multiple_choice', 'question_text' => 'Forbidden update',
+        'correct_answer' => 'B', 'options' => ['A', 'B'], 'points' => 5,
+    ]]] as $questions) {
+        $this->postJson(route('admin.quizzes.builder.update', $quiz), [
+            'module_id' => $fixture['otherModule']->id, 'passing_score' => 33, 'time_limit' => 30, 'questions' => $questions,
+        ])->assertForbidden();
+        expect($snapshot())->toBe($before);
+    }
+
+    foreach (['admin.quizzes.questions.import', 'admin.quizzes.questions.import.preview'] as $routeName) {
+        $this->post(route($routeName, $quiz), [
+            'import_file' => UploadedFile::fake()->createWithContent('quiz.csv', "question_text,correct_answer,options\nForbidden import,A,A|B\n"),
+        ])->assertForbidden();
+        expect($snapshot())->toBe($before);
+    }
+    foreach (['csv', 'xlsx'] as $format) {
+        $this->get(route('admin.quizzes.questions.template', ['quiz' => $quiz, 'format' => $format]))->assertForbidden();
+        expect($snapshot())->toBe($before);
+    }
+})->with(['otherKloterAdmin', 'unassignedMentor', 'studentA']);
+
+it('checks quiz authoring scope before payload validation', function () {
+    $fixture = quizAuthoringScopeFixture();
+    $this->actingAs($fixture['otherKloterAdmin']);
+    foreach (['admin.quizzes.builder.update', 'admin.quizzes.questions.import', 'admin.quizzes.questions.import.preview'] as $routeName) {
+        $this->postJson(route($routeName, $fixture['quiz']), [])->assertForbidden();
+    }
+});
+
 it('keeps shared content routes available to global and kloter admins', function () {
     $fixture = createAdminGlobalKloterFixture();
 
     $this->actingAs($fixture['globalAdmin'])
-        ->get(route('admin.modules.index'))
+        ->get(route('admin.modules.index', ['program_id' => $fixture['programA']->id]))
         ->assertOk();
 
     $this->actingAs($fixture['kloterAdmin'])
-        ->get(route('admin.modules.index'))
+        ->get(route('admin.modules.index', ['program_id' => $fixture['programA']->id]))
         ->assertOk();
 });
 

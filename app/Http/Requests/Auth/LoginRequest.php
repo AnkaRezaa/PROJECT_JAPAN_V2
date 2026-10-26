@@ -4,6 +4,7 @@ namespace App\Http\Requests\Auth;
 
 use App\Models\Pengguna;
 use Illuminate\Auth\Events\Lockout;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -21,10 +22,17 @@ class LoginRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('email'))) {
+            $this->merge(['email' => Str::lower(trim($this->input('email')))]);
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -35,9 +43,9 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * PengerjaanKuis to authenticate the request's credentials.
+     * Authenticate the request's credentials.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function authenticate(): void
     {
@@ -46,7 +54,7 @@ class LoginRequest extends FormRequest
         $user = Pengguna::where('email', $this->input('email'))->first();
 
         if ($user && $user->status === 'suspended' && Hash::check($this->input('password'), $user->password)) {
-            RateLimiter::hit($this->throttleKey());
+            $this->recordFailedAttempt();
 
             $reason = $user->suspended_reason ? " Alasan: {$user->suspended_reason}." : '';
             throw ValidationException::withMessages([
@@ -55,7 +63,7 @@ class LoginRequest extends FormRequest
         }
 
         if ($user && $user->status === 'anonymized') {
-            RateLimiter::hit($this->throttleKey());
+            $this->recordFailedAttempt();
 
             throw ValidationException::withMessages([
                 'email' => 'Akun ini telah dihapus/dianonimkan dan tidak dapat digunakan lagi.',
@@ -67,30 +75,38 @@ class LoginRequest extends FormRequest
             'password_login_enabled' => true,
             'status' => 'active',
         ], $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+            $this->recordFailedAttempt();
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
         }
 
-        RateLimiter::clear($this->throttleKey());
+        foreach ($this->throttleLimits() as $limit) {
+            RateLimiter::clear($limit['key']);
+        }
     }
 
     /**
      * Ensure the login request is not rate limited.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        $seconds = 0;
+
+        foreach ($this->throttleLimits() as $limit) {
+            if (RateLimiter::tooManyAttempts($limit['key'], $limit['attempts'])) {
+                $seconds = max($seconds, 1, RateLimiter::availableIn($limit['key']));
+            }
+        }
+
+        if ($seconds === 0) {
             return;
         }
 
         event(new Lockout($this));
-
-        $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
             'email' => trans('auth.throttle', [
@@ -105,6 +121,27 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return 'login:email-ip:'.hash('sha256', $this->input('email').'|'.$this->ip());
+    }
+
+    private function throttleLimits(): array
+    {
+        return [
+            [
+                'key' => $this->throttleKey(),
+                ...config('auth.login_limits.email_ip'),
+            ],
+            [
+                'key' => 'login:account:'.hash('sha256', $this->input('email')),
+                ...config('auth.login_limits.account'),
+            ],
+        ];
+    }
+
+    private function recordFailedAttempt(): void
+    {
+        foreach ($this->throttleLimits() as $limit) {
+            RateLimiter::hit($limit['key'], $limit['decay_seconds']);
+        }
     }
 }

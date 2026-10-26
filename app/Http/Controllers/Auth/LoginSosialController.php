@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
@@ -78,39 +79,67 @@ class LoginSosialController extends Controller
             ]);
         }
 
-        $user = Pengguna::where('google_id', $googleUser->getId())->first();
+        [$user, $recovered, $googleConflict] = DB::transaction(function () use ($googleUser, $email): array {
+            $user = Pengguna::where('google_id', $googleUser->getId())->lockForUpdate()->first()
+                ?? Pengguna::where('email', $email)->lockForUpdate()->first();
 
-        if (! $user) {
-            $user = Pengguna::where('email', $email)->first();
-        }
-
-        if ($user) {
-            if (filled($user->google_id) && ! hash_equals((string) $user->google_id, (string) $googleUser->getId())) {
-                return redirect()->route('login')->withErrors([
-                    'email' => 'Email ini sudah terhubung dengan akun Google lain.',
-                ]);
+            if ($user && $user->status !== 'active') {
+                return [$user, false, false];
             }
 
-            $user->forceFill([
-                'google_id' => $user->google_id ?: $googleUser->getId(),
-                'avatar' => $googleUser->getAvatar(),
-                'email_verified_at' => $user->email_verified_at ?: now(),
-            ])->save();
-        } else {
-            $user = new Pengguna([
-                'username' => $this->usernameFromGoogle($googleUser->getName(), $googleUser->getEmail()),
-                'email' => $email,
-                'password' => Hash::make(Str::random(40)),
-                'password_login_enabled' => false,
-                'role' => 'user',
-                'subscription_status' => 'free',
-                'status' => 'active',
-                'auth_provider' => 'google',
-                'google_id' => $googleUser->getId(),
-                'avatar' => $googleUser->getAvatar(),
-            ]);
+            if ($user && filled($user->google_id)
+                && ! hash_equals((string) $user->google_id, (string) $googleUser->getId())) {
+                return [$user, false, true];
+            }
 
-            $user->forceFill(['email_verified_at' => now()])->save();
+            $recovered = $user && ! $user->hasVerifiedEmail() && blank($user->google_id);
+
+            if ($user) {
+                $attributes = [
+                    'google_id' => $user->google_id ?: $googleUser->getId(),
+                    'avatar' => $googleUser->getAvatar(),
+                    'email_verified_at' => $user->email_verified_at ?: now(),
+                ];
+
+                if ($recovered) {
+                    $attributes = [
+                        ...$attributes,
+                        'auth_provider' => 'google',
+                        'password_login_enabled' => false,
+                        'password' => Hash::make(Str::random(64)),
+                        'remember_token' => Str::random(60),
+                    ];
+                }
+
+                $user->forceFill($attributes)->save();
+
+                if ($recovered) {
+                    DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+                }
+            } else {
+                $user = new Pengguna([
+                    'username' => $this->usernameFromGoogle($googleUser->getName(), $email),
+                    'email' => $email,
+                    'password' => Hash::make(Str::random(40)),
+                    'password_login_enabled' => false,
+                    'role' => 'user',
+                    'subscription_status' => 'free',
+                    'status' => 'active',
+                    'auth_provider' => 'google',
+                    'google_id' => $googleUser->getId(),
+                    'avatar' => $googleUser->getAvatar(),
+                ]);
+
+                $user->forceFill(['email_verified_at' => now()])->save();
+            }
+
+            return [$user, $recovered, false];
+        });
+
+        if ($googleConflict) {
+            return redirect()->route('login')->withErrors([
+                'email' => 'Email ini sudah terhubung dengan akun Google lain.',
+            ]);
         }
 
         if ($user->status !== 'active') {
@@ -144,15 +173,17 @@ class LoginSosialController extends Controller
             'logged_in_at' => now(),
         ]);
 
-        if ($user->role === 'superadmin') {
-            return redirect()->route('superadmin.dashboard');
+        $response = redirect()->route(match ($user->role) {
+            'superadmin' => 'superadmin.dashboard',
+            'admin' => 'admin.dashboard',
+            default => 'user.dashboard',
+        });
+
+        if ($recovered) {
+            $response->with('success', 'Akun berhasil dipulihkan. Gunakan Google untuk masuk; kata sandi lama sudah dinonaktifkan.');
         }
 
-        if ($user->role === 'admin') {
-            return redirect()->route('admin.dashboard');
-        }
-
-        return redirect()->route('user.dashboard');
+        return $response;
     }
 
     public function redirectForAccountDeletion(Request $request): RedirectResponse
