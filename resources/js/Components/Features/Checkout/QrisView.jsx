@@ -1,7 +1,7 @@
 import React from 'react';
 import DownloadIcon from '@mui/icons-material/Download';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import usePaymentQr from '@/Hooks/usePaymentQr';
 import {
   QrisLogo,
   GopayLogo,
@@ -18,14 +18,7 @@ export default function QrisView({
   onChangeMethod,
   isChanging,
 }) {
-  const qrUrl = payload?.qr_url;
-  const qrString = payload?.qr_string;
-
-  const qrImageSrc =
-    qrUrl ||
-    (qrString
-      ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrString)}`
-      : null);
+  const { src: qrImageSrc, isLoading, error, onError } = usePaymentQr(payload?.qr_url, payload?.qr_string || payload?.deeplink_url);
 
   const handleDownload = () => {
     if (!qrImageSrc) return;
@@ -33,6 +26,7 @@ export default function QrisView({
     link.href = qrImageSrc;
     link.download = `QRIS-Payment-${Date.now()}.png`;
     link.target = '_blank';
+    link.rel = 'noopener noreferrer';
     link.click();
   };
 
@@ -57,12 +51,13 @@ export default function QrisView({
             <img
               src={qrImageSrc}
               alt="QRIS Code"
+              onError={onError}
               className="h-40 w-40 object-contain sm:h-44 sm:w-44"
             />
           ) : (
-            <div className="flex h-40 w-40 flex-col items-center justify-center text-slate-400 sm:h-44 sm:w-44">
+            <div role={error ? 'alert' : 'status'} className="flex h-40 w-40 flex-col items-center justify-center text-center text-slate-500 sm:h-44 sm:w-44">
               <QrCode2Icon sx={{ fontSize: 44 }} />
-              <p className="mt-1 text-[11px] font-semibold">Memuat Kode QRIS...</p>
+              <p className="mt-1 text-[11px] font-semibold">{isLoading ? 'Memuat kode QRIS...' : error}</p>
             </div>
           )}
         </div>

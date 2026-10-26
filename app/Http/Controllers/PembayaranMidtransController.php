@@ -6,6 +6,7 @@ use App\Models\KloterBelajar;
 use App\Models\LogTransaksi;
 use App\Models\PaketPembayaran;
 use App\Models\Pengguna;
+use App\Models\ProgramPembelajaran;
 use App\Models\Transaksi;
 use App\Notifications\PurchaseReceiptNotification;
 use App\Services\AksesLanggananService;
@@ -42,6 +43,7 @@ class PembayaranMidtransController extends Controller
             ->findOrFail($validated['payment_plan_id']);
         $scope = app(AksesLanggananService::class)->scopeFromPlan($plan);
         abort_if($scope['scope_type'] === AksesLanggananService::SCOPE_GLOBAL, 422, 'Paket global sudah tidak tersedia untuk checkout baru.');
+        $this->assertProgramAvailableForPayment($scope['program_pembelajaran_id']);
 
         if ($scope['scope_type'] === AksesLanggananService::SCOPE_KLOTER) {
             abort_unless($validated['kloter_belajar_id'] ?? null, 422, 'Pilih kloter untuk kelas mentor.');
@@ -93,6 +95,7 @@ class PembayaranMidtransController extends Controller
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
+        $this->assertProgramAvailableForPayment($transaction->program_pembelajaran_id);
         $this->refreshPendingCheckoutStatus($transaction, $request->user()->id);
         $transaction->refresh();
 
@@ -120,6 +123,7 @@ class PembayaranMidtransController extends Controller
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
+        $this->assertProgramAvailableForPayment($transaction->program_pembelajaran_id);
         $this->refreshPendingCheckoutStatus($transaction, $request->user()->id);
         $transaction->refresh();
 
@@ -133,6 +137,7 @@ class PembayaranMidtransController extends Controller
                 filled($existingPayload['va_number'] ?? null)
                 || filled($existingPayload['bill_key'] ?? null)
                 || filled($existingPayload['qr_url'] ?? null)
+                || filled($existingPayload['qr_string'] ?? null)
                 || filled($existingPayload['deeplink_url'] ?? null)
                 || filled($existingPayload['redirect_url'] ?? null)
                 || filled($existingPayload['payment_code'] ?? null)
@@ -610,6 +615,15 @@ class PembayaranMidtransController extends Controller
                 ]);
             }
         });
+    }
+
+    private function assertProgramAvailableForPayment(?int $programId): void
+    {
+        abort_unless(
+            ProgramPembelajaran::query()->whereKey($programId)->where('status', 'published')->exists(),
+            422,
+            'Kelas ini belum tersedia untuk pembayaran. Hubungi admin atau pilih kelas lain.'
+        );
     }
 
     private function createOrReuseCheckout(
@@ -1148,14 +1162,6 @@ class PembayaranMidtransController extends Controller
         $qrString = $response['qr_string'] ?? null;
         $qrUrl = $actions->firstWhere('name', 'generate-qr-code')['url'] ?? null;
         $deeplinkUrl = $actions->firstWhere('name', 'deeplink-redirect')['url'] ?? null;
-
-        if (! $qrUrl && filled($qrString)) {
-            $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='.urlencode($qrString);
-        }
-
-        if (! $qrUrl && filled($deeplinkUrl)) {
-            $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='.urlencode($deeplinkUrl);
-        }
 
         $vaNumber = null;
         $bank = null;

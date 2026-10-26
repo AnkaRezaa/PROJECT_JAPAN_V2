@@ -116,6 +116,7 @@ export default function Checkout({ transaction, midtrans }) {
     (paymentPayload.va_number ||
       paymentPayload.bill_key ||
       paymentPayload.qr_url ||
+      paymentPayload.qr_string ||
       paymentPayload.deeplink_url ||
       paymentPayload.redirect_url ||
       paymentPayload.payment_code)

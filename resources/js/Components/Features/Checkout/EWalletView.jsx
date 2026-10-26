@@ -1,6 +1,7 @@
 import React from 'react';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
+import usePaymentQr from '@/Hooks/usePaymentQr';
 import { GopayLogo, ShopeePayLogo } from './PaymentLogos';
 
 export default function EWalletView({
@@ -16,8 +17,7 @@ export default function EWalletView({
   const appName = isGopay ? 'Gojek' : 'Shopee';
 
   const deeplinkUrl = payload?.deeplink_url;
-  const qrUrl = payload?.qr_url
-    || (deeplinkUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(deeplinkUrl)}` : null);
+  const { src: qrUrl, isLoading, error, onError } = usePaymentQr(payload?.qr_url, payload?.qr_string || deeplinkUrl);
 
   return (
     <div className="space-y-4">
@@ -55,17 +55,25 @@ export default function EWalletView({
         )}
 
         {/* QR Code for Desktop & Scan Fallback */}
-        {qrUrl && (
+        {payload && (
           <div className={`flex flex-col items-center text-center ${deeplinkUrl ? 'mt-4 border-t border-slate-100 pt-4' : ''}`}>
             <span className="text-[11px] font-bold text-slate-500">
               Scan QR {name} melalui ponsel:
             </span>
             <div className="mt-2 rounded-xl border border-slate-200 bg-white p-2.5 shadow-inner">
-              <img
-                src={qrUrl}
-                alt={`QR Code ${name}`}
-                className="h-36 w-36 object-contain sm:h-44 sm:w-44"
-              />
+              {qrUrl ? (
+                <img
+                  src={qrUrl}
+                  alt={`QR Code ${name}`}
+                  onError={onError}
+                  className="h-36 w-36 object-contain sm:h-44 sm:w-44"
+                />
+              ) : (
+                <div role={error ? 'alert' : 'status'} className="flex h-36 w-36 flex-col items-center justify-center text-center text-slate-500 sm:h-44 sm:w-44">
+                  <QrCode2Icon sx={{ fontSize: 44 }} />
+                  <p className="mt-1 text-[11px] font-semibold">{isLoading ? 'Memuat kode QR...' : error}</p>
+                </div>
+              )}
             </div>
             <p className="mt-1.5 text-[10px] text-slate-400">
               Arahkan kamera HP atau pemindai {appName} ke kode di atas.
