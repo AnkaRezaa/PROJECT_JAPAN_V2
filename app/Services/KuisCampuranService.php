@@ -14,9 +14,8 @@ use App\Models\Pengguna;
 use App\Models\ProgramPembelajaran;
 use App\Models\ReviewSoal;
 use App\Models\Soal;
-use App\Services\AksesKuisPenggunaService;
-use App\Services\AksesPremiumService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -29,7 +28,12 @@ class KuisCampuranService
         private readonly AksesPremiumService $aksesPremium
     ) {}
 
-    public function generatePayload(HariModul $day, Pengguna $user): array
+    public function generatePayload(HariModul $day, Pengguna $user, bool $restart = false): array
+    {
+        return $this->rememberSession($user, "day:{$day->id}", fn () => $this->buildDayPayload($day, $user), $restart);
+    }
+
+    private function buildDayPayload(HariModul $day, Pengguna $user): array
     {
         $quiz = $day->checkpointQuiz ?? $day->quizzes()->where('status', 'published')->first();
         abort_unless($quiz, 404, 'Kuis untuk hari ini belum tersedia.');
@@ -68,7 +72,8 @@ class KuisCampuranService
         if ($currentTotal < 10 && $day->module_id) {
             $defisit = 10 - $currentTotal;
             $backfillPool = Soal::query()
-                ->whereHas('quiz', fn ($q) => $q->where('module_id', $day->module_id)->where('status', 'published'))
+                ->whereHas('quiz', fn ($q) => $q->where('module_id', $day->module_id)->where('status', 'published')
+                    ->whereHas('day', fn ($d) => $d->where('status', 'published')->where('day_number', '<=', $day->day_number)))
                 ->whereNotIn('id', array_merge($sampledKosakataIds, $sampledBunpoIds))
                 ->pluck('id')
                 ->all();
@@ -123,21 +128,18 @@ class KuisCampuranService
         $submissionToken = $data['submission_token'] ?? (string) Str::uuid();
 
         return DB::transaction(function () use ($user, $quiz, $data, $submissionToken, $day) {
+            Pengguna::whereKey($user->id)->lockForUpdate()->firstOrFail();
             $existing = PengerjaanKuis::where('user_id', $user->id)
                 ->where('quiz_id', $quiz->id)
                 ->where('submission_token', $submissionToken)
                 ->first();
 
             if ($existing) {
-                return [
-                    'score' => $existing->score,
-                    'xp_earned' => $existing->xp_earned,
-                    'passed' => $existing->score >= ($quiz->passing_score ?? 70),
-                    'idempotent' => true,
-                ];
+                return $this->replayAttempt($existing, $user, (int) ($quiz->passing_score ?? 70));
             }
 
-            $submittedAnswers = collect($data['answers'] ?? []);
+            $session = $this->sessionForSubmit($user, $submissionToken, "day:{$day->id}");
+            $submittedAnswers = $this->sessionAnswers($session, $data['answers'] ?? []);
             $evaluated = $this->evaluateAnswers($submittedAnswers, $day->module_id, $user->id);
 
             $score = $evaluated['score'];
@@ -169,6 +171,7 @@ class KuisCampuranService
                         'attempt_id' => $attempt->id,
                         'question_id' => $item['raw_id'],
                         'answer_text' => $item['user_answer'],
+                        'answer_payload' => ['source_type' => $item['source_type']],
                         'is_correct' => $item['is_correct'],
                         'earned_points' => $item['is_correct'] ? 1 : 0,
                     ]);
@@ -201,7 +204,7 @@ class KuisCampuranService
             event(new KuisSelesai($user, $quiz->id, $score, $xpEarned));
             $this->summaryService->forget($user);
 
-            return [
+            $result = [
                 'score' => $score,
                 'passed' => $passed,
                 'xp_earned' => $xpEarned,
@@ -212,6 +215,9 @@ class KuisCampuranService
                 'breakdown' => $evaluated['breakdown'],
                 'weakspot_category' => $evaluated['weakspot_category'],
             ];
+            $this->completeSession($user, $submissionToken, $session, $result);
+
+            return $result;
         });
     }
 
@@ -482,7 +488,12 @@ class KuisCampuranService
         ];
     }
 
-    public function generateDashboardPayload(Pengguna $user, ?int $programId = null): array
+    public function generateDashboardPayload(Pengguna $user, ?int $programId = null, bool $restart = false): array
+    {
+        return $this->rememberSession($user, 'dashboard:'.($programId ?? 'all'), fn () => $this->buildDashboardPayload($user, $programId), $restart);
+    }
+
+    private function buildDashboardPayload(Pengguna $user, ?int $programId): array
     {
         $allowedQuizzes = Kuis::query()
             ->with(['module.programPembelajaran:id,title'])
@@ -602,20 +613,17 @@ class KuisCampuranService
         $submissionToken = $data['submission_token'] ?? (string) Str::uuid();
 
         return DB::transaction(function () use ($user, $data, $submissionToken) {
+            Pengguna::whereKey($user->id)->lockForUpdate()->firstOrFail();
             $existing = PengerjaanKuis::where('user_id', $user->id)
                 ->where('submission_token', $submissionToken)
                 ->first();
 
             if ($existing) {
-                return [
-                    'score' => $existing->score,
-                    'xp_earned' => $existing->xp_earned,
-                    'passed' => $existing->score >= 70,
-                    'idempotent' => true,
-                ];
+                return $this->replayAttempt($existing, $user, 70, true);
             }
 
-            $submittedAnswers = collect($data['answers'] ?? []);
+            $session = $this->sessionForSubmit($user, $submissionToken, 'dashboard:');
+            $submittedAnswers = $this->sessionAnswers($session, $data['answers'] ?? []);
             $evaluated = $this->evaluateAnswers($submittedAnswers, null, $user->id);
 
             $score = $evaluated['score'];
@@ -631,8 +639,8 @@ class KuisCampuranService
                 $resolvedQuizId = Soal::find($firstQuestionRawId)?->quiz_id;
             }
 
-            $fallbackQuiz = $resolvedQuizId ? Kuis::find($resolvedQuizId) : Kuis::where('status', 'published')->first();
-            $quizId = $fallbackQuiz?->id ?? 1;
+            abort_unless($resolvedQuizId, 409, 'Soal sesi tidak lagi tersedia. Mulai ulang kuis.');
+            $quizId = $resolvedQuizId;
 
             $attempt = PengerjaanKuis::create([
                 'user_id' => $user->id,
@@ -668,6 +676,7 @@ class KuisCampuranService
                         'attempt_id' => $attempt->id,
                         'question_id' => $item['raw_id'],
                         'answer_text' => $item['user_answer'],
+                        'answer_payload' => ['source_type' => $item['source_type']],
                         'is_correct' => $item['is_correct'],
                         'earned_points' => $item['is_correct'] ? 1 : 0,
                     ]);
@@ -709,7 +718,7 @@ class KuisCampuranService
             event(new KuisSelesai($user, $quizId, $score, $xpEarned));
             $this->summaryService->forget($user);
 
-            return [
+            $result = [
                 'score' => $score,
                 'passed' => $passed,
                 'xp_earned' => $xpEarned,
@@ -720,7 +729,150 @@ class KuisCampuranService
                 'weakspot_category' => $evaluated['weakspot_category'],
                 'is_dashboard' => true,
             ];
+            $this->completeSession($user, $submissionToken, $session, $result);
+
+            return $result;
         });
+    }
+
+    private function sessionKey(Pengguna $user, string $token): string
+    {
+        return "mixed-session:{$user->id}:{$token}";
+    }
+
+    private function rememberSession(Pengguna $user, string $context, \Closure $build, bool $restart): array
+    {
+        $activeKey = "mixed-active:{$user->id}:{$context}";
+
+        return Cache::lock($activeKey.':lock', 15)->block(5, function () use ($user, $context, $build, $restart, $activeKey) {
+            $token = Cache::get($activeKey);
+            $session = $token ? Cache::get($this->sessionKey($user, $token)) : null;
+            if (! $restart && is_array($session) && ! isset($session['result']) && $session['expires_at'] > now()->timestamp
+                && ! PengerjaanKuis::where('user_id', $user->id)->where('submission_token', $token)->exists()) {
+                $this->assertSessionAccess($user, $session);
+
+                return $session['quiz'];
+            }
+
+            $payload = $build();
+            $expiresAt = now()->addHours(72);
+            $payload['expires_at'] = $expiresAt->toIso8601String();
+            $session = ['context' => $context, 'expires_at' => $expiresAt->timestamp, 'quiz' => $payload];
+            Cache::put($this->sessionKey($user, $payload['session_token']), $session, $expiresAt);
+            Cache::put($activeKey, $payload['session_token'], $expiresAt);
+            if ($restart && $token) {
+                Cache::forget($this->sessionKey($user, $token));
+            }
+
+            return $payload;
+        });
+    }
+
+    private function sessionForSubmit(Pengguna $user, string $token, string $context): array
+    {
+        $session = Cache::get($this->sessionKey($user, $token));
+        abort_unless(is_array($session) && $session['expires_at'] > now()->timestamp, 409, 'Sesi kuis kedaluwarsa atau tidak tersedia. Mulai ulang kuis.');
+        $matches = $context === 'dashboard:'
+            ? str_starts_with($session['context'], $context) : $session['context'] === $context;
+        abort_unless($matches, 409, 'Sesi kuis tidak sesuai dengan halaman ini. Mulai ulang kuis.');
+        $this->assertSessionAccess($user, $session);
+
+        return $session;
+    }
+
+    private function assertSessionAccess(Pengguna $user, array $session): void
+    {
+        $questions = collect($session['quiz']['questions']);
+        $soal = Soal::whereIn('id', $questions->where('source_type', '!=', 'dokkai')->pluck('raw_id'))
+            ->with(['quiz.module.programPembelajaran', 'quiz.day'])->get()->keyBy('id');
+        $dokkai = DokkaiQuestion::whereIn('id', $questions->where('source_type', 'dokkai')->pluck('raw_id'))
+            ->with(['passage.quiz.module.programPembelajaran', 'passage.quiz.day'])->get()->keyBy('id');
+        $quizzes = collect();
+        foreach ($questions as $question) {
+            $quiz = $question['source_type'] === 'dokkai'
+                ? $dokkai->get($question['raw_id'])?->passage?->quiz : $soal->get($question['raw_id'])?->quiz;
+            abort_unless($quiz && $quiz->status === 'published', 409, 'Soal sesi tidak lagi tersedia. Mulai ulang kuis.');
+            $quizzes->put($quiz->id, $quiz);
+        }
+        foreach ($quizzes as $quiz) {
+            $this->aksesKuis->abortJikaTerkunci($user, $quiz);
+        }
+    }
+
+    private function sessionAnswers(array $session, array $answers): Collection
+    {
+        $questions = collect($session['quiz']['questions']);
+        $key = fn (array $item) => $item['source_type'].':'.$item['raw_id'];
+        $allowed = $questions->keyBy($key);
+        $submitted = collect($answers)->keyBy($key);
+        abort_if($submitted->count() !== count($answers) || $submitted->keys()->diff($allowed->keys())->isNotEmpty(), 422, 'Jawaban tidak sesuai dengan soal dalam sesi kuis.');
+
+        return $questions->map(function (array $question) use ($submitted, $key) {
+            $answer = $submitted->get($key($question));
+
+            return [
+                'raw_id' => $question['raw_id'], 'source_type' => $question['source_type'],
+                'answer' => $answer['answer'] ?? null, 'ordered_token_ids' => $answer['ordered_token_ids'] ?? null,
+            ];
+        });
+    }
+
+    private function completeSession(Pengguna $user, string $token, array $session, array $result): void
+    {
+        DB::afterCommit(function () use ($user, $token, $session, $result) {
+            $ttl = $session['expires_at'] - now()->timestamp;
+            if ($ttl <= 0) {
+                return;
+            }
+            Cache::put($this->sessionKey($user, $token), [
+                'context' => $session['context'], 'expires_at' => $session['expires_at'], 'result' => $result,
+            ], $ttl);
+            $activeKey = "mixed-active:{$user->id}:{$session['context']}";
+            Cache::lock($activeKey.':lock', 15)->block(5, function () use ($activeKey, $token) {
+                if (Cache::get($activeKey) === $token) {
+                    Cache::forget($activeKey);
+                }
+            });
+        });
+    }
+
+    private function replayAttempt(PengerjaanKuis $attempt, Pengguna $user, int $passingScore, bool $dashboard = false): array
+    {
+        $cached = Cache::get($this->sessionKey($user, $attempt->submission_token));
+        if (isset($cached['result'])) {
+            return [...$cached['result'], 'idempotent' => true];
+        }
+
+        $answers = $attempt->answers()->with('question.quiz')->get();
+        $details = $answers->map(fn ($answer) => [
+            'raw_id' => $answer->question_id,
+            'source_type' => $answer->answer_payload['source_type'] ?? ($answer->question?->quiz?->type === 'grammar' ? 'bunpo' : 'kosakata'),
+            'user_answer' => $answer->answer_text, 'is_correct' => (bool) $answer->is_correct,
+        ])->concat(DokkaiAttemptAnswer::where('attempt_id', $attempt->id)->get()->map(fn ($answer) => [
+            'raw_id' => $answer->dokkai_question_id, 'source_type' => 'dokkai',
+            'user_answer' => $answer->selected_option, 'is_correct' => (bool) $answer->is_correct,
+        ]));
+        $breakdown = [];
+        $weakspot = null;
+        $lowest = 70;
+        foreach (['kosakata', 'bunpo', 'dokkai'] as $category) {
+            $items = $details->where('source_type', $category);
+            $correct = $items->where('is_correct', true)->count();
+            $percentage = $items->isEmpty() ? 100 : (int) round($correct / $items->count() * 100);
+            $breakdown[$category] = ['correct' => $correct, 'total' => $items->count(), 'percentage' => $percentage];
+            if ($percentage < $lowest) {
+                $lowest = $percentage;
+                $weakspot = $category;
+            }
+        }
+
+        return [
+            'attempt_id' => $attempt->id, 'score' => $attempt->score, 'xp_earned' => $attempt->xp_earned,
+            'passed' => $attempt->score >= $passingScore, 'idempotent' => true,
+            'correct_count' => $details->where('is_correct', true)->count(), 'total_questions' => $details->count(),
+            'details' => $details->values()->all(), 'breakdown' => $breakdown, 'weakspot_category' => $weakspot,
+            ...($dashboard ? ['is_dashboard' => true] : []),
+        ];
     }
 
     private function sampleWeightedIds(array $ids, int $count, array $weakspotIds = []): array
@@ -774,7 +926,6 @@ class KuisCampuranService
                 'passage_text' => null,
                 'tokens' => $shuffledTokens,
                 'options' => [],
-                'explanation' => $s->explanation,
             ];
         }
 
@@ -801,7 +952,6 @@ class KuisCampuranService
             'question_reading' => $s->question_reading,
             'passage_text' => null,
             'options' => $this->fisherYatesShuffle($cleanOptions),
-            'explanation' => $s->explanation,
         ];
     }
 
@@ -813,7 +963,7 @@ class KuisCampuranService
 
         if (! $passageSnippet && $passage?->paragraphs) {
             $firstP = $passage->paragraphs->first();
-            $passageSnippet = $firstP?->content_raw ? mb_substr($firstP->content_raw, 0, 160) . '...' : null;
+            $passageSnippet = $firstP?->content_raw ? mb_substr($firstP->content_raw, 0, 160).'...' : null;
         }
 
         $rawOptions = is_array($d->options) ? $d->options : [];
@@ -843,7 +993,6 @@ class KuisCampuranService
             'passage_title' => $passage?->title,
             'passage_text' => $passageSnippet,
             'options' => $shuffledOptions,
-            'explanation' => $d->explanation_correct,
         ];
     }
 
@@ -891,6 +1040,7 @@ class KuisCampuranService
             $items[$i] = $items[$j];
             $items[$j] = $temp;
         }
+
         return array_values($items);
     }
 

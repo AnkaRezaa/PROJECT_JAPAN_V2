@@ -1,5 +1,7 @@
 <?php
 
+use App\Events\KuisSelesai;
+use App\Models\DokkaiAttemptAnswer;
 use App\Models\DokkaiParagraph;
 use App\Models\DokkaiPassage;
 use App\Models\DokkaiQuestion;
@@ -13,7 +15,11 @@ use App\Models\Pengguna;
 use App\Models\ProgramPembelajaran;
 use App\Models\ReviewSoal;
 use App\Models\Soal;
+use App\Services\KuisCampuranService;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
+use Inertia\Testing\AssertableInertia;
 
 function kuisCampuranFixture(): array
 {
@@ -22,7 +28,7 @@ function kuisCampuranFixture(): array
     $program = ProgramPembelajaran::create([
         'level_id' => $level->id,
         'title' => 'JLPT N5 Campuran',
-        'slug' => 'jlpt-n5-campuran-' . Str::random(6),
+        'slug' => 'jlpt-n5-campuran-'.Str::random(6),
         'description' => 'Test',
         'status' => 'published',
     ]);
@@ -109,8 +115,8 @@ function kuisCampuranFixture(): array
             'question_text' => "Apa isi wacana soal {$i}?",
             'evidence_paragraph_id' => $paragraph->id,
             'options' => [
-                ['id' => 1, 'option_text' => "Opsi Benar Dokkai {$i}", 'is_correct' => true],
-                ['id' => 2, 'option_text' => "Opsi Salah Dokkai {$i}", 'is_correct' => false],
+                ['id' => 1, 'option_label' => 'A', 'option_text' => "Opsi Benar Dokkai {$i}", 'is_correct' => true],
+                ['id' => 2, 'option_label' => 'B', 'option_text' => "Opsi Salah Dokkai {$i}", 'is_correct' => false],
             ],
             'order' => $i,
         ]);
@@ -296,6 +302,7 @@ test('kuis weakspot endpoint submit berhasil memperbaiki review soal dan memberi
 
 test('kuis campuran mendukung soal tipe sentence_builder dengan evaluasi array token ID yang akurat', function () {
     $f = kuisCampuranFixture();
+    $f['grammarQuiz']->questions()->delete();
 
     $sentenceBuilderSoal = Soal::create([
         'quiz_id' => $f['grammarQuiz']->id,
@@ -315,7 +322,7 @@ test('kuis campuran mendukung soal tipe sentence_builder dengan evaluasi array t
         'points' => 1,
     ]);
 
-    $service = app(\App\Services\KuisCampuranService::class);
+    $service = app(KuisCampuranService::class);
     $payload = $service->generatePayload($f['day'], $f['user']);
 
     $builderItem = collect($payload['questions'])->firstWhere('raw_id', $sentenceBuilderSoal->id);
@@ -327,7 +334,7 @@ test('kuis campuran mendukung soal tipe sentence_builder dengan evaluasi array t
 
     $submitResponse = $this->actingAs($f['user'])
         ->postJson(route('user.kuis-campuran.submit', $f['day']->id), [
-            'submission_token' => (string) Str::uuid(),
+            'submission_token' => $payload['session_token'],
             'answers' => [
                 [
                     'raw_id' => $sentenceBuilderSoal->id,
@@ -347,19 +354,20 @@ test('kuis campuran mendukung soal tipe sentence_builder dengan evaluasi array t
 it('renders dashboard mixed quiz and submits answer successfully', function () {
     $f = kuisCampuranFixture();
 
-    $this->actingAs($f['user'])
+    $show = $this->actingAs($f['user'])
         ->get(route('user.kuis-campuran.dashboard'))
         ->assertOk()
-        ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+        ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('User/Kuis/KuisCampuranRunner')
             ->has('quiz.questions')
             ->where('quiz.is_dashboard', true)
             ->where('isDashboard', true));
 
-    $soal = $f['vocabQuiz']->questions()->first();
+    $item = collect($show->viewData('page')['props']['quiz']['questions'])->firstWhere('source_type', 'kosakata');
+    $soal = Soal::findOrFail($item['raw_id']);
     $submitResponse = $this->actingAs($f['user'])
         ->postJson(route('user.kuis-campuran.dashboard.submit'), [
-            'submission_token' => (string) Str::uuid(),
+            'submission_token' => $show->viewData('page')['props']['quiz']['session_token'],
             'answers' => [
                 [
                     'raw_id' => $soal->id,
@@ -371,7 +379,9 @@ it('renders dashboard mixed quiz and submits answer successfully', function () {
 
     $submitResponse->assertOk()
         ->assertJson([
-            'passed' => true,
+            'passed' => false,
+            'score' => 10,
+            'total_questions' => 10,
             'is_dashboard' => true,
         ]);
 });
@@ -382,10 +392,155 @@ it('exposes dashboardMixedQuiz summary in Beranda page', function () {
     $this->actingAs($f['user'])
         ->get(route('user.dashboard'))
         ->assertOk()
-        ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+        ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('User/Beranda/Beranda')
             ->has('dashboardMixedQuiz')
             ->where('dashboardMixedQuiz.available', true)
             ->has('weakspotSummary'));
 });
 
+test('mixed sessions preserve question identity order and expiry without extending TTL', function () {
+    $f = kuisCampuranFixture();
+    $service = app(KuisCampuranService::class);
+    $first = $service->generatePayload($f['day'], $f['user']);
+    $this->travel(71)->hours();
+    expect($service->generatePayload($f['day'], $f['user']))->toBe($first);
+    $this->travel(2)->hours();
+    $next = $service->generatePayload($f['day'], $f['user']);
+    expect($next['session_token'])->not->toBe($first['session_token']);
+    $this->actingAs($f['user'])->postJson(route('user.kuis-campuran.submit', $f['day']), [
+        'submission_token' => $first['session_token'], 'answers' => [],
+    ])->assertConflict();
+});
+
+test('mixed sessions isolate user day and dashboard program contexts', function () {
+    $f = kuisCampuranFixture();
+    $service = app(KuisCampuranService::class);
+    $day = $service->generatePayload($f['day'], $f['user']);
+    $all = $service->generateDashboardPayload($f['user']);
+    $program = $service->generateDashboardPayload($f['user'], $f['program']->id);
+    expect(array_unique([$day['session_token'], $all['session_token'], $program['session_token']]))->toHaveCount(3);
+    $other = Pengguna::factory()->create(['role' => 'user']);
+    $this->actingAs($other)->postJson(route('user.kuis-campuran.submit', $f['day']), [
+        'submission_token' => $day['session_token'], 'answers' => [],
+    ])->assertConflict();
+    $this->actingAs($f['user'])->postJson(route('user.kuis-campuran.submit', $f['day']), [
+        'submission_token' => $all['session_token'], 'answers' => [],
+    ])->assertConflict();
+    $this->postJson(route('user.kuis-campuran.dashboard.submit'), [
+        'submission_token' => $day['session_token'], 'answers' => [],
+    ])->assertConflict();
+});
+
+test('mixed submissions reject foreign and duplicate questions and count unanswered questions', function () {
+    $f = kuisCampuranFixture();
+    $payload = app(KuisCampuranService::class)->generatePayload($f['day'], $f['user']);
+    $url = route('user.kuis-campuran.submit', $f['day']);
+    $this->actingAs($f['user'])->postJson($url, [
+        'submission_token' => $payload['session_token'],
+        'answers' => [['raw_id' => 999999, 'source_type' => 'kosakata', 'answer' => 'anything']],
+    ])->assertUnprocessable();
+    $question = $payload['questions'][0];
+    $answer = ['raw_id' => $question['raw_id'], 'source_type' => $question['source_type'], 'answer' => null];
+    $this->postJson($url, [
+        'submission_token' => $payload['session_token'], 'answers' => [$answer, $answer],
+    ])->assertUnprocessable();
+    $this->postJson($url, [
+        'submission_token' => $payload['session_token'], 'answers' => [],
+    ])->assertOk()->assertJson(['score' => 0, 'total_questions' => 10, 'correct_count' => 0, 'xp_earned' => 0]);
+});
+
+test('mixed restart creates a new session and invalidates the old unfinished token', function () {
+    $f = kuisCampuranFixture();
+    $service = app(KuisCampuranService::class);
+    $old = $service->generatePayload($f['day'], $f['user']);
+    $this->actingAs($f['user'])->postJson(route('user.kuis-campuran.restart', $f['day']))
+        ->assertOk()->assertJsonPath('redirect_url', route('user.kuis-campuran.show', $f['day']));
+    $new = $service->generatePayload($f['day'], $f['user']);
+    expect($new['session_token'])->not->toBe($old['session_token']);
+    $this->postJson(route('user.kuis-campuran.submit', $f['day']), [
+        'submission_token' => $old['session_token'], 'answers' => [],
+    ])->assertConflict();
+    $dashboard = $service->generateDashboardPayload($f['user'], $f['program']->id);
+    $this->postJson(route('user.kuis-campuran.dashboard.restart'), ['program_id' => $f['program']->id])->assertOk();
+    expect($service->generateDashboardPayload($f['user'], $f['program']->id)['session_token'])->not->toBe($dashboard['session_token']);
+});
+
+test('mixed retry returns persisted counts without repeating XP or completion events after cache loss', function () {
+    $f = kuisCampuranFixture();
+    Event::fake([KuisSelesai::class]);
+    $service = app(KuisCampuranService::class);
+    $payload = $service->generatePayload($f['day'], $f['user']);
+    $answers = collect($payload['questions'])->map(function ($question) {
+        $correct = $question['source_type'] === 'dokkai'
+            ? collect(DokkaiQuestion::findOrFail($question['raw_id'])->options)->firstWhere('is_correct', true)['option_text']
+            : Soal::findOrFail($question['raw_id'])->correct_answer;
+
+        return ['raw_id' => $question['raw_id'], 'source_type' => $question['source_type'], 'answer' => $correct];
+    })->all();
+    $data = ['submission_token' => $payload['session_token'], 'answers' => $answers];
+    $first = $service->submitAttempt($f['day'], $f['user'], $data);
+    expect($first['score'])->toBe(100)->and($first['xp_earned'])->toBe(30);
+    Cache::flush();
+    $second = $service->submitAttempt($f['day'], $f['user'], $data);
+    expect($second['idempotent'])->toBeTrue()->and($second['correct_count'])->toBe(10)
+        ->and($second['total_questions'])->toBe(10)->and($second['xp_earned'])->toBe(30);
+    expect(PengerjaanKuis::where('submission_token', $payload['session_token'])->count())->toBe(1);
+    expect(LogReward::where('user_id', $f['user']->id)->count())->toBe(1);
+    Event::assertDispatchedTimes(KuisSelesai::class, 1);
+});
+
+test('cached mixed sessions recheck access when source material is unpublished', function () {
+    $f = kuisCampuranFixture();
+    $service = app(KuisCampuranService::class);
+    $payload = $service->generatePayload($f['day'], $f['user']);
+    $f['grammarQuiz']->update(['status' => 'draft']);
+    $this->actingAs($f['user'])->postJson(route('user.kuis-campuran.submit', $f['day']), [
+        'submission_token' => $payload['session_token'], 'answers' => [],
+    ])->assertConflict();
+    expect(PengerjaanKuis::where('submission_token', $payload['session_token'])->exists())->toBeFalse();
+});
+
+test('mixed backfill never adds questions from a future locked day', function () {
+    $f = kuisCampuranFixture();
+    $first = $f['vocabQuiz']->questions()->first();
+    $f['vocabQuiz']->questions()->whereKeyNot($first->id)->delete();
+    $f['grammarQuiz']->questions()->delete();
+    $f['dokkaiQuiz']->dokkaiPassage->questions()->delete();
+    $futureDay = HariModul::create(['module_id' => $f['module']->id, 'day_number' => 2, 'title' => 'Future day', 'status' => 'published']);
+    $futureQuiz = Kuis::create(['module_id' => $f['module']->id, 'module_day_id' => $futureDay->id, 'type' => 'multiple_choice', 'status' => 'published']);
+    Soal::create(['quiz_id' => $futureQuiz->id, 'type' => 'multiple_choice', 'question_text' => 'Locked question', 'correct_answer' => 'A', 'options' => ['A', 'B'], 'order' => 1]);
+    $payload = app(KuisCampuranService::class)->generatePayload($f['day'], $f['user']);
+    expect($payload['questions'])->toHaveCount(1)->and($payload['questions'][0]['raw_id'])->toBe($first->id);
+    $this->actingAs($f['user'])->postJson(route('user.kuis-campuran.submit', $f['day']), [
+        'submission_token' => $payload['session_token'],
+        'answers' => [['raw_id' => $first->id, 'source_type' => 'kosakata', 'answer' => $first->correct_answer]],
+    ])->assertOk();
+});
+
+test('Dokkai token retry returns the original result and never duplicates attempt XP or completion events', function () {
+    $f = kuisCampuranFixture();
+    Event::fake([KuisSelesai::class]);
+    $questions = $f['dokkaiQuiz']->dokkaiPassage->questions;
+    $data = ['submission_token' => (string) Str::uuid(), 'answers' => $questions->mapWithKeys(fn ($q) => [$q->id => 'A'])->all()];
+    $url = route('user.dokkai-quizzes.submit', $f['dokkaiQuiz']);
+    $first = $this->actingAs($f['user'])->postJson($url, $data)->assertOk();
+    $second = $this->postJson($url, [...$data, 'answers' => []])->assertOk();
+    expect($second->json('idempotent'))->toBeTrue()->and($second->json('result'))->toBe($first->json('result'));
+    expect(PengerjaanKuis::where('submission_token', $data['submission_token'])->count())->toBe(1);
+    expect(DokkaiAttemptAnswer::count())->toBe($questions->count());
+    expect(LogReward::where('user_id', $f['user']->id)->count())->toBe(1);
+    Event::assertDispatchedTimes(KuisSelesai::class, 1);
+});
+
+test('Dokkai requires a valid token and keeps XP policy when a genuinely new attempt is submitted', function () {
+    $f = kuisCampuranFixture();
+    $url = route('user.dokkai-quizzes.submit', $f['dokkaiQuiz']);
+    $this->actingAs($f['user'])->postJson($url, ['answers' => []])->assertUnprocessable();
+    $this->postJson($url, ['answers' => [], 'submission_token' => 'invalid'])->assertUnprocessable();
+    $answers = $f['dokkaiQuiz']->dokkaiPassage->questions->mapWithKeys(fn ($q) => [$q->id => 'A'])->all();
+    $this->postJson($url, ['answers' => $answers, 'submission_token' => (string) Str::uuid()])->assertOk();
+    $this->postJson($url, ['answers' => $answers, 'submission_token' => (string) Str::uuid()])->assertOk()->assertJsonPath('result.xp_earned', 0);
+    expect(PengerjaanKuis::where('quiz_id', $f['dokkaiQuiz']->id)->count())->toBe(2);
+    expect(LogReward::where('user_id', $f['user']->id)->count())->toBe(1);
+});

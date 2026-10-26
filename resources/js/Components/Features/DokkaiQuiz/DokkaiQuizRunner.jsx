@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import DokkaiReadingView from './DokkaiReadingView';
 import DokkaiQuizView from './DokkaiQuizView';
 import DokkaiResultView from './DokkaiResultView';
@@ -16,6 +16,8 @@ import MenuBookIcon from '@mui/icons-material/MenuBook';
 
 import useQuizCheckpoint from '@/Hooks/useQuizCheckpoint';
 import ResumeQuizModal from '@/Components/Features/Quiz/ResumeQuizModal';
+import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
+import { QuizActionButton } from '@/Components/UI/QuizUI';
 
 const STEPS = [
     { key: 'reading', label: '1. Baca Wacana', icon: AutoStoriesIcon },
@@ -66,8 +68,46 @@ export default function DokkaiQuizRunner({
         return Boolean(initialCheckpointData?.step === 'quiz' || hasSavedAnswers);
     });
 
+    const progressRef = useRef(null);
+    if (!progressRef.current) {
+        progressRef.current = {
+            step: 'reading', selectedAnswers: {}, questionId: questions[0]?.id,
+            submission_token: crypto.randomUUID(), submission_status: 'idle',
+        };
+    }
+    const clockRef = useRef({ remainingMs: Math.max(0, Number(quiz?.time_limit || 0) * 1000), startedAt: null });
+    const [timeLeft, setTimeLeft] = useState(Number(quiz?.time_limit || 0));
+    const [questionId, setQuestionId] = useState(questions[0]?.id);
+    const [submissionStatus, setSubmissionStatus] = useState('idle');
+    const [submitError, setSubmitError] = useState('');
+    const submittingRef = useRef(false);
+    const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
+
+    const remainingMilliseconds = useCallback(() => {
+        const clock = clockRef.current;
+        return Math.max(0, clock.remainingMs - (clock.startedAt === null ? 0 : Date.now() - clock.startedAt));
+    }, []);
+
+    const persistProgress = useCallback((changes = {}) => {
+        progressRef.current = { ...progressRef.current, ...changes };
+        if (!persist || initialAttempt || progressRef.current.submission_status === 'confirmed') return;
+        saveCheckpoint({ ...progressRef.current, remainingMs: remainingMilliseconds(), capturedAt: Date.now() });
+    }, [persist, initialAttempt, saveCheckpoint, remainingMilliseconds]);
+
     const handleResumeCheckpoint = () => {
         if (initialCheckpointData) {
+            progressRef.current = { ...progressRef.current, ...initialCheckpointData };
+            clockRef.current = {
+                remainingMs: Number.isFinite(initialCheckpointData.remainingMs)
+                    ? Math.max(0, initialCheckpointData.remainingMs) : Number(quiz?.time_limit || 0) * 1000,
+                startedAt: null,
+            };
+            setTimeLeft(Math.ceil(clockRef.current.remainingMs / 1000));
+            setQuestionId(initialCheckpointData.questionId ?? questions[0]?.id);
+            setSubmissionStatus(initialCheckpointData.submission_status || 'idle');
+            if (initialCheckpointData.submission_status === 'unconfirmed') {
+                setSubmitError('Hasil belum terkonfirmasi. Kirim ulang untuk memeriksa dan menyimpan hasil.');
+            }
             if (initialCheckpointData.selectedAnswers) {
                 setSelectedAnswers(initialCheckpointData.selectedAnswers);
             }
@@ -82,6 +122,16 @@ export default function DokkaiQuizRunner({
 
     const handleRestartCheckpoint = () => {
         clearCheckpoint();
+        progressRef.current = {
+            step: 'reading', selectedAnswers: {}, questionId: questions[0]?.id,
+            submission_token: crypto.randomUUID(), submission_status: 'idle',
+        };
+        clockRef.current = { remainingMs: Number(quiz?.time_limit || 0) * 1000, startedAt: null };
+        setTimeLeft(Number(quiz?.time_limit || 0));
+        setQuestionId(questions[0]?.id);
+        setSubmissionStatus('idle');
+        setSubmitError('');
+        setResult(null);
         setSelectedAnswers({});
         setStep('reading');
         setUnlockedSteps(['reading']);
@@ -211,6 +261,103 @@ export default function DokkaiQuizRunner({
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
+        const canRun = step === 'quiz' && !isResumeModalOpen && !isSubmitting
+            && submissionStatus === 'idle' && !confirmState.show && !result;
+        const pause = () => {
+            clockRef.current.remainingMs = remainingMilliseconds();
+            clockRef.current.startedAt = null;
+            setTimeLeft(Math.ceil(clockRef.current.remainingMs / 1000));
+        };
+        const syncVisibility = () => {
+            pause();
+            if (canRun && document.visibilityState !== 'hidden') clockRef.current.startedAt = Date.now();
+            if (!isResumeModalOpen && progressRef.current.step === 'quiz') persistProgress();
+        };
+        const onPageHide = () => { pause(); if (!isResumeModalOpen) persistProgress(); };
+        syncVisibility();
+        const interval = canRun ? window.setInterval(() => setTimeLeft(Math.ceil(remainingMilliseconds() / 1000)), 250) : null;
+        document.addEventListener('visibilitychange', syncVisibility);
+        window.addEventListener('pagehide', onPageHide);
+        return () => {
+            pause();
+            if (interval) window.clearInterval(interval);
+            document.removeEventListener('visibilitychange', syncVisibility);
+            window.removeEventListener('pagehide', onPageHide);
+        };
+    }, [step, isResumeModalOpen, isSubmitting, submissionStatus, confirmState.show, result, persistProgress, remainingMilliseconds]);
+
+    const exitRef = useRef(null);
+    const guardActive = persist && !initialAttempt && !result && !isResumeModalOpen
+        && (step === 'quiz' || unlockedSteps.includes('quiz'));
+    const guardRef = useRef(guardActive);
+    guardRef.current = guardActive;
+    const historyGuardEnabled = persist && !initialAttempt && !isResumeModalOpen && unlockedSteps.includes('quiz');
+    const historyGuardRef = useRef(null);
+    const closingRef = useRef(false);
+    const closeRunner = () => {
+        if (closingRef.current) return;
+        const hasGuardEntry = historyGuardRef.current && window.history.state?.dokkaiGuard === historyGuardRef.current;
+        closingRef.current = true;
+        onClose?.({ historyOffset: hasGuardEntry ? -2 : -1 });
+    };
+    const handleRequestExit = () => {
+        if (submittingRef.current || confirmState.show) return;
+        if (!guardActive) { closeRunner(); return; }
+        openConfirm({
+            variant: 'warning', presentation: 'quiz-exit', zIndex: 'z-[10060]',
+            title: 'Mau jeda dulu?',
+            message: 'Jawaban dan sisa waktu disimpan agar kamu bisa melanjutkan sesi ini.',
+            cancelLabel: 'Lanjutkan kuis', confirmLabel: 'Keluar sesi',
+            details: [{ label: 'Progres', value: `${Object.keys(selectedAnswers).length}/${questions.length} soal dijawab` }],
+            onConfirm: () => { persistProgress(); closeConfirm(); closeRunner(); },
+        });
+    };
+    exitRef.current = handleRequestExit;
+
+    useEffect(() => {
+        if (!historyGuardEnabled) return;
+        const onNavigate = (event) => {
+            if (event.navigationType !== 'traverse' || !event.cancelable || closingRef.current || !guardRef.current) return;
+            event.preventDefault();
+            exitRef.current?.();
+        };
+        window.navigation?.addEventListener('navigate', onNavigate);
+        // Keep Back in this document, before Inertia restores the previous page.
+        const marker = crypto.randomUUID();
+        historyGuardRef.current = marker;
+        const originalState = window.history.state;
+        window.history.pushState({ ...originalState, dokkaiGuard: marker }, '');
+        const onPopState = (event) => {
+            if (closingRef.current) return;
+            event.stopImmediatePropagation();
+            if (!guardRef.current) {
+                guardRef.current = false;
+                closeRunner();
+                return;
+            }
+            window.history.pushState({ ...originalState, dokkaiGuard: marker }, '');
+            exitRef.current?.();
+        };
+        window.addEventListener('popstate', onPopState, true);
+        return () => {
+            window.navigation?.removeEventListener('navigate', onNavigate);
+            window.removeEventListener('popstate', onPopState, true);
+            if (window.history.state?.dokkaiGuard === marker) window.history.back();
+            historyGuardRef.current = null;
+        };
+    }, [historyGuardEnabled]);
+
+    useEffect(() => {
+        const onKeyDown = (event) => {
+            if (event.key !== 'Escape' || event.defaultPrevented || !guardRef.current) return;
+            event.preventDefault();
+            exitRef.current?.();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
+
+    useEffect(() => {
         setCurrentQuestions(questions);
     }, [questions]);
 
@@ -231,48 +378,50 @@ export default function DokkaiQuizRunner({
     };
 
     const handleSelectAnswer = (questionId, optionLabel) => {
-        setSelectedAnswers((prev) => {
-            const updated = {
-                ...prev,
-                [questionId]: optionLabel,
-            };
-            if (persist && !initialAttempt) {
-                saveCheckpoint({
-                    step: 'quiz',
-                    selectedAnswers: updated,
-                });
-            }
-            return updated;
-        });
+        if (submittingRef.current || submissionStatus !== 'idle' || (quiz?.time_limit > 0 && remainingMilliseconds() <= 0)) return;
+        const updated = { ...progressRef.current.selectedAnswers, [questionId]: optionLabel };
+        setSelectedAnswers(updated);
+        persistProgress({ step: 'quiz', selectedAnswers: updated });
     };
 
     const handleSubmitQuiz = async () => {
+        if (submittingRef.current) return;
+        submittingRef.current = true;
         setIsSubmitting(true);
+        setSubmitError('');
         let finalResult = null;
 
-        if (onSubmitAttempt) {
+        if (persist) {
+            setSubmissionStatus('unconfirmed');
+            persistProgress({ step: 'quiz', submission_status: 'unconfirmed' });
             try {
+                if (!onSubmitAttempt) throw new Error('Penyimpanan hasil belum tersedia.');
                 const response = await onSubmitAttempt({
                     quiz_id: quiz?.id,
-                    answers: selectedAnswers,
+                    answers: progressRef.current.selectedAnswers,
+                    submission_token: progressRef.current.submission_token,
                 });
 
-                if (response?.result) {
+                if (response?.result && Number.isFinite(Number(response.result.score))
+                    && Number.isFinite(Number(response.result.total_questions)) && response.result.total_questions > 0) {
                     finalResult = {
                         ...response.result,
-                        user_answers: selectedAnswers,
+                        user_answers: response.result.user_answers || progressRef.current.selectedAnswers,
                     };
                 }
+                if (!finalResult) throw new Error('Server belum mengonfirmasi hasil kuis.');
                 if (response?.questions && Array.isArray(response.questions) && response.questions.length > 0) {
                     setCurrentQuestions(response.questions);
                 }
             } catch (err) {
-                console.error('Gagal memproses pengerjaan kuis di server:', err);
+                setSubmitError(err.response?.data?.message || 'Hasil belum terkonfirmasi. Periksa koneksi lalu coba kirim ulang.');
+                setIsSubmitting(false);
+                submittingRef.current = false;
+                return;
             }
         }
 
-        // Fallback evaluasi lokal jika offline atau pratinjau statis tanpa respon server
-        if (!finalResult) {
+        if (!persist) {
             let correctCount = 0;
             currentQuestions.forEach((q) => {
                 const correctOpt = (q.options || []).find((o) => o.is_correct);
@@ -288,19 +437,21 @@ export default function DokkaiQuizRunner({
                 score: calculatedScore,
                 correct_count: correctCount,
                 total_questions: total,
-                xp_earned: persist
-                    ? calculatedScore >= 70 ? (quiz?.xp_reward || 80) : Math.round((quiz?.xp_reward || 80) * 0.4)
-                    : 0,
-                is_passed: calculatedScore >= 70,
+                xp_earned: 0,
+                is_passed: calculatedScore >= Number(quiz?.passing_score ?? 70),
                 user_answers: selectedAnswers,
             };
         }
 
+        progressRef.current.submission_status = 'confirmed';
+        setSubmissionStatus('confirmed');
         clearCheckpoint();
+        setSelectedAnswers(finalResult.user_answers);
         setResult(finalResult);
         setUnlockedSteps(['reading', 'quiz', 'result', 'review', 'glossary']);
         setStep('result');
         setIsSubmitting(false);
+        submittingRef.current = false;
     };
 
     const audioState = useMemo(() => ({
@@ -358,7 +509,8 @@ export default function DokkaiQuizRunner({
                         {onClose && (
                             <button
                                 type="button"
-                                onClick={onClose}
+                                onClick={handleRequestExit}
+                                disabled={isSubmitting}
                                 aria-label="Tutup kuis Dokkai"
                                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
                                 title="Tutup / Kembali"
@@ -399,8 +551,8 @@ export default function DokkaiQuizRunner({
                                 <button
                                     key={s.key}
                                     type="button"
-                                    disabled={!isUnlocked}
-                                    onClick={() => isUnlocked && setStep(s.key)}
+                                    disabled={!isUnlocked || isSubmitting}
+                                    onClick={() => { if (isUnlocked) { persistProgress({ step: s.key }); setStep(s.key); } }}
                                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition ${
                                         isCurrent
                                             ? 'bg-white text-gray-900 shadow-2xs dark:bg-gray-900 dark:text-white'
@@ -483,6 +635,12 @@ export default function DokkaiQuizRunner({
 
             {/* Main Stage Content */}
             <main className="flex-1 w-full max-w-7xl 2xl:max-w-[1536px] mx-auto p-3 sm:p-4 lg:p-5 xl:p-6">
+                {submitError && (
+                    <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+                        <p>{submitError}</p>
+                        <QuizActionButton onClick={handleSubmitQuiz} disabled={isSubmitting}>Coba Kirim Ulang</QuizActionButton>
+                    </div>
+                )}
                 {step === 'reading' && (
                     <DokkaiReadingView
                         quiz={displayQuiz}
@@ -496,12 +654,7 @@ export default function DokkaiQuizRunner({
                         onProceedToQuiz={() => {
                             setUnlockedSteps((prev) => Array.from(new Set([...prev, 'quiz'])));
                             setStep('quiz');
-                            if (persist && !initialAttempt) {
-                                saveCheckpoint({
-                                    step: 'quiz',
-                                    selectedAnswers,
-                                });
-                            }
+                            persistProgress({ step: 'quiz', selectedAnswers });
                         }}
                         audioState={audioState}
                     />
@@ -519,7 +672,11 @@ export default function DokkaiQuizRunner({
                         onSelectAnswer={handleSelectAnswer}
                         onSubmitQuiz={handleSubmitQuiz}
                         isSubmitting={isSubmitting}
-                        onBackToReading={() => setStep('reading')}
+                        timeLeft={timeLeft}
+                        questionId={questionId}
+                        onQuestionChange={(id) => { setQuestionId(id); persistProgress({ questionId: id }); }}
+                        answersLocked={submissionStatus !== 'idle' || confirmState.show}
+                        onBackToReading={() => { persistProgress({ step: 'reading' }); setStep('reading'); }}
                     />
                 )}
 
@@ -529,10 +686,11 @@ export default function DokkaiQuizRunner({
                         preview={!persist}
                         result={result}
                         onReviewAnswers={() => setStep('review')}
-                        onFinish={onClose}
+                        onFinish={closeRunner}
                         onRetry={() => {
-                            clearCheckpoint();
-                            setSelectedAnswers({});
+                            handleRestartCheckpoint();
+                            persistProgress({ step: 'quiz' });
+                            setUnlockedSteps(['reading', 'quiz']);
                             setStep('quiz');
                         }}
                     />
@@ -544,7 +702,7 @@ export default function DokkaiQuizRunner({
                         paragraphs={paragraphs}
                         questions={currentQuestions}
                         userAnswers={selectedAnswers}
-                        onFinish={onClose}
+                        onFinish={closeRunner}
                         onBackToResult={() => setStep('result')}
                     />
                 )}
@@ -554,11 +712,12 @@ export default function DokkaiQuizRunner({
                         quiz={displayQuiz}
                         vocabularies={localVocabularies}
                         onBookmark={handleToggleBookmark}
-                        onFinishLesson={onClose || (() => setStep('reading'))}
+                        onFinishLesson={onClose ? closeRunner : (() => setStep('reading'))}
                         onBackToReview={() => setStep('review')}
                     />
                 )}
             </main>
+            <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
         </div>
     );
 }

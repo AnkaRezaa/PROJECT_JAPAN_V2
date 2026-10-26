@@ -207,3 +207,19 @@ it('can limit a quick quiz session to one owned class', function () {
         ->toContain($secondQuestion->id)
         ->not->toContain($firstQuestion->id);
 });
+
+it('redirects legacy quick-quiz endpoints gracefully to mixed quiz dashboard', function () {
+    $user = Pengguna::factory()->create(['role' => 'user']);
+
+    $this->actingAs($user)
+        ->get('/user/quick-quiz')
+        ->assertRedirect('/user/dashboard-quiz/mixed');
+
+    $this->actingAs($user)
+        ->get('/quick-quiz')
+        ->assertRedirect('/user/dashboard-quiz/mixed');
+
+    $this->actingAs($user)
+        ->get('/user/quick-quiz/start')
+        ->assertRedirect(route('user.kuis-campuran.dashboard'));
+});

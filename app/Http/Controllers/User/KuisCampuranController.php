@@ -7,6 +7,7 @@ use App\Models\HariModul;
 use App\Services\AksesKuisPenggunaService;
 use App\Services\KuisCampuranService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -34,13 +35,14 @@ class KuisCampuranController extends Controller
             'quiz' => $payload,
             'submitUrl' => route('user.kuis-campuran.submit', $moduleDay->id),
             'backUrl' => $backUrl,
+            'restartUrl' => route('user.kuis-campuran.restart', $moduleDay->id),
         ]);
     }
 
     public function submit(Request $request, HariModul $moduleDay): JsonResponse
     {
         $validated = $request->validate([
-            'submission_token' => ['required', 'string'],
+            'submission_token' => ['required', 'uuid'],
             'answers' => ['present', 'array'],
             'answers.*.raw_id' => ['required', 'integer'],
             'answers.*.source_type' => ['required', 'string', 'in:kosakata,bunpo,dokkai'],
@@ -74,6 +76,32 @@ class KuisCampuranController extends Controller
         ]);
     }
 
+    public function restart(Request $request, HariModul $moduleDay): JsonResponse|RedirectResponse
+    {
+        $quiz = $moduleDay->checkpointQuiz ?? $moduleDay->quizzes()->firstOrFail();
+        $this->aksesKuis->abortJikaTerkunci($request->user(), $quiz);
+        $this->kuisCampuranService->generatePayload($moduleDay, $request->user(), true);
+
+        if ($request->expectsJson()) {
+            return response()->json(['redirect_url' => route('user.kuis-campuran.show', $moduleDay->id)]);
+        }
+
+        return to_route('user.kuis-campuran.show', $moduleDay->id, 303);
+    }
+
+    public function restartDashboard(Request $request): JsonResponse|RedirectResponse
+    {
+        $validated = $request->validate(['program_id' => ['nullable', 'integer', 'exists:program_pembelajaran,id']]);
+        $programId = isset($validated['program_id']) ? (int) $validated['program_id'] : null;
+        $this->kuisCampuranService->generateDashboardPayload($request->user(), $programId, true);
+
+        if ($request->expectsJson()) {
+            return response()->json(['redirect_url' => route('user.kuis-campuran.dashboard', array_filter(['program_id' => $programId]))]);
+        }
+
+        return to_route('user.kuis-campuran.dashboard', array_filter(['program_id' => $programId]), 303);
+    }
+
     public function submitWeakspot(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -100,13 +128,14 @@ class KuisCampuranController extends Controller
             'submitUrl' => route('user.kuis-campuran.dashboard.submit'),
             'backUrl' => route('user.dashboard'),
             'isDashboard' => true,
+            'restartUrl' => route('user.kuis-campuran.dashboard.restart'),
         ]);
     }
 
     public function submitDashboard(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'submission_token' => ['required', 'string'],
+            'submission_token' => ['required', 'uuid'],
             'answers' => ['present', 'array'],
             'answers.*.raw_id' => ['required', 'integer'],
             'answers.*.source_type' => ['required', 'string', 'in:kosakata,bunpo,dokkai'],

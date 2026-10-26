@@ -54,7 +54,8 @@ export default function useQuizCheckpoint({
             if (!parsed?.savedAt) return null;
 
             // Periksa apakah sesi sudah kedaluwarsa (> 3 hari)
-            if (Date.now() - parsed.savedAt > maxAgeMs) {
+            if ((Number.isFinite(parsed.expiresAt) && Date.now() >= parsed.expiresAt)
+                || Date.now() - parsed.savedAt > maxAgeMs) {
                 window.localStorage.removeItem(storageKey);
                 return null;
             }

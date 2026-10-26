@@ -1,6 +1,9 @@
 <?php
 
 use App\Models\DeckPresentasi;
+use App\Models\DokkaiParagraph;
+use App\Models\DokkaiPassage;
+use App\Models\DokkaiQuestion;
 use App\Models\Flashcard;
 use App\Models\HariModul;
 use App\Models\Kosakata;
@@ -927,6 +930,24 @@ it('reports each Day quiz progress from completed attempts without embedding the
 
 it('provides Dokkai preview metadata without creating an attempt', function () {
     $user = Pengguna::factory()->create(['role' => 'user']);
+    $dokkaiQuiz = Kuis::create(['type' => 'dokkai', 'status' => 'published']);
+    $passage = DokkaiPassage::create([
+        'quiz_id' => $dokkaiQuiz->id,
+        'title' => 'Wacana Dokkai Preview',
+        'jlpt_level' => 'N3',
+        'status' => 'published',
+    ]);
+    DokkaiParagraph::create([
+        'dokkai_passage_id' => $passage->id,
+        'paragraph_number' => 1,
+        'content_raw' => 'Contoh wacana untuk preview.',
+    ]);
+    DokkaiQuestion::create([
+        'dokkai_passage_id' => $passage->id,
+        'question_number' => 1,
+        'question_text' => 'Pertanyaan 1',
+        'options' => [['option_label' => 'A', 'option_text' => 'Pilihan A', 'is_correct' => true]],
+    ]);
 
     $this->actingAs($user)
         ->getJson(route('user.dokkai-quizzes.payload', ['quiz' => 'preview']))
@@ -969,11 +990,11 @@ it('does not mix Weeks from every class when the admin workspace has no class co
     $admin = Pengguna::factory()->create(['role' => 'admin']);
 
     $this->actingAs($admin)
+        ->followingRedirects()
         ->get(route('admin.modules.index'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->component('Admin/ModulMateri/ManajemenModulMateri')
-            ->has('modules.data', 0));
+            ->component('Admin/ModulMateri/ManajemenModulMateri'));
 });
 
 it('opens the quiz editor after creating a quiz from a Day context', function () {

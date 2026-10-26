@@ -21,12 +21,12 @@ export default function PreviewDemo({
             const response = await axios.post(endpoint, {
                 answers: attemptPayload.answers,
                 submission_token: attemptPayload.submission_token,
-            });
+            }, { timeout: 20000 });
 
             return response.data;
         } catch (error) {
             console.error('Failed to submit dokkai attempt to server:', error);
-            return null;
+            throw error;
         }
     };
 
@@ -38,11 +38,11 @@ export default function PreviewDemo({
                 paragraphs={paragraphs}
                 vocabularies={vocabularies}
                 questions={questions}
-                onClose={() => {
-                    if (window.history.length > 1) {
-                        window.history.back();
+                onClose={({ historyOffset = -1 } = {}) => {
+                    if (window.history.length > Math.abs(historyOffset)) {
+                        window.history.go(historyOffset);
                     } else {
-                        window.location.href = '/user/dokkai';
+                        window.location.replace('/user/dokkai');
                     }
                 }}
                 persist={persist}

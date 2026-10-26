@@ -59,41 +59,28 @@ export default function DokkaiQuizView({
     onSubmitQuiz,
     isSubmitting = false,
     onBackToReading,
+    timeLeft = 0,
+    questionId,
+    onQuestionChange,
+    answersLocked = false,
 }) {
-    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const currentQuestionIndex = Math.max(0, questions.findIndex((question) => question.id === questionId));
+    const setCurrentQuestionIndex = (index) => onQuestionChange?.(questions[index]?.id);
     const [isPassageSheetOpen, setIsPassageSheetOpen] = useState(false);
     const [flaggedQuestions, setFlaggedQuestions] = useState(new Set());
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
     const hasSubmittedRef = useRef(false);
 
     const initialTime = Number(quiz?.time_limit || 0);
-    const [timeLeft, setTimeLeft] = useState(initialTime);
+    const answersDisabled = isSubmitting || answersLocked || (initialTime > 0 && timeLeft <= 0);
 
     useEffect(() => {
-        if (!initialTime || initialTime <= 0) return;
-        setTimeLeft(initialTime);
-        hasSubmittedRef.current = false;
-
-        const timer = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [initialTime]);
-
-    useEffect(() => {
-        if (initialTime > 0 && timeLeft === 0 && !hasSubmittedRef.current && !isSubmitting) {
+        if (initialTime > 0 && timeLeft === 0 && !hasSubmittedRef.current && !isSubmitting && !answersLocked) {
             hasSubmittedRef.current = true;
             setShowSubmitConfirm(false);
             onSubmitQuiz?.();
         }
-    }, [timeLeft, initialTime, isSubmitting, onSubmitQuiz]);
+    }, [timeLeft, initialTime, isSubmitting, answersLocked, onSubmitQuiz]);
 
     const formatTimer = (sec) => {
         const m = Math.floor(sec / 60);
@@ -123,13 +110,13 @@ export default function DokkaiQuizView({
 
     const handleNext = () => {
         if (currentQuestionIndex < totalQuestions - 1) {
-            setCurrentQuestionIndex((prev) => prev + 1);
+            setCurrentQuestionIndex(currentQuestionIndex + 1);
         }
     };
 
     const handlePrev = () => {
         if (currentQuestionIndex > 0) {
-            setCurrentQuestionIndex((prev) => prev - 1);
+            setCurrentQuestionIndex(currentQuestionIndex - 1);
         }
     };
 
@@ -137,7 +124,7 @@ export default function DokkaiQuizView({
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
-            if (isPassageSheetOpen || showSubmitConfirm) return;
+            if (isPassageSheetOpen || showSubmitConfirm || isSubmitting || answersLocked) return;
 
             const key = e.key ? e.key.toUpperCase() : '';
             const options = currentQuestion?.options || [];
@@ -168,10 +155,10 @@ export default function DokkaiQuizView({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [currentQuestion, currentQuestionIndex, totalQuestions, isPassageSheetOpen, showSubmitConfirm]);
+    }, [currentQuestion, currentQuestionIndex, totalQuestions, isPassageSheetOpen, showSubmitConfirm, isSubmitting, answersLocked]);
 
     const handleSubmitClick = () => {
-        if (isSubmitting || hasSubmittedRef.current) return;
+        if (isSubmitting || answersLocked || hasSubmittedRef.current) return;
         if (hasUnanswered || hasFlagged) {
             setShowSubmitConfirm(true);
             return;
@@ -336,7 +323,7 @@ export default function DokkaiQuizView({
                                 <button
                                     type="button"
                                     onClick={handleSubmitClick}
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || answersLocked}
                                     className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-xs hover:bg-emerald-700 active:scale-95 transition cursor-pointer disabled:opacity-50"
                                 >
                                     <CheckCircleIcon sx={{ fontSize: 13 }} />
@@ -404,6 +391,7 @@ export default function DokkaiQuizView({
                                             key={opt.id || opt.option_label}
                                             type="button"
                                             onClick={() => onSelectAnswer(currentQuestion.id, opt.option_label)}
+                                            disabled={answersDisabled}
                                             className={`w-full text-left p-4 sm:p-4.5 rounded-2xl border-2 transition-all flex items-start gap-3.5 group cursor-pointer select-none ${
                                                 isSelected
                                                     ? 'border-emerald-500 border-b-[4px] border-b-emerald-600 bg-emerald-50/80 text-emerald-950 dark:border-emerald-500 dark:border-b-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-100 shadow-xs ring-2 ring-emerald-500/20 active:border-b-2 active:translate-y-[2px]'
@@ -460,7 +448,7 @@ export default function DokkaiQuizView({
                                         <button
                                             type="button"
                                             onClick={handleSubmitClick}
-                                            disabled={isSubmitting}
+                                            disabled={isSubmitting || answersLocked}
                                             className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-xl bg-emerald-600 border-b-4 border-emerald-700 text-white text-xs font-bold shadow-md hover:bg-emerald-700 active:border-b-2 active:translate-y-[2px] transition cursor-pointer disabled:opacity-50"
                                         >
                                             <CheckCircleIcon sx={{ fontSize: 16 }} />

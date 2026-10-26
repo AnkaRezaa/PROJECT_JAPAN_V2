@@ -7,6 +7,7 @@ use App\Models\Kuis;
 use App\Services\AksesKuisPenggunaService;
 use App\Services\KuisDokkaiService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -90,7 +91,7 @@ class DokkaiController extends Controller
         return response()->json($this->dokkaiService->payload($quizModel, false, $user));
     }
 
-    public function show(Request $request, string $quiz): Response|\Illuminate\Http\RedirectResponse
+    public function show(Request $request, string $quiz): Response|RedirectResponse
     {
         $quizModel = $this->resolveQuiz($quiz);
         $user = Auth::user();
@@ -120,7 +121,7 @@ class DokkaiController extends Controller
     {
         $validated = $request->validate([
             'answers' => ['present', 'array'],
-            'submission_token' => ['nullable', 'uuid'],
+            'submission_token' => ['required', 'uuid'],
         ]);
 
         $quizModel = $this->resolveQuiz($quiz);
@@ -135,7 +136,7 @@ class DokkaiController extends Controller
             $quizModel,
             $user,
             $validated['answers'],
-            $validated['submission_token'] ?? null
+            $validated['submission_token']
         );
 
         return response()->json($result);

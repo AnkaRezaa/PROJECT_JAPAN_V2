@@ -91,7 +91,7 @@ function DonutScoreGauge({ score = 0, correctCount = 0, totalQuestions = 10 }) {
     );
 }
 
-export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspot = false, isDashboard = false }) {
+export default function KuisCampuranRunner({ quiz, submitUrl, restartUrl, backUrl, isWeakspot = false, isDashboard = false }) {
     const questions = useMemo(() => quiz?.questions || [], [quiz]);
     const totalQuestions = questions.length || 10;
 
@@ -101,6 +101,7 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspo
     const [submitError, setSubmitError] = useState(null);
     const [resultData, setResultData] = useState(null);
     const [fontSize, setFontSize] = useState('base');
+    const [sessionExpired, setSessionExpired] = useState(false);
     const isSelectingRef = useRef(false);
     const isWeakspotQuiz = Boolean(quiz?.is_weakspot);
 
@@ -113,31 +114,45 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspo
         dismissResume,
     } = useQuizCheckpoint({
         quizType: 'mixed',
-        quizId: isWeakspotQuiz ? null : (quiz?.day_id || quiz?.quiz_id || 'general'),
+        quizId: isWeakspotQuiz ? null : (isDashboard ? `dashboard:${quiz?.program_id ?? 'all'}` : quiz?.day_id || quiz?.quiz_id),
         maxAgeDays: 3,
         enabled: !isWeakspotQuiz,
     });
 
     const [showResumeModal, setShowResumeModal] = useState(() => {
         if (isWeakspotQuiz || !hasCheckpoint) return false;
-        return Boolean(initialCheckpointData?.answers && Object.keys(initialCheckpointData.answers).length > 0);
+        return Boolean(initialCheckpointData?.currentIndex > 0 || Object.keys(initialCheckpointData?.answers || {}).length > 0);
     });
+    const checkpointMatches = initialCheckpointData?.session_token === quiz?.session_token;
 
     const handleResume = () => {
-        if (initialCheckpointData) {
+        if (initialCheckpointData && checkpointMatches) {
             setUserAnswers(initialCheckpointData.answers || {});
-            setCurrentIndex(initialCheckpointData.currentIndex ?? 0);
+            setCurrentIndex(Math.max(0, Math.min(initialCheckpointData.currentIndex ?? 0, questions.length - 1)));
         }
         setShowResumeModal(false);
         dismissResume();
     };
 
-    const handleRestart = () => {
-        clearCheckpoint();
-        setUserAnswers({});
-        setCurrentIndex(0);
-        setShowResumeModal(false);
+    const handleRestart = async () => {
+        if (isSubmitting) return;
+        if (isWeakspotQuiz) { router.reload(); return; }
+        setIsSubmitting(true);
+        try {
+            const { data } = await axios.post(restartUrl, isDashboard ? { program_id: quiz?.program_id } : {});
+            clearCheckpoint();
+            router.get(data.redirect_url, {}, { preserveState: false });
+        } catch (error) {
+            setSubmitError(error.response?.data?.message || 'Sesi baru gagal dibuat. Coba lagi.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
+
+    useEffect(() => {
+        if (isWeakspotQuiz || showResumeModal || resultData || sessionExpired) return;
+        saveCheckpoint({ answers: userAnswers, currentIndex, session_token: quiz.session_token, expiresAt: Date.parse(quiz.expires_at) });
+    }, [currentIndex, userAnswers, showResumeModal, resultData, sessionExpired, isWeakspotQuiz, quiz.session_token, quiz.expires_at, saveCheckpoint]);
 
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
 
@@ -180,6 +195,19 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspo
     }, [resultData, showResumeModal, userAnswers]);
 
     // Validasi checkpoint SEBELUM masuk ke antarmuka soal kuis
+    if (!isWeakspotQuiz && showResumeModal && !checkpointMatches) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 text-slate-900 dark:bg-slate-950 dark:text-white">
+                <div role="alert" className="max-w-md space-y-4">
+                    <h1 className="text-xl font-bold">Sesi sebelumnya tidak tersedia</h1>
+                    <p>Jawaban lama tidak dapat dipasang ke soal yang berbeda. Mulai sesi baru untuk melanjutkan.</p>
+                    <button type="button" onClick={handleRestart} disabled={isSubmitting} className="rounded-lg bg-emerald-700 px-4 py-3 font-semibold text-white disabled:opacity-50">{isSubmitting ? 'Memulai...' : 'Mulai Ulang Kuis'}</button>
+                    {submitError && <p>{submitError}</p>}
+                </div>
+            </div>
+        );
+    }
+
     if (!isWeakspotQuiz && showResumeModal && initialCheckpointData?.answers) {
         return (
             <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors items-center justify-center p-4">
@@ -231,7 +259,7 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspo
     const isSentenceBuilder = currentQuestion?.type === 'sentence_builder' || Boolean(currentQuestion?.tokens?.length);
 
     const handleSelectOption = (optionText) => {
-        if (isSelectingRef.current || isSubmitting || resultData) return;
+        if (isSelectingRef.current || isSubmitting || resultData || sessionExpired) return;
         isSelectingRef.current = true;
 
         const updated = {
@@ -244,19 +272,13 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspo
         };
         setUserAnswers(updated);
 
-        // Simpan Checkpoint
-        saveCheckpoint({
-            answers: updated,
-            currentIndex: currentIndex,
-        });
-
         setTimeout(() => {
             isSelectingRef.current = false;
         }, 350);
     };
 
     const handleSentenceBuilderChange = (newSelectedIds) => {
-        if (isSubmitting || resultData) return;
+        if (isSubmitting || resultData || sessionExpired) return;
 
         const tokenMap = new Map((currentQuestion.tokens || []).map((t) => [t.id, t.text]));
         const assembledText = newSelectedIds.map((id) => tokenMap.get(id) || '').join('');
@@ -272,11 +294,6 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspo
         };
         setUserAnswers(updated);
 
-        // Simpan Checkpoint
-        saveCheckpoint({
-            answers: updated,
-            currentIndex: currentIndex,
-        });
     };
 
     const handleNext = () => {
@@ -294,7 +311,7 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspo
     };
 
     const handleSubmit = async () => {
-        if (isSubmitting) return;
+        if (isSubmitting || sessionExpired) return;
         setIsSubmitting(true);
         setSubmitError(null);
 
@@ -317,6 +334,7 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspo
             clearCheckpoint();
             setResultData(response.data);
         } catch (err) {
+            if (err?.response?.status === 409) setSessionExpired(true);
             console.error('Submit error:', err);
             setSubmitError(
                 err?.response?.data?.message || 'Gagal mengirim jawaban. Periksa koneksi internet Anda.'
@@ -422,11 +440,11 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspo
                         </div>
                         <button
                             type="button"
-                            onClick={handleSubmit}
+                            onClick={sessionExpired ? handleRestart : handleSubmit}
                             disabled={isSubmitting}
                             className="font-bold underline hover:no-underline shrink-0"
                         >
-                            Coba Lagi
+                            {sessionExpired ? 'Mulai Ulang Kuis' : 'Coba Lagi'}
                         </button>
                     </div>
                 </div>
@@ -540,7 +558,7 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspo
 
                             <button
                                 type="button"
-                                onClick={() => router.reload()}
+                                onClick={handleRestart}
                                 className="p-3.5 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition flex items-center justify-center"
                                 title="Ulangi Kuis"
                             >
@@ -619,7 +637,7 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspo
                                 tokens={currentQuestion?.tokens || []}
                                 selectedIds={userAnswers[currentQuestion?.id]?.ordered_token_ids || []}
                                 onChange={handleSentenceBuilderChange}
-                                disabled={isSubmitting || Boolean(resultData)}
+                                disabled={isSubmitting || sessionExpired || Boolean(resultData)}
                                 theme={currentCategory === 'bunpo' ? 'sky' : 'amber'}
                             />
                         ) : (
@@ -634,6 +652,7 @@ export default function KuisCampuranRunner({ quiz, submitUrl, backUrl, isWeakspo
                                             key={option.id || idx}
                                             type="button"
                                             onClick={() => handleSelectOption(optionText)}
+                                            disabled={isSubmitting || sessionExpired}
                                             className={`w-full flex items-center gap-3.5 p-4 rounded-2xl border text-left font-semibold text-sm sm:text-base transition-all duration-150 active:scale-[0.99] ${
                                                 isSelected
                                                     ? 'border-amber-500 bg-amber-50/70 dark:bg-amber-950/40 text-amber-950 dark:text-amber-200 ring-2 ring-amber-400/50 shadow-sm'
