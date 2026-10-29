@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Auth\LoginSosialController;
+use App\Models\AnggotaKloter;
 use App\Models\BroadcastPopup;
 use App\Models\DeckPresentasi;
 use App\Models\HariModul;
@@ -13,6 +14,7 @@ use App\Models\PaketPembayaran;
 use App\Models\PengerjaanKuis;
 use App\Models\ProgresHariModul;
 use App\Models\ProgramPembelajaran;
+use App\Models\SesiKelasLive;
 use App\Models\Transaksi;
 use App\Services\AksesLanggananService;
 use App\Services\AksesPremiumService;
@@ -433,6 +435,39 @@ class HalamanController extends Controller
     {
         $user = Auth::user();
 
+        $userKloterIds = AnggotaKloter::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->pluck('kloter_belajar_id');
+
+        $activeLiveSessionsByProgram = collect();
+        if ($userKloterIds->isNotEmpty()) {
+            $activeLiveSessionsByProgram = SesiKelasLive::query()
+                ->whereIn('kloter_belajar_id', $userKloterIds)
+                ->whereIn('status', ['live', 'scheduled'])
+                ->with(['mentor:id,username'])
+                ->orderByRaw("CASE WHEN status = 'live' THEN 0 ELSE 1 END")
+                ->orderBy('scheduled_at', 'asc')
+                ->get()
+                ->groupBy('program_pembelajaran_id')
+                ->map(function ($sessions) {
+                    $first = $sessions->first();
+                    $scheduled = $first->scheduled_at;
+                    return [
+                        'id' => $first->id,
+                        'join_code' => $first->join_code,
+                        'status' => $first->status,
+                        'is_live' => $first->status === 'live',
+                        'is_today' => $scheduled ? $scheduled->isToday() : false,
+                        'time_formatted' => $scheduled ? $scheduled->format('H:i').' WIB' : null,
+                        'date_formatted' => $scheduled ? $scheduled->locale('id')->translatedFormat('l, d M') : null,
+                        'mentor_name' => $first->mentor?->username,
+                        'join_url' => route('user.live-classes.show', $first->join_code, absolute: false),
+                        'portal_url' => route('user.live-classes.index'),
+                    ];
+                });
+        }
+
         $programs = ProgramPembelajaran::with(['level', 'modules' => fn ($query) => $query
             ->where('status', 'published')
             ->withCount(['flashcardSets', 'quizzes'])
@@ -451,7 +486,7 @@ class HalamanController extends Controller
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get()
-            ->map(function (ProgramPembelajaran $program) use ($user, $aksesPremium, $kelasPayload) {
+            ->map(function (ProgramPembelajaran $program) use ($user, $aksesPremium, $kelasPayload, $activeLiveSessionsByProgram) {
                 $modules = $program->modules;
                 $moduleIds = $modules->pluck('id');
                 $accessibleCount = $modules->filter(fn (Modul $modul) => $aksesPremium->bolehAksesModul($user, $modul))->count();
@@ -484,6 +519,7 @@ class HalamanController extends Controller
                     'progress' => $modules->count() > 0 ? (int) round(($completedCount / $modules->count()) * 100) : 0,
                     'href' => route('user.modul.program', $program->slug),
                     'is_trial_active' => $isTrialActive,
+                    'live_session' => $activeLiveSessionsByProgram->get($program->id),
                     ...$classAccess,
                     'resource_summary' => [
                         'presentations' => DeckPresentasi::whereIn('module_id', $moduleIds)->shared()->where('status', 'published')->count(),
@@ -509,8 +545,11 @@ class HalamanController extends Controller
             })
             ->values();
 
+        $activeLiveToday = $activeLiveSessionsByProgram->first(fn ($s) => $s['is_today'] || $s['is_live']);
+
         return Inertia::render('User/Kelas/KelasPage', [
             'programs' => $programs,
+            'activeLiveToday' => $activeLiveToday,
         ]);
     }
 

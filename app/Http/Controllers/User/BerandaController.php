@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\AnggotaKloter;
 use App\Models\Berita;
 use App\Models\BroadcastPopup;
 use App\Models\DeckPresentasi;
@@ -14,10 +15,12 @@ use App\Models\LogAktivitas;
 use App\Models\LogReward;
 use App\Models\Modul;
 use App\Models\PengerjaanKuis;
+use App\Models\Pengguna;
 use App\Models\PenukaranKodeAkses;
 use App\Models\ProgramPembelajaran;
 use App\Models\ProgresHariModul;
 use App\Models\ReviewSoal;
+use App\Models\SesiKelasLive;
 use App\Services\AksesKuisPenggunaService;
 use App\Services\AksesLanggananService;
 use App\Services\AksesPremiumService;
@@ -117,6 +120,7 @@ class BerandaController extends Controller
             'lastCompletedQuiz' => $this->lastCompletedQuizPayload($user->id),
             'dailyGoal' => $this->dailyGoalPayload($user->id),
             'weakspotSummary' => $this->weakspotSummaryPayload($user->id),
+            'liveAlert' => $this->liveAlertPayload($user),
         ]);
     }
 
@@ -496,5 +500,56 @@ class BerandaController extends Controller
         }
 
         return back()->with('success', 'Access key berhasil digunakan. Akses belajar sudah aktif.');
+    }
+
+    private function liveAlertPayload(Pengguna $user): ?array
+    {
+        $userKloterIds = AnggotaKloter::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->pluck('kloter_belajar_id');
+
+        if ($userKloterIds->isEmpty()) {
+            return null;
+        }
+
+        $session = SesiKelasLive::query()
+            ->whereIn('kloter_belajar_id', $userKloterIds)
+            ->where(function ($q) {
+                $q->where('status', 'live')
+                    ->orWhere(function ($sq) {
+                        $sq->where('status', 'scheduled')
+                            ->whereDate('scheduled_at', now()->toDateString());
+                    });
+            })
+            ->with(['program:id,title,slug', 'kloter:id,nama', 'mentor:id,username,avatar', 'deck:id,title'])
+            ->orderByRaw("CASE WHEN status = 'live' THEN 0 ELSE 1 END")
+            ->orderBy('scheduled_at', 'asc')
+            ->first();
+
+        if (! $session) {
+            return null;
+        }
+
+        $scheduled = $session->scheduled_at;
+        $isLive = $session->status === 'live';
+        $startsInMinutes = $scheduled ? (int) now()->diffInMinutes($scheduled, false) : null;
+
+        return [
+            'id' => $session->id,
+            'join_code' => $session->join_code,
+            'status' => $session->status,
+            'is_live' => $isLive,
+            'starts_in_minutes' => $startsInMinutes,
+            'time_formatted' => $scheduled ? $scheduled->format('H:i').' WIB' : '-',
+            'date_formatted' => $scheduled ? $scheduled->locale('id')->translatedFormat('l, d M') : '-',
+            'program_title' => $session->program?->title,
+            'kloter_name' => $session->kloter?->nama,
+            'mentor_name' => $session->mentor?->username,
+            'mentor_avatar' => $session->mentor?->avatar,
+            'topic' => $session->deck?->title ?? 'Sesi Bimbingan Tatap Muka',
+            'join_url' => route('user.live-classes.show', $session->join_code, absolute: false),
+            'portal_url' => route('user.live-classes.index', absolute: false),
+        ];
     }
 }

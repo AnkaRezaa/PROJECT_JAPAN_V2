@@ -400,6 +400,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/questions/{question}/check', [ModulController::class, 'checkQuestion'])->middleware('throttle:learning-actions')->name('questions.check');
         Route::get('/news', [BeritaController::class, 'index'])->name('news.index');
         Route::get('/news/{news}', [BeritaController::class, 'show'])->name('news.show');
+        Route::get('/live-classes', [UserRuangKelasLiveController::class, 'index'])->name('live-classes.index');
+        Route::post('/live-classes/join-by-code', [UserRuangKelasLiveController::class, 'joinByCode'])->middleware('throttle:15,1')->name('live-classes.join-by-code');
         Route::get('/live-classes/{session:join_code}', [UserRuangKelasLiveController::class, 'show'])->name('live-classes.show');
         Route::post('/live-classes/{session:join_code}/token', [UserRuangKelasLiveController::class, 'token'])->middleware('throttle:live-room-user-token')->name('live-classes.token');
         Route::post('/live-classes/{session:join_code}/leave', [UserRuangKelasLiveController::class, 'leave'])->middleware('throttle:live-room-control')->name('live-classes.leave');

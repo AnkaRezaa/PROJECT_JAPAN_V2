@@ -17,6 +17,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import SearchIcon from '@mui/icons-material/Search';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 import TranslateIcon from '@mui/icons-material/Translate';
+import VideoCameraFrontIcon from '@mui/icons-material/VideoCameraFront';
 
 const heroSlides = [
     { src: MountFujiBg, label: 'Gunung Fuji' },
@@ -182,6 +183,7 @@ export default function BerandaUser({
     lastCompletedQuiz = null,
     dailyGoal = {},
     weakspotSummary = { has_weakspot: false, count: 0, url: '' },
+    liveAlert = null,
 }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -215,6 +217,7 @@ export default function BerandaUser({
         : lastCompletedQuiz?.url || null;
     const quickLinks = [
         { label: 'Kelas Saya', href: activeLearning?.roadmap_url || route('user.kelas.index'), icon: SchoolIcon },
+        { label: 'Kelas Live', href: route('user.live-classes.index'), icon: VideoCameraFrontIcon },
         resourceByCategory.presentasi?.available && resourceByCategory.presentasi?.href
             ? { label: 'Presentasi', href: resourceByCategory.presentasi.href, icon: SlideshowIcon }
             : null,
@@ -361,7 +364,68 @@ export default function BerandaUser({
                     </div>
                 </HeroCarousel>
 
-                <div className="relative z-10 mx-auto -mt-10 max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div className="relative z-10 mx-auto -mt-10 max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+                    {liveAlert && (
+                        <aside aria-label="Pengingat Sesi Live" className={`overflow-hidden rounded-3xl border p-5 shadow-lg backdrop-blur-md transition sm:p-6 ${
+                            liveAlert.is_live
+                                ? 'border-emerald-500/50 bg-gradient-to-r from-emerald-900/90 to-emerald-950/95 text-white shadow-emerald-950/30'
+                                : 'border-amber-400/40 bg-gradient-to-r from-slate-900/95 to-slate-950/95 text-white shadow-black/40'
+                        }`}>
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-start gap-4">
+                                    <div className={`mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-md ${
+                                        liveAlert.is_live ? 'bg-emerald-500 text-slate-950' : 'bg-amber-500 text-slate-950'
+                                    }`}>
+                                        <VideoCameraFrontIcon sx={{ fontSize: 26 }} />
+                                    </div>
+                                    <div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider ${
+                                                liveAlert.is_live ? 'bg-emerald-400 text-slate-950' : 'bg-amber-400 text-slate-950'
+                                            }`}>
+                                                {liveAlert.is_live ? (
+                                                    <>
+                                                        <span className="h-1.5 w-1.5 rounded-full bg-slate-950" />
+                                                        Sedang Berlangsung
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <AccessTimeIcon sx={{ fontSize: 13 }} />
+                                                        Hari Ini {liveAlert.time_formatted}
+                                                    </>
+                                                )}
+                                            </span>
+                                            <span className="text-xs font-semibold text-slate-300">
+                                                {liveAlert.program_title} • {liveAlert.kloter_name}
+                                            </span>
+                                        </div>
+                                        <h3 className="mt-1 text-base font-black text-white sm:text-lg">
+                                            {liveAlert.topic}
+                                        </h3>
+                                        <p className="mt-0.5 text-xs text-slate-300">
+                                            {liveAlert.mentor_name ? `Bersama Sensei ${liveAlert.mentor_name}` : 'Sesi Bimbingan Mentor'}
+                                            {liveAlert.starts_in_minutes !== null && liveAlert.starts_in_minutes > 0
+                                                ? ` · Dimulai dalam ${liveAlert.starts_in_minutes} menit`
+                                                : ''}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2.5 sm:self-center">
+                                    <Link
+                                        href={liveAlert.join_url}
+                                        className={`inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 text-xs font-black shadow-md transition sm:w-auto ${
+                                            liveAlert.is_live
+                                                ? 'bg-emerald-400 text-slate-950 hover:bg-emerald-300'
+                                                : 'bg-white text-slate-950 hover:bg-slate-100'
+                                        }`}
+                                    >
+                                        <PlayArrowIcon sx={{ fontSize: 16 }} />
+                                        {liveAlert.is_live ? 'Masuk Sekarang' : 'Ruang Tunggu'}
+                                    </Link>
+                                </div>
+                            </div>
+                        </aside>
+                    )}
                     <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
                         {/* Kolom Kiri: Jalur Belajar (lg:col-span-8) */}
                         <div className="space-y-8 lg:col-span-8">

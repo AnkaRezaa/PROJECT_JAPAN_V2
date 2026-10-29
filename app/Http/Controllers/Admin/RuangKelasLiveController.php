@@ -23,49 +23,129 @@ class RuangKelasLiveController extends Controller
 {
     public function create(Request $request, KloterBelajarService $kloterService): Response
     {
-        $program = ProgramPembelajaran::query()->findOrFail($request->integer('program_id'));
         $user = $request->user();
-        $kloterService->abortJikaProgramDiLuarCakupan($user, $program);
-        $decks = DeckPresentasi::query()
-            ->with(['module:id,title,week_number', 'creator:id,username'])
-            ->withCount('slides')
-            ->whereHas('module', fn ($query) => $query->where('program_pembelajaran_id', $program->id))
-            ->where(function ($query) use ($user) {
-                $query->where(function ($sharedQuery) {
-                    $sharedQuery->shared()->where('status', 'published');
+        $programs = $kloterService->batasiProgramDikelola(
+            ProgramPembelajaran::query()->orderBy('title'),
+            $user
+        )->get(['id', 'title', 'description']);
+
+        $selectedProgramId = $request->integer('program_id') ?: (int) $programs->first()?->id;
+        $program = $programs->firstWhere('id', $selectedProgramId);
+
+        $kloters = $program
+            ? $kloterService->kloterDikelola($user)
+                ->where('program_pembelajaran_id', $program->id)
+                ->where('status', 'active')
+                ->orderBy('nama')
+                ->get(['id', 'nama', 'kode', 'tanggal_mulai', 'tanggal_selesai'])
+            : collect();
+
+        $weeks = $program
+            ? Modul::query()
+                ->where('program_pembelajaran_id', $program->id)
+                ->where('status', 'published')
+                ->orderBy('week_number')
+                ->orderBy('id')
+                ->get(['id', 'title', 'week_number'])
+            : collect();
+
+        $decks = $program
+            ? DeckPresentasi::query()
+                ->with(['module:id,title,week_number', 'creator:id,username'])
+                ->withCount('slides')
+                ->whereHas('module', fn ($query) => $query->where('program_pembelajaran_id', $program->id))
+                ->where(function ($query) use ($user) {
+                    $query->where(function ($sharedQuery) {
+                        $sharedQuery->shared()->where('status', 'published');
+                    })
+                        ->orWhere(function ($mentorQuery) use ($user) {
+                            $mentorQuery->where('audience_scope', DeckPresentasi::AUDIENCE_MENTOR_SESSION)
+                                ->when(! $user->isAdminGlobal(), fn ($ownerQuery) => $ownerQuery->where('created_by', $user->id));
+                        });
                 })
-                    ->orWhere(function ($mentorQuery) use ($user) {
-                        $mentorQuery->where('audience_scope', DeckPresentasi::AUDIENCE_MENTOR_SESSION)
-                            ->when(! $user->isAdminGlobal(), fn ($ownerQuery) => $ownerQuery->where('created_by', $user->id));
-                    });
+                ->orderBy('module_id')
+                ->orderByDesc('updated_at')
+                ->get(['id', 'created_by', 'module_id', 'title', 'status', 'audience_scope', 'updated_at'])
+            : collect();
+
+        $selectedKloter = $kloters->firstWhere('id', $request->integer('kloter_id')) ?: $kloters->first();
+        $activeWeekNum = $kloterService->mingguAktif($selectedKloter);
+        $defaultWeek = ($activeWeekNum ? $weeks->firstWhere('week_number', $activeWeekNum) : null)
+            ?: ($weeks->firstWhere('id', $request->integer('week_id')) ?: $weeks->first());
+        $defaultDeck = $decks->firstWhere('id', $request->integer('deck_id'))
+            ?: ($defaultWeek ? $decks->firstWhere('module_id', $defaultWeek->id) : null);
+
+        $activeSessions = SesiKelasLive::query()
+            ->whereIn('kloter_belajar_id', $kloters->pluck('id'))
+            ->where('status', 'live')
+            ->with('mentor:id,username')
+            ->get(['id', 'kloter_belajar_id', 'mentor_id'])
+            ->keyBy('kloter_belajar_id');
+
+        $upcomingSessions = SesiKelasLive::query()
+            ->where(function ($query) use ($user) {
+                if (! $user->isAdminGlobal()) {
+                    $query->where('mentor_id', $user->id);
+                }
             })
-            ->orderBy('module_id')
-            ->orderByDesc('updated_at')
-            ->get(['id', 'created_by', 'module_id', 'title', 'status', 'audience_scope', 'updated_at']);
+            ->whereIn('status', ['scheduled', 'live'])
+            ->where(function ($q) {
+                $q->whereNull('scheduled_at')
+                    ->orWhere('scheduled_at', '>=', now()->subHours(4));
+            })
+            ->with([
+                'program:id,title,slug',
+                'kloter:id,nama,kode',
+                'mentor:id,username',
+                'deck:id,title',
+            ])
+            ->orderByRaw("CASE status WHEN 'live' THEN 0 ELSE 1 END")
+            ->orderBy('scheduled_at')
+            ->get()
+            ->map(function ($s) {
+                return [
+                    'id' => $s->id,
+                    'status' => $s->status,
+                    'is_live' => $s->status === 'live',
+                    'room_name' => $s->room_name,
+                    'join_code' => $s->join_code,
+                    'scheduled_at' => $s->scheduled_at?->toISOString(),
+                    'scheduled_date_formatted' => $s->scheduled_at ? $s->scheduled_at->translatedFormat('l, d F Y') : 'Hari ini',
+                    'scheduled_time_formatted' => $s->scheduled_at ? $s->scheduled_at->format('H:i').' WIB' : '-',
+                    'program_title' => $s->program?->title,
+                    'kloter_name' => $s->kloter?->nama,
+                    'kloter_code' => $s->kloter?->kode,
+                    'mentor_name' => $s->mentor?->username,
+                    'deck_title' => $s->deck?->title ?? 'Papan Tulis Kosong',
+                    'start_url' => route('admin.live-classes.start', $s, absolute: false),
+                    'cancel_url' => route('admin.live-classes.cancel', $s, absolute: false),
+                    'join_url' => route('user.live-classes.show', $s->join_code, absolute: false),
+                ];
+            });
 
         return Inertia::render('Admin/RuangKelas/Show', [
             'setup' => [
-                'program' => $program->only(['id', 'title', 'description']),
-                'kloters' => $kloterService->kloterDikelola($user)
-                    ->where('program_pembelajaran_id', $program->id)
-                    ->where('status', 'active')
-                    ->orderBy('nama')
-                    ->get(['id', 'nama', 'kode']),
-                'weeks' => Modul::query()
-                    ->where('program_pembelajaran_id', $program->id)
-                    ->where('status', 'published')
-                    ->orderBy('week_number')
-                    ->orderBy('id')
-                    ->get(['id', 'title', 'week_number']),
+                'programs' => $programs->map->only(['id', 'title']),
+                'program' => $program ? $program->only(['id', 'title', 'description']) : null,
+                'kloters' => $kloters->map(fn ($k) => [
+                    'id' => $k->id,
+                    'nama' => $k->nama,
+                    'kode' => $k->kode,
+                    'minggu_aktif' => $kloterService->mingguAktif($k),
+                    'live_mentor' => $activeSessions->get($k->id)?->mentor?->username,
+                ]),
+                'weeks' => $weeks,
                 'decks' => $decks,
                 'initial' => [
-                    'kloter_id' => $request->integer('kloter_id') ?: null,
-                    'week_id' => $request->integer('week_id') ?: null,
-                    'deck_id' => $request->integer('deck_id') ?: null,
+                    'program_id' => $program?->id,
+                    'kloter_id' => $selectedKloter?->id,
+                    'week_id' => $defaultWeek?->id,
+                    'deck_id' => $defaultDeck?->id,
                 ],
                 'is_global_admin' => $user->isAdminGlobal(),
                 'current_user_id' => $user->id,
             ],
+            'upcomingSessions' => $upcomingSessions,
             'storeEndpoint' => route('admin.live-classes.store', absolute: false),
             'exitUrl' => route('admin.programs.index', absolute: false),
         ]);
@@ -84,20 +164,26 @@ class RuangKelasLiveController extends Controller
             ? Carbon::parse($validated['scheduled_at'])
             : null;
 
+        $kloter = app(KloterBelajarService::class)->kloterDikelola($request->user())->findOrFail($validated['kloter_belajar_id']);
+
         $session = $service->createSession(
             $request->user(),
-            KloterBelajar::findOrFail($validated['kloter_belajar_id']),
+            $kloter,
             filled($validated['presentation_deck_id'] ?? null) ? DeckPresentasi::findOrFail($validated['presentation_deck_id']) : null,
             $scheduledAt,
         );
 
         if ($validated['action'] === 'start') {
             $service->startSession($session, $request->user());
+
+            return redirect()
+                ->route('admin.live-classes.show', $session)
+                ->with('success', 'Kelas dimulai.');
         }
 
         return redirect()
-            ->route('admin.live-classes.show', $session)
-            ->with('success', $validated['action'] === 'start' ? 'Kelas dimulai.' : 'Jadwal kelas disimpan.');
+            ->route('admin.live-classes.create', ['program_id' => $kloter->program_pembelajaran_id])
+            ->with('success', 'Jadwal kelas berhasil disimpan.');
     }
 
     public function show(Request $request, SesiKelasLive $liveClassSession, RuangKelasLiveService $service): Response
@@ -152,7 +238,7 @@ class RuangKelasLiveController extends Controller
         $service->cancelSession($liveClassSession, $request->user());
 
         return redirect()
-            ->route('admin.programs.index')
+            ->route('admin.live-classes.create')
             ->with('success', 'Jadwal kelas dibatalkan.');
     }
 

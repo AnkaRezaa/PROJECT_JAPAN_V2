@@ -108,7 +108,7 @@ function IconButton({ label, active = false, danger = false, disabled = false, o
             aria-label={label}
             disabled={disabled}
             onClick={onClick}
-            className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border text-sm transition disabled:cursor-not-allowed disabled:opacity-35 ${
+            className={`grid h-11 w-11 min-h-11 min-w-11 shrink-0 place-items-center rounded-xl border text-sm transition disabled:cursor-not-allowed disabled:opacity-35 ${
                 danger
                     ? 'border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20'
                     : active
@@ -259,7 +259,7 @@ function Lobby({ deck, session, role, joining = false, lowDataMode = false, onTo
         <main className="min-h-dvh bg-[#070b14] px-3 py-3 text-white sm:px-6 sm:py-6 lg:px-10">
             <div className="mx-auto max-w-6xl">
                 <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
-                    <button type="button" onClick={exitLobby} className="flex min-h-10 items-center gap-2 rounded-lg px-1 text-sm font-bold text-gray-300 hover:text-white">
+                    <button type="button" onClick={exitLobby} className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-bold text-gray-300 hover:text-white">
                         <ArrowBackIcon sx={{ fontSize: 18 }} /> Kembali
                     </button>
                     <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-300">
@@ -1951,7 +1951,7 @@ export default function LiveClassRoom({
                 )}
             </div>
 
-            <footer className={`relative z-30 flex min-h-14 shrink-0 items-center justify-start gap-2 border-t border-white/10 bg-[#0b111d] px-2 py-2 [scrollbar-width:none] sm:min-h-16 sm:px-3 md:justify-center [&::-webkit-scrollbar]:hidden ${toolsOpen || stageMenuOpen || raiseHandPromptOpen || raiseHandNotice ? 'overflow-visible' : 'overflow-x-auto overflow-y-hidden'}`}>
+            <footer className={`relative z-30 flex min-h-16 shrink-0 items-center justify-start gap-2 border-t border-white/10 bg-[#0b111d] px-2 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] [scrollbar-width:none] sm:px-3 md:justify-center [&::-webkit-scrollbar]:hidden ${toolsOpen || stageMenuOpen || raiseHandPromptOpen || raiseHandNotice ? 'overflow-visible' : 'overflow-x-auto overflow-y-hidden'}`}>
                 {role === 'mentor' && stageMenuOpen && (
                     <div className="absolute bottom-full left-2 mb-2 w-56 overflow-hidden rounded-xl border border-white/10 bg-[#111a2b] p-2 shadow-2xl lg:hidden">
                         <p className="px-2 pb-2 pt-1 text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">Tampilan kelas</p>
@@ -2024,7 +2024,7 @@ export default function LiveClassRoom({
                                     )}
                                 </div>
                             )}
-                            <button type="button" onClick={handleRaiseHandButton} aria-expanded={raiseHandPromptOpen} className={`flex h-10 items-center gap-2 rounded-xl px-3 text-xs font-black transition-colors ${currentStudent.handRaised ? 'bg-amber-500 text-gray-950 hover:bg-amber-400' : 'bg-white/5 text-gray-200 hover:bg-white/10'}`}><PanToolIcon sx={{ fontSize: 17 }} /> {currentStudent.handRaised ? 'Turunkan tangan' : 'Angkat tangan'}</button>
+                            <button type="button" onClick={handleRaiseHandButton} aria-expanded={raiseHandPromptOpen} className={`flex min-h-11 items-center gap-2 rounded-xl px-3.5 text-xs font-black transition-colors ${currentStudent.handRaised ? 'bg-amber-500 text-gray-950 hover:bg-amber-400' : 'bg-white/5 text-gray-200 hover:bg-white/10'}`}><PanToolIcon sx={{ fontSize: 17 }} /> {currentStudent.handRaised ? 'Turunkan tangan' : 'Angkat tangan'}</button>
                         </div>
                         <button
                             type="button"
@@ -2035,7 +2035,7 @@ export default function LiveClassRoom({
                             onPointerUp={currentStudent.handRaised ? undefined : () => setStudentMic(false)}
                             onPointerCancel={currentStudent.handRaised ? undefined : () => setStudentMic(false)}
                             onPointerLeave={currentStudent.handRaised ? undefined : () => setStudentMic(false)}
-                            className={`flex h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-black disabled:opacity-40 ${studentSpeaking ? 'bg-green-500 text-gray-950' : 'bg-white/5 text-gray-200'}`}
+                            className={`flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-3.5 text-xs font-black disabled:opacity-40 ${studentSpeaking ? 'bg-green-500 text-gray-950' : 'bg-white/5 text-gray-200'}`}
                             title={currentStudent.handRaised ? 'Klik untuk mengaktifkan atau mematikan mikrofon' : 'Tahan tombol atau Space untuk bicara'}
                         >
                             {studentSpeaking ? <MicIcon sx={{ fontSize: 17 }} /> : <MicOffIcon sx={{ fontSize: 17 }} />}

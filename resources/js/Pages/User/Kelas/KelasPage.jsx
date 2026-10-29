@@ -3,6 +3,8 @@ import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import theme from '@/Components/theme/themes';
 
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ExploreIcon from '@mui/icons-material/Explore';
 import GroupsIcon from '@mui/icons-material/Groups';
@@ -10,6 +12,7 @@ import HourglassTopIcon from '@mui/icons-material/HourglassTop';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SchoolIcon from '@mui/icons-material/School';
+import VideoCameraFrontIcon from '@mui/icons-material/VideoCameraFront';
 
 const clampProgress = (value) => Math.max(0, Math.min(100, Number(value ?? 0)));
 
@@ -135,21 +138,48 @@ function OwnedCourseCard({ item }) {
                         {item.kloter.nama} - Minggu {item.kloter.minggu_aktif || 0}
                     </p>
                 )}
+                {item.live_session && (
+                    <div className="mt-2.5 flex items-center gap-2">
+                        {item.live_session.is_live ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[11px] font-black text-white shadow-sm">
+                                <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                                Live Sekarang
+                            </span>
+                        ) : item.live_session.is_today ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                                <AccessTimeIcon sx={{ fontSize: 13 }} />
+                                Live Hari Ini: {item.live_session.time_formatted}
+                            </span>
+                        ) : null}
+                    </div>
+                )}
             </div>
             {!item.waiting_for_approval && !item.refund_required && (
-                <Link
-                    href={item.href}
-                    className={`relative z-10 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r ${theme.ctaBg} px-4 text-sm font-black text-white shadow-sm transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600`}
-                >
-                    {item.has_class_access ? 'Lanjutkan' : (item.progress > 0 ? 'Lanjutkan Trial' : 'Mulai Trial Week 1')}
-                    <PlayArrowIcon sx={{ fontSize: 18 }} />
-                </Link>
+                <div className="relative z-10 flex flex-wrap items-center gap-2 sm:flex-col sm:items-stretch sm:justify-center">
+                    <Link
+                        href={item.href}
+                        className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r ${theme.ctaBg} px-4 text-sm font-black text-white shadow-sm transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600`}
+                    >
+                        {item.has_class_access ? 'Lanjutkan' : (item.progress > 0 ? 'Lanjutkan Trial' : 'Mulai Trial Minggu 1')}
+                        <PlayArrowIcon sx={{ fontSize: 18 }} />
+                    </Link>
+
+                    {item.live_session && (
+                        <Link
+                            href={item.live_session.is_live && item.live_session.join_url ? item.live_session.join_url : route('user.live-classes.index')}
+                            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-slate-200"
+                        >
+                            <VideoCameraFrontIcon sx={{ fontSize: 16 }} className={item.live_session.is_live ? 'text-emerald-500' : 'text-slate-400'} />
+                            <span>Kelas Live</span>
+                        </Link>
+                    )}
+                </div>
             )}
         </article>
     );
 }
 
-export default function KelasPage({ programs = [] }) {
+export default function KelasPage({ programs = [], activeLiveToday = null }) {
     const enrolledCourses = useMemo(
         () => programs.filter((item) => item.has_class_access || item.waiting_for_approval || item.refund_required),
         [programs],
@@ -222,6 +252,14 @@ export default function KelasPage({ programs = [] }) {
                                 )}
 
                                 <Link
+                                    href={route('user.live-classes.index')}
+                                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-800 shadow-sm transition hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                                >
+                                    <VideoCameraFrontIcon sx={{ fontSize: 18 }} className="text-brand-600 dark:text-brand-400" />
+                                    Jadwal Kelas Live
+                                </Link>
+
+                                <Link
                                     href={route('katalog')}
                                     className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r ${theme.ctaBg} px-5 text-sm font-black text-white shadow-sm transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600`}
                                 >
@@ -230,6 +268,36 @@ export default function KelasPage({ programs = [] }) {
                                 </Link>
                             </div>
                         </div>
+
+                        {activeLiveToday && (
+                            <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-emerald-500/40 bg-emerald-50/90 p-4 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-950/30">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+                                        <VideoCameraFrontIcon sx={{ fontSize: 22 }} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
+                                                {activeLiveToday.is_live ? 'Live Sekarang' : 'Hari Ini'}
+                                            </span>
+                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                {activeLiveToday.time_formatted || ''}
+                                            </span>
+                                        </div>
+                                        <p className="mt-0.5 text-sm font-black text-slate-900 dark:text-white">
+                                            Sesi Tatap Muka bersama {activeLiveToday.mentor_name ? `Mentor ${activeLiveToday.mentor_name}` : 'Mentor'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <Link
+                                    href={activeLiveToday.join_url || route('user.live-classes.index')}
+                                    className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-xs font-black text-white shadow-sm transition hover:bg-emerald-500"
+                                >
+                                    Buka Ruang Live
+                                    <ArrowForwardIcon sx={{ fontSize: 14 }} />
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 </section>
 
@@ -241,15 +309,15 @@ export default function KelasPage({ programs = [] }) {
                                     <PlayArrowIcon sx={{ fontSize: 20 }} />
                                 </div>
                                 <div>
-                                    <h2 className="text-sm font-black text-slate-950 dark:text-white">Akses Uji Coba Week 1 Aktif</h2>
+                                    <h2 className="text-sm font-black text-slate-950 dark:text-white">Akses Uji Coba Minggu 1 Aktif</h2>
                                     <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
-                                        Seluruh materi, latihan flashcard, dan kuis Hari 1–7 (Week 1) terbuka penuh untuk dicoba gratis. Selesaikan materi awal atau buka akses penuh kapan saja.
+                                        Seluruh materi, latihan flashcard, dan kuis Hari 1–7 (Minggu 1) terbuka penuh untuk dicoba gratis. Selesaikan materi awal atau buka akses penuh kapan saja.
                                     </p>
                                 </div>
                             </div>
                             <Link
                                 href={route('katalog')}
-                                className="shrink-0 inline-flex h-9 items-center justify-center rounded-lg border border-sky-300 bg-white px-3.5 text-xs font-bold text-sky-800 shadow-sm transition hover:bg-sky-50 dark:border-sky-800 dark:bg-sky-900/50 dark:text-sky-200 dark:hover:bg-sky-900"
+                                className="shrink-0 inline-flex min-h-11 items-center justify-center rounded-lg border border-sky-300 bg-white px-4 text-xs font-bold text-sky-800 shadow-sm transition hover:bg-sky-50 dark:border-sky-800 dark:bg-sky-900/50 dark:text-sky-200 dark:hover:bg-sky-900"
                             >
                                 Lihat Paket Berlangganan
                             </Link>

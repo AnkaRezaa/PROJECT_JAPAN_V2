@@ -35,6 +35,7 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import SettingsIcon from '@mui/icons-material/Settings';
+import VideoCameraFrontIcon from '@mui/icons-material/VideoCameraFront';
 import ConfirmActionDialog from '@/Components/UI/ConfirmActionDialog';
 
 const resolveThemeMode = () => {
@@ -458,6 +459,7 @@ export default function AuthenticatedLayout({ children }) {
         { href: '/user/dashboard', activePaths: ['/user/dashboard'], icon: <DashboardIcon sx={{ fontSize: 22 }} />, label: 'Beranda' },
         { type: 'heading', label: 'Belajar' },
         { href: '/user/kelas', activePaths: ['/user/kelas', '/user/modul', '/user/quizzes', '/user/flashcards', '/user/grammar-quizzes', '/user/dokkai'], icon: <SchoolIcon sx={{ fontSize: 22 }} />, label: 'Kelas Saya' },
+        { href: '/user/live-classes', activePaths: ['/user/live-classes'], icon: <VideoCameraFrontIcon sx={{ fontSize: 22 }} />, label: 'Kelas Live' },
         {
             href: '/katalog',
             activePaths: ['/katalog', '/pricing'],
@@ -474,6 +476,7 @@ export default function AuthenticatedLayout({ children }) {
 
     const adminMenu = [
         { href: '/admin/dashboard', activePaths: ['/admin/dashboard'], icon: <DashboardIcon sx={{ fontSize: 24 }} />, label: 'Beranda' },
+        { href: '/admin/live-classes/create', activePaths: ['/admin/live-classes'], icon: <VideoCameraFrontIcon sx={{ fontSize: 24 }} />, label: 'Kelas Live' },
         { href: '/admin/users', activePaths: ['/admin/users', '/admin/kloters', '/admin/analytics'], icon: <PeopleIcon sx={{ fontSize: 24 }} />, label: 'Kloter & Siswa' },
         { href: '/admin/exams', activePaths: ['/admin/exams'], excludePaths: ['/admin/exams/question-banks'], icon: <FactCheckOutlinedIcon sx={{ fontSize: 24 }} />, label: 'Ujian' },
         {

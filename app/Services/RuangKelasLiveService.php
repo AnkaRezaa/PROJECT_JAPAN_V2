@@ -518,6 +518,100 @@ class RuangKelasLiveService
         abort_unless($allowed, 403, 'Anda bukan anggota aktif kloter ini.');
     }
 
+    public function portalPayloadForUser(Pengguna $user): array
+    {
+        $userKloterIds = AnggotaKloter::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->pluck('kloter_belajar_id');
+
+        if ($userKloterIds->isEmpty()) {
+            return [
+                'active_session' => null,
+                'upcoming_sessions' => [],
+                'past_sessions' => [],
+                'has_kloter' => false,
+            ];
+        }
+
+        $baseQuery = SesiKelasLive::query()
+            ->whereIn('kloter_belajar_id', $userKloterIds)
+            ->with([
+                'program:id,title,slug',
+                'kloter:id,nama,kode',
+                'mentor:id,username,avatar',
+                'deck:id,title,module_id',
+                'deck.module:id,title,week_number',
+            ]);
+
+        $activeSession = (clone $baseQuery)
+            ->where('status', 'live')
+            ->first();
+
+        $upcomingSessions = (clone $baseQuery)
+            ->where('status', 'scheduled')
+            ->where(fn ($q) => $q->whereNull('scheduled_at')->orWhere('scheduled_at', '>=', now()->subHours(2)))
+            ->orderBy('scheduled_at', 'asc')
+            ->get();
+
+        $pastSessions = (clone $baseQuery)
+            ->where('status', 'ended')
+            ->orderBy('ended_at', 'desc')
+            ->take(5)
+            ->get();
+
+        return [
+            'active_session' => $activeSession ? $this->sessionCardPayload($activeSession) : null,
+            'upcoming_sessions' => $upcomingSessions->map($this->sessionCardPayload(...))->values(),
+            'past_sessions' => $pastSessions->map($this->sessionCardPayload(...))->values(),
+            'has_kloter' => true,
+        ];
+    }
+
+    public function sessionCardPayload(SesiKelasLive $session): array
+    {
+        $session->loadMissing([
+            'program:id,title,slug',
+            'kloter:id,nama,kode',
+            'mentor:id,username,avatar',
+            'deck:id,title,module_id',
+            'deck.module:id,title',
+        ]);
+
+        $scheduled = $session->scheduled_at;
+        $isToday = $scheduled ? $scheduled->isToday() : false;
+        $startsInMinutes = $scheduled ? (int) now()->diffInMinutes($scheduled, false) : null;
+
+        return [
+            'id' => $session->id,
+            'join_code' => $session->join_code,
+            'status' => $session->status,
+            'is_live' => $session->status === 'live',
+            'is_today' => $isToday,
+            'starts_in_minutes' => $startsInMinutes,
+            'scheduled_at' => $scheduled?->toIso8601String(),
+            'date_formatted' => $scheduled ? $scheduled->locale('id')->translatedFormat('l, d F Y') : 'Jadwal belum ditentukan',
+            'time_formatted' => $scheduled ? $scheduled->format('H:i').' WIB' : '-',
+            'program' => $session->program ? [
+                'id' => $session->program->id,
+                'title' => $session->program->title,
+                'slug' => $session->program->slug,
+            ] : null,
+            'kloter' => $session->kloter ? [
+                'id' => $session->kloter->id,
+                'nama' => $session->kloter->nama,
+                'kode' => $session->kloter->kode,
+            ] : null,
+            'mentor' => $session->mentor ? [
+                'id' => $session->mentor->id,
+                'username' => $session->mentor->username,
+                'avatar' => $session->mentor->avatar,
+            ] : null,
+            'topic' => $session->deck?->title ?? ($session->deck?->module?->title ?? 'Sesi Tatap Muka & Bimbingan'),
+            'join_url' => route('user.live-classes.show', $session->join_code, absolute: false),
+        ];
+    }
+
     private function roomClient(): RoomServiceClient
     {
         return new RoomServiceClient(
