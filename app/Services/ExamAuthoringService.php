@@ -95,6 +95,7 @@ class ExamAuthoringService
         $this->assertDraft($version);
 
         DB::transaction(function () use ($version, $sections) {
+            $version->sections()->update(['sort_order' => DB::raw('sort_order + 10000')]);
             $keep = [];
             foreach ($sections as $section) {
                 $model = $version->sections()->updateOrCreate(['key' => $section['key']], $section);
@@ -111,6 +112,7 @@ class ExamAuthoringService
         $this->assertDraft($section->version);
 
         DB::transaction(function () use ($section, $questions) {
+            $section->questions()->update(['sort_order' => DB::raw('sort_order + 10000')]);
             $keep = [];
             foreach ($questions as $question) {
                 $question['content_hash'] = hash('sha256', json_encode($question, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));

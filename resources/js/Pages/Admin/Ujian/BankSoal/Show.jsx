@@ -45,6 +45,7 @@ export default function Show({ bank, levels = [] }) {
     // Modals
     const [wrapperModal, setWrapperModal] = useState(null); // null, { mode: 'create' }, { mode: 'edit', wrapper }
     const [questionModal, setQuestionModal] = useState(null); // null, { mode: 'create', defaultWrapperId }, { mode: 'edit', question }
+    const [modalError, setModalError] = useState('');
     const [importModal, setImportModal] = useState(false);
 
     // Import State
@@ -53,7 +54,7 @@ export default function Show({ bank, levels = [] }) {
     const [importBusy, setImportBusy] = useState(false);
     const [importError, setImportError] = useState('');
 
-    const { confirmState, requestConfirm, closeConfirm } = useConfirmAction();
+    const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
 
     // Form Wrapper
     const [wrapperForm, setWrapperForm] = useState({
@@ -105,6 +106,7 @@ export default function Show({ bank, levels = [] }) {
 
     // Handlers Wrapper
     const openCreateWrapper = () => {
+        setModalError('');
         setWrapperForm({
             title: '',
             wrapper_code: '',
@@ -118,6 +120,7 @@ export default function Show({ bank, levels = [] }) {
     };
 
     const openEditWrapper = (wrapper) => {
+        setModalError('');
         setWrapperForm({
             title: wrapper.title,
             wrapper_code: wrapper.wrapper_code || '',
@@ -133,6 +136,7 @@ export default function Show({ bank, levels = [] }) {
     const handleSaveWrapper = async (e) => {
         e.preventDefault();
         try {
+            setModalError('');
             if (wrapperModal.mode === 'create') {
                 await window.axios.post(route('admin.exams.question-banks.wrappers.store', bank.slug), wrapperForm);
             } else {
@@ -141,25 +145,30 @@ export default function Show({ bank, levels = [] }) {
             setWrapperModal(null);
             router.reload({ preserveScroll: true });
         } catch (err) {
-            alert(apiErrorMessage(err));
+            setModalError(apiErrorMessage(err));
         }
     };
 
     const handleDeleteWrapper = (wrapper) => {
-        requestConfirm({
+        openConfirm({
+            variant: 'danger',
             title: 'Hapus Wacana (Wrapper)',
             message: `Hapus wacana "${wrapper.title}"? Seluruh butir soal di bawahnya juga akan ikut terhapus.`,
             confirmLabel: 'Ya, Hapus',
-            isDestructive: true,
             onConfirm: async () => {
-                await window.axios.delete(route('admin.exams.question-banks.wrappers.destroy', wrapper.id));
-                router.reload({ preserveScroll: true });
+                try {
+                    await window.axios.delete(route('admin.exams.question-banks.wrappers.destroy', wrapper.id));
+                } finally {
+                    closeConfirm();
+                    router.reload({ preserveScroll: true });
+                }
             },
         });
     };
 
     // Handlers Question
     const openCreateQuestion = (defaultWrapperId = '') => {
+        setModalError('');
         setQuestionForm({
             exam_question_wrapper_id: defaultWrapperId ? String(defaultWrapperId) : '',
             code: '',
@@ -179,6 +188,7 @@ export default function Show({ bank, levels = [] }) {
     };
 
     const openEditQuestion = (question) => {
+        setModalError('');
         const opts = question.options || [];
         setQuestionForm({
             exam_question_wrapper_id: question.exam_question_wrapper_id ? String(question.exam_question_wrapper_id) : '',
@@ -214,6 +224,7 @@ export default function Show({ bank, levels = [] }) {
         };
 
         try {
+            setModalError('');
             if (questionModal.mode === 'create') {
                 await window.axios.post(route('admin.exams.question-banks.questions.store', bank.slug), payload);
             } else {
@@ -222,19 +233,23 @@ export default function Show({ bank, levels = [] }) {
             setQuestionModal(null);
             router.reload({ preserveScroll: true });
         } catch (err) {
-            alert(apiErrorMessage(err));
+            setModalError(apiErrorMessage(err));
         }
     };
 
     const handleDeleteQuestion = (question) => {
-        requestConfirm({
+        openConfirm({
+            variant: 'danger',
             title: 'Hapus Butir Soal',
             message: 'Apakah Anda yakin ingin menghapus butir soal ini dari bank soal?',
             confirmLabel: 'Ya, Hapus',
-            isDestructive: true,
             onConfirm: async () => {
-                await window.axios.delete(route('admin.exams.question-banks.questions.destroy', question.id));
-                router.reload({ preserveScroll: true });
+                try {
+                    await window.axios.delete(route('admin.exams.question-banks.questions.destroy', question.id));
+                } finally {
+                    closeConfirm();
+                    router.reload({ preserveScroll: true });
+                }
             },
         });
     };
@@ -684,10 +699,15 @@ export default function Show({ bank, levels = [] }) {
                 isOpen={Boolean(wrapperModal)}
                 onClose={() => setWrapperModal(null)}
                 title={wrapperModal?.mode === 'create' ? 'Tambah Wacana Baru (Wrapper)' : 'Edit Wacana (Wrapper)'}
-                subtitle="Wacana ini akan membungkus butir-butir pertanyaan di bawahnya."
+                description="Wacana ini akan membungkus butir-butir pertanyaan di bawahnya."
                 maxWidth="max-w-2xl"
             >
                 <form onSubmit={handleSaveWrapper} className="space-y-4">
+                    {modalError && (
+                        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/40 dark:text-rose-300">
+                            {modalError}
+                        </div>
+                    )}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="block text-xs font-black text-gray-700 dark:text-gray-300">Judul Wacana / Topik</label>
@@ -787,10 +807,15 @@ export default function Show({ bank, levels = [] }) {
                 isOpen={Boolean(questionModal)}
                 onClose={() => setQuestionModal(null)}
                 title={questionModal?.mode === 'create' ? 'Tambah Butir Soal' : 'Edit Butir Soal'}
-                subtitle="Masukkan pertanyaan, opsi pilihan ganda A/B/C/D, dan kunci jawaban."
+                description="Masukkan pertanyaan, opsi pilihan ganda A/B/C/D, dan kunci jawaban."
                 maxWidth="max-w-2xl"
             >
                 <form onSubmit={handleSaveQuestion} className="space-y-4">
+                    {modalError && (
+                        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/40 dark:text-rose-300">
+                            {modalError}
+                        </div>
+                    )}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="block text-xs font-black text-gray-700 dark:text-gray-300">Pilih Wacana Induk</label>
@@ -941,7 +966,7 @@ export default function Show({ bank, levels = [] }) {
                 isOpen={importModal}
                 onClose={() => setImportModal(false)}
                 title="Mass Import Bank Soal (XLSX & CSV)"
-                subtitle="Unggah ratusan soal sekaligus dari template standar atau dataset eksternal."
+                description="Unggah ratusan soal sekaligus dari template standar atau dataset eksternal."
                 maxWidth="max-w-3xl"
             >
                 <div className="space-y-4">
@@ -1086,13 +1111,8 @@ export default function Show({ bank, levels = [] }) {
             </AdminDialog>
 
             <ConfirmActionDialog
-                isOpen={confirmState.isOpen}
-                title={confirmState.title}
-                message={confirmState.message}
-                confirmLabel={confirmState.confirmLabel}
-                isDestructive={confirmState.isDestructive}
-                onConfirm={confirmState.onConfirm}
-                onClose={closeConfirm}
+                {...confirmState}
+                onCancel={closeConfirm}
             />
         </AuthenticatedLayout>
     );

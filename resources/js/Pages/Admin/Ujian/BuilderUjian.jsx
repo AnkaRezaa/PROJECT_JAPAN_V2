@@ -31,7 +31,7 @@ const questionTypes = [
 ];
 
 const emptyQuestion = (sectionKey = 'vocabulary') => ({
-    local_id: `new-${Date.now()}`,
+    local_id: `new-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     id: null,
     section_key: sectionKey,
     code: '',
@@ -198,6 +198,7 @@ export default function Editor({ exam, mode = 'create', level_options = [], sect
         }));
 
         setQuestions((current) => [...current, ...newItems]);
+        setReadiness(null);
         setPickerOpen(false);
         setNotice(`${newItems.length} butir soal berhasil ditarik dari Bank Soal ke bagian ${sections.find((s) => s.key === pickerTargetSection)?.short_label || pickerTargetSection}.`);
     };

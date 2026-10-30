@@ -28,9 +28,9 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
         };
     }, []);
 
-    const { confirmState, requestConfirm, closeConfirm } = useConfirmAction();
+    const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
 
-    const { data, setData, post, patch, processing, errors, reset } = useForm({
+    const { data, setData, post, patch, processing, errors, reset, clearErrors } = useForm({
         title: '',
         level_id: levels[0]?.id || '',
         source: '',
@@ -46,8 +46,15 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
         }, { preserveState: true, replace: true });
     };
 
+    const closeBankModal = () => {
+        reset();
+        clearErrors();
+        setBankModal(null);
+    };
+
     const openCreateModal = () => {
         reset();
+        clearErrors();
         setData({
             title: '',
             level_id: levels[0]?.id || '',
@@ -59,6 +66,7 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
     };
 
     const openEditModal = (bank) => {
+        clearErrors();
         setData({
             title: bank.title,
             level_id: bank.level_id,
@@ -73,22 +81,25 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
         event.preventDefault();
         if (bankModal?.mode === 'create') {
             post(route('admin.exams.question-banks.store'), {
-                onSuccess: () => setBankModal(null),
+                onSuccess: () => closeBankModal(),
             });
         } else if (bankModal?.mode === 'edit') {
             patch(route('admin.exams.question-banks.update', bankModal.bank.slug), {
-                onSuccess: () => setBankModal(null),
+                onSuccess: () => closeBankModal(),
             });
         }
     };
 
     const handleDeleteBank = (bank) => {
-        requestConfirm({
+        openConfirm({
+            variant: 'danger',
             title: 'Hapus Bank Soal',
             message: `Apakah Anda yakin ingin menghapus bank soal "${bank.title}"? Seluruh wacana dan butir soal di dalamnya akan terhapus permanen.`,
             confirmLabel: 'Ya, Hapus',
-            isDestructive: true,
-            onConfirm: () => router.delete(route('admin.exams.question-banks.destroy', bank.slug)),
+            onConfirm: () => router.delete(route('admin.exams.question-banks.destroy', bank.slug), {
+                preserveScroll: true,
+                onFinish: closeConfirm,
+            }),
         });
     };
 
@@ -292,9 +303,9 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
             {/* Modal Tambah/Edit Bank Soal */}
             <AdminDialog
                 open={Boolean(bankModal)}
-                onClose={() => setBankModal(null)}
+                onClose={closeBankModal}
                 title={bankModal?.mode === 'create' ? 'Buat Bank Soal Baru' : 'Edit Informasi Bank Soal'}
-                subtitle="Bank soal berfungsi sebagai wadah penampung materi ujian dari sumber tertentu."
+                description="Bank soal berfungsi sebagai wadah penampung materi ujian dari sumber tertentu."
                 maxWidth="max-w-lg"
             >
                 <form onSubmit={handleSubmitBank} className="space-y-4">
@@ -367,7 +378,7 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
                     <div className="flex justify-end gap-2 pt-3">
                         <button
                             type="button"
-                            onClick={() => setBankModal(null)}
+                            onClick={closeBankModal}
                             className="h-10 rounded-md border border-gray-300 px-4 text-xs font-black text-gray-700 dark:border-gray-700 dark:text-gray-300"
                         >
                             Batal
@@ -384,13 +395,8 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
             </AdminDialog>
 
             <ConfirmActionDialog
-                isOpen={confirmState.isOpen}
-                title={confirmState.title}
-                message={confirmState.message}
-                confirmLabel={confirmState.confirmLabel}
-                isDestructive={confirmState.isDestructive}
-                onConfirm={confirmState.onConfirm}
-                onClose={closeConfirm}
+                {...confirmState}
+                onCancel={closeConfirm}
             />
         </AuthenticatedLayout>
     );
