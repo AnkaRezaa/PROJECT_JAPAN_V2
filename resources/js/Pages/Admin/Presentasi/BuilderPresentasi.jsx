@@ -997,6 +997,7 @@ export default function BuilderPresentasi({
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
+                setShowImportMenu(false);
                 setPdfFile(null);
             },
             onFinish: () => setIsImporting(false),

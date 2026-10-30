@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 import AddIcon from '@mui/icons-material/Add';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
@@ -17,6 +18,7 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
     const [editingTrack, setEditingTrack] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [deleteTrackConfirm, setDeleteTrackConfirm] = useState(null);
+    const [deleting, setDeleting] = useState(false);
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         curriculum_track_id: '',
@@ -26,12 +28,14 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
     const trackForm = useForm({ code: '', name: '', status: 'active', sort_order: 1 });
 
     const openCreateModal = () => {
+        clearErrors();
         reset();
         setEditingLevel(null);
         setShowLevelModal(true);
     };
 
     const openEditModal = (level) => {
+        clearErrors();
         setEditingLevel(level);
         setData({
             curriculum_track_id: level.curriculum_track_id || '',
@@ -42,6 +46,7 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
     };
 
     const openTrackModal = (track = null) => {
+        trackForm.clearErrors();
         setEditingTrack(track);
         trackForm.setData(track ? {
             code: track.code || '',
@@ -89,8 +94,13 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
     };
 
     const confirmDelete = () => {
+        setDeleting(true);
         router.delete(route('admin.levels.destroy', deleteConfirm.id), {
-            onSuccess: () => setDeleteConfirm(null),
+            preserveScroll: true,
+            onFinish: () => {
+                setDeleting(false);
+                setDeleteConfirm(null);
+            },
         });
     };
 
@@ -101,6 +111,13 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
             <div className="min-h-screen bg-surface-muted font-sans">
                 <header className="sticky top-16 z-40 flex flex-col gap-4 border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:top-0 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center gap-3">
+                        <Link
+                            href={route('admin.programs.index')}
+                            className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                            title="Kembali ke Manajemen Kelas"
+                        >
+                            <ArrowBackIcon sx={{ fontSize: 18 }} />
+                        </Link>
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white">
                             <LayersOutlinedIcon sx={{ fontSize: 20 }} />
                         </div>
@@ -416,6 +433,7 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
                     title="Hapus Level?"
                     message="Pastikan level ini tidak lagi dipakai oleh konten lain."
                     confirmLabel="Iya, Hapus"
+                    processing={deleting}
                     details={[
                         { label: 'Level', value: deleteConfirm.level_name },
                         { label: 'Stage', value: deleteConfirm.stage },
@@ -431,9 +449,19 @@ export default function ManajemenLevel({ levels = [], tracks = [] }) {
                     title="Hapus Jalur?"
                     message="Jalur hanya dapat dihapus jika tidak memiliki level dan kelas."
                     confirmLabel="Hapus"
+                    processing={deleting}
                     details={[{ label: 'Jalur', value: deleteTrackConfirm.name }]}
                     onCancel={() => setDeleteTrackConfirm(null)}
-                    onConfirm={() => router.delete(route('admin.curriculum-tracks.destroy', deleteTrackConfirm.id), { onSuccess: () => setDeleteTrackConfirm(null) })}
+                    onConfirm={() => {
+                        setDeleting(true);
+                        router.delete(route('admin.curriculum-tracks.destroy', deleteTrackConfirm.id), {
+                            preserveScroll: true,
+                            onFinish: () => {
+                                setDeleting(false);
+                                setDeleteTrackConfirm(null);
+                            },
+                        });
+                    }}
                 />
             )}
         </AuthenticatedLayout>

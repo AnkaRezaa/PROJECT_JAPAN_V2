@@ -118,6 +118,7 @@ class AdminFlashcardController extends Controller
 
     public function updateCards(Request $request, SetFlashcard $flashcardSet, NotifikasiPenggunaService $notifikasi)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $flashcardSet->module_id);
         $validated = $request->validate([
             'status' => ['required', 'in:draft,published'],
             'cards' => ['present', 'array'],
@@ -185,6 +186,7 @@ class AdminFlashcardController extends Controller
         SetFlashcard $flashcardSet,
         ImportSpreadsheetService $spreadsheets
     ) {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $flashcardSet->module_id);
         $validated = $request->validate([
             'import_file' => ['required', 'file', 'max:4096'],
         ]);
@@ -274,10 +276,12 @@ class AdminFlashcardController extends Controller
     }
 
     public function downloadImportTemplate(
+        Request $request,
         SetFlashcard $flashcardSet,
         TemplateExcelService $templates,
         ?string $format = 'xlsx'
     ) {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $flashcardSet->module_id);
         $format = strtolower($format ?: 'xlsx');
 
         if (! in_array($format, ['csv', 'xlsx'], true)) {
@@ -303,6 +307,7 @@ class AdminFlashcardController extends Controller
 
     public function generateQuiz(Request $request, SetFlashcard $flashcardSet)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $flashcardSet->module_id);
         $validated = $request->validate([
             'quiz_id' => [
                 'required',

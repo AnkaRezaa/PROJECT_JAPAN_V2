@@ -94,6 +94,17 @@ export default function QuizBuilder({
     const hasUnsavedChanges = currentSnapshot !== cleanSnapshotRef.current;
 
     useEffect(() => {
+        if (hasUnsavedChanges) return;
+        const normalized = normalizeQuestions(initialQuestions, quiz?.type);
+        setData('questions', normalized);
+        cleanSnapshotRef.current = JSON.stringify({
+            time_limit: quiz?.time_limit ?? '',
+            passing_score: quiz?.passing_score ?? 70,
+            questions: normalized,
+        });
+    }, [initialQuestions]);
+
+    useEffect(() => {
         if (activeIndex > data.questions.length - 1) {
             setActiveIndex(Math.max(0, data.questions.length - 1));
         }

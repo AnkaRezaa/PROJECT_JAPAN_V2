@@ -73,14 +73,15 @@ class ModulRequest extends FormRequest
                 return;
             }
 
-            if ($program->level_id && ! $level) {
-                $validator->errors()->add('level_id', 'Level kelas tidak ditemukan. Periksa pengaturan kelas.');
+            if ($program->level_id) {
+                if (! $level) {
+                    $validator->errors()->add('level_id', 'Level kelas tidak ditemukan. Periksa pengaturan kelas.');
+                    return;
+                }
 
-                return;
-            }
-
-            if ((int) $program->level_id !== (int) ($level?->id)) {
-                $validator->errors()->add('level_id', 'Level Week harus sama dengan level kelas yang dipilih.');
+                if ((int) $program->level_id !== (int) $level->id) {
+                    $validator->errors()->add('level_id', 'Level Week harus sama dengan level kelas yang dipilih.');
+                }
             }
 
             if ($level && $program->curriculum_track_id && $level->curriculum_track_id

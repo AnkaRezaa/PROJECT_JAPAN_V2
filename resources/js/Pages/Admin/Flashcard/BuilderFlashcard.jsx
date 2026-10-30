@@ -123,6 +123,19 @@ export function FlashcardEditorWorkspace({
     });
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
     const activeCard = cards[activeIndex] || null;
+    const setIdRef = useRef(set.id);
+    const cleanSnapshotRef = useRef(JSON.stringify((set.flashcards || []).map((card) => normalizeCard(card))));
+
+    useEffect(() => {
+        const currentCardsJson = JSON.stringify(cards);
+        const isDirty = currentCardsJson !== cleanSnapshotRef.current;
+        if (setIdRef.current !== set.id || !isDirty) {
+            setIdRef.current = set.id;
+            const normalized = (set.flashcards || []).map((card) => normalizeCard(card));
+            setCards(normalized);
+            cleanSnapshotRef.current = JSON.stringify(normalized);
+        }
+    }, [set.id, set.flashcards]);
 
     useEffect(() => {
         if (activeIndex > cards.length - 1) {
@@ -226,6 +239,7 @@ export function FlashcardEditorWorkspace({
             preserveScroll: true,
             onSuccess: () => {
                 setIsSaving(false);
+                cleanSnapshotRef.current = JSON.stringify(cards);
                 setSaveSuccess('Flashcard berhasil disimpan.');
                 setTimeout(() => setSaveSuccess(''), 4000);
             },
@@ -240,7 +254,13 @@ export function FlashcardEditorWorkspace({
 
     const generateQuiz = (event) => {
         event.preventDefault();
-        generateForm.post(route('admin.flashcards.generate-quiz', set.id), { preserveScroll: true });
+        generateForm.post(route('admin.flashcards.generate-quiz', set.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSaveSuccess('Soal kuis berhasil digenerate.');
+                generateForm.reset();
+            },
+        });
     };
 
     const importCards = (event) => {

@@ -116,15 +116,21 @@ class AdminModulController extends Controller
             return redirect()->back()->with('error', 'Kelas tidak dapat dihapus karena masih terhubung dengan kloter belajar.');
         }
 
-        try {
-            $this->deleteManagedThumbnail($program->thumbnail_url);
-            $program->delete();
+        if ($program->paymentPlans()->exists() || $program->subscriptions()->exists()) {
+            return redirect()->back()->with('error', 'Kelas tidak dapat dihapus karena masih memiliki paket pembayaran atau langganan.');
+        }
 
-            return redirect()->back()->with('success', 'Kelas berhasil dihapus.');
+        $thumbnailUrl = $program->thumbnail_url;
+        try {
+            $program->delete();
         } catch (\Throwable $e) {
             report($e);
             return redirect()->back()->with('error', 'Gagal menghapus kelas karena terdapat data transaksi atau paket terkait.');
         }
+
+        $this->deleteManagedThumbnail($thumbnailUrl);
+
+        return redirect()->back()->with('success', 'Kelas berhasil dihapus.');
     }
 
     public function index(Request $request)
@@ -337,6 +343,7 @@ class AdminModulController extends Controller
 
     public function store(ModulRequest $request, NotifikasiPenggunaService $notifikasi)
     {
+        $this->kloterService->abortJikaProgramDiLuarCakupan($request->user(), $request->integer('program_pembelajaran_id'));
         $module = Modul::create($request->validated());
 
         if ($module->status === 'published') {
@@ -348,6 +355,8 @@ class AdminModulController extends Controller
 
     public function update(ModulRequest $request, Modul $module, NotifikasiPenggunaService $notifikasi)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $module->id);
+        $this->kloterService->abortJikaProgramDiLuarCakupan($request->user(), $request->integer('program_pembelajaran_id'));
         $oldStatus = $module->status;
         $module->update($request->validated());
 
@@ -358,20 +367,24 @@ class AdminModulController extends Controller
         return redirect()->back()->with('success', 'Modul berhasil diperbarui');
     }
 
-    public function destroy(Modul $module)
+    public function destroy(Request $request, Modul $module)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $module->id);
+
         $flashcardCount = $module->flashcardSets()->count();
         $quizCount = $module->quizzes()->count();
 
         if ($flashcardCount > 0 || $quizCount > 0) {
-            return redirect()->back()->withErrors([
-                'delete' => 'Modul tidak dapat dihapus karena masih memiliki konten terkait.',
-            ]);
+            return redirect()->back()->with('error', 'Modul tidak dapat dihapus karena masih memiliki konten terkait.');
         }
 
-        $module->delete();
+        try {
+            $module->delete();
 
-        return redirect()->back()->with('success', 'Modul berhasil dihapus');
+            return redirect()->back()->with('success', 'Modul berhasil dihapus');
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Gagal menghapus modul: data masih berelasi dengan aktivitas atau bank konten.');
+        }
     }
 
     private function prepareProgramInput(Request $request, ?ProgramPembelajaran $program = null): array

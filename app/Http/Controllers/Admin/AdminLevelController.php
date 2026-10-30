@@ -11,8 +11,10 @@ use Inertia\Inertia;
 
 class AdminLevelController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang berhak mengelola level kurikulum.');
+
         return Inertia::render('Admin/Level/ManajemenLevel', [
             'tracks' => CurriculumTrack::query()
                 ->withCount(['levels', 'programs'])
@@ -28,6 +30,7 @@ class AdminLevelController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang berhak mengelola level kurikulum.');
         $validated = $request->validate([
             'curriculum_track_id' => ['required', 'exists:curriculum_tracks,id'],
             'level_name' => ['required', 'string', 'max:50'],
@@ -41,6 +44,7 @@ class AdminLevelController extends Controller
 
     public function update(Request $request, LevelPembelajaran $level)
     {
+        abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang berhak mengelola level kurikulum.');
         $validated = $request->validate([
             'curriculum_track_id' => ['required', 'exists:curriculum_tracks,id'],
             'level_name' => ['required', 'string', 'max:50'],
@@ -52,21 +56,25 @@ class AdminLevelController extends Controller
         return redirect()->back()->with('success', 'LevelPembelajaran berhasil diperbarui');
     }
 
-    public function destroy(LevelPembelajaran $level)
+    public function destroy(Request $request, LevelPembelajaran $level)
     {
+        abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang berhak mengelola level kurikulum.');
         if ($level->modules()->exists() || $level->programPembelajaran()->exists()) {
-            return redirect()->back()->withErrors([
-                'delete' => 'Level tidak dapat dihapus karena masih digunakan oleh kelas atau Week.',
-            ]);
+            return redirect()->back()->with('error', 'Level tidak dapat dihapus karena masih digunakan oleh kelas atau Week.');
         }
 
-        $level->delete();
+        try {
+            $level->delete();
 
-        return redirect()->back()->with('success', 'LevelPembelajaran berhasil dihapus');
+            return redirect()->back()->with('success', 'Level berhasil dihapus');
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Level tidak dapat dihapus karena masih digunakan oleh Bank Soal atau Ujian.');
+        }
     }
 
     public function storeTrack(Request $request)
     {
+        abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang berhak mengelola level kurikulum.');
         CurriculumTrack::create($this->validateTrack($request));
 
         return redirect()->back()->with('success', 'Jalur kurikulum berhasil ditambahkan.');
@@ -74,22 +82,26 @@ class AdminLevelController extends Controller
 
     public function updateTrack(Request $request, CurriculumTrack $curriculumTrack)
     {
+        abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang berhak mengelola level kurikulum.');
         $curriculumTrack->update($this->validateTrack($request, $curriculumTrack));
 
         return redirect()->back()->with('success', 'Jalur kurikulum berhasil diperbarui.');
     }
 
-    public function destroyTrack(CurriculumTrack $curriculumTrack)
+    public function destroyTrack(Request $request, CurriculumTrack $curriculumTrack)
     {
+        abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang berhak mengelola level kurikulum.');
         if ($curriculumTrack->levels()->exists() || $curriculumTrack->programs()->exists()) {
-            return redirect()->back()->withErrors([
-                'delete' => 'Jalur tidak dapat dihapus karena masih memiliki level atau kelas.',
-            ]);
+            return redirect()->back()->with('error', 'Jalur tidak dapat dihapus karena masih memiliki level atau kelas.');
         }
 
-        $curriculumTrack->delete();
+        try {
+            $curriculumTrack->delete();
 
-        return redirect()->back()->with('success', 'Jalur kurikulum berhasil dihapus.');
+            return redirect()->back()->with('success', 'Jalur kurikulum berhasil dihapus.');
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Jalur kurikulum tidak dapat dihapus karena masih memiliki relasi data.');
+        }
     }
 
     private function validateTrack(Request $request, ?CurriculumTrack $track = null): array

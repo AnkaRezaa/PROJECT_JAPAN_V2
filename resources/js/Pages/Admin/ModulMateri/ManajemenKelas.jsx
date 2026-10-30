@@ -12,6 +12,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import GroupsIcon from '@mui/icons-material/Groups';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
+import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SearchIcon from '@mui/icons-material/Search';
 import SchoolIcon from '@mui/icons-material/School';
@@ -307,6 +308,16 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                     <MenuBookIcon sx={{ fontSize: 18 }} />
                                     <span>Panduan Modul</span>
                                 </a>
+                                {isAdminGlobal && (
+                                    <Link
+                                        href={route('admin.levels.index')}
+                                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-700 shadow-xs transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-brand-800 dark:hover:bg-brand-950/30 dark:hover:text-brand-300"
+                                        title="Kelola Jalur Kurikulum dan Level Pembelajaran"
+                                    >
+                                        <LayersOutlinedIcon sx={{ fontSize: 18 }} />
+                                        <span>Jalur & Level</span>
+                                    </Link>
+                                )}
                                 <button onClick={openCreate} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-brand-600 px-5 text-sm font-black text-white shadow-sm shadow-brand-500/20 transition-colors hover:bg-brand-700">
                                     <AddIcon sx={{ fontSize: 18 }} />
                                     Tambah Kelas

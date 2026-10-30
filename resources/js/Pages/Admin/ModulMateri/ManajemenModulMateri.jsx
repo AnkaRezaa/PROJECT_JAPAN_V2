@@ -115,6 +115,14 @@ function DailyPracticeRow({ module, day, onCreate, focused = false }) {
                     </span>
                 </span>
                 <div className="flex flex-wrap gap-2">
+                    {flashcardSets[0] && (
+                        <Link
+                            href={route('admin.flashcards.builder', flashcardSets[0].id)}
+                            className="inline-flex h-9 items-center rounded-lg border border-teal-300 bg-teal-50 px-3 text-xs font-black text-teal-700 transition hover:bg-teal-100 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-300"
+                        >
+                            Builder Flashcard
+                        </Link>
+                    )}
                     {!hasMaterial && (
                         <button
                             type="button"
@@ -453,9 +461,11 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
     };
 
     const deleteDay = (module, day) => {
+        const realCards = (day.flashcard_sets || []).reduce((sum, s) => sum + Number(s.item_count || 0), 0);
+        const realQuestions = (day.quizzes || []).reduce((sum, q) => sum + Number(q.item_count || 0), 0);
         const contentCount = Number(day.vocabulary_count || 0)
-            + (day.flashcard_sets?.length || 0)
-            + (day.quizzes?.length || 0)
+            + realCards
+            + realQuestions
             + Number(day.grammar_lesson_count || 0)
             + Number(day.dokkai_lesson_count || 0)
             + (day.presentation_decks?.length || 0);
@@ -829,7 +839,10 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
 
             <AdminDialog
                 open={showModuleDialog}
-                onClose={() => setShowModuleDialog(false)}
+                onClose={() => {
+                    moduleForm.clearErrors();
+                    setShowModuleDialog(false);
+                }}
                 eyebrow={selectedProgram?.title || 'Kelas'}
                 title={editingModule ? 'Edit Minggu' : 'Tambah Minggu'}
                 description="Susun modul mingguan untuk alur belajar dan roadmap kelas."
@@ -893,7 +906,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                     <div className="grid gap-4 sm:grid-cols-2">
                         <FormField
                             label="Level"
-                            required
+                            required={Boolean(selectedProgram?.level_id)}
                             error={moduleForm.errors.level_id}
                             tooltip="Tingkat kemahiran modul mingguan."
                         >
@@ -904,9 +917,9 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                     if (moduleForm.errors.level_id) moduleForm.clearErrors('level_id');
                                 }}
                                 className={formInputClass(moduleForm.errors.level_id)}
-                                required
+                                required={Boolean(selectedProgram?.level_id)}
                             >
-                                <option value="">Pilih level</option>
+                                <option value="">{selectedProgram?.level_id ? 'Pilih level' : 'Tanpa level (Kelas Umum)'}</option>
                                 {levels.map((level) => (
                                     <option key={level.id} value={level.id}>{level.level_name}</option>
                                 ))}

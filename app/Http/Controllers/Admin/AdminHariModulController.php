@@ -6,14 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\HariModul;
 use App\Models\Kuis;
 use App\Models\Modul;
+use App\Services\KloterBelajarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class AdminHariModulController extends Controller
 {
+    public function __construct(private readonly KloterBelajarService $kloterService) {}
+
     public function store(Request $request, Modul $module)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $module->id);
         $validated = $this->validateDay($request, $module);
         $validated['module_id'] = $module->id;
 
@@ -45,6 +49,7 @@ class AdminHariModulController extends Controller
 
     public function update(Request $request, HariModul $moduleDay)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $moduleDay->module_id);
         $validated = $this->validateDay($request, $moduleDay->module, $moduleDay);
 
         DB::transaction(function () use ($moduleDay, $validated) {
@@ -60,26 +65,36 @@ class AdminHariModulController extends Controller
         return redirect()->back()->with('success', 'Day berhasil diperbarui.');
     }
 
-    public function destroy(HariModul $moduleDay)
+    public function destroy(Request $request, HariModul $moduleDay)
     {
-        if (
-            $moduleDay->flashcardSets()->exists()
-            || $moduleDay->quizzes()->exists()
-            || $moduleDay->presentationDecks()->exists()
-            || $moduleDay->vocabulary()->exists()
-        ) {
-            return redirect()->back()->withErrors([
-                'delete' => 'Day tidak dapat dihapus karena masih mempunyai konten.',
-            ]);
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $moduleDay->module_id);
+
+        $hasRealFlashcards = $moduleDay->flashcardSets()->whereHas('flashcards')->exists();
+        $hasRealQuizzes = $moduleDay->quizzes()->where(fn ($q) => $q->whereHas('questions')->orWhereHas('attempts'))->exists();
+        $hasPresentations = $moduleDay->presentationDecks()->exists();
+        $hasVocabulary = $moduleDay->vocabulary()->exists();
+
+        if ($hasRealFlashcards || $hasRealQuizzes || $hasPresentations || $hasVocabulary) {
+            return redirect()->back()->with('error', 'Day tidak dapat dihapus karena masih mempunyai materi (kartu, soal kuis, atau presentasi).');
         }
 
-        $moduleDay->delete();
+        try {
+            DB::transaction(function () use ($moduleDay) {
+                $moduleDay->update(['checkpoint_quiz_id' => null]);
+                $moduleDay->flashcardSets()->delete();
+                $moduleDay->quizzes()->delete();
+                $moduleDay->delete();
+            });
 
-        return redirect()->back()->with('success', 'Day berhasil dihapus.');
+            return redirect()->back()->with('success', 'Day berhasil dihapus.');
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Gagal menghapus Day: ' . $e->getMessage());
+        }
     }
 
     public function syncVocabulary(Request $request, HariModul $moduleDay)
     {
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $moduleDay->module_id);
         $validated = $request->validate([
             'vocabulary_ids' => ['present', 'array'],
             'vocabulary_ids.*' => ['integer', 'exists:vocabulary_bank,id'],
