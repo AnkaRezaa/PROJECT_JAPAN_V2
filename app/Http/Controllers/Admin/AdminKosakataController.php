@@ -8,6 +8,7 @@ use App\Models\Kosakata;
 use App\Models\Modul;
 use App\Models\ProgramPembelajaran;
 use App\Services\ImportSpreadsheetService;
+use App\Services\KloterBelajarService;
 use App\Services\NotifikasiPenggunaService;
 use App\Services\SoalKuisService;
 use App\Services\TemplateExcelService;
@@ -20,6 +21,8 @@ use Inertia\Inertia;
 
 class AdminKosakataController extends Controller
 {
+    public function __construct(private readonly KloterBelajarService $kloterService) {}
+
     public function picker(Request $request, SoalKuisService $questions)
     {
         $validated = $request->validate([
@@ -147,6 +150,11 @@ class AdminKosakataController extends Controller
     public function store(Request $request, NotifikasiPenggunaService $notifikasi)
     {
         $validated = $this->validateVocabulary($request);
+        if (empty($validated['module_id'])) {
+            abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang berhak mengelola kosakata umum.');
+        } else {
+            $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $validated['module_id']);
+        }
         $dayIds = $validated['module_day_ids'] ?? [];
         unset($validated['module_day_ids']);
 
@@ -168,8 +176,18 @@ class AdminKosakataController extends Controller
 
     public function update(Request $request, Kosakata $vocabulary, NotifikasiPenggunaService $notifikasi)
     {
+        if ($vocabulary->module_id) {
+            $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $vocabulary->module_id);
+        } else {
+            abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang berhak mengelola kosakata umum.');
+        }
         $oldStatus = $vocabulary->status;
         $validated = $this->validateVocabulary($request, $vocabulary);
+        if (empty($validated['module_id'])) {
+            abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang berhak mengelola kosakata umum.');
+        } else {
+            $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $validated['module_id']);
+        }
         $dayIds = $validated['module_day_ids'] ?? [];
         unset($validated['module_day_ids']);
 
@@ -188,8 +206,13 @@ class AdminKosakataController extends Controller
         return redirect()->back()->with('success', 'Konten berhasil diperbarui.');
     }
 
-    public function destroy(Kosakata $vocabulary)
+    public function destroy(Request $request, Kosakata $vocabulary)
     {
+        if ($vocabulary->module_id) {
+            $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $vocabulary->module_id);
+        } else {
+            abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang berhak mengelola kosakata umum.');
+        }
         $vocabulary->delete();
         Cache::forget('admin:bank_soal:stats');
 
@@ -215,6 +238,8 @@ class AdminKosakataController extends Controller
             'source_type' => ['nullable', 'string', 'max:30'],
             'source_title' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $validated['module_id']);
 
         $file = $validated['import_file'];
         $extension = strtolower($file->getClientOriginalExtension());

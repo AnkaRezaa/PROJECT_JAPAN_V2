@@ -86,7 +86,7 @@ export default function PusatBankSoalKonten({
 
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
 
-    const { data: formData, setData: setFormData, post, put, processing, errors, reset } = useForm({
+    const { data: formData, setData: setFormData, post, put, transform, processing, errors, reset, clearErrors } = useForm({
         jlpt_level: 'N3',
         pattern: '',
         title: '',
@@ -113,13 +113,30 @@ export default function PusatBankSoalKonten({
         );
     };
 
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (search !== (filters.search || '')) {
+                handleFilterChange(selectedLevel, search, selectedStatus);
+            }
+        }, 350);
+        return () => clearTimeout(timer);
+    }, [search]);
+
     const clearSearch = () => {
         setSearch('');
         handleFilterChange(selectedLevel, '', selectedStatus);
     };
 
+    const closeFormModal = () => {
+        setFormModalOpen(false);
+        setEditingPattern(null);
+        clearErrors();
+        reset();
+    };
+
     const openCreateModal = () => {
         setEditingPattern(null);
+        clearErrors();
         reset();
         setFormData({
             jlpt_level: 'N3',
@@ -138,6 +155,7 @@ export default function PusatBankSoalKonten({
     };
 
     const openEditModal = (item) => {
+        clearErrors();
         setEditingPattern(item);
         setFormData({
             jlpt_level: item.jlpt_level || 'N3',
@@ -175,22 +193,25 @@ export default function PusatBankSoalKonten({
 
     const submitForm = (e) => {
         e.preventDefault();
+        const cleanedExamples = formData.examples.filter(
+            (ex) => (ex.japanese || '').trim() !== ''
+        );
+        transform((data) => ({
+            ...data,
+            examples: cleanedExamples.length > 0 ? cleanedExamples : [],
+        }));
+
+        const options = {
+            preserveScroll: true,
+            onSuccess: () => {
+                closeFormModal();
+            },
+        };
+
         if (editingPattern) {
-            put(route('admin.grammar-banks.update', editingPattern.id), {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setFormModalOpen(false);
-                    reset();
-                }
-            });
+            put(route('admin.grammar-banks.update', editingPattern.id), options);
         } else {
-            post(route('admin.grammar-banks.store'), {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setFormModalOpen(false);
-                    reset();
-                }
-            });
+            post(route('admin.grammar-banks.store'), options);
         }
     };
 
@@ -201,7 +222,10 @@ export default function PusatBankSoalKonten({
             message: 'Pola ini akan dihapus dari Bank Grammar. Kuis yang sudah ditugaskan ke modul tidak akan terhapus otomatis.',
             confirmLabel: 'Hapus Pola',
             onConfirm: () => {
-                router.delete(route('admin.grammar-banks.destroy', item.id), { preserveScroll: true });
+                router.delete(route('admin.grammar-banks.destroy', item.id), {
+                    preserveScroll: true,
+                    onFinish: closeConfirm,
+                });
             }
         });
     };
@@ -350,10 +374,7 @@ export default function PusatBankSoalKonten({
                             <input
                                 type="text"
                                 value={search}
-                                onChange={(e) => {
-                                    setSearch(e.target.value);
-                                    handleFilterChange(selectedLevel, e.target.value);
-                                }}
+                                onChange={(e) => setSearch(e.target.value)}
                                 placeholder="Cari pola, rumus, arti..."
                                 className={`${inputClass} pl-10 pr-9`}
                             />
@@ -609,7 +630,7 @@ export default function PusatBankSoalKonten({
                             </div>
                             <button
                                 type="button"
-                                onClick={() => setFormModalOpen(false)}
+                                onClick={closeFormModal}
                                 className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
                                 <CloseIcon sx={{ fontSize: 19 }} />
@@ -632,6 +653,7 @@ export default function PusatBankSoalKonten({
                                         <option value="N2">N2</option>
                                         <option value="N1">N1</option>
                                     </select>
+                                    {errors.jlpt_level && <p className="mt-1 text-xs font-bold text-red-600 dark:text-red-400">{errors.jlpt_level}</p>}
                                 </div>
                                 <div className="sm:col-span-2">
                                     <label className="mb-1 block text-xs font-black text-gray-700 dark:text-gray-300">Pola Grammar *</label>
@@ -643,6 +665,7 @@ export default function PusatBankSoalKonten({
                                         required
                                         className={inputClass}
                                     />
+                                    {errors.pattern && <p className="mt-1 text-xs font-bold text-red-600 dark:text-red-400">{errors.pattern}</p>}
                                 </div>
                             </div>
 
@@ -657,6 +680,7 @@ export default function PusatBankSoalKonten({
                                         required
                                         className={inputClass}
                                     />
+                                    {errors.title && <p className="mt-1 text-xs font-bold text-red-600 dark:text-red-400">{errors.title}</p>}
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-xs font-black text-gray-700 dark:text-gray-300">Rumus Pembentukan *</label>
@@ -668,6 +692,7 @@ export default function PusatBankSoalKonten({
                                         required
                                         className={inputClass}
                                     />
+                                    {errors.formula && <p className="mt-1 text-xs font-bold text-red-600 dark:text-red-400">{errors.formula}</p>}
                                 </div>
                             </div>
 
@@ -681,6 +706,7 @@ export default function PusatBankSoalKonten({
                                     rows={2}
                                     className={`${inputClass} resize-y`}
                                 />
+                                {errors.meaning && <p className="mt-1 text-xs font-bold text-red-600 dark:text-red-400">{errors.meaning}</p>}
                             </div>
 
                             <div>
@@ -692,6 +718,7 @@ export default function PusatBankSoalKonten({
                                     rows={2}
                                     className={`${inputClass} resize-y`}
                                 />
+                                {errors.explanation && <p className="mt-1 text-xs font-bold text-red-600 dark:text-red-400">{errors.explanation}</p>}
                             </div>
 
                             {/* Contoh Kalimat */}
@@ -756,7 +783,7 @@ export default function PusatBankSoalKonten({
                             <div className="shrink-0 flex items-center justify-end gap-2.5 border-t border-gray-100 px-6 py-3.5 bg-gray-50/50 dark:border-gray-800 dark:bg-gray-950/40">
                                 <button
                                     type="button"
-                                    onClick={() => setFormModalOpen(false)}
+                                    onClick={closeFormModal}
                                     className="min-h-10 rounded-xl border border-gray-200 px-4 text-xs font-black text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300"
                                 >
                                     Batal

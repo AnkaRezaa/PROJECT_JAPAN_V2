@@ -23,7 +23,7 @@ class GrammarBankService
         }
 
         $query = GrammarBank::query()
-            ->with(['level', 'creator:id,name'])
+            ->with(['level', 'creator:id,username'])
             ->withCount(['lessons', 'examQuestions'])
             ->latest('id');
 

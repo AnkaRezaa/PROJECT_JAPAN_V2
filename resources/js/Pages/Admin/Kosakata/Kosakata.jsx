@@ -59,7 +59,7 @@ const typeBadge = {
 
 const inputClass = 'w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:focus:ring-brand-900/30';
 
-const parseTags = (value) => value.split(',').map((tag) => tag.trim()).filter(Boolean);
+const parseTags = (value) => (typeof value === 'string' ? value : '').split(',').map((tag) => tag.trim()).filter(Boolean);
 
 const toForm = (item) => ({
     content_type: item.content_type || 'kosakata',
@@ -132,6 +132,8 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
 
     const openCreate = () => {
         setEditing(null);
+        form.clearErrors();
+        form.transform((data) => data);
         form.setData({
             ...emptyForm,
             content_type: contentType !== 'all' ? contentType : 'kosakata',
@@ -143,6 +145,8 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
     };
 
     const openEdit = (item) => {
+        form.clearErrors();
+        form.transform((data) => data);
         setEditing(item);
         form.setData(toForm(item));
         setShowForm(true);
@@ -151,7 +155,9 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
     const closeForm = () => {
         setShowForm(false);
         setEditing(null);
+        form.clearErrors();
         form.reset();
+        form.transform((data) => data);
     };
 
     const submitFilters = (event) => {
@@ -179,7 +185,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                 content_type: data.content_type,
                 onyomi: data.onyomi || null,
                 kunyomi: data.kunyomi || null,
-                radicals: data.radicals_text.split('|').map((value) => value.trim()).filter(Boolean),
+                radicals: (data.radicals_text || '').split('|').map((value) => value.trim()).filter(Boolean),
                 stroke_count: data.stroke_count ? Number(data.stroke_count) : null,
                 notes: data.notes || null,
             },
