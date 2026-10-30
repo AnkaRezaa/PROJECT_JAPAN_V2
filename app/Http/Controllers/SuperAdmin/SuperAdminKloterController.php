@@ -176,6 +176,10 @@ class SuperAdminKloterController extends SuperAdminDasarController
 
     public function destroy(Request $request, KloterBelajar $kloter)
     {
+        if ($kloter->anggota()->whereIn('status', ['active', 'paid_pending_approval'])->exists()) {
+            return back()->with('error', 'Kloter masih memiliki anggota aktif atau pembayaran tertunda. Arsipkan kloter terlebih dahulu.');
+        }
+
         $kloterId = $kloter->id;
         $kloterName = $kloter->nama;
 
@@ -196,6 +200,16 @@ class SuperAdminKloterController extends SuperAdminDasarController
         ]);
 
         $user = Pengguna::where('role', 'user')->findOrFail($validated['user_id']);
+
+        AnggotaKloter::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->whereHas('kloterBelajar', fn ($q) => $q->where('program_pembelajaran_id', $kloter->program_pembelajaran_id)->where('id', '!=', $kloter->id))
+            ->update([
+                'status' => 'transferred',
+                'catatan' => "Dipindahkan ke {$kloter->nama} oleh superadmin.",
+            ]);
+
         $subscription = $user->subscriptions()
             ->where('status', 'active')
             ->where(function ($query) use ($kloter) {

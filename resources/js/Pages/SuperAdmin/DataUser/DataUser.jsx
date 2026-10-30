@@ -61,6 +61,9 @@ export default function DataUser({
                 setStatusTarget(null);
                 setReason('');
             },
+            onError: () => {
+                setStatusTarget(null);
+            },
             onFinish: () => setIsSubmittingStatus(false),
         });
     };

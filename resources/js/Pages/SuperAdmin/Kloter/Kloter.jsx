@@ -81,8 +81,30 @@ export default function Kloter({
         router.get(route('superadmin.kloters'), filterForm.data, { preserveState: true, preserveScroll: true });
     };
 
+    const handleCloseKloterForm = () => {
+        setShowKloterForm(false);
+        setEditingKloter(null);
+        kloterForm.clearErrors();
+        kloterForm.reset();
+    };
+
+    const handleCloseAssignForm = () => {
+        setShowAssignForm(false);
+        setAssignDropdownOpen(false);
+        setAssignSearch('');
+        assignForm.clearErrors();
+        assignForm.reset();
+    };
+
+    const handleCloseKeyForm = () => {
+        setShowAccessKeyForm(false);
+        keyForm.clearErrors();
+        keyForm.reset();
+    };
+
     const openCreate = () => {
         setEditingKloter(null);
+        kloterForm.clearErrors();
         kloterForm.setData({ ...emptyKloter });
         setShowKloterForm(true);
     };
@@ -91,6 +113,7 @@ export default function Kloter({
         if (!selectedKloter) return;
 
         setEditingKloter(selectedKloter);
+        kloterForm.clearErrors();
         kloterForm.setData({
             program_pembelajaran_id: selectedKloter.program_pembelajaran_id || '',
             admin_id: selectedKloter.admin_id || '',
@@ -109,11 +132,7 @@ export default function Kloter({
         event.preventDefault();
         const options = {
             preserveScroll: true,
-            onSuccess: () => {
-                setShowKloterForm(false);
-                setEditingKloter(null);
-                kloterForm.reset();
-            },
+            onSuccess: handleCloseKloterForm,
         };
 
         if (editingKloter) {
@@ -130,12 +149,7 @@ export default function Kloter({
 
         assignForm.post(route('superadmin.kloters.users.store', selectedId), {
             preserveScroll: true,
-            onSuccess: () => {
-                setShowAssignForm(false);
-                setAssignDropdownOpen(false);
-                setAssignSearch('');
-                assignForm.reset();
-            },
+            onSuccess: handleCloseAssignForm,
         });
     };
 
@@ -145,10 +159,7 @@ export default function Kloter({
 
         keyForm.post(route('superadmin.kloters.access-keys.store', selectedId), {
             preserveScroll: true,
-            onSuccess: () => {
-                setShowAccessKeyForm(false);
-                keyForm.reset();
-            },
+            onSuccess: handleCloseKeyForm,
         });
     };
 
@@ -539,7 +550,7 @@ export default function Kloter({
 
             <AdminDialog
                 open={showKloterForm}
-                onClose={() => setShowKloterForm(false)}
+                onClose={handleCloseKloterForm}
                 title={editingKloter ? 'Edit Kloter' : 'Buat Kloter'}
                 description="Kelola batch belajar, jadwal, instruktur, dan kuota kapasitas siswa."
                 maxWidth="max-w-2xl"
@@ -721,12 +732,17 @@ export default function Kloter({
             {selectedKloter && (
                 <AdminDialog
                     open={showAssignForm}
-                    onClose={() => setShowAssignForm(false)}
+                    onClose={handleCloseAssignForm}
                     title="Tambah User ke Kloter"
                     description={`Daftarkan siswa secara manual ke dalam kloter ${selectedKloter.nama}.`}
                     maxWidth="max-w-xl"
                 >
                     <form onSubmit={submitAssign} className="space-y-4">
+                        {assignForm.errors.kloter && (
+                            <div className="rounded-2xl border border-red-200 bg-red-50 p-3.5 text-xs font-bold text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+                                {assignForm.errors.kloter}
+                            </div>
+                        )}
                         <div className="flex items-center justify-between rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-bold text-sky-800 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-200">
                             <span>Kapasitas Kloter Saat Ini</span>
                             <span className="rounded-full bg-white px-3 py-1 font-black text-sky-900 shadow-sm dark:bg-gray-800 dark:text-sky-200">
@@ -815,7 +831,7 @@ export default function Kloter({
                         <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
                             <button
                                 type="button"
-                                onClick={() => setShowAssignForm(false)}
+                                onClick={handleCloseAssignForm}
                                 className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold transition-colors hover:bg-gray-50 dark:border-gray-700 sm:w-auto"
                             >
                                 Batal
@@ -835,7 +851,7 @@ export default function Kloter({
             {selectedKloter && (
                 <AdminDialog
                     open={showAccessKeyForm}
-                    onClose={() => setShowAccessKeyForm(false)}
+                    onClose={handleCloseKeyForm}
                     title="Generate Access Key Kloter"
                     description={`Buat kode voucher akses langsung ke kloter ${selectedKloter.nama}.`}
                     maxWidth="max-w-xl"
@@ -933,7 +949,7 @@ export default function Kloter({
                         <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
                             <button
                                 type="button"
-                                onClick={() => setShowAccessKeyForm(false)}
+                                onClick={handleCloseKeyForm}
                                 className="min-h-11 w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold transition-colors hover:bg-gray-50 dark:border-gray-700 sm:w-auto"
                             >
                                 Batal

@@ -481,7 +481,7 @@ export default function AuthenticatedLayout({ children }) {
         { href: '/admin/exams', activePaths: ['/admin/exams'], excludePaths: ['/admin/exams/question-banks'], icon: <FactCheckOutlinedIcon sx={{ fontSize: 24 }} />, label: 'Ujian' },
         {
             href: '/admin/programs',
-            activePaths: ['/admin/programs', '/admin/modules', '/admin/module-days', '/admin/quizzes', '/admin/questions', '/admin/flashcards', '/admin/presentations', '/admin/boards'],
+            activePaths: ['/admin/programs', '/admin/levels', '/admin/modules', '/admin/module-days', '/admin/quizzes', '/admin/questions', '/admin/flashcards', '/admin/presentations', '/admin/boards'],
             icon: <SchoolIcon sx={{ fontSize: 24 }} />,
             label: 'Kelas',
         },
@@ -597,7 +597,7 @@ export default function AuthenticatedLayout({ children }) {
         ['/admin/analytics', 'Monitoring Kloter'],
         ['/admin/gamification', 'Gamifikasi'],
         ['/admin/achievements', 'Pencapaian'],
-        ['/admin/levels', 'Level'],
+        ['/admin/levels', 'Jalur & Level Kurikulum'],
         ['/admin/profile', 'Pengaturan Profil'],
         ['/user/modul', 'Roadmap Belajar'],
         ['/user/quizzes', 'Latihan & Kuis'],

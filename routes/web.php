@@ -203,10 +203,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // Admin Routes
-    Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+    Route::middleware('role:admin,superadmin')->prefix('admin')->name('admin.')->group(function () {
         Route::post('/quiz-generator/{type}', \App\Http\Controllers\Admin\AdminQuizGeneratorController::class)
             ->whereIn('type', ['vocab', 'grammar', 'dokkai'])->middleware('throttle:admin-generator')->name('quiz-generator');
         Route::get('/dashboard', [AdminBerandaController::class, 'index'])->name('dashboard');
+        Route::middleware(\App\Http\Middleware\RequireGlobalAdmin::class)->group(function () {
         Route::get('/exams', [AdminExamPortalController::class, 'index'])->name('exams.index');
         Route::get('/exams/create', [AdminExamPortalController::class, 'create'])->name('exams.create');
         Route::get('/exams/sessions', [AdminExamPortalController::class, 'sessions'])->name('exams.sessions');
@@ -230,6 +231,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/exam-attempts/{attempt}/invalidate', [AdminExamPortalController::class, 'invalidate'])->middleware('throttle:exam-admin')->name('exam-attempts.invalidate');
         Route::get('/exams/{exam}/edit', [AdminExamPortalController::class, 'edit'])->name('exams.edit');
         Route::get('/exams/{exam}/preview', [AdminExamPortalController::class, 'preview'])->name('exams.preview');
+        });
         Route::get('/bank-soal-konten', [AdminGrammarBankController::class, 'index'])->name('bank-soal-konten.index');
         Route::get('/grammar-banks/picker', [AdminGrammarBankController::class, 'picker'])->name('grammar-banks.picker');
         Route::post('/grammar-banks', [AdminGrammarBankController::class, 'store'])->name('grammar-banks.store');
@@ -237,6 +239,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/grammar-banks/{grammarBank}', [AdminGrammarBankController::class, 'update'])->name('grammar-banks.update');
         Route::delete('/grammar-banks/{grammarBank}', [AdminGrammarBankController::class, 'destroy'])->name('grammar-banks.destroy');
         Route::post('/grammar-banks/{grammarBank}/assign-day', [AdminGrammarBankController::class, 'assignToDay'])->name('grammar-banks.assign-day');
+        Route::middleware(\App\Http\Middleware\RequireGlobalAdmin::class)->group(function () {
         Route::get('/exams/question-banks', [AdminExamQuestionBankController::class, 'index'])->name('exams.question-banks.index');
         Route::post('/exams/question-banks', [AdminExamQuestionBankController::class, 'store'])->name('exams.question-banks.store');
         Route::get('/exams/question-banks/template/{format}', [AdminExamQuestionBankController::class, 'template'])->name('exams.question-banks.template');
@@ -253,6 +256,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/exams/question-banks/{bank}/import/preview', [AdminExamQuestionBankController::class, 'importPreview'])->middleware('throttle:admin-imports')->name('exams.question-banks.import.preview');
         Route::post('/exams/question-banks/{bank}/import', [AdminExamQuestionBankController::class, 'import'])->middleware('throttle:admin-imports')->name('exams.question-banks.import');
         Route::post('/exam-sections/{section}/pull-questions', [AdminExamQuestionBankController::class, 'pullQuestions'])->name('exam-sections.questions.pull');
+        });
         Route::get('/users', [AdminPenggunaController::class, 'index'])->name('users');
         Route::get('/users/{user}', [AdminPenggunaController::class, 'show'])->name('users.show');
         Route::patch('/kloters/{kloter}/schedule', [AdminPenggunaController::class, 'updateKloterSchedule'])->name('kloters.schedule.update');

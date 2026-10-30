@@ -14,6 +14,7 @@ use App\Services\ChartDataService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class SuperAdminPenggunaController extends SuperAdminDasarController
@@ -219,11 +220,17 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
             return redirect()->back()->with('error', 'Akun ini sudah dalam status terhapus/anonim.');
         }
 
-        $name = $user->username;
-        $deletions->permanentlyDelete($user, $request->user());
-        $this->logActivity($request, 'user.deleted', 'user', $user->id, "Menghapus permanen user {$name}");
+        try {
+            $name = $user->username;
+            $deletions->permanentlyDelete($user, $request->user());
+            $this->logActivity($request, 'user.deleted', 'user', $user->id, "Menghapus permanen user {$name}");
 
-        return back()->with('success', 'Akun user berhasil dihapus permanen.');
+            return back()->with('success', 'Akun user berhasil dihapus permanen.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['delete'][0] ?? 'Tidak dapat menghapus akun ini.';
+
+            return back()->with('error', $message);
+        }
     }
 
     public function anonymize(Request $request, Pengguna $user, AccountDeletionService $deletions)
@@ -234,10 +241,16 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
             return redirect()->back()->with('error', 'Akun ini sudah dalam status terhapus/anonim.');
         }
 
-        $name = $user->username;
-        $deletions->anonymize($user, $request->user());
-        $this->logActivity($request, 'user.anonymized', 'user', $user->id, "Menganonimkan user {$name}");
+        try {
+            $name = $user->username;
+            $deletions->anonymize($user, $request->user());
+            $this->logActivity($request, 'user.anonymized', 'user', $user->id, "Menganonimkan user {$name}");
 
-        return back()->with('success', 'Identitas user berhasil dianonimkan.');
+            return back()->with('success', 'Identitas user berhasil dianonimkan.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['delete'][0] ?? 'Tidak dapat menganonimkan akun ini.';
+
+            return back()->with('error', $message);
+        }
     }
 }

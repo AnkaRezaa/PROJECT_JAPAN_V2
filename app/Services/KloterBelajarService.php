@@ -52,6 +52,7 @@ class KloterBelajarService
                 'anggota_aktif_count' => (int) $kloter->anggota_aktif_count,
                 'max_siswa' => $kloter->max_siswa,
                 'is_read_only' => $kloter->status === 'archived',
+                'minggu_aktif' => $this->mingguAktif($kloter),
             ]);
     }
 

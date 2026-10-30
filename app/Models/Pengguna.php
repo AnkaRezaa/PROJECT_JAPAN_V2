@@ -175,8 +175,7 @@ class Pengguna extends Authenticatable implements MustVerifyEmailContract
 
     public function isAdminGlobal(): bool
     {
-        return ($this->role === 'admin' && $this->admin_scope !== self::ADMIN_SCOPE_KLOTER)
-            || $this->role === 'superadmin';
+        return $this->role === 'admin' && $this->admin_scope !== self::ADMIN_SCOPE_KLOTER;
     }
 
     public function isMentor(): bool
