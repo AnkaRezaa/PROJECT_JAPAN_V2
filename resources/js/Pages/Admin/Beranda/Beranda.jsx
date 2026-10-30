@@ -47,8 +47,9 @@ function MetricGrid({ stats = [] }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {stats.map((item) => {
                 const Wrapper = item.href ? Link : 'div';
+                const wrapperProps = item.href ? { href: item.href } : {};
                 return (
-                    <Wrapper key={item.title} href={item.href} className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-brand-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700 ${item.href ? 'cursor-pointer' : ''}`}>
+                    <Wrapper key={item.title} {...wrapperProps} className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-brand-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700 ${item.href ? 'cursor-pointer' : ''}`}>
                         <div>
                             <div className="flex items-start justify-between gap-3 mb-3">
                                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
@@ -159,7 +160,7 @@ function CohortWorkspace({ cohorts = [], atRiskStudents = [], lowScoreStudents =
                             <h2 className="text-lg font-black text-gray-950 dark:text-white">Kuis terbaru</h2>
                             <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">Sinyal cepat performa kelas.</p>
                         </div>
-                        <Link href={route('admin.analytics')} className="text-xs font-black text-brand-600 hover:text-brand-700 dark:text-brand-300">Analitik</Link>
+                        <Link href={route('admin.analytics', filters.kloter ? { kloter: filters.kloter } : {})} className="text-xs font-black text-brand-600 hover:text-brand-700 dark:text-brand-300">Analitik</Link>
                     </div>
                     <div className="mt-4 divide-y divide-gray-100 dark:divide-gray-800">
                         {recentAttempts.map((attempt) => (

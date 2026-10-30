@@ -119,7 +119,7 @@ class RuangKelasLiveController extends Controller
                     'deck_title' => $s->deck?->title ?? 'Papan Tulis Kosong',
                     'start_url' => route('admin.live-classes.start', $s, absolute: false),
                     'cancel_url' => route('admin.live-classes.cancel', $s, absolute: false),
-                    'join_url' => route('user.live-classes.show', $s->join_code, absolute: false),
+                    'join_url' => route('user.live-classes.show', $s->join_code, absolute: true),
                 ];
             });
 
@@ -219,7 +219,7 @@ class RuangKelasLiveController extends Controller
             'endEndpoint' => route('admin.live-classes.end', $liveClassSession, absolute: false),
             'participantEndpoint' => route('admin.live-classes.participants.update', [$liveClassSession, '__USER__'], absolute: false),
             'muteAllEndpoint' => route('admin.live-classes.mute-all', $liveClassSession, absolute: false),
-            'joinUrl' => route('user.live-classes.show', $liveClassSession->join_code, absolute: false),
+            'joinUrl' => route('user.live-classes.show', $liveClassSession->join_code, absolute: true),
             'exitUrl' => route('admin.programs.index', absolute: false),
         ]);
     }
@@ -235,11 +235,16 @@ class RuangKelasLiveController extends Controller
 
     public function cancel(Request $request, SesiKelasLive $liveClassSession, RuangKelasLiveService $service): RedirectResponse
     {
-        $service->cancelSession($liveClassSession, $request->user());
+        try {
+            $programId = $liveClassSession->program_pembelajaran_id;
+            $service->cancelSession($liveClassSession, $request->user());
 
-        return redirect()
-            ->route('admin.live-classes.create')
-            ->with('success', 'Jadwal kelas dibatalkan.');
+            return redirect()
+                ->route('admin.live-classes.create', ['program_id' => $programId])
+                ->with('success', 'Jadwal kelas dibatalkan.');
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Gagal membatalkan sesi: ' . $e->getMessage());
+        }
     }
 
     public function token(Request $request, SesiKelasLive $liveClassSession, RuangKelasLiveService $service): JsonResponse

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState, useTransition } from 'reac
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import SearchableSelect from '@/Components/UI/SearchableSelect';
+import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -19,6 +20,21 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 const LiveClassRoom = React.lazy(() => import('@/Components/Features/Presentation/LiveClassRoom'));
+
+function RealtimeClock() {
+    const [time, setTime] = useState(() => new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    return (
+        <p className="text-xs font-bold tabular-nums text-gray-700 dark:text-gray-300">
+            {formatIndonesianTime(time)}
+        </p>
+    );
+}
 
 function LiveRoomSkeleton() {
     return (
@@ -51,7 +67,7 @@ const nextHourInputValue = () => {
 
 function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
     const [, startTransition] = useTransition();
-    const [currentTime, setCurrentTime] = useState(new Date());
+    const { confirmState, openConfirm, closeConfirm, setConfirmProcessing } = useConfirmAction();
     const [materiScope, setMateriScope] = useState('shared'); // 'shared' | 'mentor' | 'blank'
     const [deviceDrawerOpen, setDeviceDrawerOpen] = useState(false);
     const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -63,13 +79,13 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
     const streamRef = useRef(null);
     const audioContextRef = useRef(null);
     const animationFrameRef = useRef(null);
+    const audioBarRef = useRef(null);
 
     const [devices, setDevices] = useState({ cameras: [], mics: [] });
     const [selectedCamera, setSelectedCamera] = useState('');
     const [selectedMic, setSelectedMic] = useState('');
     const [cameraEnabled, setCameraEnabled] = useState(true);
     const [micEnabled, setMicEnabled] = useState(true);
-    const [audioLevel, setAudioLevel] = useState(0);
     const [deviceError, setDeviceError] = useState('');
     const [isDeviceLoading, setIsDeviceLoading] = useState(true);
 
@@ -89,12 +105,6 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
         scheduled_at: nextHourInputValue(),
     });
 
-    // Realtime digital clock ala Google Meet Home
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
-
     const stopAllTracks = () => {
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
@@ -110,6 +120,9 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
         }
         if (videoRef.current) {
             videoRef.current.srcObject = null;
+        }
+        if (audioBarRef.current) {
+            audioBarRef.current.style.width = '0%';
         }
     };
 
@@ -135,7 +148,10 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
                 analyser.getByteFrequencyData(samples);
                 const sum = samples.reduce((acc, val) => acc + val, 0);
                 const avg = sum / samples.length;
-                setAudioLevel(Math.min(100, Math.round((avg / 128) * 100)));
+                const pct = Math.min(100, Math.round((avg / 128) * 100) * 1.5);
+                if (audioBarRef.current) {
+                    audioBarRef.current.style.width = `${pct}%`;
+                }
                 animationFrameRef.current = requestAnimationFrame(updateLevel);
             };
             updateLevel();
@@ -323,8 +339,21 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
 
     const submit = (action) => {
         stopAllTracks();
+        form.setData('action', action);
         form.transform((data) => ({ ...data, action }));
-        form.post(storeEndpoint);
+        form.post(storeEndpoint, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setScheduleOpen(false);
+                setRightPanelTab('schedules');
+                form.setData('scheduled_at', nextHourInputValue());
+            },
+            onError: () => {
+                if (action === 'schedule') {
+                    setScheduleOpen(true);
+                }
+            },
+        });
     };
 
     const startScheduledSession = (startUrl) => {
@@ -333,15 +362,47 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
     };
 
     const cancelScheduledSession = (cancelUrl) => {
-        if (!window.confirm('Batalkan jadwal kelas ini?')) return;
-        router.delete(cancelUrl);
+        openConfirm({
+            variant: 'danger',
+            title: 'Batalkan Jadwal Kelas?',
+            message: 'Jadwal sesi kelas ini akan dibatalkan dan dihapus dari daftar.',
+            confirmLabel: 'Batalkan Jadwal',
+            onConfirm: () => {
+                setConfirmProcessing(true);
+                router.delete(cancelUrl, {
+                    preserveScroll: true,
+                    onFinish: () => closeConfirm(),
+                });
+            },
+        });
+    };
+
+    const fallbackCopy = (text, sessionId) => {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            setCopiedSessionId(sessionId);
+            setTimeout(() => setCopiedSessionId(null), 2500);
+        } finally {
+            document.body.removeChild(textArea);
+        }
     };
 
     const copyJoinUrl = (sessionId, url) => {
-        navigator.clipboard.writeText(url).then(() => {
-            setCopiedSessionId(sessionId);
-            setTimeout(() => setCopiedSessionId(null), 2500);
-        });
+        const resolvedUrl = url && url.startsWith('http') ? url : new URL(url, window.location.origin).toString();
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(resolvedUrl).then(() => {
+                setCopiedSessionId(sessionId);
+                setTimeout(() => setCopiedSessionId(null), 2500);
+            }).catch(() => fallbackCopy(resolvedUrl, sessionId));
+        } else {
+            fallbackCopy(resolvedUrl, sessionId);
+        }
     };
 
     const switchProgram = (programId) => {
@@ -390,9 +451,7 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
                         </div>
 
                         <div className="text-right">
-                            <p className="text-xs font-bold tabular-nums text-gray-700 dark:text-gray-300">
-                                {formatIndonesianTime(currentTime)}
-                            </p>
+                            <RealtimeClock />
                         </div>
                     </div>
                 </header>
@@ -584,6 +643,16 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
                                                 Simpan Jadwal Kelas
                                             </button>
                                         </div>
+                                        {form.errors.scheduled_at && (
+                                            <p className="mt-2 text-xs font-bold text-red-600 dark:text-red-400">
+                                                {form.errors.scheduled_at}
+                                            </p>
+                                        )}
+                                        {form.errors.session && (
+                                            <p className="mt-2 text-xs font-bold text-red-600 dark:text-red-400">
+                                                {form.errors.session}
+                                            </p>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -691,14 +760,25 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
                                             {/* Bottom Actions: Google Meet Pill Style */}
                                             <div className="mt-4 flex flex-wrap items-center justify-between gap-2.5 border-t border-gray-100 pt-3.5 dark:border-gray-800/80">
                                                 <div className="flex flex-wrap items-center gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => startScheduledSession(session.start_url)}
-                                                        className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-orange-600 px-5 text-xs font-bold text-white shadow-xs transition hover:bg-orange-700 active:scale-95"
-                                                    >
-                                                        <PlayArrowIcon sx={{ fontSize: 16 }} />
-                                                        {session.is_live ? 'Masuk Kelas' : 'Mulai Kelas'}
-                                                    </button>
+                                                    {session.is_live ? (
+                                                        <Link
+                                                            href={route('admin.live-classes.show', session.id)}
+                                                            onClick={stopAllTracks}
+                                                            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-emerald-600 px-5 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700 active:scale-95"
+                                                        >
+                                                            <PlayArrowIcon sx={{ fontSize: 16 }} />
+                                                            Masuk Kelas
+                                                        </Link>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => startScheduledSession(session.start_url)}
+                                                            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-orange-600 px-5 text-xs font-bold text-white shadow-xs transition hover:bg-orange-700 active:scale-95"
+                                                        >
+                                                            <PlayArrowIcon sx={{ fontSize: 16 }} />
+                                                            Mulai Kelas
+                                                        </button>
+                                                    )}
 
                                                     <button
                                                         type="button"
@@ -800,8 +880,9 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
                                                 <VolumeUpIcon sx={{ fontSize: 16 }} className="text-gray-300" />
                                                 <div className="h-2 w-16 overflow-hidden rounded-full bg-white/20">
                                                     <div
+                                                        ref={audioBarRef}
                                                         className="h-full bg-emerald-500 transition-all duration-75 ease-out"
-                                                        style={{ width: `${Math.min(100, audioLevel * 1.5)}%` }}
+                                                        style={{ width: '0%' }}
                                                     />
                                                 </div>
                                             </div>
@@ -920,12 +1001,14 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
                     </div>
                 </div>
             </main>
+            <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
         </AuthenticatedLayout>
     );
 }
 
 function ScheduledRoom({ session, startEndpoint, cancelEndpoint, exitUrl }) {
     const action = useForm({});
+    const { confirmState, openConfirm, closeConfirm, setConfirmProcessing } = useConfirmAction();
     const scheduledAt = session.scheduled_at
         ? new Intl.DateTimeFormat('id-ID', {
             dateStyle: 'full',
@@ -934,8 +1017,19 @@ function ScheduledRoom({ session, startEndpoint, cancelEndpoint, exitUrl }) {
         : 'Waktu belum ditentukan';
 
     const cancel = () => {
-        if (!window.confirm('Batalkan jadwal kelas ini?')) return;
-        action.delete(cancelEndpoint);
+        openConfirm({
+            variant: 'danger',
+            title: 'Batalkan Jadwal Kelas?',
+            message: 'Sesi kelas terjadwal ini akan dibatalkan secara permanen.',
+            confirmLabel: 'Batalkan Jadwal',
+            onConfirm: () => {
+                setConfirmProcessing(true);
+                action.delete(cancelEndpoint, {
+                    preserveScroll: true,
+                    onFinish: () => closeConfirm(),
+                });
+            },
+        });
     };
 
     return (
@@ -982,6 +1076,7 @@ function ScheduledRoom({ session, startEndpoint, cancelEndpoint, exitUrl }) {
                     </div>
                 </section>
             </main>
+            <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
         </AuthenticatedLayout>
     );
 }

@@ -142,9 +142,8 @@ class AdminBerandaController extends Controller
         $cohorts = $kloterService->pilihanKloterAdmin($admin)
             ->when($selectedKloter, fn (Collection $items) => $items->where('id', $selectedKloter->id)->values())
             ->take(4)
-            ->map(function (array $kloter) use ($kloterService, $admin) {
-                $model = $kloterService->kloterDikelola($admin)->find($kloter['id']);
-                $week = $kloterService->mingguAktif($model);
+            ->map(function (array $kloter) {
+                $week = $kloter['minggu_aktif'] ?? null;
 
                 return [
                     ...$kloter,
@@ -220,7 +219,7 @@ class AdminBerandaController extends Controller
         $totalModules = (clone $modulesQuery)->count();
         $publishedModules = (clone $modulesQuery)->where('status', 'published')->count();
 
-        $modules = (clone $modulesQuery)
+        $allModules = (clone $modulesQuery)
             ->withCount([
                 'presentationDecks as presentation_ready_count' => fn (Builder $query) => $query->where('status', 'published'),
                 'flashcardSets as flashcard_ready_count' => fn (Builder $query) => $query
@@ -232,15 +231,14 @@ class AdminBerandaController extends Controller
             ])
             ->orderBy('program_pembelajaran_id')
             ->orderBy('week_number')
-            ->take(8)
             ->get(['id', 'program_pembelajaran_id', 'title', 'week_number', 'status']);
         $vocabularyCounts = Kosakata::query()
-            ->whereIn('module_id', $modules->pluck('id'))
+            ->whereIn('module_id', $allModules->pluck('id'))
             ->where('status', 'published')
             ->selectRaw('module_id, COUNT(*) as total')
             ->groupBy('module_id')
             ->pluck('total', 'module_id');
-        $coverage = $modules->map(function (Modul $module) use ($vocabularyCounts) {
+        $allCoverage = $allModules->map(function (Modul $module) use ($vocabularyCounts) {
             $items = [
                 ['label' => 'PPT', 'ready' => $module->presentation_ready_count > 0],
                 ['label' => 'Kosakata', 'ready' => (int) ($vocabularyCounts->get($module->id) ?? 0) > 0],
@@ -258,8 +256,9 @@ class AdminBerandaController extends Controller
                 'items' => $items,
                 'href' => route('admin.modules.index', ['program_id' => $module->program_pembelajaran_id]),
             ];
-        })->values();
-        $incompleteModules = $coverage->filter(fn (array $module) => $module['ready_count'] < 4)->count();
+        });
+        $incompleteModules = $allCoverage->filter(fn (array $module) => $module['ready_count'] < 4)->count();
+        $coverage = $allCoverage->take(8)->values();
 
         $quizzesQuery = Kuis::query()->whereHas('module', fn (Builder $query) => $this->scopePrograms($query, $programIds));
         $readyQuizzes = (clone $quizzesQuery)->whereHas('questions')->count();

@@ -52,14 +52,9 @@ class RuangKelasLiveService
                 ->lockForUpdate()
                 ->first();
 
-            if ($liveSession) {
-                if ($scheduledAt) {
-                    throw ValidationException::withMessages([
-                        'session' => 'Kloter ini masih memiliki kelas yang sedang berlangsung.',
-                    ]);
-                }
-
-                abort_unless($liveSession->mentor_id === $mentor->id, 409, 'Kloter ini masih memiliki ruang kelas yang dipandu admin lain.');
+            if ($liveSession && ! $scheduledAt) {
+                $authorized = $liveSession->mentor_id === $mentor->id || $mentor->isAdminGlobal();
+                abort_unless($authorized, 409, 'Kloter ini masih memiliki ruang kelas yang dipandu admin lain.');
 
                 return $liveSession;
             }
@@ -403,7 +398,7 @@ class RuangKelasLiveService
 
     public function roleFor(SesiKelasLive $session, Pengguna $user): string
     {
-        if ($session->mentor_id === $user->id) {
+        if ($session->mentor_id === $user->id || $user->isAdminGlobal()) {
             return 'mentor';
         }
 
@@ -493,14 +488,15 @@ class RuangKelasLiveService
 
     private function assertMentor(SesiKelasLive $session, Pengguna $mentor): void
     {
-        abort_unless($session->mentor_id === $mentor->id && $mentor->role === 'admin', 403, 'Anda bukan mentor sesi ini.');
+        $authorized = ($session->mentor_id === $mentor->id || $mentor->isAdminGlobal())
+            && $mentor->role === 'admin';
+        abort_unless($authorized, 403, 'Anda bukan mentor sesi ini.');
     }
 
     private function assertMentorOwnsKloter(Pengguna $mentor, KloterBelajar $kloter): void
     {
         abort_unless(
-            $mentor->role === 'admin'
-                && ($mentor->isAdminGlobal() || $kloter->admin_id === $mentor->id),
+            $mentor->role === 'admin' && ($mentor->isAdminGlobal() || $kloter->admin_id === $mentor->id),
             403,
             'Anda bukan mentor kloter ini.'
         );
@@ -608,7 +604,7 @@ class RuangKelasLiveService
                 'avatar' => $session->mentor->avatar,
             ] : null,
             'topic' => $session->deck?->title ?? ($session->deck?->module?->title ?? 'Sesi Tatap Muka & Bimbingan'),
-            'join_url' => route('user.live-classes.show', $session->join_code, absolute: false),
+            'join_url' => route('user.live-classes.show', $session->join_code, absolute: true),
         ];
     }
 

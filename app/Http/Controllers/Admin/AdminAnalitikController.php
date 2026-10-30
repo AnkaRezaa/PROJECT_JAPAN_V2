@@ -79,7 +79,18 @@ class AdminAnalitikController extends Controller
             ->take(8)
             ->get(['id', 'title']);
 
-        $inactiveStudents = (clone $studentsQuery)
+        $cutoff = now()->subDays(7);
+        $inactiveQuery = (clone $studentsQuery)
+            ->whereDoesntHave('progress', fn (Builder $query) => $query
+                ->where('updated_at', '>=', $cutoff)
+                ->when($programIds !== null, fn (Builder $query) => $query
+                    ->whereHas('module', fn (Builder $module) => $module->whereIn('program_pembelajaran_id', $programIds))))
+            ->whereDoesntHave('attempts', fn (Builder $query) => $query
+                ->where('attempted_at', '>=', $cutoff)
+                ->when($programIds !== null, fn (Builder $query) => $query
+                    ->whereHas('quiz.module', fn (Builder $module) => $module->whereIn('program_pembelajaran_id', $programIds))));
+        $inactiveStudentsCount = (clone $inactiveQuery)->count();
+        $inactiveStudents = $inactiveQuery
             ->withMax([
                 'progress as last_lesson_activity' => function (Builder $query) use ($programIds) {
                     $query->when($programIds !== null, fn (Builder $query) => $query
@@ -92,6 +103,10 @@ class AdminAnalitikController extends Controller
                         ->whereHas('quiz.module', fn (Builder $module) => $module->whereIn('program_pembelajaran_id', $programIds)));
                 },
             ], 'attempted_at')
+            ->orderByRaw('CASE WHEN last_lesson_activity IS NULL AND last_quiz_activity IS NULL THEN 0 ELSE 1 END')
+            ->orderByRaw('CASE WHEN last_lesson_activity IS NULL THEN last_quiz_activity WHEN last_quiz_activity IS NULL THEN last_lesson_activity WHEN last_lesson_activity > last_quiz_activity THEN last_lesson_activity ELSE last_quiz_activity END')
+            ->orderBy('users.id')
+            ->limit(8)
             ->get()
             ->map(function (Pengguna $student) {
                 $lastActivity = collect([
@@ -108,11 +123,7 @@ class AdminAnalitikController extends Controller
                     'xp' => (int) $student->xp,
                 ];
             })
-            ->filter(fn ($student) => ! $student['last_activity'] || strtotime($student['last_activity']) < now()->subDays(7)->timestamp)
-            ->sortBy('last_activity')
             ->values();
-
-        $inactiveStudentsCount = $inactiveStudents->count();
 
         $recentAttempts = (clone $attemptsQuery)
             ->with(['user:id,username,email', 'quiz.module'])
@@ -140,8 +151,12 @@ class AdminAnalitikController extends Controller
                     ->where('is_correct', true)
                     ->whereHas('attempt', fn (Builder $attempt) => $attempt->whereIn('user_id', clone $studentIds)),
             ])
+            ->whereHas('attemptAnswers', fn (Builder $query) => $query
+                ->whereHas('attempt', fn (Builder $attempt) => $attempt->whereIn('user_id', clone $studentIds)))
+            ->orderByRaw('ROUND(100.0 * correct_count / NULLIF(attempts_count, 0), 1) ASC')
+            ->orderBy('questions.id')
+            ->limit(12)
             ->get()
-            ->filter(fn (Soal $question) => $question->attempts_count > 0)
             ->map(function (Soal $question) {
                 $correctRate = round(($question->correct_count / $question->attempts_count) * 100, 1);
 
@@ -156,8 +171,6 @@ class AdminAnalitikController extends Controller
                     'correct_rate' => $correctRate,
                 ];
             })
-            ->sortBy('correct_rate')
-            ->take(12)
             ->values();
         $feedbackCounts = UmpanBalikPembelajaran::query()
             ->whereIn('user_id', clone $studentIds)
