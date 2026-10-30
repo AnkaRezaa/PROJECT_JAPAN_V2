@@ -107,16 +107,24 @@ class AdminModulController extends Controller
     public function destroyProgram(Request $request, ProgramPembelajaran $program)
     {
         abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang dapat menghapus kelas.');
+
         if ($program->modules()->exists()) {
-            return redirect()->back()->withErrors([
-                'delete' => 'Kelas tidak dapat dihapus karena masih memiliki modul.',
-            ]);
+            return redirect()->back()->with('error', 'Kelas tidak dapat dihapus karena masih memiliki modul materi terkait.');
         }
 
-        $this->deleteManagedThumbnail($program->thumbnail_url);
-        $program->delete();
+        if ($program->kloterBelajar()->exists()) {
+            return redirect()->back()->with('error', 'Kelas tidak dapat dihapus karena masih terhubung dengan kloter belajar.');
+        }
 
-        return redirect()->back()->with('success', 'Kelas berhasil dihapus.');
+        try {
+            $this->deleteManagedThumbnail($program->thumbnail_url);
+            $program->delete();
+
+            return redirect()->back()->with('success', 'Kelas berhasil dihapus.');
+        } catch (\Throwable $e) {
+            report($e);
+            return redirect()->back()->with('error', 'Gagal menghapus kelas karena terdapat data transaksi atau paket terkait.');
+        }
     }
 
     public function index(Request $request)
@@ -368,6 +376,10 @@ class AdminModulController extends Controller
 
     private function prepareProgramInput(Request $request, ?ProgramPembelajaran $program = null): array
     {
+        if ($request->input('level_id') === '' || $request->input('level_id') === '0') {
+            $request->merge(['level_id' => null]);
+        }
+
         $track = CurriculumTrack::whereKey($request->integer('curriculum_track_id'))->first();
 
         $validated = $request->validate([

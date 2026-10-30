@@ -251,17 +251,27 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
         const options = { preserveScroll: true, forceFormData: true, onSuccess: closeForm };
 
         if (editing) {
-            form.transform((data) => ({ ...data, _method: 'put' })).post(route('admin.programs.update', editing.id), options);
+            form.transform((data) => ({
+                ...data,
+                _method: 'put',
+                level_id: data.level_id || null,
+            }));
+            form.post(route('admin.programs.update', editing.id), options);
             return;
         }
 
-        form.transform((data) => data).post(route('admin.programs.store'), options);
+        form.transform((data) => ({
+            ...data,
+            level_id: data.level_id || null,
+        }));
+        form.post(route('admin.programs.store'), options);
     };
 
     const confirmDelete = () => {
+        if (!deleteTarget) return;
         router.delete(route('admin.programs.destroy', deleteTarget.id), {
             preserveScroll: true,
-            onSuccess: () => setDeleteTarget(null),
+            onFinish: () => setDeleteTarget(null),
         });
     };
 
