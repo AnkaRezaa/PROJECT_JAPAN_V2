@@ -7,12 +7,31 @@ import SchoolIcon from '@mui/icons-material/School';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import SettingsVoiceIcon from '@mui/icons-material/SettingsVoice';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import DeviceTestModal from '@/Components/Features/LiveClass/DeviceTestModal';
+import { isInAppBrowser } from '@/lib/browserDetection';
 
 export default function ShowWaitingMentor({ session = {}, portalUrl = '/user/live-classes' }) {
     const [isChecking, setIsChecking] = useState(false);
     const [isTestModalOpen, setIsTestModalOpen] = useState(false);
     const [countdown, setCountdown] = useState(session.starts_in_minutes ?? null);
+    const [inApp, setInApp] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        setInApp(isInAppBrowser());
+    }, []);
+
+    const copyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2500);
+        } catch {
+            // Abaikan kegagalan clipboard
+        }
+    };
 
     const checkSessionStatus = async () => {
         setIsChecking(true);
@@ -28,8 +47,10 @@ export default function ShowWaitingMentor({ session = {}, portalUrl = '/user/liv
         }
     };
 
-    // Auto-polling setiap 8 detik untuk mendeteksi kapan mentor mulai
+    // Auto-polling setiap 8 detik untuk mendeteksi kapan mentor mulai (dijeda jika modal tes perangkat sedang aktif)
     useEffect(() => {
+        if (isTestModalOpen) return undefined;
+
         const interval = setInterval(() => {
             router.reload({
                 preserveScroll: true,
@@ -37,7 +58,7 @@ export default function ShowWaitingMentor({ session = {}, portalUrl = '/user/liv
         }, 8000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [isTestModalOpen]);
 
     // Countdown lokal
     useEffect(() => {
@@ -79,6 +100,28 @@ export default function ShowWaitingMentor({ session = {}, portalUrl = '/user/liv
                     </span>
                     Sinkronisasi otomatis aktif • Memeriksa status sesi...
                 </div>
+
+                {inApp && (
+                    <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-left text-xs">
+                        <div className="flex items-start gap-2.5 text-amber-300">
+                            <WarningAmberIcon sx={{ fontSize: 18 }} className="shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-bold">Terdeteksi Browser Aplikasi (WhatsApp/Instagram)</p>
+                                <p className="mt-1 text-[11px] text-amber-200/80 leading-relaxed">
+                                    Izin mikrofon dan audio sering diblokir oleh aplikasi chat. Agar sesi kelas berjalan lancar tanpa terpental ke login, buka tautan ini di <strong>Chrome</strong> atau <strong>Safari</strong>.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={copyLink}
+                                    className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-black text-slate-950 transition hover:bg-amber-400"
+                                >
+                                    <ContentCopyIcon sx={{ fontSize: 13 }} />
+                                    {copied ? 'Tautan Tersalin!' : 'Salin Tautan Kelas'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Info Card */}
                 <div className="mt-6 space-y-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-left text-xs sm:text-sm">

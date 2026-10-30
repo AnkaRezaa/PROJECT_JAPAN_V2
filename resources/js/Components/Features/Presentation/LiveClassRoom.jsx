@@ -7,6 +7,8 @@ import PresentationStage from '@/Components/Features/Presentation/PresentationSt
 import { getEcho, leaveLiveClassChannel } from '@/lib/echo';
 import ContextualFeedbackPrompt from '@/Components/Features/Feedback/ContextualFeedbackPrompt';
 import { pushAnalyticsEvent } from '@/lib/analytics';
+import { isInAppBrowser } from '@/lib/browserDetection';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -132,10 +134,26 @@ function Lobby({ deck, session, role, joining = false, lowDataMode = false, onTo
     const [deviceError, setDeviceError] = useState('');
     const [checkingDevices, setCheckingDevices] = useState(true);
     const [previewRevision, setPreviewRevision] = useState(0);
+    const [inApp, setInApp] = useState(false);
+    const [copied, setCopied] = useState(false);
     const videoRef = useRef(null);
     const streamRef = useRef(null);
     const audioContextRef = useRef(null);
     const meterFrameRef = useRef(null);
+
+    useEffect(() => {
+        setInApp(isInAppBrowser());
+    }, []);
+
+    const copyClassLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2500);
+        } catch {
+            // Abaikan kegagalan clipboard
+        }
+    };
 
     const stopPreview = useCallback(() => {
         if (meterFrameRef.current) cancelAnimationFrame(meterFrameRef.current);
@@ -266,6 +284,28 @@ function Lobby({ deck, session, role, joining = false, lowDataMode = false, onTo
                         <span className="h-2 w-2 rounded-full bg-emerald-400" /> Persiapan kelas
                     </span>
                 </div>
+
+                {inApp && (
+                    <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-200">
+                        <div className="flex items-start gap-3">
+                            <WarningAmberIcon sx={{ fontSize: 22 }} className="shrink-0 text-amber-400 mt-0.5" />
+                            <div>
+                                <p className="font-bold text-amber-300">Terdeteksi Browser Aplikasi (WhatsApp / Instagram / Telegram)</p>
+                                <p className="mt-1 text-xs text-amber-200/80 leading-relaxed">
+                                    Browser dalam aplikasi chat sering membatasi izin mikrofon dan WebRTC. Buka tautan kelas ini langsung di <strong>Chrome</strong> atau <strong>Safari</strong> agar mikrofon dan audio bekerja normal tanpa kendala sesi.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={copyClassLink}
+                                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-black text-slate-950 transition hover:bg-amber-400"
+                                >
+                                    <ContentCopyIcon sx={{ fontSize: 14 }} />
+                                    {copied ? 'Tautan Tersalin!' : 'Salin Tautan Kelas'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)] lg:items-start xl:gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
                     <section>
@@ -587,6 +627,7 @@ export default function LiveClassRoom({
     role: initialRole = 'mentor',
     participants: initialParticipantRows = [],
     tokenEndpoint = null,
+    pingEndpoint = null,
     stateEndpoint = null,
     endEndpoint = null,
     leaveEndpoint = null,
@@ -632,6 +673,7 @@ export default function LiveClassRoom({
     const mediaPreferencesRef = useRef({ micEnabled: true, cameraEnabled: true, microphoneId: '', cameraId: '' });
     const raiseHandControlRef = useRef(null);
     const raiseHandNoticeTimerRef = useRef(null);
+    const isMicTogglingRef = useRef(false);
     const snapshotTimerRef = useRef(null);
     const boardVersionRef = useRef(Number(session?.board_snapshot?.version || 0));
     const seenBoardEventsRef = useRef(new Set());
@@ -710,6 +752,19 @@ export default function LiveClassRoom({
         trackedCompletionRef.current = true;
         pushAnalyticsEvent('class_session_completed', { session_type: 'live_class' });
     }, [phase, role]);
+
+    // Heartbeat HTTP untuk memperpanjang sesi cookie Laravel (mencegah sesi kedaluwarsa saat murni WebRTC)
+    useEffect(() => {
+        if (!pingEndpoint) return undefined;
+
+        const pingInterval = setInterval(() => {
+            axios.post(pingEndpoint).catch(() => {
+                // Abaikan jika network drop sementara, sesi diperbarui pada interval berikutnya
+            });
+        }, 210000); // 3.5 menit
+
+        return () => clearInterval(pingInterval);
+    }, [pingEndpoint]);
 
     const visibleStrokes = useMemo(() => strokes.filter((stroke) => !stroke.hidden), [strokes]);
 
@@ -1493,6 +1548,8 @@ export default function LiveClassRoom({
 
     const setStudentMic = async (enabled) => {
         if (!currentStudent?.canSpeak || currentStudent?.micBlocked) return false;
+        if (isMicTogglingRef.current) return false;
+        isMicTogglingRef.current = true;
         try {
             await roomRef.current?.localParticipant.setMicrophoneEnabled(enabled);
             setStudentSpeaking(enabled);
@@ -1501,6 +1558,8 @@ export default function LiveClassRoom({
             setStudentSpeaking(false);
             setConnection('slow');
             return false;
+        } finally {
+            isMicTogglingRef.current = false;
         }
     };
 
@@ -2026,22 +2085,29 @@ export default function LiveClassRoom({
                             )}
                             <button type="button" onClick={handleRaiseHandButton} aria-expanded={raiseHandPromptOpen} className={`flex min-h-11 items-center gap-2 rounded-xl px-3.5 text-xs font-black transition-colors ${currentStudent.handRaised ? 'bg-amber-500 text-gray-950 hover:bg-amber-400' : 'bg-white/5 text-gray-200 hover:bg-white/10'}`}><PanToolIcon sx={{ fontSize: 17 }} /> {currentStudent.handRaised ? 'Turunkan tangan' : 'Angkat tangan'}</button>
                         </div>
-                        <button
-                            type="button"
-                            data-sound="none"
-                            disabled={!currentStudent.canSpeak || currentStudent.micBlocked}
-                            onClick={currentStudent.handRaised ? () => setStudentMic(!studentSpeaking) : undefined}
-                            onPointerDown={currentStudent.handRaised ? undefined : () => setStudentMic(true)}
-                            onPointerUp={currentStudent.handRaised ? undefined : () => setStudentMic(false)}
-                            onPointerCancel={currentStudent.handRaised ? undefined : () => setStudentMic(false)}
-                            onPointerLeave={currentStudent.handRaised ? undefined : () => setStudentMic(false)}
-                            className={`flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-3.5 text-xs font-black disabled:opacity-40 ${studentSpeaking ? 'bg-green-500 text-gray-950' : 'bg-white/5 text-gray-200'}`}
-                            title={currentStudent.handRaised ? 'Klik untuk mengaktifkan atau mematikan mikrofon' : 'Tahan tombol atau Space untuk bicara'}
-                        >
-                            {studentSpeaking ? <MicIcon sx={{ fontSize: 17 }} /> : <MicOffIcon sx={{ fontSize: 17 }} />}
-                            {currentStudent.micBlocked ? 'Mikrofon dinonaktifkan mentor' : currentStudent.handRaised ? (studentSpeaking ? 'Mikrofon aktif' : 'Aktifkan mikrofon') : 'Tahan untuk bicara'}
-                            {!currentStudent.handRaised && <span className="hidden rounded bg-black/25 px-1.5 py-0.5 text-[9px] md:inline">Space</span>}
-                        </button>
+                        {(() => {
+                            const isTouchDevice = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+                            const canToggleDirectly = Boolean(currentStudent.handRaised || isTouchDevice);
+
+                            return (
+                                <button
+                                    type="button"
+                                    data-sound="none"
+                                    disabled={!currentStudent.canSpeak || currentStudent.micBlocked}
+                                    onClick={canToggleDirectly ? () => setStudentMic(!studentSpeaking) : undefined}
+                                    onPointerDown={canToggleDirectly ? undefined : () => setStudentMic(true)}
+                                    onPointerUp={canToggleDirectly ? undefined : () => setStudentMic(false)}
+                                    onPointerCancel={canToggleDirectly ? undefined : () => setStudentMic(false)}
+                                    onPointerLeave={canToggleDirectly ? undefined : () => setStudentMic(false)}
+                                    className={`flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-3.5 text-xs font-black disabled:opacity-40 ${studentSpeaking ? 'bg-green-500 text-gray-950' : 'bg-white/5 text-gray-200'}`}
+                                    title={canToggleDirectly ? (studentSpeaking ? 'Klik untuk mematikan mikrofon' : 'Klik untuk mengaktifkan mikrofon') : 'Tahan tombol atau Space untuk bicara'}
+                                >
+                                    {studentSpeaking ? <MicIcon sx={{ fontSize: 17 }} /> : <MicOffIcon sx={{ fontSize: 17 }} />}
+                                    {currentStudent.micBlocked ? 'Mikrofon dinonaktifkan mentor' : canToggleDirectly ? (studentSpeaking ? 'Mikrofon aktif' : 'Aktifkan mikrofon') : 'Tahan untuk bicara'}
+                                    {!canToggleDirectly && <span className="hidden rounded bg-black/25 px-1.5 py-0.5 text-[9px] md:inline">Space</span>}
+                                </button>
+                            );
+                        })()}
                         {canDraw && <IconButton label="Alat menulis" active={toolsOpen || tool !== 'pointer'} onClick={() => setToolsOpen((value) => !value)}><BrushIcon sx={{ fontSize: 18 }} /></IconButton>}
                     </>
                 )}

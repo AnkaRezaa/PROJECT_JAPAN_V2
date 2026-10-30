@@ -111,6 +111,7 @@ class RuangKelasLiveController extends Controller
                 ->map($service->participantPayload(...))
                 ->values(),
             'tokenEndpoint' => route('user.live-classes.token', $session->join_code, absolute: false),
+            'pingEndpoint' => route('user.live-classes.ping', $session->join_code, absolute: false),
             'leaveEndpoint' => route('user.live-classes.leave', $session->join_code, absolute: false),
             'exitUrl' => route('user.live-classes.index', absolute: false),
         ]);
@@ -127,6 +128,13 @@ class RuangKelasLiveController extends Controller
         );
 
         return response()->json($service->tokenPayload($session, $request->user()));
+    }
+
+    public function ping(Request $request, SesiKelasLive $session, RuangKelasLiveService $service): JsonResponse
+    {
+        abort_unless($service->roleFor($session, $request->user()) === 'student', 403);
+
+        return response()->json(['status' => 'ok', 'timestamp' => now()->timestamp]);
     }
 
     public function leave(Request $request, SesiKelasLive $session, RuangKelasLiveService $service): JsonResponse

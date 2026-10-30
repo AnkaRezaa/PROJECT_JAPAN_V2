@@ -306,6 +306,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/live-classes/{liveClassSession}/participants/{user}', [AdminRuangKelasLiveController::class, 'updateParticipant'])->middleware('throttle:live-room-control')->name('live-classes.participants.update');
         Route::delete('/live-classes/{liveClassSession}/participants/{user}', [AdminRuangKelasLiveController::class, 'kick'])->middleware('throttle:live-room-control')->name('live-classes.participants.kick');
         Route::post('/live-classes/{liveClassSession}/mute-all', [AdminRuangKelasLiveController::class, 'muteAll'])->middleware('throttle:live-room-control')->name('live-classes.mute-all');
+        Route::post('/live-classes/{liveClassSession}/ping', [AdminRuangKelasLiveController::class, 'ping'])->name('live-classes.ping');
         Route::post('/live-classes/{liveClassSession}/end', [AdminRuangKelasLiveController::class, 'end'])->middleware('throttle:live-room-control')->name('live-classes.end');
         Route::get('/boards', static fn () => redirect()->route('admin.programs.index'))->name('boards.index');
         Route::any('/gamification/{path?}', static fn () => abort(403))->where('path', '.*')->name('gamification.legacy');
@@ -408,6 +409,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/live-classes/join-by-code', [UserRuangKelasLiveController::class, 'joinByCode'])->middleware('throttle:15,1')->name('live-classes.join-by-code');
         Route::get('/live-classes/{session:join_code}', [UserRuangKelasLiveController::class, 'show'])->name('live-classes.show');
         Route::post('/live-classes/{session:join_code}/token', [UserRuangKelasLiveController::class, 'token'])->middleware('throttle:live-room-user-token')->name('live-classes.token');
+        Route::post('/live-classes/{session:join_code}/ping', [UserRuangKelasLiveController::class, 'ping'])->name('live-classes.ping');
         Route::post('/live-classes/{session:join_code}/leave', [UserRuangKelasLiveController::class, 'leave'])->middleware('throttle:live-room-control')->name('live-classes.leave');
 
         Route::get('/quizzes', [PembelajaranController::class, 'quizLobby'])->name('quizzes.index');

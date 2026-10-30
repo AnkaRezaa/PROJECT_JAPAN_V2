@@ -33,7 +33,7 @@ return [
         'ws_url' => env('LIVEKIT_WS_URL', 'ws://127.0.0.1:7880'),
         'api_key' => env('LIVEKIT_API_KEY'),
         'api_secret' => env('LIVEKIT_API_SECRET'),
-        'token_ttl' => (int) env('LIVEKIT_TOKEN_TTL', 900),
+        'token_ttl' => (int) env('LIVEKIT_TOKEN_TTL', 7200),
     ],
 
     'midtrans' => [

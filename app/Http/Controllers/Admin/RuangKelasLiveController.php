@@ -213,6 +213,7 @@ class RuangKelasLiveController extends Controller
             'availableDecks' => $availableDecks,
             'participants' => $liveClassSession->participants()->where('role', 'student')->with('user:id,username,avatar')->get()->map($service->participantPayload(...))->values(),
             'tokenEndpoint' => route('admin.live-classes.token', $liveClassSession, absolute: false),
+            'pingEndpoint' => route('admin.live-classes.ping', $liveClassSession, absolute: false),
             'startEndpoint' => route('admin.live-classes.start', $liveClassSession, absolute: false),
             'cancelEndpoint' => route('admin.live-classes.cancel', $liveClassSession, absolute: false),
             'stateEndpoint' => route('admin.live-classes.state', $liveClassSession, absolute: false),
@@ -307,6 +308,13 @@ class RuangKelasLiveController extends Controller
         $service->kickParticipant($liveClassSession, $request->user(), $user);
 
         return response()->json(status: 204);
+    }
+
+    public function ping(Request $request, SesiKelasLive $liveClassSession, RuangKelasLiveService $service): JsonResponse
+    {
+        abort_unless($service->roleFor($liveClassSession, $request->user()) === 'mentor', 403);
+
+        return response()->json(['status' => 'ok', 'timestamp' => now()->timestamp]);
     }
 
     public function end(Request $request, SesiKelasLive $liveClassSession, RuangKelasLiveService $service): JsonResponse
