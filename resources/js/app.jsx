@@ -7,6 +7,7 @@ import { createRoot } from 'react-dom/client';
 import { installInterfaceSoundEffects } from '@/Components/UI/SoundEffects';
 import { applyThemeVariables } from '@/Components/theme/themes';
 import AnalyticsConsentBanner from '@/Components/Features/Feedback/AnalyticsConsentBanner';
+import PageTransitionLoader from '@/Components/UI/PageTransitionLoader';
 import AppErrorBoundary from '@/Components/Errors/AppErrorBoundary';
 import { getAnalyticsConsent, initializeAnalytics, pushPageView } from '@/lib/analytics';
 import { resetScrollLock } from '@/lib/scrollLock';
@@ -73,7 +74,13 @@ createInertiaApp({
             ? installInterfaceSoundEffects(el)
             : () => {};
 
-        const content = <><App {...props} /><AnalyticsConsentBanner /></>;
+        const content = (
+            <>
+                <App {...props} />
+                <PageTransitionLoader />
+                <AnalyticsConsentBanner />
+            </>
+        );
         const reportRenderError = sentryEnabled
             ? (error, errorInfo) => Sentry.captureException(error, {
                 contexts: { react: { componentStack: errorInfo.componentStack } },
@@ -92,7 +99,5 @@ createInertiaApp({
             import.meta.hot.dispose(removeInterfaceSoundEffects);
         }
     },
-    progress: {
-        color: '#15803D',
-    },
+    progress: false,
 });

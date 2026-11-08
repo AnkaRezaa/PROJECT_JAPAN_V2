@@ -214,18 +214,18 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
             </div>
 
             <motion.div {...reveal} className="relative mx-auto min-w-0 w-full max-w-full sm:max-w-lg lg:mx-0">
-              <div className="relative overflow-hidden rounded-2xl border border-white/80 bg-white/95 p-5 shadow-2xl backdrop-blur-md sm:p-6">
+              <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-5 shadow-lg sm:p-6">
                 <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
                   <div className="flex items-center gap-2">
                     <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
                       <DarumaIcon className="h-4 w-4 text-brand-600" />
                     </span>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-brand-700">Preview Materi Interaktif</p>
-                      <h2 className="text-xs font-black text-ink-900">Kartu Kosakata & Kanji</h2>
+                      <p className="text-xs font-semibold text-brand-700">Preview Materi Interaktif</p>
+                      <h2 className="text-sm font-bold text-ink-900">Kartu Kosakata & Kanji</h2>
                     </div>
                   </div>
-                  <span className="rounded-full border border-brand-200 bg-brand-50 px-2.5 py-0.5 text-[10px] font-bold text-brand-700">
+                  <span className="rounded-full border border-brand-200 bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-700">
                     {currentCard.level}
                   </span>
                 </div>
@@ -235,7 +235,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
                   <p className="my-1 font-sans text-4xl font-black text-ink-900">{currentCard.kanji}</p>
                   <p className="mt-2 text-xs font-bold text-ink-800">{currentCard.meaning}</p>
                   
-                  <div className="mt-3 rounded-lg border border-white bg-white/90 p-2.5 text-left text-xs shadow-sm">
+                  <div className="mt-3 border-t border-brand-100 pt-3 text-left text-xs">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-ink-900">{currentCard.sentence}</span>
                       <button
@@ -264,14 +264,14 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
                   <button
                     type="button"
                     onClick={handleNextCard}
-                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-brand-600 text-xs font-bold text-white shadow-sm transition-all hover:bg-brand-700"
+                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-brand-600 text-xs font-bold text-white transition-colors hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
                   >
                     <CheckIcon sx={{ fontSize: 16 }} />
                     Kartu Berikutnya
                   </button>
                 </div>
 
-                <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-[11px] text-ink-600">
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3 text-xs text-ink-600">
                   <span className="flex items-center gap-1.5">
                     <LocalFireDepartmentIcon sx={{ fontSize: 15 }} className="text-emerald-600" />
                     Contoh materi interaktif
@@ -280,7 +280,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
                 </div>
               </div>
 
-              <div className="absolute -bottom-6 -left-3 hidden items-center gap-2.5 rounded-xl border border-brand-200 bg-white/95 px-3.5 py-2.5 shadow-lg backdrop-blur-sm sm:flex">
+              <div className="absolute -bottom-12 -left-3 hidden items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 py-2.5 shadow-sm sm:flex">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-xs font-black text-brand-700">N2</div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-wider text-ink-500">Standar Kurikulum</p>
@@ -312,7 +312,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
               {learningSteps.map((step) => (
                 <article
                   key={step.number}
-                  className="group relative rounded-xl border border-slate-800 bg-slate-800/40 p-5 transition-all duration-300 hover:border-emerald-500/40 hover:bg-slate-800/70"
+                  className="group relative rounded-xl border border-slate-800 bg-slate-800/40 p-5 transition-colors duration-300 hover:border-emerald-500/40 hover:bg-slate-800/70"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-sm font-black text-emerald-400">{step.number}</span>
@@ -418,7 +418,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
               {publicPlans.length > 0 ? publicPlans.map((plan, index) => (
                 <article
                   key={`${plan.programId}-${plan.id}`}
-                  className={`relative rounded-2xl border p-6 transition-all duration-300 ${
+                  className={`relative rounded-2xl border p-6 transition-colors duration-300 ${
                     index === 0
                       ? 'border-emerald-500/50 bg-emerald-950/40 shadow-xl shadow-black/30'
                       : 'border-slate-800 bg-slate-800/40 hover:border-slate-700'

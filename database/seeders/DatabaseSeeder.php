@@ -17,7 +17,6 @@ class DatabaseSeeder extends Seeder
         if (! app()->environment('production')) {
             $this->call([
                 DemoDataSeeder::class,
-                StandaloneExamDemoSeeder::class,
             ]);
         }
 
