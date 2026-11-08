@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePage } from '@inertiajs/react';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import PauseIcon from '@mui/icons-material/Pause';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -57,6 +59,7 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
     const canvasRef = useRef(null);
     const frameRef = useRef(null);
     const renderTaskRef = useRef(null);
+    const lastRenderedPageRef = useRef(null);
     const { props } = usePage();
     const pdfUrl = normalizePdfUrl(url);
     const watermark = useMemo(() => userLabel(props.auth), [props.auth]);
@@ -66,6 +69,8 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
     const [zoom, setZoom] = useState(1.25);
     const [status, setStatus] = useState(pdfUrl ? 'loading' : 'empty');
     const [error, setError] = useState('');
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isPageTransitioning, setIsPageTransitioning] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -81,6 +86,9 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
             setPdfDocument(null);
             setPageNumber(1);
             setTotalPages(0);
+            setIsPlaying(false);
+            setIsPageTransitioning(false);
+            lastRenderedPageRef.current = null;
             debug('load:start', { url: pdfUrl });
 
             try {
@@ -138,11 +146,21 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
 
     useEffect(() => {
         let cancelled = false;
+        let fadeTimer = null;
 
         const renderPage = async () => {
             if (!pdfDocument || !canvasRef.current) return;
 
             renderTaskRef.current?.cancel?.();
+            const isPageChange = lastRenderedPageRef.current !== null && lastRenderedPageRef.current !== pageNumber;
+            if (isPageChange) {
+                setIsPageTransitioning(true);
+                await new Promise((resolve) => {
+                    fadeTimer = window.setTimeout(resolve, 140);
+                });
+                if (cancelled || !canvasRef.current) return;
+            }
+
             debug('render:start', { page: pageNumber, zoom });
 
             try {
@@ -178,9 +196,14 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
                 context.fillText(watermark, 0, 0);
                 context.restore();
 
+                lastRenderedPageRef.current = pageNumber;
+                setIsPageTransitioning(false);
                 debug('render:done', { page: pageNumber });
             } catch (exception) {
                 if (exception?.name === 'RenderingCancelledException') return;
+                if (!cancelled) {
+                    setIsPageTransitioning(false);
+                }
                 debug('render:error', exception);
                 setError(exception.message || 'Halaman PDF gagal dirender.');
                 setStatus('error');
@@ -191,12 +214,63 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
 
         return () => {
             cancelled = true;
+            if (fadeTimer) {
+                window.clearTimeout(fadeTimer);
+            }
             renderTaskRef.current?.cancel?.();
         };
     }, [pdfDocument, pageNumber, watermark, zoom]);
 
-    const previous = () => setPageNumber((current) => Math.max(1, current - 1));
-    const next = () => setPageNumber((current) => Math.min(totalPages, current + 1));
+    useEffect(() => {
+        if (!isPlaying) return undefined;
+
+        if (status !== 'ready' || totalPages <= 1) {
+            setIsPlaying(false);
+            return undefined;
+        }
+
+        if (isPageTransitioning) return undefined;
+
+        if (pageNumber >= totalPages) {
+            setIsPlaying(false);
+            return undefined;
+        }
+
+        const timer = window.setTimeout(() => {
+            setPageNumber((current) => {
+                if (current >= totalPages) {
+                    setIsPlaying(false);
+                    return current;
+                }
+                return current + 1;
+            });
+        }, 5000);
+
+        return () => window.clearTimeout(timer);
+    }, [isPageTransitioning, isPlaying, pageNumber, status, totalPages]);
+
+    const previous = () => {
+        setIsPlaying(false);
+        setPageNumber((current) => Math.max(1, current - 1));
+    };
+
+    const next = () => {
+        setIsPlaying(false);
+        setPageNumber((current) => Math.min(totalPages, current + 1));
+    };
+
+    const togglePlay = () => {
+        if (status !== 'ready' || totalPages <= 1) return;
+
+        if (!isPlaying && pageNumber >= totalPages) {
+            setPageNumber(1);
+            setIsPlaying(true);
+            return;
+        }
+
+        setIsPlaying((current) => !current);
+    };
+
     const zoomOut = () => setZoom((current) => Math.max(0.75, Number((current - 0.15).toFixed(2))));
     const zoomIn = () => setZoom((current) => Math.min(2.5, Number((current + 0.15).toFixed(2))));
     const fullscreen = () => frameRef.current?.requestFullscreen?.();
@@ -210,6 +284,21 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
                     {totalPages > 0 && <p className="mt-1 text-xs font-bold text-gray-500">Halaman {pageNumber} dari {totalPages}</p>}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={togglePlay}
+                        disabled={status !== 'ready' || totalPages <= 1}
+                        aria-pressed={isPlaying}
+                        title={isPlaying ? 'Jeda putar otomatis' : 'Putar halaman otomatis'}
+                        className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition disabled:opacity-40 ${
+                            isPlaying
+                                ? 'bg-orange-600 text-white shadow-sm hover:bg-orange-700'
+                                : 'border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 dark:border-orange-900/50 dark:bg-orange-950/40 dark:text-orange-300'
+                        }`}
+                    >
+                        {isPlaying ? <PauseIcon sx={{ fontSize: 16 }} /> : <PlayArrowIcon sx={{ fontSize: 16 }} />}
+                        <span>{isPlaying ? 'Jeda' : 'Play'}</span>
+                    </button>
                     <button type="button" onClick={zoomOut} disabled={status !== 'ready'} className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">-</button>
                     <span className="min-w-12 text-center text-xs font-black text-gray-500">{Math.round(zoom * 100)}%</span>
                     <button type="button" onClick={zoomIn} disabled={status !== 'ready'} className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">+</button>
@@ -241,14 +330,36 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
                 )}
                 {status === 'ready' && (
                     <div className="mx-auto max-h-[72vh] overflow-auto rounded-xl bg-gray-200 p-3 shadow-inner dark:bg-gray-950">
-                        <canvas ref={canvasRef} className="mx-auto block max-w-none rounded-lg bg-white shadow-xl" />
+                        <canvas
+                            ref={canvasRef}
+                            className={`mx-auto block max-w-none rounded-lg bg-white shadow-xl transition-opacity duration-300 ease-in-out motion-reduce:transition-none ${
+                                isPageTransitioning ? 'opacity-0' : 'opacity-100'
+                            }`}
+                        />
                     </div>
                 )}
             </div>
 
             {status === 'ready' && (
                 <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-t border-gray-100 p-3 dark:border-gray-800">
-                    <button type="button" onClick={previous} disabled={pageNumber <= 1} className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 disabled:opacity-40 sm:px-4 dark:border-gray-700 dark:text-gray-200">Prev</button>
+                    <div className="flex items-center gap-1.5">
+                        <button type="button" onClick={previous} disabled={pageNumber <= 1} className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 disabled:opacity-40 sm:px-4 dark:border-gray-700 dark:text-gray-200">Prev</button>
+                        <button
+                            type="button"
+                            onClick={togglePlay}
+                            disabled={totalPages <= 1}
+                            aria-pressed={isPlaying}
+                            title={isPlaying ? 'Jeda putar otomatis' : 'Putar halaman otomatis'}
+                            className={`inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition disabled:opacity-40 ${
+                                isPlaying
+                                    ? 'bg-orange-600 text-white shadow-sm hover:bg-orange-700'
+                                    : 'border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 dark:border-orange-900/50 dark:bg-orange-950/40 dark:text-orange-300'
+                            }`}
+                        >
+                            {isPlaying ? <PauseIcon sx={{ fontSize: 15 }} /> : <PlayArrowIcon sx={{ fontSize: 15 }} />}
+                            <span>{isPlaying ? 'Jeda' : 'Play'}</span>
+                        </button>
+                    </div>
                     <p className="min-w-0 text-center text-[10px] font-black leading-4 text-gray-500 sm:text-xs">Canvas render - tanpa link download langsung</p>
                     <button type="button" onClick={next} disabled={pageNumber >= totalPages} className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 disabled:opacity-40 sm:px-4 dark:border-gray-700 dark:text-gray-200">Next</button>
                 </div>

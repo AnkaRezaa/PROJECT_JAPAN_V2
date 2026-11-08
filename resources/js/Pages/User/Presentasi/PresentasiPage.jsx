@@ -1,11 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import theme from '@/Components/theme/themes';
 import PdfCarousel from '@/Components/Features/Presentation/PdfCarousel';
-import EmbedFrame, { isImageUrl } from '@/Components/Features/Presentation/EmbedFrame';
+import EmbedFrame, { isEmbeddableUrl, isImageUrl, isVideoUrl } from '@/Components/Features/Presentation/EmbedFrame';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import PauseIcon from '@mui/icons-material/Pause';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 import ViewCarouselIcon from '@mui/icons-material/ViewCarousel';
 
@@ -91,8 +95,41 @@ function SlideFrame({ slide }) {
 
 function SlideCarousel({ deck }) {
     const [activeIndex, setActiveIndex] = useState(0);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const stageRef = useRef(null);
+    const prefersReducedMotion = useReducedMotion();
     const slides = deck?.slides || [];
     const activeSlide = slides[activeIndex] || null;
+    const isInteractiveMediaSlide = Boolean(
+        activeSlide?.layout === 'media'
+            && (isVideoUrl(activeSlide?.media_url || '') || isEmbeddableUrl(activeSlide?.media_url || '')),
+    );
+
+    useEffect(() => {
+        if (!isPlaying) return undefined;
+
+        if (slides.length <= 1 || isInteractiveMediaSlide) {
+            setIsPlaying(false);
+            return undefined;
+        }
+
+        if (activeIndex >= slides.length - 1) {
+            setIsPlaying(false);
+            return undefined;
+        }
+
+        const timer = window.setTimeout(() => {
+            setActiveIndex((current) => {
+                if (current >= slides.length - 1) {
+                    setIsPlaying(false);
+                    return current;
+                }
+                return current + 1;
+            });
+        }, 5000);
+
+        return () => window.clearTimeout(timer);
+    }, [activeIndex, isInteractiveMediaSlide, isPlaying, slides.length]);
 
     if (!activeSlide) {
         return (
@@ -102,26 +139,86 @@ function SlideCarousel({ deck }) {
         );
     }
 
-    const previous = () => setActiveIndex((current) => Math.max(0, current - 1));
-    const next = () => setActiveIndex((current) => Math.min(slides.length - 1, current + 1));
+    const previous = () => {
+        setIsPlaying(false);
+        setActiveIndex((current) => Math.max(0, current - 1));
+    };
+
+    const next = () => {
+        setIsPlaying(false);
+        setActiveIndex((current) => Math.min(slides.length - 1, current + 1));
+    };
+
+    const selectSlide = (index) => {
+        setIsPlaying(false);
+        setActiveIndex(index);
+    };
+
+    const togglePlay = () => {
+        if (slides.length <= 1) return;
+
+        if (!isPlaying && activeIndex >= slides.length - 1) {
+            setActiveIndex(0);
+            setIsPlaying(true);
+            return;
+        }
+
+        setIsPlaying((current) => !current);
+    };
+
+    const fullscreen = () => stageRef.current?.requestFullscreen?.();
 
     return (
         <div className="space-y-2.5">
-            <SlideFrame slide={activeSlide} />
-            <div className="flex items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-white p-2 sm:p-2.5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                <button type="button" onClick={previous} disabled={activeIndex === 0} className="shrink-0 rounded-xl border border-gray-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Sebelumnya</button>
+            <div ref={stageRef} className="overflow-hidden rounded-2xl bg-gray-950/5 dark:bg-gray-950">
+                <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                        key={activeSlide.id || `slide-${activeIndex}`}
+                        initial={prefersReducedMotion ? false : { opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={prefersReducedMotion ? undefined : { opacity: 0 }}
+                        transition={{ duration: prefersReducedMotion ? 0 : 0.32, ease: 'easeInOut' }}
+                    >
+                        <SlideFrame slide={activeSlide} />
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-white p-2 sm:p-2.5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <div className="flex items-center gap-1.5">
+                    <button type="button" onClick={previous} disabled={activeIndex === 0} className="shrink-0 rounded-xl border border-gray-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Sebelumnya</button>
+                    <button
+                        type="button"
+                        onClick={togglePlay}
+                        disabled={slides.length <= 1}
+                        aria-pressed={isPlaying}
+                        title={isPlaying ? 'Jeda putar otomatis' : 'Putar slide otomatis'}
+                        className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black transition disabled:opacity-40 ${
+                            isPlaying
+                                ? 'bg-orange-600 text-white shadow-sm hover:bg-orange-700'
+                                : 'border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 dark:border-orange-900/50 dark:bg-orange-950/40 dark:text-orange-300'
+                        }`}
+                    >
+                        {isPlaying ? <PauseIcon sx={{ fontSize: 16 }} /> : <PlayArrowIcon sx={{ fontSize: 16 }} />}
+                        <span>{isPlaying ? 'Jeda' : 'Play'}</span>
+                    </button>
+                </div>
                 <div className="min-w-0 flex-1 px-1 text-center">
                     <p className="text-[11px] sm:text-xs font-black text-gray-500">Slide {activeIndex + 1} dari {slides.length}</p>
                     <p className="mt-0.5 max-w-full truncate text-xs sm:text-sm font-black text-gray-900 dark:text-white">{activeSlide.title || 'Slide Presentasi'}</p>
                 </div>
-                <button type="button" onClick={next} disabled={activeIndex >= slides.length - 1} className="shrink-0 rounded-xl border border-gray-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Berikutnya</button>
+                <div className="flex items-center gap-1.5">
+                    <button type="button" onClick={fullscreen} title="Layar penuh" aria-label="Layar penuh" className="hidden sm:inline-flex shrink-0 items-center justify-center rounded-xl border border-gray-200 p-2 text-xs font-black text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
+                        <FullscreenIcon sx={{ fontSize: 16 }} />
+                    </button>
+                    <button type="button" onClick={next} disabled={activeIndex >= slides.length - 1} className="shrink-0 rounded-xl border border-gray-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Berikutnya</button>
+                </div>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2">
                 {slides.map((slide, index) => (
                     <button
                         key={slide.id || index}
                         type="button"
-                        onClick={() => setActiveIndex(index)}
+                        onClick={() => selectSlide(index)}
                         className={`h-12 w-20 shrink-0 overflow-hidden rounded-xl border text-[10px] font-black ${activeIndex === index ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 bg-white text-gray-500 dark:border-gray-800 dark:bg-gray-900'}`}
                     >
                         {slide.snapshot_url || slide.jamboard_snapshot || isImageUrl(slide.media_url || '') ? (
@@ -138,6 +235,13 @@ function SlideCarousel({ deck }) {
 
 export default function PresentasiPage({ program = {}, decks = [], modules = [], selected_module_id = null }) {
     const [selectedDeckId, setSelectedDeckId] = useState(decks[0]?.id || null);
+
+    useEffect(() => {
+        if (decks.length > 0 && !decks.some((deck) => deck.id === selectedDeckId)) {
+            setSelectedDeckId(decks[0].id);
+        }
+    }, [decks, selectedDeckId]);
+
     const selectedDeck = useMemo(
         () => decks.find((deck) => deck.id === selectedDeckId) || decks[0] || null,
         [decks, selectedDeckId],

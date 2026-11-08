@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { AnimatePresence, MotionConfig, motion, useDragControls } from 'framer-motion';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import theme from '@/Components/theme/themes';
@@ -9,6 +9,7 @@ import { playSoundEffect } from '@/Components/UI/SoundEffects';
 import { useScrollLock } from '@/lib/scrollLock';
 import GrammarQuizPreviewDialog from '@/Components/Features/GrammarQuiz/GrammarQuizPreviewDialog';
 import Popper from '@mui/material/Popper';
+import LiveSessionDialog from '@/Components/Features/LiveClass/LiveSessionDialog';
 
 const DokkaiQuizRunner = lazy(() => import('@/Components/Features/DokkaiQuiz/DokkaiQuizRunner'));
 
@@ -447,7 +448,7 @@ function CourseAccessPanel({ program, processing, error, onCheckout }) {
 }
 
 function itemStatusLabel(item) {
-    if (item.kind === 'live') return item.status === 'active' ? 'Live sekarang' : 'Terjadwal';
+    if (item.kind === 'live') return item.status === 'active' ? 'Live sekarang' : item.status === 'done' ? 'Selesai' : 'Terjadwal';
     if (item.status === 'done') return 'Selesai';
     if (item.status === 'active') return 'Lanjutkan';
     if (item.status === 'unavailable') return 'Belum tersedia';
@@ -455,6 +456,14 @@ function itemStatusLabel(item) {
 }
 
 function nodeColors(item) {
+    if (item.kind === 'live' && item.status === 'scheduled') {
+        return {
+            color: '#d1d5db',
+            shadow: '#9ca3af',
+            foreground: '#374151',
+            labelClass: 'text-gray-700 dark:text-gray-300',
+        };
+    }
     if (['locked', 'unavailable'].includes(item.status)) {
         return {
             color: item.status === 'unavailable' ? '#f3f4f6' : '#e5e7eb',
@@ -541,9 +550,9 @@ function quizItem(day, available) {
 function weeklyMainItems(week) {
     const items = [];
     const presentations = week.presentations || [];
-    const liveSession = week.live_session;
+    const liveSessions = week.live_sessions || (week.live_session ? [week.live_session] : []);
 
-    if (liveSession) {
+    liveSessions.forEach((liveSession) => {
         const schedule = liveSession.scheduled_at
             ? new Intl.DateTimeFormat('id-ID', {
                 day: 'numeric',
@@ -561,11 +570,12 @@ function weeklyMainItems(week) {
             title: liveSession.deck_title || 'Ruang Kelas',
             weekLabel: `Minggu ${week.week_number}`,
             detail: `${schedule}${liveSession.mentor_name ? ` · ${liveSession.mentor_name}` : ''}`,
-            status: liveSession.status === 'live' ? 'active' : 'scheduled',
+            status: liveSession.status === 'live' ? 'active' : liveSession.status === 'ended' ? 'done' : 'scheduled',
             href: liveSession.join_url,
+            session: liveSession,
             mainPosition: 'center',
         });
-    }
+    });
     const presentationItem = (presentation, eyebrow) => ({
         key: `presentation-${presentation.id}`,
         kind: 'presentation',
@@ -685,11 +695,19 @@ function StatusBadge({ item, className = '' }) {
     );
 }
 
-function PathNode({ item, selected, onDayToggle }) {
+function PathNode({ item, selected, onDayToggle, onLiveOpen }) {
     const locked = ['locked', 'unavailable'].includes(item.status);
     const className = `group relative inline-flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-400 ${
         locked ? 'cursor-not-allowed' : ''
     }`;
+
+    if (item.kind === 'live') {
+        return (
+            <button type="button" className={className} aria-label={`Detail ${item.title}`} onClick={() => onLiveOpen(item.key)}>
+                <PathNodeCircle item={item} />
+            </button>
+        );
+    }
 
     if (item.kind === 'day') {
         return (
@@ -727,7 +745,7 @@ function PathNode({ item, selected, onDayToggle }) {
     );
 }
 
-function PathNodeLabel({ item, onDayToggle, selected }) {
+function PathNodeLabel({ item, onDayToggle, selected, onLiveOpen }) {
     const showStatus = item.status !== 'done';
     const hasExtraInfo = showStatus || (item.kind !== 'day' && item.detail);
     const colors = nodeColors(item);
@@ -735,14 +753,17 @@ function PathNodeLabel({ item, onDayToggle, selected }) {
 
     if (item.kind === 'live') {
         const isLive = item.status === 'active';
+        const isScheduled = item.status === 'scheduled';
         const cardClassName = `relative mt-2.5 block w-44 overflow-hidden rounded-xl border px-2.5 py-2 text-left shadow-md transition min-[380px]:w-48 sm:mt-3 sm:w-56 sm:px-3 ${
             isLive
                 ? 'border-green-300 bg-white shadow-green-900/10 hover:-translate-y-0.5 hover:border-green-400 dark:border-green-800 dark:bg-gray-900'
-                : 'border-orange-200 bg-white/95 shadow-orange-900/5 dark:border-orange-900/70 dark:bg-gray-900'
+                : isScheduled
+                    ? 'border-gray-300 bg-gray-50 shadow-gray-900/5 dark:border-gray-600 dark:bg-gray-800'
+                    : 'border-orange-200 bg-white/95 shadow-orange-900/5 dark:border-orange-900/70 dark:bg-gray-900'
         }`;
         const cardContent = (
             <>
-                <span className={`absolute inset-y-0 left-0 w-1 ${isLive ? 'bg-green-500' : 'bg-orange-500'}`} />
+                <span className={`absolute inset-y-0 left-0 w-1 ${isLive ? 'bg-green-500' : isScheduled ? 'bg-gray-400' : 'bg-orange-500'}`} />
                 <div className="flex items-center justify-between gap-1.5 pl-1">
                     <span className={`truncate text-[9px] font-black uppercase tracking-[0.12em] ${colors.labelClass}`}>
                         {item.weekLabel} · Live
@@ -750,10 +771,12 @@ function PathNodeLabel({ item, onDayToggle, selected }) {
                     <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase ${
                         isLive
                             ? 'bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300'
-                            : 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300'
+                            : isScheduled
+                                ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'
+                                : 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300'
                     }`}>
                         {isLive && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" aria-hidden="true" />}
-                        {isLive ? 'Live' : 'Terjadwal'}
+                        {isLive ? 'Live' : item.status === 'done' ? 'Selesai' : 'Terjadwal'}
                     </span>
                 </div>
                 <h3 className="mt-1 line-clamp-1 pl-1 text-xs font-black text-gray-900 dark:text-white sm:text-sm">
@@ -762,14 +785,13 @@ function PathNodeLabel({ item, onDayToggle, selected }) {
                 <p className="mt-0.5 line-clamp-1 pl-1 text-[9px] font-semibold text-gray-500 dark:text-gray-400 sm:text-[10px]">
                     {item.detail}
                 </p>
+                <span className="mt-1 flex items-center gap-0.5 pl-1 text-[10px] font-bold text-green-700 dark:text-green-300">
+                    Lihat detail <ChevronRightIcon sx={{ fontSize: 14 }} aria-hidden="true" />
+                </span>
             </>
         );
 
-        return item.href ? (
-            <Link href={item.href} className={cardClassName}>{cardContent}</Link>
-        ) : (
-            <div className={cardClassName}>{cardContent}</div>
-        );
+        return <button type="button" onClick={() => onLiveOpen(item.key)} className={`${cardClassName} hover:-translate-y-0.5 hover:border-green-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-600`}>{cardContent}</button>;
     }
 
     const labelInner = (
@@ -847,7 +869,24 @@ function PathNodeLabel({ item, onDayToggle, selected }) {
     );
 }
 
-function SoumatomeNodeBadge({ type = 'kanji', locked = false }) {
+function resolveBookLevelBadge(program = {}, levelOverride = null) {
+    if (levelOverride) {
+        const match = String(levelOverride).match(/\b(N[1-5](?:\s*-\s*N[1-5])?)\b/i);
+        if (match) return match[1].replace(/\s+/g, '').toUpperCase();
+    }
+    const raw = String(program?.level || '').trim();
+    const jlptMatch = raw.match(/\b(N[1-5](?:\s*-\s*N[1-5])?)\b/i);
+    if (jlptMatch) return jlptMatch[1].replace(/\s+/g, '').toUpperCase();
+    if (/ssw/i.test(raw) || program?.curriculum?.code === 'ssw') return 'SSW';
+    if (/jft/i.test(raw) || program?.curriculum?.code === 'jft') return 'JFT';
+    return raw ? raw.slice(0, 5).toUpperCase() : 'JLPT';
+}
+
+function SoumatomeNodeBadge({ type = 'kanji', levelOverride = null, locked = false }) {
+    const { props } = usePage();
+    const program = props?.program || {};
+    const badgeText = resolveBookLevelBadge(program, levelOverride);
+
     const BADGE_IMAGES = {
         kanji: '/images/nodes/soumatome-kanji.webp',
         bunpo: '/images/nodes/soumatome-bunpo.webp',
@@ -855,7 +894,14 @@ function SoumatomeNodeBadge({ type = 'kanji', locked = false }) {
         mixed: '/images/nodes/soumatome-mixed.webp',
     };
 
+    const PILL_COLORS = {
+        kanji: 'bg-[#433282]',
+        bunpo: 'bg-[#005f8a]',
+        dokkai: 'bg-[#00633f]',
+    };
+
     const src = BADGE_IMAGES[type] || BADGE_IMAGES.kanji;
+    const pillBg = PILL_COLORS[type];
 
     return (
         <span className="relative flex h-[62px] w-[50px] min-[380px]:h-[70px] min-[380px]:w-[56px] sm:h-[78px] sm:w-[62px] shrink-0 items-center justify-center select-none">
@@ -867,6 +913,16 @@ function SoumatomeNodeBadge({ type = 'kanji', locked = false }) {
                 }`}
                 loading="lazy"
             />
+            {type !== 'mixed' && pillBg && (
+                <span
+                    aria-hidden="true"
+                    className={`absolute top-[9%] right-[10%] flex h-[13%] min-w-[34%] max-w-[44%] items-center justify-center rounded-[4px] px-1 text-[7px] min-[380px]:text-[8px] sm:text-[9.5px] font-black tracking-tight text-white shadow-xs select-none pointer-events-none transition-transform group-hover:scale-105 ${pillBg} ${
+                        locked ? 'grayscale opacity-60' : ''
+                    }`}
+                >
+                    {badgeText}
+                </span>
+            )}
         </span>
     );
 }
@@ -1085,7 +1141,7 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null, o
                             className="group flex min-h-[76px] sm:min-h-[82px] w-full items-center gap-2.5 min-[380px]:gap-3 sm:gap-3.5 rounded-xl border border-emerald-200 bg-white p-2.5 min-[380px]:p-3 text-left shadow-[0_3px_0_#a7f3d0] transition hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-[0_4px_0_#6ee7b7] active:translate-y-0.5 active:scale-[0.98] active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200/70 dark:border-emerald-800 dark:bg-gray-800 dark:hover:bg-emerald-950/20 sm:px-4 sm:py-3"
                         >
                             <span className="relative shrink-0 flex items-center justify-center">
-                                <SoumatomeNodeBadge type="dokkai" />
+                                <SoumatomeNodeBadge type="dokkai" levelOverride={dokkai.jlpt_level} />
                                 {isDone && (
                                     <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xs z-10">
                                         <CheckCircleIcon sx={{ fontSize: 13 }} />
@@ -1356,6 +1412,8 @@ function PathConnector({ items }) {
 
 function DuolingoPath({ week, selectedDayId, dayAnchorEl, onDayToggle, onOpenGrammarQuiz, onOpenDokkai }) {
     const items = weeklyMainItems(week);
+    const [liveItemKey, setLiveItemKey] = useState(null);
+    const selectedLive = items.find((item) => item.kind === 'live' && item.key === liveItemKey);
     const selectedDay = items.find((item) => item.dayId === selectedDayId) || null;
 
     useEffect(() => {
@@ -1400,13 +1458,14 @@ function DuolingoPath({ week, selectedDayId, dayAnchorEl, onDayToggle, onOpenGra
                             className="group/node absolute top-0 flex -translate-x-1/2 flex-col items-center"
                             style={{ left: `${x}%` }}
                         >
-                            <PathNode item={item} selected={selected} onDayToggle={onDayToggle} />
-                            <PathNodeLabel item={item} onDayToggle={onDayToggle} selected={selected} />
+                            <PathNode item={item} selected={selected} onDayToggle={onDayToggle} onLiveOpen={setLiveItemKey} />
+                            <PathNodeLabel item={item} onDayToggle={onDayToggle} selected={selected} onLiveOpen={setLiveItemKey} />
                         </motion.div>
 
                     </div>
                 );
             })}
+            {selectedLive && <LiveSessionDialog open onClose={() => setLiveItemKey(null)} item={selectedLive} />}
 
             {selectedDay && dayAnchorEl && (
                 <DesktopDayPopover
