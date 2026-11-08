@@ -5,7 +5,9 @@ import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
 import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import UndoRoundedIcon from '@mui/icons-material/UndoRounded';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import SkipNextRoundedIcon from '@mui/icons-material/SkipNextRounded';
 import Modal from '@/Components/Modal';
+import { QuizErrorMessage } from '@/Components/UI/QuizUI';
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
 import { loadStrokeCharacter } from './strokeData';
 
@@ -31,7 +33,7 @@ function StrokeComparisonPreview({ label, paths, strokeColor = '#334155', userSt
                         d={typeof path === 'string' ? path : path.d}
                         fill="none"
                         stroke={userStrokes ? path.color : strokeColor}
-                        strokeWidth={userStrokes ? 5 : 4.2}
+                        strokeWidth={userStrokes ? (path.width || 5) : 4.2}
                         strokeLinecap="round"
                         strokeLinejoin="round"
                     />
@@ -46,6 +48,11 @@ export default function KanjiHandwritingCanvas({
     mode = 'practice',
     compact = false,
     selfEvaluation = false,
+    strokeWidth = 5,
+    onStrokeWidthChange,
+    onSkip,
+    disabled = false,
+    errorMessage = '',
     onChange,
     onComplete,
     onError,
@@ -148,7 +155,7 @@ export default function KanjiHandwritingCanvas({
             ghostColor: '#f97316',
             ghostOpacity: '0.16',
             strokeColor: '#111827',
-            strokeWidth: 5,
+            strokeWidth,
         });
         writerRef.current = writer;
 
@@ -292,6 +299,15 @@ export default function KanjiHandwritingCanvas({
         };
     }, [containerId, mode, selfEvaluation, status, strokeData]);
 
+    useEffect(() => {
+        const writer = writerRef.current;
+        if (!writer || !onStrokeWidthChange) return;
+        writer.setOptions({ strokeWidth });
+        writer.currentGroup.querySelectorAll('path').forEach((path) => {
+            path.setAttribute('stroke-width', strokeWidth);
+        });
+    }, [strokeWidth, onStrokeWidthChange, status, strokeData]);
+
     const reset = () => {
         writerRef.current?.clear();
         if (writerRef.current?.svg) writerRef.current.svg.style.pointerEvents = '';
@@ -353,6 +369,7 @@ export default function KanjiHandwritingCanvas({
                     .map((stroke) => ({
                         d: stroke.path?.getAttribute('d') || '',
                         color: stroke.path?.getAttribute('stroke') || writer.options.strokeColor,
+                        width: Number(stroke.path?.getAttribute('stroke-width') || writer.options.strokeWidth),
                     }))
                     .filter((stroke) => stroke.d),
                 targetPaths: strokeData?.paths || [],
@@ -449,7 +466,7 @@ export default function KanjiHandwritingCanvas({
     };
 
     return (
-        <div className={`mx-auto w-full ${compact ? 'max-w-[260px]' : 'max-w-[460px] [@media(max-height:820px)]:max-w-[300px]'}`}>
+        <fieldset disabled={disabled} className={`mx-auto min-w-0 w-full ${compact ? 'max-w-[260px]' : 'max-w-[460px] [@media(max-height:820px)]:max-w-[300px]'}`}>
             <div className="mb-2 flex items-center justify-between gap-3 text-xs font-bold text-gray-500 dark:text-gray-400">
                 <span>
                     {strokeData
@@ -469,10 +486,28 @@ export default function KanjiHandwritingCanvas({
                 id={containerId}
                 className="aspect-square w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-inner dark:border-gray-700"
                 aria-label={`Area latihan menulis ${character}`}
+                style={{ pointerEvents: disabled ? 'none' : undefined }}
             />
             <p className={`mt-2 min-h-5 text-center text-xs font-bold ${status === 'error' ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>
                 {message}
             </p>
+            {!(selfEvaluation && evaluation && evaluationPreview) && <QuizErrorMessage className="mt-3">{errorMessage}</QuizErrorMessage>}
+            {mode === 'quiz' && (onStrokeWidthChange || onSkip) && !(selfEvaluation && evaluation) && (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                    {onStrokeWidthChange && (
+                        <label className="flex min-h-11 flex-wrap items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-200">
+                            Ketebalan pena
+                            <input type="range" min="2" max="8" step="1" value={strokeWidth} onChange={(event) => onStrokeWidthChange(Number(event.target.value))} className="w-24 accent-orange-600 dark:accent-orange-400" />
+                            <output className="w-4 text-center tabular-nums">{strokeWidth}</output>
+                        </label>
+                    )}
+                    {onSkip && !completed && (
+                        <button type="button" onClick={onSkip} className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+                            <SkipNextRoundedIcon sx={{ fontSize: 18 }} /> Lewati karakter
+                        </button>
+                    )}
+                </div>
+            )}
             {mode === 'quiz' && evaluation && !selfEvaluation && (
                 <div
                     role="status"
@@ -514,11 +549,14 @@ export default function KanjiHandwritingCanvas({
                             <StrokeComparisonPreview label="Target" paths={evaluationPreview.targetPaths} />
                         </div>
 
+                        <QuizErrorMessage className="mt-3">{errorMessage}</QuizErrorMessage>
+
                         <div className="mt-4 grid grid-cols-2 gap-2.5">
                             <button
                                 type="button"
                                 data-sound="none"
                                 onClick={retryEvaluation}
+                                disabled={disabled}
                                 className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-3 text-sm font-black text-orange-700 transition hover:bg-orange-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300 dark:hover:bg-orange-900/60"
                             >
                                 <RestartAltRoundedIcon sx={{ fontSize: 18 }} /> Coba Lagi
@@ -527,6 +565,7 @@ export default function KanjiHandwritingCanvas({
                                 type="button"
                                 data-sound="none"
                                 onClick={continueAfterEvaluation}
+                                disabled={disabled}
                                 className={`inline-flex min-h-11 items-center justify-center rounded-xl px-3 text-sm font-black text-white shadow-sm transition focus-visible:outline-none focus-visible:ring-4 dark:text-gray-950 ${
                                     evaluation.success
                                         ? 'bg-green-600 hover:bg-green-700 focus-visible:ring-green-300/60 dark:bg-green-500 dark:hover:bg-green-400'
@@ -608,6 +647,6 @@ export default function KanjiHandwritingCanvas({
                     )}
                 </div>
             )}
-        </div>
+        </fieldset>
     );
 }

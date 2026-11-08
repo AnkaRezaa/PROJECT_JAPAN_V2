@@ -5,6 +5,14 @@ use App\Models\Pengguna;
 use App\Models\ReviewFlashcard;
 use App\Models\SetFlashcard;
 use App\Models\Soal;
+use App\Models\Flashcard;
+use App\Models\HariModul;
+use App\Models\LevelPembelajaran;
+use App\Models\Modul;
+use App\Models\ProgramPembelajaran;
+use App\Models\LogReward;
+use App\Models\PengerjaanKuis;
+use App\Models\ProgresHariModul;
 use App\Services\PembelajaranPenggunaService;
 use Database\Seeders\KelasDemoSeeder;
 
@@ -73,4 +81,26 @@ it('cleans legacy handwriting questions only when force is supplied', function (
 
     expect(Soal::query()->where('type', 'handwriting')->count())->toBe(0)
         ->and(Soal::query()->whereKey($regularQuestionId)->exists())->toBeTrue();
+});
+
+it('records skipped writing as learning without awarding completion XP or completing a Day', function () {
+    $level = LevelPembelajaran::create(['level_name' => 'N3', 'stage' => 1, 'is_premium' => false]);
+    $program = ProgramPembelajaran::create(['level_id' => $level->id, 'title' => 'Writing test', 'slug' => 'writing-test', 'status' => 'published']);
+    $module = Modul::create(['program_pembelajaran_id' => $program->id, 'level_id' => $level->id, 'title' => 'Week 1', 'week_number' => 1, 'status' => 'published']);
+    $day = HariModul::create(['module_id' => $module->id, 'day_number' => 1, 'title' => 'Day 1', 'status' => 'published']);
+    $set = SetFlashcard::create(['module_id' => $module->id, 'module_day_id' => $day->id, 'title' => 'Writing', 'status' => 'published']);
+    $card = Flashcard::create(['flashcard_set_id' => $set->id, 'front_text' => "\u{4e00}", 'back_text' => 'Satu', 'order' => 0]);
+    $user = Pengguna::factory()->create(['role' => 'user']);
+    $xpBefore = $user->fresh()->xp;
+
+    $this->actingAs($user)->post(route('user.flashcards.review', $card), ['action' => 'learning', 'skill' => 'writing'])
+        ->assertRedirect()->assertSessionHasNoErrors();
+
+    $review = ReviewFlashcard::where('user_id', $user->id)->where('flashcard_id', $card->id)->where('skill', 'writing')->firstOrFail();
+    expect($review->learning_count)->toBe(1)
+        ->and($review->known_count)->toBe(0)
+        ->and($user->fresh()->xp)->toBe($xpBefore)
+        ->and(LogReward::where('user_id', $user->id)->count())->toBe(0)
+        ->and(PengerjaanKuis::where('user_id', $user->id)->count())->toBe(0)
+        ->and(ProgresHariModul::where('user_id', $user->id)->count())->toBe(0);
 });
