@@ -146,6 +146,21 @@ class RuangKelasLiveController extends Controller
                 'current_user_id' => $user->id,
             ],
             'upcomingSessions' => $upcomingSessions,
+            'planningSessions' => SesiKelasLive::query()
+                ->whereIn('kloter_belajar_id', $kloters->pluck('id'))
+                ->when(! $user->isAdminGlobal(), fn ($query) => $query->where('mentor_id', $user->id))
+                ->whereIn('status', ['scheduled', 'live', 'ended'])
+                ->with(['kloter:id,nama', 'deck:id,title'])
+                ->orderByDesc('id')->simplePaginate(20, ['*'], 'planning_page')->withQueryString()
+                ->through(fn ($session) => [
+                    'id' => $session->id, 'status' => $session->status,
+                    'title' => $session->deck?->title ?? 'Ruang Kelas',
+                    'kloter' => $session->kloter?->nama,
+                    'scheduled_at' => $session->scheduled_at?->toISOString(),
+                    'recording_url' => $session->recording_url, 'summary_url' => $session->summary_url,
+                    'attendance_url' => route('admin.live-classes.attendance', $session, absolute: false),
+                    'materials_url' => route('admin.live-classes.materials', $session, absolute: false),
+                ]),
             'storeEndpoint' => route('admin.live-classes.store', absolute: false),
             'exitUrl' => route('admin.programs.index', absolute: false),
         ]);

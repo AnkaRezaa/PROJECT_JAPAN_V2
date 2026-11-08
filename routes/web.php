@@ -308,6 +308,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/live-classes/{liveClassSession}/mute-all', [AdminRuangKelasLiveController::class, 'muteAll'])->middleware('throttle:live-room-control')->name('live-classes.mute-all');
         Route::post('/live-classes/{liveClassSession}/ping', [AdminRuangKelasLiveController::class, 'ping'])->name('live-classes.ping');
         Route::post('/live-classes/{liveClassSession}/end', [AdminRuangKelasLiveController::class, 'end'])->middleware('throttle:live-room-control')->name('live-classes.end');
+        Route::get('/live-classes/{session}/attendance', [\App\Http\Controllers\LiveClassPlanningController::class, 'overview'])->name('live-classes.attendance');
+        Route::patch('/live-classes/{session}/materials', [\App\Http\Controllers\LiveClassPlanningController::class, 'materials'])->middleware('throttle:live-room-control')->name('live-classes.materials');
         Route::get('/boards', static fn () => redirect()->route('admin.programs.index'))->name('boards.index');
         Route::any('/gamification/{path?}', static fn () => abort(403))->where('path', '.*')->name('gamification.legacy');
         Route::any('/achievements/{path?}', static fn () => abort(403))->where('path', '.*')->name('achievements.legacy');
@@ -411,6 +413,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/live-classes/{session:join_code}/token', [UserRuangKelasLiveController::class, 'token'])->middleware('throttle:live-room-user-token')->name('live-classes.token');
         Route::post('/live-classes/{session:join_code}/ping', [UserRuangKelasLiveController::class, 'ping'])->name('live-classes.ping');
         Route::post('/live-classes/{session:join_code}/leave', [UserRuangKelasLiveController::class, 'leave'])->middleware('throttle:live-room-control')->name('live-classes.leave');
+        Route::post('/live-classes/{session:join_code}/rsvp', [\App\Http\Controllers\LiveClassPlanningController::class, 'respond'])->middleware('throttle:live-room-control')->name('live-classes.rsvp');
 
         Route::get('/quizzes', [PembelajaranController::class, 'quizLobby'])->name('quizzes.index');
         Route::get('/quizzes/{quiz}', [PembelajaranController::class, 'showQuiz'])->name('quizzes.show');
@@ -435,6 +438,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/exams/{exam}/attempts', [ExamPortalController::class, 'start'])->middleware('throttle:exam-start')->name('exams.attempts.start');
         Route::get('/exam-attempts/{attempt}', [ExamPortalController::class, 'attempt'])->name('exam-attempts.show');
         Route::put('/exam-attempts/{attempt}/answers', [ExamPortalController::class, 'autosave'])->middleware('throttle:exam-autosave')->name('exam-attempts.answers');
+        Route::post('/exam-attempts/{attempt}/advance', [ExamPortalController::class, 'advance'])->middleware('throttle:exam-autosave')->name('exam-attempts.advance');
         Route::post('/exam-attempts/{attempt}/submit', [ExamPortalController::class, 'submit'])->middleware('throttle:exam-submit')->name('exam-attempts.submit');
         Route::get('/exam-attempts/{attempt}/result', [ExamPortalController::class, 'result'])->name('exam-attempts.result');
         Route::get('/exams/{exam}', [ExamPortalController::class, 'show'])->name('exams.show');

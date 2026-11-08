@@ -9,6 +9,7 @@ use App\Models\Pengguna;
 use App\Models\ProgramPembelajaran;
 use App\Models\SesiKelasLive;
 use Inertia\Testing\AssertableInertia as Assert;
+use App\Services\AksesPremiumService;
 
 function createLiveClassRoadmapFixture(): array
 {
@@ -63,6 +64,134 @@ function createLiveClassRoadmapFixture(): array
     return compact('program', 'module', 'mentor', 'globalAdmin', 'student', 'outsider', 'kloter');
 }
 
+it('protects rsvp by kloter and prevents changes once a session starts', function () {
+    $fixture = createLiveClassRoadmapFixture();
+    $access = Mockery::mock(AksesPremiumService::class)->makePartial();
+    $access->shouldReceive('punyaAksesKelas')->andReturn(true);
+    $this->app->instance(AksesPremiumService::class, $access);
+    $session = SesiKelasLive::create([
+        'program_pembelajaran_id' => $fixture['program']->id, 'kloter_belajar_id' => $fixture['kloter']->id,
+        'mentor_id' => $fixture['mentor']->id, 'room_name' => 'rsvp-room', 'join_code' => 'RSVPTEST1',
+        'status' => 'scheduled', 'stage_mode' => 'board', 'scheduled_at' => now()->addDay(),
+    ]);
+    $url = route('user.live-classes.rsvp', $session->join_code);
+    $this->actingAs($fixture['student'])->post($url, ['response' => 'attending'])->assertRedirect();
+    $this->actingAs($fixture['student'])->post($url, ['response' => 'not_attending'])->assertRedirect();
+    $this->assertDatabaseCount('live_class_rsvps', 1);
+    $this->assertDatabaseHas('live_class_rsvps', ['user_id' => $fixture['student']->id, 'response' => 'not_attending']);
+    $this->actingAs($fixture['outsider'])->post($url, ['response' => 'attending'])->assertForbidden();
+    $session->update(['status' => 'live']);
+    $this->actingAs($fixture['student'])->post($url, ['response' => 'attending'])->assertSessionHasErrors('response');
+});
+
+it('limits session materials and attendance to the assigned mentor', function () {
+    $fixture = createLiveClassRoadmapFixture();
+    $session = SesiKelasLive::create([
+        'program_pembelajaran_id' => $fixture['program']->id, 'kloter_belajar_id' => $fixture['kloter']->id,
+        'mentor_id' => $fixture['mentor']->id, 'room_name' => 'materials-room', 'join_code' => 'MATERIALS1',
+        'status' => 'ended', 'stage_mode' => 'board',
+    ]);
+    $this->actingAs($fixture['outsider'])->get(route('admin.live-classes.attendance', $session))->assertForbidden();
+    $otherMentor = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => Pengguna::ADMIN_SCOPE_KLOTER, 'status' => 'active']);
+    $this->actingAs($otherMentor)->get(route('admin.live-classes.attendance', $session))->assertForbidden();
+    $this->actingAs($otherMentor)->patch(route('admin.live-classes.materials', $session), ['recording_url' => 'https://example.com/other'])->assertForbidden();
+    $this->actingAs($fixture['mentor'])->get(route('admin.live-classes.attendance', $session))->assertOk()->assertJsonPath('members.0.response', null);
+    $this->actingAs($fixture['mentor'])->patch(route('admin.live-classes.materials', $session), ['recording_url' => 'javascript:alert(1)'])->assertSessionHasErrors('recording_url');
+    $this->actingAs($fixture['mentor'])->patch(route('admin.live-classes.materials', $session), ['recording_url' => 'https://example.com/video', 'summary_url' => null])->assertRedirect();
+    $this->assertDatabaseHas('live_class_sessions', ['id' => $session->id, 'recording_url' => 'https://example.com/video']);
+    $session->update(['status' => 'scheduled']);
+    $this->actingAs($fixture['mentor'])->patch(route('admin.live-classes.materials', $session), ['recording_url' => 'https://example.com/other'])->assertStatus(409);
+});
+
+it('paginates mentor session planning without losing older sessions', function () {
+    $fixture = createLiveClassRoadmapFixture();
+    foreach (range(1, 21) as $number) {
+        SesiKelasLive::create([
+            'program_pembelajaran_id' => $fixture['program']->id, 'kloter_belajar_id' => $fixture['kloter']->id,
+            'mentor_id' => $fixture['mentor']->id, 'room_name' => 'page-room-'.$number,
+            'join_code' => 'PAGE'.str_pad((string) $number, 8, '0', STR_PAD_LEFT),
+            'status' => 'ended', 'stage_mode' => 'board',
+        ]);
+    }
+    $url = route('admin.live-classes.create', ['program_id' => $fixture['program']->id]);
+    $this->actingAs($fixture['mentor'])->get($url)->assertInertia(fn (Assert $page) => $page
+        ->has('planningSessions.data', 20)->whereNot('planningSessions.next_page_url', null));
+    $this->actingAs($fixture['mentor'])->get($url.'&planning_page=2')->assertInertia(fn (Assert $page) => $page
+        ->has('planningSessions.data', 1)->where('planningSessions.data.0.title', 'Ruang Kelas'));
+});
+
+it('keeps multiple sessions visible and hides ended session links from students without access', function () {
+    $fixture = createLiveClassRoadmapFixture();
+    foreach ([['scheduled', 'MULTILIVE1'], ['scheduled', 'MULTILIVE2'], ['ended', 'MULTILIVE3']] as [$status, $code]) {
+        SesiKelasLive::create([
+            'program_pembelajaran_id' => $fixture['program']->id, 'kloter_belajar_id' => $fixture['kloter']->id,
+            'mentor_id' => $fixture['mentor']->id, 'room_name' => $code, 'join_code' => $code,
+            'status' => $status, 'stage_mode' => 'board', 'scheduled_at' => now()->addDay(),
+            'recording_url' => $status === 'ended' ? 'https://example.com/recording' : null,
+        ]);
+    }
+    $access = Mockery::mock(AksesPremiumService::class)->makePartial();
+    $access->shouldReceive('punyaAksesKelas')->andReturn(false);
+    $this->app->instance(AksesPremiumService::class, $access);
+    $this->actingAs($fixture['student'])->get(route('user.modul.program', $fixture['program']->slug))
+        ->assertInertia(fn (Assert $page) => $page->has('weeks.0.live_sessions', 3)
+            ->where('weeks.0.live_sessions.2.recording_url', null));
+});
+
+it('only exposes recording links to eligible students who were not kicked', function () {
+    $fixture = createLiveClassRoadmapFixture();
+    $session = SesiKelasLive::create([
+        'program_pembelajaran_id' => $fixture['program']->id, 'kloter_belajar_id' => $fixture['kloter']->id,
+        'mentor_id' => $fixture['mentor']->id, 'room_name' => 'recording-room', 'join_code' => 'RECORDING1',
+        'status' => 'ended', 'stage_mode' => 'board', 'recording_url' => 'https://example.com/private-recording',
+    ]);
+    $access = Mockery::mock(AksesPremiumService::class)->makePartial();
+    $access->shouldReceive('punyaAksesKelas')->andReturn(true);
+    $this->app->instance(AksesPremiumService::class, $access);
+    $url = route('user.modul.program', $fixture['program']->slug);
+    $this->actingAs($fixture['student'])->get($url)->assertInertia(fn (Assert $page) => $page
+        ->where('weeks.0.live_sessions.0.recording_url', 'https://example.com/private-recording'));
+    $session->participants()->create(['user_id' => $fixture['student']->id, 'role' => 'student', 'kicked_at' => now()]);
+    $this->actingAs($fixture['student'])->get($url)->assertInertia(fn (Assert $page) => $page
+        ->where('weeks.0.live_sessions.0.recording_url', null)
+        ->where('weeks.0.live_sessions.0.access_allowed', false));
+    $this->actingAs($fixture['outsider'])->get($url)->assertInertia(fn (Assert $page) => $page
+        ->has('weeks.0.live_sessions', 0));
+});
+
+it('connects the student roadmap rsvp mentor recap and published session materials', function () {
+    $fixture = createLiveClassRoadmapFixture();
+    $access = Mockery::mock(AksesPremiumService::class)->makePartial();
+    $access->shouldReceive('punyaAksesKelas')->andReturn(true);
+    $this->app->instance(AksesPremiumService::class, $access);
+    $session = SesiKelasLive::create([
+        'program_pembelajaran_id' => $fixture['program']->id, 'kloter_belajar_id' => $fixture['kloter']->id,
+        'mentor_id' => $fixture['mentor']->id, 'room_name' => 'planning-flow', 'join_code' => 'FLOWLIVE1',
+        'status' => 'scheduled', 'stage_mode' => 'board', 'scheduled_at' => now()->addDay(),
+    ]);
+    $roadmapUrl = route('user.modul.program', $fixture['program']->slug);
+    $this->actingAs($fixture['student'])->get($roadmapUrl)->assertInertia(fn (Assert $page) => $page
+        ->where('weeks.0.live_sessions.0.status', 'scheduled')->where('weeks.0.live_sessions.0.rsvp', null));
+    $this->actingAs($fixture['student'])->post(route('user.live-classes.rsvp', $session->join_code), ['response' => 'attending'])->assertRedirect();
+    $this->actingAs($fixture['student'])->get($roadmapUrl)->assertInertia(fn (Assert $page) => $page
+        ->where('weeks.0.live_sessions.0.rsvp', 'attending'));
+    $this->actingAs($fixture['mentor'])->get(route('admin.live-classes.attendance', $session))
+        ->assertOk()->assertJsonPath('members.0.response', 'attending');
+    $this->actingAs($fixture['mentor'])->post(route('admin.live-classes.start', $session))->assertRedirect();
+    $this->actingAs($fixture['student'])->get($roadmapUrl)->assertInertia(fn (Assert $page) => $page
+        ->where('weeks.0.live_sessions.0.status', 'live')
+        ->where('weeks.0.live_sessions.0.join_url', route('user.live-classes.show', $session->join_code, absolute: false)));
+    $this->actingAs($fixture['student'])->post(route('user.live-classes.rsvp', $session->join_code), ['response' => 'not_attending'])->assertSessionHasErrors('response');
+    $session->update(['status' => 'ended', 'ended_at' => now()]);
+    $this->actingAs($fixture['mentor'])->patch(route('admin.live-classes.materials', $session), [
+        'recording_url' => 'https://example.com/recording', 'summary_url' => 'https://example.com/summary',
+    ])->assertRedirect();
+    $this->actingAs($fixture['student'])->get($roadmapUrl)->assertInertia(fn (Assert $page) => $page
+        ->where('weeks.0.live_sessions.0.status', 'ended')
+        ->where('weeks.0.live_sessions.0.recording_url', 'https://example.com/recording')
+        ->where('weeks.0.live_sessions.0.summary_url', 'https://example.com/summary'));
+});
+
 it('lets the assigned mentor schedule a class without starting LiveKit', function () {
     $fixture = createLiveClassRoadmapFixture();
     $scheduledAt = now()->addDay()->startOfHour();
@@ -105,6 +234,9 @@ it('allows a global admin to schedule and mentor any active kloter', function ()
 
 it('denies student media tokens until the scheduled class is live', function () {
     $fixture = createLiveClassRoadmapFixture();
+    $access = Mockery::mock(AksesPremiumService::class)->makePartial();
+    $access->shouldReceive('punyaAksesKelas')->andReturn(true);
+    $this->app->instance(AksesPremiumService::class, $access);
     $session = SesiKelasLive::create([
         'program_pembelajaran_id' => $fixture['program']->id,
         'kloter_belajar_id' => $fixture['kloter']->id,

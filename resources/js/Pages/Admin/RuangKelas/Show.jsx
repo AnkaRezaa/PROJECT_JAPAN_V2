@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import SearchableSelect from '@/Components/UI/SearchableSelect';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
+import PlanningSession from '@/Components/Features/LiveClass/PlanningSession';
 
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -65,7 +66,7 @@ const nextHourInputValue = () => {
     return new Date(value.getTime() - (value.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 };
 
-function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
+function RoomSetup({ setup, upcomingSessions = [], planningSessions, storeEndpoint, exitUrl }) {
     const [, startTransition] = useTransition();
     const { confirmState, openConfirm, closeConfirm, setConfirmProcessing } = useConfirmAction();
     const [materiScope, setMateriScope] = useState('shared'); // 'shared' | 'mentor' | 'blank'
@@ -175,7 +176,7 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
 
             if (!cameraEnabled && !micEnabled) {
                 setIsDeviceLoading(false);
-                setAudioLevel(0);
+                if (audioBarRef.current) audioBarRef.current.style.width = '0%';
                 return;
             }
 
@@ -204,7 +205,7 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
                 if (micEnabled) {
                     setupAudioMeter(stream);
                 } else {
-                    setAudioLevel(0);
+                    if (audioBarRef.current) audioBarRef.current.style.width = '0%';
                 }
 
                 const allDevices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
@@ -340,7 +341,11 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
     const submit = (action) => {
         stopAllTracks();
         form.setData('action', action);
-        form.transform((data) => ({ ...data, action }));
+        form.transform((data) => ({
+            ...data,
+            action,
+            scheduled_at: action === 'start' ? null : data.scheduled_at,
+        }));
         form.post(storeEndpoint, {
             preserveScroll: true,
             onSuccess: () => {
@@ -1000,6 +1005,7 @@ function RoomSetup({ setup, upcomingSessions = [], storeEndpoint, exitUrl }) {
                         </div>
                     </div>
                 </div>
+                <section className="mx-auto mt-8 max-w-6xl px-4 text-gray-900 dark:text-gray-100"><h2 className="text-lg font-bold">Kehadiran dan materi sesi</h2>{planningSessions?.data?.length ? planningSessions.data.map((session) => <PlanningSession key={session.id} session={session} inputClass={inputClass} />) : <p className="py-4 text-sm text-gray-500">Belum ada sesi.</p>}<nav aria-label="Halaman sesi" className="flex gap-4 py-3 text-sm font-bold">{planningSessions?.prev_page_url && <Link href={planningSessions.prev_page_url} preserveScroll>Halaman sebelumnya</Link>}{planningSessions?.next_page_url && <Link href={planningSessions.next_page_url} preserveScroll>Halaman berikutnya</Link>}</nav></section>
             </main>
             <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
         </AuthenticatedLayout>
@@ -1087,6 +1093,7 @@ export default function Show(props) {
             <RoomSetup
                 setup={props.setup}
                 upcomingSessions={props.upcomingSessions || []}
+                planningSessions={props.planningSessions}
                 storeEndpoint={props.storeEndpoint}
                 exitUrl={props.exitUrl}
             />

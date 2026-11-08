@@ -27,6 +27,8 @@ class SesiKelasLive extends Model
         'scheduled_at',
         'started_at',
         'ended_at',
+        'recording_url',
+        'summary_url',
     ];
 
     protected function casts(): array

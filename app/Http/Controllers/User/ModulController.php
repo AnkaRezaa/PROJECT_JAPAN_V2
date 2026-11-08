@@ -125,21 +125,35 @@ class ModulController extends Controller
                 ])
                 ->where('program_pembelajaran_id', $program->id)
                 ->where('kloter_belajar_id', $kloterAktif->id)
-                ->whereIn('status', ['scheduled', 'live'])
+                ->where(function ($query) {
+                    $query->whereIn('status', ['scheduled', 'live'])
+                        ->orWhere(fn ($query) => $query->where('status', 'ended')
+                            ->where(fn ($query) => $query->whereNotNull('recording_url')->orWhereNotNull('summary_url')));
+                })
                 ->orderByRaw("CASE WHEN status = 'live' THEN 0 ELSE 1 END")
                 ->orderBy('scheduled_at')
                 ->get()
-                ->groupBy(fn (SesiKelasLive $session) => $session->deck?->module_id ?? $fallbackLiveModuleId)
-                ->map(fn ($sessions) => $sessions->first());
+                ->groupBy(fn (SesiKelasLive $session) => $session->deck?->module_id ?? $fallbackLiveModuleId);
         }
+
+        $liveRsvps = \Illuminate\Support\Facades\DB::table('live_class_rsvps')
+            ->where('user_id', $user->id)
+            ->whereIn('live_class_session_id', $liveSessionsByModule->flatten()->pluck('id'))
+            ->pluck('response', 'live_class_session_id');
+        $canAccessLiveMaterials = $aksesPremium->punyaAksesKelas($user, $program->id);
+        $kickedLiveSessionIds = \Illuminate\Support\Facades\DB::table('live_class_participants')
+            ->where('user_id', $user->id)->whereNotNull('kicked_at')
+            ->whereIn('live_class_session_id', $liveSessionsByModule->flatten()->pluck('id'))
+            ->pluck('live_class_session_id')->all();
 
         $completedModulIds = collect();
 
-        $weeks = $moduls->values()->map(function (Modul $modul, int $index) use (&$completedModulIds, $user, $aksesPremium, $moduls, $program, $kloterAktif, $mingguAktifKloter, $aksesKuis, $liveSessionsByModule) {
+        $weeks = $moduls->values()->map(function (Modul $modul, int $index) use (&$completedModulIds, $user, $aksesPremium, $moduls, $program, $kloterAktif, $mingguAktifKloter, $aksesKuis, $liveSessionsByModule, $liveRsvps, $canAccessLiveMaterials, $kickedLiveSessionIds) {
             $flashcardSet = $this->firstFlashcardSetFor($modul);
             $flashcardStats = $this->flashcardStats($user->id, $flashcardSet);
             $presentationCount = $modul->presentationDecks->count();
-            $liveSession = $liveSessionsByModule->get($modul->id);
+            $sessions = $liveSessionsByModule->get($modul->id, collect());
+            $liveSession = $sessions->first();
             $vocabularyCount = $this->vocabularyQueryForModules(collect([$modul->id]))->count('vocabulary_bank.id');
 
             $hasFlashcard = $flashcardStats['total'] > 0;
@@ -444,6 +458,19 @@ class ModulController extends Controller
                         ? route('user.live-classes.show', $liveSession->join_code, absolute: false)
                         : null,
                 ] : null,
+                'live_sessions' => $sessions->map(fn ($session) => [
+                    'id' => $session->id,
+                    'status' => $session->status,
+                    'scheduled_at' => $session->scheduled_at?->toIso8601String(),
+                    'mentor_name' => $session->mentor?->username,
+                    'deck_title' => $session->deck?->title,
+                    'join_url' => $session->status === 'live' ? route('user.live-classes.show', $session->join_code, absolute: false) : null,
+                    'rsvp_url' => route('user.live-classes.rsvp', $session->join_code, absolute: false),
+                    'rsvp' => $liveRsvps[$session->id] ?? null,
+                    'recording_url' => $canAccessLiveMaterials && ! in_array($session->id, $kickedLiveSessionIds) && $session->status === 'ended' ? $session->recording_url : null,
+                    'summary_url' => $canAccessLiveMaterials && ! in_array($session->id, $kickedLiveSessionIds) && $session->status === 'ended' ? $session->summary_url : null,
+                    'access_allowed' => $canAccessLiveMaterials && ! in_array($session->id, $kickedLiveSessionIds),
+                ])->values(),
             ];
         });
 
