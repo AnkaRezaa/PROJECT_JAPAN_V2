@@ -318,7 +318,7 @@ class AdminFlashcardController extends Controller
                         ->where('module_day_id', $flashcardSet->module_day_id)
                 ),
             ],
-            'mode' => ['required', Rule::in(['word_to_meaning', 'meaning_to_word', 'reading_to_word'])],
+            'mode' => ['required', Rule::in(['word_to_meaning', 'meaning_to_word', 'reading_to_word', 'word_to_reading'])],
             'count' => ['required', 'integer', 'min:1', 'max:50'],
         ]);
 
@@ -413,6 +413,18 @@ class AdminFlashcardController extends Controller
 
             return [
                 'question_text' => 'Pilih kosakata untuk reading: '.($card->reading ?: $card->hint ?: $card->back_text),
+                'correct_answer' => $correct,
+                'options' => $options,
+                'explanation' => trim(($card->front_text ?? '').' / '.($card->reading ?? '').' = '.($card->back_text ?? '')),
+            ];
+        }
+
+        if ($mode === 'word_to_reading') {
+            $correct = $card->reading ?: $card->hint;
+            $options = $this->options($correct, $pool->pluck('reading')->filter()->all());
+
+            return [
+                'question_text' => 'Pilih cara baca untuk kosakata: '.$card->front_text,
                 'correct_answer' => $correct,
                 'options' => $options,
                 'explanation' => trim(($card->front_text ?? '').' / '.($card->reading ?? '').' = '.($card->back_text ?? '')),

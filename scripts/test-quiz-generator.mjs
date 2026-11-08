@@ -16,12 +16,20 @@ const fixture = String.raw`
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import Modal from '@/Components/Features/Quiz/Shared/UnifiedQuizGeneratorModal';
-import { vocabularyQuestionsFromDraft, grammarStagesFromDraft, dokkaiMaterialFromDraft } from '@/Components/Features/Quiz/Shared/generatorDraftAdapters';
+import HighlightedLearningText from '@/Components/Features/Learning/HighlightedLearningText';
+import QuestionHighlightField from '@/Components/Features/Quiz/Shared/QuestionHighlightField';
+import QuestionReadingField from '@/Components/Features/Quiz/Shared/QuestionReadingField';
+import { vocabularyQuestionsFromDraft, appendVocabularyQuestionsFromDraft, grammarStagesFromDraft, dokkaiMaterialFromDraft } from '@/Components/Features/Quiz/Shared/generatorDraftAdapters';
+import { emptyQuestion } from '@/lib/quizHelpers';
 import '/resources/css/app.css';
 const type = new URLSearchParams(location.search).get('type') || 'vocab';
+const appendMode = new URLSearchParams(location.search).get('apply') === 'append';
+window.__appendVocabulary = appendVocabularyQuestionsFromDraft;
+window.__emptyQuestion = emptyQuestion;
 window.route = (name, type) => '/fixture/' + name + (type ? '/' + type : '');
 window.__generator = { calls: [], applied: [], mode: 'success', closed: 0 };
 const q = (stage, index, suffix = '') => ({ id:'q'+index,kind:stage==='sentence_builder'?'sentence_builder':'choice',stage,
+    highlight_text:'Question',show_question_reading:false,
     prompt:'Question '+index+suffix,japanese:'日本語',reading:null,translation:null,context:null,
     choices:[{id:'c1',text:'正解',reading:'せいかい'},{id:'c2',text:'別の選択肢',reading:null}],
     tokens:[{id:'t1',text:'日本語を'},{id:'t2',text:'学びます'}],answer:stage==='sentence_builder'?{correct_order:['t1','t2']}:{choice_id:'c1'},
@@ -38,18 +46,40 @@ window.axios = {
         return {data:{draft:{schema_version:1,type,level:'N3',material:type==='dokkai'?material:{lesson:body.input},questions,warnings:[]}}};
     }
 };
+function HighlightFixture(){
+    const [target,setTarget]=React.useState('Question');
+    const [reading,setReading]=React.useState('kana');
+    const [showReading,setShowReading]=React.useState(false);
+    return <main className="space-y-4 p-4 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+        <div id="reading-field"><QuestionReadingField value={reading} showReading={showReading} onReadingChange={setReading} onVisibilityChange={setShowReading}/><output data-visible={showReading}>{reading}</output></div>
+        <QuestionHighlightField text="Question one. Question two." value={target} onChange={setTarget}/>
+        <div id="question-highlight"><HighlightedLearningText text={'  \u304d\u3085\u3046 / \u304d\u3085\u3046\n'} term={'\u304d\u3085\u3046'} variant="question"/></div>
+        <div id="special-highlight"><HighlightedLearningText text="a+b? [a+b?]" term="a+b?" variant="question"/></div>
+        <div id="html-highlight"><HighlightedLearningText text={'<img src=x onerror=alert(1)>'} term="img" variant="question"/></div>
+        <div id="legacy-highlight"><HighlightedLearningText text="Word word" term="word"/></div>
+    </main>;
+}
 function Fixture(){
     const [open,setOpen]=React.useState(true);
     const [version,setVersion]=React.useState(0);
+    const [builderQuestions,setBuilderQuestions]=React.useState([{...emptyQuestion(),id:42,question_text:'Original unsaved question',correct_answer:'A',options:['A','B'],points:3,explanation:'Keep this draft'}]);
     return <><button onClick={()=>{setVersion(v=>v+1);setOpen(true)}}>Open generator</button><p>Original builder draft</p>
-    <Modal key={version} open={open} type={type} onClose={()=>{window.__generator.closed++;setOpen(false)}}
+    <Modal key={version} open={open} type={type} applyMode={appendMode?'append':'replace'} onClose={()=>{window.__generator.closed++;setOpen(false)}}
         initialData={{moduleDayId:1,level:'N3',hasContent:true,input:type==='grammar'?{pattern:'〜ば〜ほど',meaning:'Semakin',examples:[{japanese:'読めば読むほど、上手になります。',translation:'Semakin membaca semakin mahir.'}]}:{}}}
-        onApplyDraft={(draft,settings)=>{window.__generator.settings=settings;window.__generator.applied.push(type==='vocab'?vocabularyQuestionsFromDraft(draft):type==='grammar'?grammarStagesFromDraft(draft):dokkaiMaterialFromDraft(draft))}}/></>;
+        onApplyDraft={(draft,settings)=>{
+            window.__generator.settings=settings;
+            if(appendMode){
+                const next=appendVocabularyQuestionsFromDraft(draft,builderQuestions);
+                setBuilderQuestions(next);
+                window.__generator.draft=draft;
+                window.__generator.applied.push(next);
+            }else window.__generator.applied.push(type==='vocab'?vocabularyQuestionsFromDraft(draft):type==='grammar'?grammarStagesFromDraft(draft):dokkaiMaterialFromDraft(draft));
+        }}/></>;
 }
-createRoot(document.getElementById('app')).render(<Fixture/>);
+createRoot(document.getElementById('app')).render(type==='highlight'?<HighlightFixture/>:<Fixture/>);
 window.__ready=true;
 `;
-const server = await createServer({configFile:false,root,resolve:{alias:{'@':path.join(root,'resources/js')}},plugins:[react(),{
+const server = await createServer({configFile:false,root,cacheDir:path.join(screenshots,'vite-cache'),optimizeDeps:{entries:[],include:['react','react-dom','react-dom/client','@headlessui/react','framer-motion','@mui/material/Tooltip',...['Close','Add','DeleteOutlineOutlined','Refresh','AutoAwesome','CheckCircle','ErrorOutlineOutlined','InfoOutlined','WarningAmber'].map(name=>'@mui/icons-material/'+name)]},resolve:{alias:{'@':path.join(root,'resources/js')}},plugins:[react(),{
     name:'generator-fixture',
     configureServer(vite){vite.middlewares.use(async(req,res,next)=>{
         if(req.url.split('?')[0]!=='/__generator')return next();
@@ -63,12 +93,12 @@ const pending=new Map(), errors=[];
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function send(method,params={},sessionId=session){return new Promise((resolve,reject)=>{
     const id=++sequence;
-    const timer=setTimeout(()=>{pending.delete(id);reject(new Error('CDP timeout: '+method));},20000);
+    const timer=setTimeout(()=>{pending.delete(id);reject(new Error('CDP timeout: '+method));},40000);
     pending.set(id,{resolve:r=>{clearTimeout(timer);resolve(r)},reject:e=>{clearTimeout(timer);reject(e)}});
     socket.send(JSON.stringify({id,method,params,...(sessionId?{sessionId}:{})}));
 });}
 async function evaluate(expression){const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true,userGesture:true});if(r.exceptionDetails)throw new Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result?.value;}
-async function waitFor(expression){const until=Date.now()+60000;while(Date.now()<until){if(await evaluate('Boolean('+expression+')'))return;await sleep(100);}throw new Error('Timeout: '+expression+' '+await evaluate('document.body.innerText'));}
+async function waitFor(expression){const until=Date.now()+90000;while(Date.now()<until){if(await evaluate('Boolean('+expression+')'))return;await sleep(100);}throw new Error('Timeout: '+expression+' '+await evaluate('document.body.innerText'));}
 async function click(text){
     const selector=`Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===${JSON.stringify(text)}&&!b.disabled&&b.getClientRects().length)`;
     await waitFor(selector);
@@ -121,6 +151,7 @@ try{
         if(type==='grammar')assert.equal(await evaluate('window.__generator.applied[0][1].questions[0].correctOrder.length'),2);
         if(type==='grammar')assert.deepEqual(await evaluate('window.__generator.settings'),await evaluate('window.__generator.calls[0].body.settings'));
         if(type==='vocab')assert.equal(await evaluate('window.__generator.applied[0][0].id'),null);
+        assert.equal(await evaluate(type==='vocab'?'window.__generator.applied[0][0].highlight_text':type==='grammar'?'window.__generator.applied[0][0].questions[0].highlight_text':'window.__generator.applied[0].questions[0].highlight_text'),'Question','Adapters must preserve highlight');
         if(type==='dokkai')assert.equal(await evaluate('window.__generator.applied[0].questions[0].evidence_paragraph_number'),1);
         await click('Open generator');
         if(type==='dokkai'){await waitFor('document.querySelector("input[type=radio]")');await evaluate('document.querySelector("input[type=radio]").click()');}
@@ -129,14 +160,68 @@ try{
         await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
         await waitFor('!document.querySelector("[role=dialog]")');
     }
+    await send('Emulation.setDeviceMetricsOverride',{width:390,height:900,deviceScaleFactor:1,mobile:true});
+    await send('Page.navigate',{url:server.resolvedUrls.local[0]+'__generator?type=vocab&apply=append'});
+    await waitFor('window.__ready&&document.querySelector("[role=dialog]")');
+    await evaluate(`(()=>{const selects=Array.from(document.querySelectorAll('select'));const mode=selects.find(s=>Array.from(s.options).some(o=>o.value==='meaning_to_word'));mode.value='meaning_to_word';mode.dispatchEvent(new Event('change',{bubbles:true}));const content=selects.find(s=>Array.from(s.options).some(o=>o.value==='kanji'));content.value='kanji';content.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+    await click('Buat Draf');await waitFor('document.body.innerText.includes("Pratinjau:")');
+    assert.equal(await evaluate('window.__generator.calls[0].body.input.mode'),'meaning_to_word');
+    assert.equal(await evaluate('window.__generator.calls[0].body.input.content_type'),'kanji');
+    await capture('vocab-append-mobile');
+    await click('Tambahkan ke Kuis');
+    await waitFor('window.__generator.applied.length===1');
+    assert.equal(await evaluate('document.body.innerText.includes("Ganti isi draf editor?")'),false);
+    assert.equal(await evaluate('window.__generator.applied[0].length'),3);
+    assert.equal(await evaluate('window.__generator.applied[0][0].id'),42);
+    assert.equal(await evaluate('window.__generator.applied[0][0].question_text'),'Original unsaved question');
+    assert.equal(await evaluate('window.__generator.applied[0][0].points'),3);
+    assert.equal(await evaluate('window.__generator.applied[0][0].explanation'),'Keep this draft');
+    assert.equal(await evaluate('window.__generator.applied[0][1].show_question_reading'),false,'Preserve generator visibility on append');
+    assert.equal(await evaluate('window.__generator.calls.length'),1,'Append must not save');
+    assert.equal(await evaluate('window.__appendVocabulary(window.__generator.draft,[window.__emptyQuestion()]).length'),2,'Remove only pristine placeholder');
+    assert.equal(await evaluate('window.__appendVocabulary(window.__generator.draft,[{...window.__emptyQuestion(),audio_url:"/draft-audio.mp3"}]).length'),3,'Keep partially edited placeholder');
+    await click('Open generator');await click('Buat Draf');await waitFor('document.body.innerText.includes("Pratinjau:")');
+    await click('Tambahkan ke Kuis');await waitFor('window.__generator.applied.length===2');
+    assert.equal(await evaluate('window.__generator.applied[1].length'),5,'Repeated append keeps existing questions');
+    assert(await evaluate('window.__generator.applied[1].slice(1).every(q=>q.id===null)'),'Generated IDs must remain database-safe');
     await click('Open generator');
     await evaluate('window.__generator.mode="fail"');await click('Buat Draf');
     await waitFor('document.body.innerText.includes("Bahan belum cukup.")');
     assert.equal(await evaluate('document.body.innerText.includes("Pratinjau:")'),false);
     await evaluate('window.__generator.mode="slow"');await click('Buat Draf');await click('Batal');await sleep(950);
     assert.equal(await evaluate('document.body.innerText.includes("Pratinjau:")'),false,'Closed modal must ignore stale response');
+    await send('Page.navigate',{url:server.resolvedUrls.local[0]+'__generator?type=highlight'});
+    await waitFor('window.__ready&&document.querySelector("#question-highlight mark")');
+    assert.equal(await evaluate('window.__emptyQuestion().show_question_reading'),false,'New builder questions default to hidden reading');
+    assert.equal(await evaluate('document.querySelector("#reading-field [role=switch]").checked'),false,'Reading toggle defaults off');
+    await evaluate('document.querySelector("#reading-field [role=switch]").click()');
+    await waitFor('document.querySelector("#reading-field output").dataset.visible==="true"');
+    await evaluate('document.querySelector("#reading-field [role=switch]").click()');
+    await waitFor('document.querySelector("#reading-field output").dataset.visible==="false"');
+    assert.equal(await evaluate('document.querySelector("#reading-field input[type=text]").value'),'kana','Hiding must retain the reading');
+    await evaluate(`(()=>{const input=document.querySelector('#reading-field input[type=text]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'updated kana');input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+    await waitFor('document.querySelector("#reading-field output").textContent==="updated kana"');
+    await evaluate('document.querySelector("#reading-field [role=switch]").focus()');
+    await send('Input.dispatchKeyEvent',{type:'keyDown',key:' ',code:'Space',windowsVirtualKeyCode:32});
+    await send('Input.dispatchKeyEvent',{type:'keyUp',key:' ',code:'Space',windowsVirtualKeyCode:32});
+    await waitFor('document.querySelector("#reading-field output").dataset.visible==="true"');
+    assert.equal(await evaluate('document.querySelector("#reading-field input[type=text]").value'),'updated kana','Keyboard toggle preserves the edited reading');
+    assert.equal(await evaluate('document.querySelectorAll("#question-highlight mark").length'),2);
+    assert.equal(await evaluate('document.querySelector("#question-highlight").textContent'),'  \u304d\u3085\u3046 / \u304d\u3085\u3046\n');
+    assert.equal(await evaluate('document.querySelectorAll("#special-highlight mark").length'),2,'Literal regex characters');
+    assert.equal(await evaluate('document.querySelectorAll("#html-highlight img").length'),0,'HTML must remain escaped');
+    assert.equal(await evaluate('document.querySelector("#html-highlight").textContent'),'<img src=x onerror=alert(1)>');
+    assert.equal(await evaluate('document.querySelectorAll("#legacy-highlight mark").length'),2,'Existing case-insensitive highlights unchanged');
+    assert(await evaluate('document.querySelector("#legacy-highlight mark").classList.contains("text-inherit")'));
+    for(const [width,dark] of [[390,false],[1366,true]]){
+        await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width===390});
+        await evaluate(`document.documentElement.classList.toggle('dark',${dark})`);
+        await capture('highlight-'+width);
+    }
+    await evaluate(`(()=>{const input=document.querySelector('#reading-field + div input') || Array.from(document.querySelectorAll('input')).find(i=>i.value==='Question');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'missing');input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+    await waitFor('document.querySelector("[role=alert]")');
     assert.deepEqual(errors,[],'Uncaught browser errors');
-    console.log(JSON.stringify({passed:true,types:3,checks:['preview','local adapters','replace confirmation/cancel','no save on apply','Escape','422','abort stale response','responsive overflow'],screenshots},null,2));
+    console.log(JSON.stringify({passed:true,types:3,checks:['preview','local adapters and highlight metadata','replace confirmation/cancel','append preserves draft','repeated append','kanji meaning-to-word filters','pristine placeholder','no save on apply','Escape','422','abort stale response','literal Unicode highlight','escaped HTML and regex characters','inline target validation','legacy highlights unchanged','reading visibility metadata','keyboard reading toggle and draft retention','light/dark responsive overflow'],screenshots:'temporary; removed after test'},null,2));
 }catch(error){
     console.error('Generator browser test failed:',error);
     throw error;
@@ -148,5 +233,9 @@ try{
     if(resolved.startsWith(path.resolve(tmpdir())+path.sep)&&path.basename(resolved).startsWith('tokuup-generator-browser-')){
         try{rmSync(resolved,{recursive:true,force:true,maxRetries:5,retryDelay:300});}
         catch(error){console.warn('Chrome temporary profile cleanup:',error.code,resolved);}
+    }
+    const resolvedScreenshots=path.resolve(screenshots);
+    if(resolvedScreenshots.startsWith(path.resolve(tmpdir())+path.sep)&&path.basename(resolvedScreenshots).startsWith('tokuup-generator-images-')){
+        rmSync(resolvedScreenshots,{recursive:true,force:true});
     }
 }

@@ -1,9 +1,14 @@
+import { emptyQuestion, normalizeQuestions } from '@/lib/quizHelpers';
+
 export function vocabularyQuestionsFromDraft(draft) {
   return draft.questions.map(q => ({
     id: null,
     type: 'multiple_choice',
+    stage: q.stage || null,
     question_text: q.prompt,
+    highlight_text: q.highlight_text || '',
     question_reading: q.reading,
+    show_question_reading: q.show_question_reading ?? false,
     options: q.choices.map(c => c.text),
     option_readings: q.choices.map(c => c.reading),
     correct_answer: q.choices.find(c => c.id === q.answer.choice_id)?.text || '',
@@ -13,6 +18,16 @@ export function vocabularyQuestionsFromDraft(draft) {
     audio_url: q.audio_url,
     points: q.points
   }));
+}
+export function appendVocabularyQuestionsFromDraft(draft, existingQuestions, quizType) {
+  const placeholder = emptyQuestion(existingQuestions[0]?.type || quizType);
+  const isEmptyPlaceholder = existingQuestions.length === 1 &&
+    Object.entries(existingQuestions[0]).every(([key, value]) =>
+      JSON.stringify(value) === JSON.stringify(placeholder[key]));
+  const existing = isEmptyPlaceholder ? [] : existingQuestions;
+  const generated = normalizeQuestions(vocabularyQuestionsFromDraft(draft), quizType);
+
+  return [...existing, ...generated];
 }
 export function grammarStagesFromDraft(draft) {
   const titles = {
@@ -27,6 +42,7 @@ export function grammarStagesFromDraft(draft) {
       id: q.id,
       type: q.kind === 'sentence_builder' ? q.kind : q.stage,
       prompt: q.prompt,
+      highlight_text: q.highlight_text || '',
       japanese: q.japanese,
       reading: q.reading,
       translation: q.translation,
@@ -49,6 +65,7 @@ export function grammarQuestionsToDraft(stages) {
     kind: stage.id === 'sentence_builder' ? 'sentence_builder' : 'choice',
     stage: stage.id,
     prompt: q.prompt || '',
+    highlight_text: q.highlight_text || null,
     japanese: q.japanese || '',
     choices: (q.choices || []).filter(text => text?.trim()).map((text, i) => ({
       id: `c${i + 1}`,
@@ -77,6 +94,7 @@ export function dokkaiMaterialFromDraft(draft) {
       id: null,
       question_number: index + 1,
       question_text: q.prompt,
+      highlight_text: q.highlight_text || '',
       question_translation: q.translation,
       evidence_paragraph_number: q.evidence?.paragraph_number,
       evidence_quote: q.evidence?.quote,

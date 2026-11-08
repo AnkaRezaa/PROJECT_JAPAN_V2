@@ -3,7 +3,9 @@ import { Head, router, useForm } from '@inertiajs/react';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import QuizField, { TooltipHelp } from '@/Components/UI/QuizField';
 import UnifiedQuizGeneratorModal from '@/Components/Features/Quiz/Shared/UnifiedQuizGeneratorModal';
-import { vocabularyQuestionsFromDraft } from '@/Components/Features/Quiz/Shared/generatorDraftAdapters';
+import QuestionHighlightField from '@/Components/Features/Quiz/Shared/QuestionHighlightField';
+import QuestionReadingField from '@/Components/Features/Quiz/Shared/QuestionReadingField';
+import { appendVocabularyQuestionsFromDraft } from '@/Components/Features/Quiz/Shared/generatorDraftAdapters';
 
 import SettingsIcon from '@mui/icons-material/Settings';
 import AssessmentIcon from '@mui/icons-material/Assessment';
@@ -470,18 +472,14 @@ export default function QuizBuilder({
                             </div>
                         </QuizField>
                         <div className="mt-3">
-                            <label className="mb-1.5 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-sky-700 dark:text-sky-300">
-                                <span>Cara Baca Kana (Yomikata)</span>
-                                <TooltipHelp text="Cara baca kanji dalam hiragana untuk mempermudah siswa yang belum menguasai kanji." />
-                            </label>
+                            <QuestionHighlightField text={activeQ.question_text} value={activeQ.highlight_text} onChange={(value) => updateQuestion(activeIndex, 'highlight_text', value)} error={errors[`questions.${activeIndex}.highlight_text`]} />
                         </div>
-                        <input
-                            type="text"
-                            value={activeQ.question_reading || ''}
-                            onChange={(e) => updateQuestion(activeIndex, 'question_reading', e.target.value)}
-                            placeholder="Cara baca kana (opsional), contoh: けいざい"
-                            lang="ja"
-                            className="mt-2 h-11 w-full rounded-xl border border-sky-100 bg-sky-50/60 px-4 text-sm font-japanese font-medium text-sky-900 outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-500/10 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-200"
+                        <QuestionReadingField
+                            value={activeQ.question_reading}
+                            showReading={activeQ.show_question_reading ?? false}
+                            onReadingChange={(value) => updateQuestion(activeIndex, 'question_reading', value)}
+                            onVisibilityChange={(value) => updateQuestion(activeIndex, 'show_question_reading', value)}
+                            error={errors[`questions.${activeIndex}.show_question_reading`] || errors[`questions.${activeIndex}.question_reading`]}
                         />
                     </div>
 
@@ -1100,7 +1098,14 @@ export default function QuizBuilder({
             )}
 <UnifiedQuizGeneratorModal open={showVocabularyGenerate} onClose={() => setShowVocabularyGenerate(false)} type="vocab"
                 initialData={{ quizId: quiz.id, level: quiz?.module?.level?.level_name, hasContent: data.questions.some(q => q.question_text?.trim()) }}
-                onApplyDraft={generated => { setData('questions', normalizeQuestions(vocabularyQuestionsFromDraft(generated), quiz?.type)); setActiveIndex(0); setActiveTab('questions'); clearErrors(); }} />
+                applyMode="append"
+                onApplyDraft={generated => {
+                    const questions = appendVocabularyQuestionsFromDraft(generated, data.questions, quiz?.type);
+                    setData('questions', questions);
+                    setActiveIndex(questions.length - generated.questions.length);
+                    setActiveTab('questions');
+                    clearErrors();
+                }} />
             {importPreview && (
                 <div className="fixed inset-0 z-[110] flex items-end overflow-y-auto bg-gray-950/60 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4">
                     <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-xl border border-gray-200 dark:border-gray-800 dark:bg-gray-900">
@@ -1158,6 +1163,8 @@ export default function QuizBuilder({
                                                 </span>
                                             </div>
                                             <p className="text-sm font-black text-gray-900 dark:text-white">{row.question_text}</p>
+                                            {row.question_reading && row.show_question_reading === true && <p lang="ja" className="mt-1 text-sm text-sky-700 dark:text-sky-300">{row.question_reading}</p>}
+                                            <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">Bantuan baca: {row.show_question_reading === true ? 'Aktif' : 'Nonaktif'}</p>
                                             <p className="mt-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">Jawaban: {row.correct_answer}</p>
                                             {Array.isArray(row.options) && row.options.length > 0 && (
                                                  <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">Opsi: {row.options.join(' | ')}</p>

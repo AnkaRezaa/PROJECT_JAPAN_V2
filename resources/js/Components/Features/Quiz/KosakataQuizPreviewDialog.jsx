@@ -37,6 +37,8 @@ export default function KosakataQuizPreviewDialog({
             explanation: q.explanation || '',
             explanation_reading: q.explanation_reading || '',
             audio_url: q.audio_url || '',
+            stage: q.stage || null,
+            disable_question_narration: Boolean(q.disable_question_narration || q.stage === 'word_to_reading'),
             points: Number(q.points || 1),
         }));
     }, [questions]);

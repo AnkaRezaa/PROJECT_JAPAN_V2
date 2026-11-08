@@ -167,6 +167,8 @@ export default function Quiz({
     const [handwritingPractice, setHandwritingPractice] = useState(null);
     const [flashcardIndex, setFlashcardIndex] = useState(0);
     const [flashcardReviewing, setFlashcardReviewing] = useState(false);
+    const [handwritingStrokeWidth, setHandwritingStrokeWidth] = useState(5);
+    const [handwritingReviewError, setHandwritingReviewError] = useState('');
     const hasTimeLimit = Number(quiz?.time_limit || 0) > 0;
     const [secondsLeft, setSecondsLeft] = useState(Number(quiz?.time_limit || 0));
     const [finishedByTimeout, setFinishedByTimeout] = useState(false);
@@ -187,6 +189,12 @@ export default function Quiz({
     const correctMapRef = useRef({});
     const practiceResumeRef = useRef('next');
     const handwritingReviewRecordedRef = useRef(false);
+    const handwritingReviewPendingRef = useRef(false);
+    const handwritingTransitionRef = useRef(false);
+
+    useEffect(() => {
+        handwritingTransitionRef.current = false;
+    }, [handwritingPractice?.flashcard_id, handwritingPractice?.character_index]);
 
     const isWeakspotQuiz = Boolean(quiz?.is_weakspot || quiz?.quiz_kind === 'weakspot');
 
@@ -259,18 +267,26 @@ export default function Quiz({
 
     const currentQ = questions[currentIndex];
     const currentType = currentQ?.type || 'multiple_choice';
-    const currentSpeechText = getJapaneseSpeechText(currentQ, {
+    const isReadingQuestion = Boolean(
+        currentQ?.disable_question_narration || currentQ?.stage === 'word_to_reading'
+    );
+    const isNarrationBlocked = Boolean(isReadingQuestion && selectedAnswer === null);
+    const rawSpeechText = getJapaneseSpeechText(currentQ, {
         includeCorrectAnswer: currentType !== 'multiple_choice',
     });
-    const hasQuestionAudio = Boolean(currentQ?.audio_url || currentSpeechText);
-    const narrationAudioUrl = isStreamableAudio(currentQ?.audio_url) ? currentQ.audio_url : null;
+    const currentSpeechText = isNarrationBlocked ? null : rawSpeechText;
+    const hasQuestionAudio = Boolean(!isNarrationBlocked && (currentQ?.audio_url || rawSpeechText));
+    const narrationAudioUrl = (!isNarrationBlocked && isStreamableAudio(currentQ?.audio_url)) ? currentQ.audio_url : null;
     const totalQuestionCount = rawQuestions.length || questions.length;
     const scoredQuestionCount = rawQuestions.length || questions.filter((question) => !question.isRepeat).length;
     const originalQuestionCount = rawQuestions.length || questions.filter((question) => !question.isRepeat).length || questions.length;
 
     useEffect(() => {
         const nextQuestion = questions[currentIndex + 1];
-        if (isStreamableAudio(nextQuestion?.audio_url)) {
+        const isNextNarrationBlocked = Boolean(
+            nextQuestion?.disable_question_narration || nextQuestion?.stage === 'word_to_reading'
+        );
+        if (!isNextNarrationBlocked && isStreamableAudio(nextQuestion?.audio_url)) {
             preloadNarrationAudio(nextQuestion.audio_url);
         }
     }, [currentIndex, questions]);
@@ -628,6 +644,8 @@ export default function Quiz({
 
             if (targets.length > 0) {
                 handwritingReviewRecordedRef.current = false;
+                handwritingReviewPendingRef.current = false;
+                setHandwritingReviewError('');
                 setShowFlashcard(false);
                 setHandwritingPractice({
                     characters: targets,
@@ -653,7 +671,9 @@ export default function Quiz({
             return;
         }
 
-        handwritingReviewRecordedRef.current = true;
+        if (handwritingReviewPendingRef.current) return;
+        handwritingReviewPendingRef.current = true;
+        setHandwritingReviewError('');
         setFlashcardReviewing(true);
         router.post(route('user.flashcards.review', handwritingPractice.flashcard_id), {
             action: isKnown ? 'known' : 'learning',
@@ -661,11 +681,23 @@ export default function Quiz({
         }, {
             preserveScroll: true,
             preserveState: true,
-            onSuccess,
+            onSuccess: () => {
+                handwritingReviewRecordedRef.current = true;
+                onSuccess?.();
+            },
             onError: () => {
                 handwritingReviewRecordedRef.current = false;
+                handwritingTransitionRef.current = false;
+                setHandwritingReviewError('Review tulisan belum tersimpan. Coba lanjutkan atau lewati karakter ini lagi.');
             },
-            onFinish: () => setFlashcardReviewing(false),
+            onFinish: () => {
+                handwritingReviewPendingRef.current = false;
+                handwritingTransitionRef.current = false;
+                setFlashcardReviewing(false);
+                if (!handwritingReviewRecordedRef.current) {
+                    setHandwritingReviewError('Review tulisan belum tersimpan. Coba lanjutkan atau lewati karakter ini lagi.');
+                }
+            },
         });
     };
 
@@ -676,7 +708,9 @@ export default function Quiz({
     };
 
     const finishHandwritingPractice = (result = {}) => {
-        if (flashcardReviewing) return;
+        if (flashcardReviewing || handwritingReviewPendingRef.current || handwritingTransitionRef.current) return;
+        handwritingTransitionRef.current = true;
+        setHandwritingReviewError('');
 
         const nextIndex = (handwritingPractice?.character_index ?? 0) + 1;
         const currentOutcome = {
@@ -993,10 +1027,15 @@ export default function Quiz({
                         <p className="mt-3 text-xs font-semibold leading-5 text-gray-600 dark:text-gray-300">Tulis seluruh karakter mengikuti panduan transparan, lalu periksa hasilnya.</p>
                     </div>
                     <KanjiHandwritingCanvas
-                        key={`${handwritingPractice.flashcard_id}-${activeWritingCharacter.character}`}
+                        key={`${handwritingPractice.flashcard_id}-${handwritingPractice.character_index}-${activeWritingCharacter.character}`}
                         character={activeWritingCharacter.character}
                         mode="quiz"
                         selfEvaluation
+                        strokeWidth={handwritingStrokeWidth}
+                        onStrokeWidthChange={setHandwritingStrokeWidth}
+                        onSkip={() => finishHandwritingPractice({ outcome: 'skipped' })}
+                        disabled={flashcardReviewing}
+                        errorMessage={handwritingReviewError}
                         onChange={trackHandwritingMistake}
                         onComplete={finishHandwritingPractice}
                     />
@@ -1194,10 +1233,10 @@ export default function Quiz({
             {/* Quiz Content Area */}
             <main className="w-full max-w-3xl flex-1 flex flex-col items-center relative z-10">
                 <JapaneseSpeechButton
-                    text={currentSpeechText || currentQ?.kanji || currentQ?.question}
+                    text={isNarrationBlocked ? null : (currentSpeechText || currentQ?.kanji || currentQ?.question)}
                     audioUrl={narrationAudioUrl}
-                    autoPlay={Boolean(narrationAudioUrl || currentSpeechText)}
-                    autoPlayEnabled={soundEnabled}
+                    autoPlay={!isNarrationBlocked && Boolean(narrationAudioUrl || currentSpeechText)}
+                    autoPlayEnabled={!isNarrationBlocked && soundEnabled}
                     playbackKey={`question-${currentQ?.attemptKey}`}
                     renderButton={false}
                     usePreloadedAudio
@@ -1217,7 +1256,9 @@ export default function Quiz({
                             <h2 className="mb-1.5 px-1 text-lg font-black text-gray-900 dark:text-white sm:text-xl md:text-2xl">
                                 <JapaneseReading
                                     japanese={currentQ.question}
-                                    reading={currentQ.question_reading}
+                                    highlightTerms={{ japanese: currentQ.highlight_text }}
+                                    highlightVariant="question"
+                                    reading={currentQ.show_question_reading === false ? null : currentQ.question_reading}
                                     className="items-center"
                                 />
                             </h2>
@@ -1227,9 +1268,13 @@ export default function Quiz({
                         </div>
 
                         {/* Flashcard Canvas / Media */}
-                        {(currentQ.kanji || currentQ.audio_url || currentSpeechText) && (
+                        {(currentQ.kanji || currentQ.audio_url || currentSpeechText || isReadingQuestion) && (
                             <QuizSurface media className={`relative mb-4 flex w-full max-w-[500px] items-center justify-center overflow-hidden ${currentQ.audio_url?.includes('youtu') ? 'aspect-video' : 'min-h-36 py-4 sm:min-h-44 sm:py-6 md:min-h-48'}`}>
-                                {currentQ.kanji ? (
+                                {isReadingQuestion ? (
+                                    <span className="max-w-full break-words px-4 text-[60px] font-medium leading-none text-gray-900 select-none dark:text-white sm:text-[80px] md:text-[96px]">
+                                        {currentQ.kanji || rawSpeechText || currentQ.question}
+                                    </span>
+                                ) : currentQ.kanji ? (
                                     <span className="max-w-full break-words px-4 text-[60px] font-medium leading-none text-gray-900 select-none dark:text-white sm:text-[80px] md:text-[96px]">{currentQ.kanji}</span>
                                 ) : !currentQ.audio_url ? (
                                     <div className="max-h-[72%] overflow-y-auto overscroll-contain px-6 text-center sm:px-8">
@@ -1237,7 +1282,7 @@ export default function Quiz({
                                     </div>
                                 ) : null}
                                 
-                                {currentQ.audio_url && (
+                                {!isNarrationBlocked && currentQ.audio_url && (
                                     (currentQ.audio_url.includes('youtube.com') || currentQ.audio_url.includes('youtu.be')) ? (
                                         <iframe
                                             src={currentQ.audio_url.includes('watch?v=') ? currentQ.audio_url.replace('watch?v=', 'embed/') : currentQ.audio_url}
@@ -1259,7 +1304,7 @@ export default function Quiz({
                                         </>
                                     )
                                 )}
-                                {!currentQ.audio_url && hasQuestionAudio && (
+                                {!isNarrationBlocked && !currentQ.audio_url && hasQuestionAudio && (
                                     <JapaneseSpeechButton
                                         text={currentSpeechText || currentQ.kanji || currentQ.question}
                                         autoPlay={false}

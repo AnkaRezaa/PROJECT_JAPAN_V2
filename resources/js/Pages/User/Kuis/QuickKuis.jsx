@@ -34,6 +34,8 @@ export default function QuickKuis({ quickSession, backUrl, answerUrl, resetUrl }
     const [error, setError] = useState(null);
     const question = session.current_question;
     const type = normalizeType(question?.type);
+    const isReadingQuestion = Boolean(question?.disable_question_narration || question?.stage === 'word_to_reading');
+    const isNarrationBlocked = Boolean(isReadingQuestion && !feedback);
     const choices = useMemo(() => choicesFor(question), [question]);
     const progress = session.target_count > 0
         ? Math.round((session.resolved_count / session.target_count) * 100)
@@ -152,11 +154,11 @@ export default function QuickKuis({ quickSession, backUrl, answerUrl, resetUrl }
                         </div>
 
                         <h1 className="mt-6 break-words text-2xl font-black leading-tight sm:text-3xl">
-                            <JapaneseReading japanese={question.question} reading={question.question_reading} />
+                            <JapaneseReading japanese={question.question} reading={question.show_question_reading === false ? null : question.question_reading} highlightTerms={{ japanese: question.highlight_text }} highlightVariant="question" />
                         </h1>
                         {question.source.day_title && <p className="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400">{question.source.day_title}</p>}
 
-                        {(type === 'listening' || question.audio_url) && (
+                        {(!isNarrationBlocked && (type === 'listening' || question.audio_url)) && (
                             <div className="mt-6 flex justify-center rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
                                 <JapaneseSpeechButton audioUrl={question.audio_url} text={question.question} autoPlay={type === 'listening'} autoPlayEnabled playbackKey={`quick-${question.id}-${session.current_token}`} className="flex h-14 w-14 items-center justify-center rounded-full bg-action-secondary text-white shadow-md" />
                             </div>

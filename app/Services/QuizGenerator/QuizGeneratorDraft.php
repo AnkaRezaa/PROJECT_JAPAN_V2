@@ -17,6 +17,7 @@ final class QuizGeneratorDraft
         return array_replace([
             'id' => (string) Str::uuid(), 'kind' => 'choice', 'stage' => null,
             'prompt' => '', 'japanese' => '', 'reading' => null, 'translation' => null,
+            'highlight_text' => null,
             'context' => null, 'choices' => [], 'tokens' => [], 'answer' => [],
             'explanation' => null, 'explanation_reading' => null, 'distractor_explanations' => [], 'audio_url' => null, 'points' => 1, 'source' => null, 'evidence' => null,
         ], $fields);
@@ -40,7 +41,9 @@ final class QuizGeneratorDraft
     public static function vocabularyQuestions(array $draft): array
     {
         return array_map(fn (array $q) => [
-            'type' => 'multiple_choice', 'question_text' => $q['prompt'], 'question_reading' => $q['reading'],
+            'type' => 'multiple_choice', 'stage' => $q['stage'] ?? null, 'question_text' => $q['prompt'], 'question_reading' => $q['reading'],
+            'highlight_text' => $q['highlight_text'] ?? null,
+            'show_question_reading' => $q['show_question_reading'] ?? false,
             'correct_answer' => collect($q['choices'])->firstWhere('id', $q['answer']['choice_id'])['text'],
             'options' => array_column($q['choices'], 'text'), 'option_readings' => array_column($q['choices'], 'reading'),
             'correct_answer_reading' => collect($q['choices'])->firstWhere('id', $q['answer']['choice_id'])['reading'] ?? null,
@@ -56,6 +59,7 @@ final class QuizGeneratorDraft
             $questions = collect($draft['questions'])->where('stage', $id)->map(fn (array $q) => [
                 'id' => $q['id'], 'type' => $q['kind'] === 'sentence_builder' ? 'sentence_builder' : $id,
                 'prompt' => $q['prompt'], 'japanese' => $q['japanese'], 'reading' => $q['reading'],
+                'highlight_text' => $q['highlight_text'] ?? null,
                 'translation' => $q['translation'], 'context' => $q['context'],
                 ...($q['kind'] === 'sentence_builder'
                     ? ['tokens' => $q['tokens'], 'correctOrder' => $q['answer']['correct_order']]

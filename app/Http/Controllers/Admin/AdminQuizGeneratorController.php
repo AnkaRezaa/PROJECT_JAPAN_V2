@@ -36,7 +36,7 @@ final class AdminQuizGeneratorController extends Controller
             'input.examples.*.reading' => ['nullable', 'string', 'max:5000'],
             'input.examples.*.translation' => ['nullable', 'string', 'max:5000'],
             'input.category' => ['nullable', 'string', 'max:100'],
-            'input.mode' => ['nullable', 'in:word_to_meaning,meaning_to_word,reading_to_word'],
+            'input.mode' => ['nullable', 'in:word_to_meaning,meaning_to_word,reading_to_word,word_to_reading'],
             'input.status' => ['nullable', 'in:published,draft,all'],
             'input.content_type' => ['nullable', Rule::in([...Kosakata::contentTypes(), 'all'])],
             'settings' => ['required', 'array:count,counts,difficulty,target_form,useDistractors,autoMeaning'],

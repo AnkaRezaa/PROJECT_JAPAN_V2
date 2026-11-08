@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Kosakata;
 use App\Models\Kuis;
 use App\Models\Soal;
+use App\Support\QuestionHighlight;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -20,7 +21,7 @@ class SoalKuisService
             'correct_answer', 'correct_answer_reading',
             'options', 'option_readings',
             'explanation', 'explanation_reading',
-            'audio_url', 'points',
+            'audio_url', 'points', 'highlight_text', 'show_question_reading',
         ];
     }
 
@@ -40,6 +41,7 @@ class SoalKuisService
             ]);
 
             foreach ($validated['questions'] as $index => $data) {
+                QuestionHighlight::validated($data['highlight_text'] ?? null, trim((string) ($data['question_text'] ?? '')), "questions.{$index}.highlight_text");
                 $normalized = $this->normalizePayload($data, $index);
 
                 if ($normalized['error']) {
@@ -52,8 +54,11 @@ class SoalKuisService
                     ['id' => $data['id'] ?? null],
                     [
                         'type' => $normalized['type'],
+                        'stage' => $normalized['stage'],
                         'question_text' => $normalized['question_text'],
+                        'highlight_text' => $normalized['highlight_text'],
                         'question_reading' => $normalized['question_reading'],
+                        'show_question_reading' => $normalized['show_question_reading'],
                         'correct_answer' => $normalized['correct_answer'],
                         'correct_answer_reading' => $normalized['correct_answer_reading'],
                         'options' => $normalized['options'],
@@ -89,6 +94,9 @@ class SoalKuisService
     public function importRows(Kuis $quiz, array $rows): int
     {
         foreach ($rows as $index => $row) {
+            if ($this->readingVisibility($row['show_question_reading'] ?? null) === null) {
+                throw ValidationException::withMessages(['import_file' => 'Baris '.($index + 2).': show_question_reading harus 0 atau 1.']);
+            }
             if ($scopeError = $this->importScopeError($quiz, $row, $index)) {
                 throw ValidationException::withMessages(['import_file' => $scopeError]);
             }
@@ -108,8 +116,11 @@ class SoalKuisService
                 Soal::create([
                     'quiz_id' => $quiz->id,
                     'type' => $normalized['type'],
+                    'stage' => $normalized['stage'] ?? null,
                     'question_text' => $normalized['question_text'],
+                    'highlight_text' => $normalized['highlight_text'],
                     'question_reading' => $normalized['question_reading'],
+                    'show_question_reading' => $normalized['show_question_reading'],
                     'correct_answer' => $normalized['correct_answer'],
                     'correct_answer_reading' => $normalized['correct_answer_reading'],
                     'options' => $normalized['options'],
@@ -150,7 +161,9 @@ class SoalKuisService
                 'row' => $index + 2,
                 'type' => $normalized['type'],
                 'question_text' => $normalized['question_text'],
+                'highlight_text' => $normalized['highlight_text'] ?? null,
                 'question_reading' => $normalized['question_reading'],
+                'show_question_reading' => $normalized['show_question_reading'],
                 'correct_answer' => $normalized['correct_answer'],
                 'correct_answer_reading' => $normalized['correct_answer_reading'],
                 'options' => $normalized['options'] ?? [],
@@ -188,8 +201,11 @@ class SoalKuisService
                 Soal::create([
                     'quiz_id' => $quiz->id,
                     'type' => $payload['type'] ?? 'multiple_choice',
+                    'stage' => $payload['stage'] ?? null,
                     'question_text' => $payload['question_text'],
+                    'highlight_text' => QuestionHighlight::validated($payload['highlight_text'] ?? null, $payload['question_text']),
                     'question_reading' => $payload['question_reading'] ?? null,
+                    'show_question_reading' => $payload['show_question_reading'] ?? false,
                     'correct_answer' => $payload['correct_answer'],
                     'correct_answer_reading' => $payload['correct_answer_reading'] ?? null,
                     'options' => $payload['options'],
@@ -223,8 +239,10 @@ class SoalKuisService
             'vocabulary_ids' => collect($generated)->pluck('vocabulary_id')->values()->all(),
             'questions' => collect($generated)->map(fn (array $payload) => [
                 'type' => $payload['type'] ?? 'multiple_choice',
+                'stage' => $payload['stage'] ?? null,
                 'question_text' => $payload['question_text'],
                 'question_reading' => $payload['question_reading'] ?? null,
+                'show_question_reading' => $payload['show_question_reading'] ?? false,
                 'correct_answer' => $payload['correct_answer'],
                 'correct_answer_reading' => $payload['correct_answer_reading'] ?? null,
                 'options' => $payload['options'],
@@ -287,7 +305,7 @@ class SoalKuisService
             });
         }
 
-        if ($mode === 'reading_to_word') {
+        if (in_array($mode, ['reading_to_word', 'word_to_reading'], true)) {
             $query->whereNotNull('reading')->where('reading', '!=', '');
         }
 
@@ -308,6 +326,12 @@ class SoalKuisService
         if ($pool->count() < 2) {
             throw ValidationException::withMessages([
                 'generate' => 'Bank Konten belum cukup untuk membuat soal. Minimal butuh 2 item valid.',
+            ]);
+        }
+
+        if ($mode === 'word_to_reading' && $pool->pluck('reading')->filter()->map(fn ($r) => trim((string) $r))->filter()->unique()->count() < 4) {
+            throw ValidationException::withMessages([
+                'generate' => 'Bank Konten belum cukup untuk membuat soal pilihan ganda. Minimal butuh 4 cara baca unik.',
             ]);
         }
 
@@ -336,7 +360,7 @@ class SoalKuisService
             ['handwriting', 'Tulis karakter sesuai urutan stroke.', '環', '', 'Practice only: tidak memengaruhi nilai, XP, atau unlock Day.', ''],
         ];
 
-        return array_map(fn (array $row) => [$week, $day, ...$row, 1], $rows);
+        return array_map(fn (array $row) => [$week, $day, $row[0], $row[1], '', $row[2], '', $row[3], '', $row[4], '', $row[5], 1, '', 0], $rows);
     }
 
     public function normalizeType(?string $type): string
@@ -383,11 +407,23 @@ class SoalKuisService
             $error = "Soal {$number}: handwriting berasal dari flashcard dan tidak boleh disimpan sebagai soal kuis.";
         }
 
+        $highlightError = QuestionHighlight::error($data['highlight_text'] ?? null, $questionText);
+        $showReading = $this->readingVisibility($data['show_question_reading'] ?? null);
+        if ($showReading === null) {
+            $error = "Soal {$number}: show_question_reading harus 0 atau 1.";
+        }
+        if ($highlightError) {
+            $error = "Soal {$number}: {$highlightError}";
+        }
+
         return [
             'error' => $error,
             'type' => $type,
+            'stage' => $this->nullableText($data['stage'] ?? null),
             'question_text' => $questionText,
+            'highlight_text' => $highlightError ? null : QuestionHighlight::validated($data['highlight_text'] ?? null, $questionText),
             'question_reading' => $this->nullableText($data['question_reading'] ?? null),
+            'show_question_reading' => $showReading ?? false,
             'correct_answer' => $correctAnswer,
             'correct_answer_reading' => $this->nullableText($data['correct_answer_reading'] ?? null),
             'options' => match ($type) {
@@ -457,6 +493,7 @@ class SoalKuisService
             return [
                 'error' => $scopeError,
                 'type' => $type,
+                'stage' => $row['stage'] ?? null,
                 'question_text' => $questionText,
                 'question_reading' => $row['question_reading'] ?? null,
                 'correct_answer' => $correctAnswer,
@@ -476,6 +513,7 @@ class SoalKuisService
             return [
                 'error' => 'Baris '.($index + 2).": kolom {$missing} wajib diisi.",
                 'type' => $type,
+                'stage' => $row['stage'] ?? null,
                 'question_text' => $questionText,
                 'question_reading' => $row['question_reading'] ?? null,
                 'correct_answer' => $correctAnswer,
@@ -491,8 +529,11 @@ class SoalKuisService
 
         $normalized = $this->normalizePayload([
             'type' => $type,
+            'stage' => $row['stage'] ?? null,
             'question_text' => $questionText,
+            'highlight_text' => $row['highlight_text'] ?? null,
             'question_reading' => $row['question_reading'] ?? null,
+            'show_question_reading' => $row['show_question_reading'] ?? null,
             'correct_answer' => $correctAnswer,
             'correct_answer_reading' => $row['correct_answer_reading'] ?? null,
             'options' => $options,
@@ -575,16 +616,43 @@ class SoalKuisService
             ];
         }
 
+        if ($mode === 'word_to_reading') {
+            if ($reading === '') {
+                return null;
+            }
+
+            $label = $vocabulary->word;
+            $correct = $reading;
+            $options = $this->optionsFromVocabularyPool($pool, $correct, 'reading');
+
+            if (count($options) < 4) {
+                return null;
+            }
+
+            return [
+                'stage' => 'word_to_reading',
+                'question_text' => "Pilih cara baca untuk kosakata: {$label}",
+                'question_reading' => null,
+                'show_question_reading' => false,
+                'correct_answer' => $correct,
+                'options' => $options,
+                'option_readings' => [],
+                'explanation' => $this->vocabularyExplanation($vocabulary),
+                'audio_url' => null,
+            ];
+        }
+
         if ($meaning === '') {
             return null;
         }
 
-        $label = $vocabulary->word.($reading !== '' ? " ({$reading})" : '');
+        $label = $vocabulary->word;
         $options = $this->optionsFromVocabularyPool($pool, $meaning, 'meaning');
 
         return [
             'question_text' => "Apa arti dari {$label}?",
             'question_reading' => $reading !== '' ? $reading : null,
+            'show_question_reading' => false,
             'correct_answer' => $meaning,
             'options' => $options,
             'explanation' => $this->vocabularyExplanation($vocabulary),
@@ -599,6 +667,18 @@ class SoalKuisService
         return collect($options)
             ->map(fn (string $option) => $this->nullableText($readings->get($option)?->reading))
             ->all();
+    }
+
+    private function readingVisibility(mixed $value): ?bool
+    {
+        if ($value === null || (is_string($value) && trim($value) === '')) {
+            return false;
+        }
+        return match (is_string($value) ? trim($value) : $value) {
+            true, 1, 1.0, '1' => true,
+            false, 0, 0.0, '0' => false,
+            default => null,
+        };
     }
 
     private function nullableText(mixed $value): ?string

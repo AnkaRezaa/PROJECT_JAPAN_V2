@@ -24,8 +24,11 @@ export const emptyQuestion = (type = 'multiple_choice') => {
     return {
         id: null,
         type: normalizedType,
+        stage: null,
         question_text: '',
+        highlight_text: '',
         question_reading: '',
+        show_question_reading: false,
         correct_answer: '',
         correct_answer_reading: '',
         options: normalizedType === 'multiple_choice'
@@ -51,7 +54,9 @@ export const normalizeQuestions = (questions, quizType = 'multiple_choice') => (
             return {
                 ...question,
                 type,
+                stage: question.stage || null,
                 question_reading: question.question_reading || '',
+                show_question_reading: question.show_question_reading ?? false,
                 correct_answer_reading: question.correct_answer_reading || '',
                 options,
                 option_readings: type === 'multiple_choice'
@@ -66,6 +71,13 @@ export const normalizeQuestions = (questions, quizType = 'multiple_choice') => (
 
 export const normalizeText = (value) => String(value || '').trim();
 
+export const getQuestionHighlightError = (text, target) => {
+    if (target == null || target === '') return null;
+    if (typeof target !== 'string' || Array.from(target).length > 500) return 'Kata/frasa yang disorot maksimal 500 karakter.';
+    const value = target.trim();
+    return value && !String(text || '').includes(value) ? 'Kata/frasa yang disorot harus ditemukan persis dalam kalimat soal.' : null;
+};
+
 export const getQuestionError = (question, index) => {
     const number = index + 1;
     const type = question.type || 'multiple_choice';
@@ -75,6 +87,8 @@ export const getQuestionError = (question, index) => {
     const points = Number(question.points || 0);
 
     if (!questionText) return `Q${number}: pertanyaan wajib diisi.`;
+    const highlightError = getQuestionHighlightError(question.question_text, question.highlight_text);
+    if (highlightError) return `Q${number}: ${highlightError}`;
     if (!correctAnswer) return `Q${number}: jawaban benar wajib diisi.`;
     if (type === 'multiple_choice' && options.length < 2) return `Q${number}: multiple choice minimal 2 opsi.`;
     if (type === 'multiple_choice' && !options.includes(correctAnswer)) return `Q${number}: jawaban benar harus sama dengan salah satu opsi.`;

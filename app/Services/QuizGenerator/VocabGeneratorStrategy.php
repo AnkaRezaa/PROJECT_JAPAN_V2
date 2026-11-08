@@ -20,6 +20,8 @@ final class VocabGeneratorStrategy implements QuizGeneratorStrategyInterface
         foreach ($preview['questions'] as $index => $question) {
             $questions[] = QuizGeneratorDraft::question([
                 'prompt' => $question['question_text'], 'reading' => $question['question_reading'],
+                'stage' => $question['stage'] ?? null,
+                'show_question_reading' => $question['show_question_reading'] ?? false,
                 ...QuizGeneratorDraft::choices($question['options'], $question['correct_answer'], $question['option_readings']),
                 'explanation' => $question['explanation'], 'explanation_reading' => $question['explanation_reading'] ?? null,
                 'audio_url' => $question['audio_url'] ?? null, 'source' => ['type' => 'vocabulary', 'id' => $preview['vocabulary_ids'][$index]],

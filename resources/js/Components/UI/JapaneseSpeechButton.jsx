@@ -66,6 +66,8 @@ export default function JapaneseSpeechButton({
     children = null,
     renderButton = true,
     usePreloadedAudio = false,
+    onPlay = null,
+    disabled = false,
     ...buttonProps
 }) {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -134,7 +136,7 @@ export default function JapaneseSpeechButton({
     const play = useCallback(async (event) => {
         event?.stopPropagation?.();
 
-        if (!supported) return;
+        if (disabled || !supported) return;
 
         if (audioUrl) {
             window.speechSynthesis?.cancel?.();
@@ -149,6 +151,7 @@ export default function JapaneseSpeechButton({
 
             audio.onplaying = () => {
                 debugNarration('start', { key: playbackKey, transport: 'audio', latencyMs: Math.round(performance.now() - queuedAt) });
+                onPlay?.();
             };
 
             audio.onended = () => {
@@ -188,6 +191,7 @@ export default function JapaneseSpeechButton({
         utterance.onstart = () => {
             debugNarration('start', { key: playbackKey, transport: 'speech', latencyMs: Math.round(performance.now() - queuedAt), voice: voice?.name || 'browser-default' });
             setIsPlaying(true);
+            onPlay?.();
         };
         utterance.onend = () => {
             if (activeSpeechOwner === speakerIdRef.current) activeSpeechOwner = null;
@@ -199,7 +203,7 @@ export default function JapaneseSpeechButton({
         };
 
         window.speechSynthesis.speak(utterance);
-    }, [audioUrl, pitch, playbackKey, rate, speakableText, supported, volume]);
+    }, [audioUrl, disabled, onPlay, pitch, playbackKey, rate, speakableText, supported, volume]);
 
     useEffect(() => {
         if (!autoPlay || !autoPlayEnabled || !supported) return undefined;
@@ -219,17 +223,19 @@ export default function JapaneseSpeechButton({
 
     if (!renderButton) return null;
 
+    const isDisabled = Boolean(disabled || !supported);
+
     return (
         <button
             type="button"
             onClick={play}
-            disabled={!supported}
             title={supported ? title : 'Narator tidak tersedia di browser ini'}
             aria-label={supported ? title : 'Narator tidak tersedia'}
-            className={`${className} ${!supported ? 'cursor-not-allowed opacity-45' : ''}`}
+            {...buttonProps}
+            disabled={isDisabled}
+            className={`${className} ${isDisabled ? 'cursor-not-allowed opacity-45' : ''}`}
             data-sound="none"
             data-voice-ready={voiceReady ? 'true' : 'false'}
-            {...buttonProps}
         >
             {children || (
                 isPlaying

@@ -12,6 +12,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import useQuizCheckpoint from '@/Hooks/useQuizCheckpoint';
 import ResumeQuizModal from '@/Components/Features/Quiz/ResumeQuizModal';
 import SentenceBuilder from '@/Components/Features/Quiz/SentenceBuilder';
+import HighlightedLearningText from '@/Components/Features/Learning/HighlightedLearningText';
 import { UniversalFeedbackWidget } from '@/Components/Features/UniversalFeedback';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 
@@ -616,13 +617,13 @@ export default function KuisCampuranRunner({ quiz, submitUrl, restartUrl, backUr
 
                         {/* Question Card */}
                         <div className="p-6 sm:p-7 rounded-3xl border border-slate-200/80 bg-white dark:border-slate-800/80 dark:bg-slate-900 shadow-sm space-y-3">
-                            {currentQuestion?.question_reading && (
+                            {currentQuestion?.show_question_reading !== false && currentQuestion?.question_reading && (
                                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                                     {currentQuestion.question_reading}
                                 </p>
                             )}
                             <h2 className="text-lg sm:text-xl font-black text-slate-950 dark:text-white leading-relaxed">
-                                {currentQuestion?.question_text || 'Pertanyaan tidak ditemukan'}
+                                <HighlightedLearningText text={currentQuestion?.question_text || 'Pertanyaan tidak ditemukan'} term={currentQuestion?.highlight_text} variant="question" />
                             </h2>
                             {currentQuestion?.context && (
                                 <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">

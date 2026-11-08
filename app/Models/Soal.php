@@ -18,7 +18,9 @@ class Soal extends Model
         'type',
         'stage',
         'question_text',
+        'highlight_text',
         'question_reading',
+        'show_question_reading',
         'correct_answer',
         'correct_answer_reading',
         'explanation',
@@ -34,7 +36,13 @@ class Soal extends Model
         'options' => 'array',
         'option_readings' => 'array',
         'points' => 'integer',
+        'show_question_reading' => 'boolean',
     ];
+
+    public function questionReadingForStudent(): ?string
+    {
+        return ($this->show_question_reading ?? false) ? $this->question_reading : null;
+    }
 
     public function quiz(): BelongsTo
     {

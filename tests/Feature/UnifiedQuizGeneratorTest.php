@@ -13,6 +13,7 @@ use App\Models\ProgramPembelajaran;
 use App\Models\Soal;
 use App\Services\KuisDokkaiService;
 use App\Services\QuizGenerator\QuizGeneratorDraft;
+use Inertia\Testing\AssertableInertia as Assert;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -95,11 +96,257 @@ class UnifiedQuizGeneratorTest extends TestCase
         $this->assertSame(10, $quiz->questions()->count());
     }
 
+    public function test_kanji_to_meaning_draft_defaults_to_hidden_reading_without_losing_kana(): void
+    {
+        foreach ([['食品', 'しょくひん', 'Bahan makanan'], ['工場', 'こうじょう', 'Pabrik'], ['制服', 'せいふく', 'Seragam']] as [$word, $reading, $meaning]) {
+            Kosakata::create(['module_id' => $this->day->module_id, 'word' => $word, 'reading' => $reading, 'meaning_id' => $meaning,
+                'jlpt_level' => 'N3', 'content_type' => 'kanji', 'status' => 'published']);
+        }
+        $draft = $this->generate('vocab', $this->payload('vocab', ['content_type' => 'kanji'], 2))->assertOk()->json('draft');
+        foreach ($draft['questions'] as $question) {
+            $source = Kosakata::findOrFail($question['source']['id']);
+            $this->assertFalse($question['show_question_reading']);
+            $this->assertSame($source->reading, $question['reading']);
+            $this->assertSame("Apa arti dari {$source->word}?", $question['prompt']);
+        }
+        $questions = QuizGeneratorDraft::vocabularyQuestions($draft);
+        $this->assertFalse($questions[0]['show_question_reading']);
+        $quiz = Kuis::create(['module_id' => $this->day->module_id, 'module_day_id' => $this->day->id, 'type' => 'multiple_choice', 'status' => 'draft']);
+        $this->actingAs($this->admin)->post(route('admin.quizzes.builder.update', $quiz), ['questions' => $questions])->assertSessionHasNoErrors();
+        $this->assertFalse($quiz->questions()->firstOrFail()->show_question_reading);
+        $this->assertNotEmpty($quiz->questions()->firstOrFail()->question_reading);
+        $legacy = $this->generate('vocab', $this->payload('vocab', ['content_type' => 'all'], 2))->assertOk()->json('draft.questions.0');
+        $this->assertFalse($legacy['show_question_reading']);
+        $this->assertStringNotContainsString($legacy['reading'], $legacy['prompt']);
+        $readingPrompt = $this->generate('vocab', $this->payload('vocab', ['content_type' => 'kanji', 'mode' => 'reading_to_word'], 2))->assertOk()->json('draft.questions.0');
+        $this->assertStringContainsString(Kosakata::findOrFail($readingPrompt['source']['id'])->reading, $readingPrompt['prompt']);
+        $this->assertFalse($readingPrompt['show_question_reading']);
+    }
+
     public function test_vocab_shortage_is_422_not_partial_or_dummy_draft(): void
     {
         $this->words();
         $this->generate('vocab', $this->payload('vocab', count: 15))->assertUnprocessable()->assertJsonValidationErrors('settings.count');
         $this->assertDatabaseCount('questions', 0);
+    }
+
+    public function test_reversed_kanji_draft_preserves_existing_questions_and_uses_normal_student_grading(): void
+    {
+        $kanji = ["\u{4e00}", "\u{4e8c}", "\u{4e09}", "\u{56db}"];
+        foreach ($kanji as $index => $word) {
+            Kosakata::create([
+                'module_id' => $this->day->module_id, 'word' => $word,
+                'reading' => null, 'meaning_id' => ['Satu', 'Dua', 'Tiga', 'Empat'][$index],
+                'jlpt_level' => 'N3', 'content_type' => 'kanji', 'status' => 'published',
+            ]);
+        }
+        $this->words();
+        $quiz = Kuis::create([
+            'module_id' => $this->day->module_id, 'module_day_id' => $this->day->id,
+            'type' => 'multiple_choice', 'status' => 'published', 'passing_score' => 70,
+        ]);
+        $original = Soal::create([
+            'quiz_id' => $quiz->id, 'type' => 'multiple_choice', 'question_text' => 'Arti api?',
+            'correct_answer' => 'Fire', 'options' => ['Fire', 'Water'],
+            'explanation' => 'Original explanation', 'order' => 0, 'points' => 1,
+        ]);
+        $payload = $this->payload('vocab', ['mode' => 'meaning_to_word', 'content_type' => 'kanji'], 2);
+        $draft = $this->generate('vocab', [...$payload, 'quiz_id' => $quiz->id])->assertOk()->json('draft');
+        $this->assertDatabaseCount('questions', 1);
+        foreach ($draft['questions'] as $question) {
+            $source = Kosakata::findOrFail($question['source']['id']);
+            $this->assertSame('kanji', $source->content_type);
+            $this->assertStringContainsString($source->meaning_id, $question['prompt']);
+            $choices = array_column($question['choices'], 'text');
+            $this->assertSame(count($choices), count(array_unique($choices)));
+            $this->assertEmpty(array_diff($choices, $kanji));
+            $correct = collect($question['choices'])->firstWhere('id', $question['answer']['choice_id']);
+            $this->assertSame($source->word, $correct['text']);
+        }
+
+        $this->actingAs($this->admin)->post(route('admin.quizzes.builder.update', $quiz), [
+            'questions' => [$original->toArray(), ...QuizGeneratorDraft::vocabularyQuestions($draft)],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $saved = $quiz->questions()->orderBy('order')->get();
+        $this->assertCount(3, $saved);
+        $this->assertSame($original->id, $saved[0]->id);
+        $this->assertSame('Original explanation', $saved[0]->explanation);
+        $this->assertSame(3, $saved->pluck('id')->unique()->count());
+        $this->assertSame($draft['questions'][0]['prompt'], $saved[1]->question_text);
+
+        $student = Pengguna::factory()->create(['role' => 'user']);
+        $this->actingAs($student)->get(route('user.quizzes.show', $quiz))->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('User/Kuis/KerjakanKuis')
+                ->has('questions', 3)->where('questions.1.question', $saved[1]->question_text)
+                ->where('questions.1.options', $saved[1]->options));
+        $wrong = collect($saved[2]->options)->first(fn ($choice) => $choice !== $saved[2]->correct_answer);
+        $this->actingAs($student)->postJson(route('user.attempts.store'), [
+            'quiz_id' => $quiz->id,
+            'answers' => [
+                ['question_id' => $saved[0]->id, 'answer_text' => $saved[0]->correct_answer],
+                ['question_id' => $saved[1]->id, 'answer_text' => $saved[1]->correct_answer],
+                ['question_id' => $saved[2]->id, 'answer_text' => $wrong],
+            ],
+        ])->assertOk()->assertJsonPath('correct_count', 2);
+    }
+
+    public function test_reversed_kanji_generator_rejects_insufficient_kanji_without_falling_back_to_vocabulary(): void
+    {
+        $this->words();
+        Kosakata::create([
+            'module_id' => $this->day->module_id, 'word' => "\u{4e8c}", 'meaning_id' => 'Dua',
+            'jlpt_level' => 'N3', 'content_type' => 'kanji', 'status' => 'published',
+        ]);
+        $this->generate('vocab', $this->payload('vocab', ['mode' => 'meaning_to_word', 'content_type' => 'kanji'], 2))
+            ->assertUnprocessable();
+        $this->assertDatabaseCount('questions', 0);
+    }
+
+    public function test_word_to_reading_mode_generates_kanji_prompt_with_kana_choices_and_no_audio_leak(): void
+    {
+        $kanjiItems = [
+            ['word' => '食品', 'reading' => 'しょくひん', 'meaning' => 'Bahan makanan'],
+            ['word' => '工場', 'reading' => 'こうじょう', 'meaning' => 'Pabrik'],
+            ['word' => '制服', 'reading' => 'せいふく', 'meaning' => 'Seragam kerja'],
+            ['word' => '冷蔵庫', 'reading' => 'れいぞうこ', 'meaning' => 'Lemari pendingin'],
+        ];
+
+        foreach ($kanjiItems as $item) {
+            Kosakata::create([
+                'module_id' => $this->day->module_id,
+                'word' => $item['word'],
+                'reading' => $item['reading'],
+                'meaning_id' => $item['meaning'],
+                'jlpt_level' => 'N3',
+                'category' => 'ssw_food',
+                'content_type' => 'kanji',
+                'status' => 'published',
+                'audio_url' => 'https://example.com/audio.mp3',
+            ]);
+        }
+
+        $payload = $this->payload('vocab', ['content_type' => 'kanji', 'mode' => 'word_to_reading'], 2);
+        $draft = $this->generate('vocab', $payload)->assertOk()->json('draft');
+
+        $this->assertCount(2, $draft['questions']);
+
+        foreach ($draft['questions'] as $question) {
+            $source = Kosakata::findOrFail($question['source']['id']);
+            $this->assertSame("Pilih cara baca untuk kosakata: {$source->word}", $question['prompt']);
+            $this->assertNull($question['reading']);
+            $this->assertFalse($question['show_question_reading']);
+            $this->assertNull($question['audio_url']);
+
+            $choices = array_column($question['choices'], 'text');
+            $this->assertCount(4, $choices);
+            $this->assertCount(4, array_unique($choices));
+            $this->assertContains($source->reading, $choices);
+
+            $correctChoice = collect($question['choices'])->firstWhere('id', $question['answer']['choice_id']);
+            $this->assertNotNull($correctChoice);
+            $this->assertSame($source->reading, $correctChoice['text']);
+            $this->assertSame('word_to_reading', $question['stage']);
+        }
+    }
+
+    public function test_word_to_reading_stage_is_persisted_and_controls_runner_narration_guard_without_regex(): void
+    {
+        $quiz = Kuis::create([
+            'module_id' => $this->day->module_id,
+            'day_id' => $this->day->id,
+            'type' => 'multiple_choice',
+            'title' => 'Test Quiz',
+            'status' => 'published',
+        ]);
+        $user = Pengguna::factory()->create(['role' => 'user']);
+
+        $updatePayload = [
+            'questions' => [
+                [
+                    'type' => 'multiple_choice',
+                    'stage' => 'word_to_reading',
+                    'question_text' => 'Custom prompt tanpa kata kunci bawaan: 食品',
+                    'correct_answer' => 'しょくひん',
+                    'options' => ['しょくひん', 'こうじょう', 'せいふく', 'れいぞうこ'],
+                    'option_readings' => ['', '', '', ''],
+                    'show_question_reading' => false,
+                    'audio_url' => null,
+                ],
+            ],
+        ];
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.quizzes.builder.update', $quiz->id), $updatePayload)
+            ->assertRedirect();
+
+        $saved = $quiz->fresh()->questions()->first();
+        $this->assertNotNull($saved);
+        $this->assertSame('word_to_reading', $saved->stage);
+
+        $runnerService = app(\App\Services\PembelajaranPenggunaService::class);
+        $payload = $runnerService->quizPayload($user, $quiz);
+        $runnerQuestion = $payload['questions'][0];
+
+        $this->assertSame('word_to_reading', $runnerQuestion['stage']);
+        $this->assertTrue($runnerQuestion['disable_question_narration']);
+    }
+
+    public function test_legacy_generate_vocabulary_questions_endpoint_persists_stage_and_protects_runner(): void
+    {
+        $kanjiItems = [
+            ['word' => '食品', 'reading' => 'しょくひん', 'meaning' => 'Bahan makanan'],
+            ['word' => '工場', 'reading' => 'こうじょう', 'meaning' => 'Pabrik'],
+            ['word' => '制服', 'reading' => 'せいふく', 'meaning' => 'Seragam kerja'],
+            ['word' => '冷蔵庫', 'reading' => 'れいぞうこ', 'meaning' => 'Lemari pendingin'],
+        ];
+
+        foreach ($kanjiItems as $item) {
+            Kosakata::create([
+                'module_id' => $this->day->module_id,
+                'word' => $item['word'],
+                'reading' => $item['reading'],
+                'meaning_id' => $item['meaning'],
+                'jlpt_level' => 'N3',
+                'category' => 'ssw_food',
+                'content_type' => 'kanji',
+                'status' => 'published',
+            ]);
+        }
+
+        $quiz = Kuis::create([
+            'module_id' => $this->day->module_id,
+            'day_id' => $this->day->id,
+            'type' => 'multiple_choice',
+            'title' => 'Legacy Generator Quiz',
+            'status' => 'draft',
+        ]);
+        $user = Pengguna::factory()->create(['role' => 'user']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.quizzes.questions.generate-vocabulary', $quiz), [
+                'count' => 2,
+                'jlpt_level' => 'N3',
+                'content_type' => 'kanji',
+                'mode' => 'word_to_reading',
+                'status' => 'published',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $savedQuestions = $quiz->fresh()->questions()->get();
+        $this->assertCount(2, $savedQuestions);
+
+        foreach ($savedQuestions as $q) {
+            $this->assertSame('word_to_reading', $q->stage);
+        }
+
+        $runnerService = app(\App\Services\PembelajaranPenggunaService::class);
+        $payload = $runnerService->quizPayload($user, $quiz);
+
+        foreach ($payload['questions'] as $runnerQ) {
+            $this->assertSame('word_to_reading', $runnerQ['stage']);
+            $this->assertTrue($runnerQ['disable_question_narration']);
+        }
     }
 
     public function test_grammar_draft_can_be_saved_through_existing_authoring_endpoint(): void

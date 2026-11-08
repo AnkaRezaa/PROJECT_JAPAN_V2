@@ -81,9 +81,12 @@ class PembelajaranPenggunaService
                 return [
                     'id' => $question->id,
                     'question' => $question->question_text,
-                    'question_reading' => $question->question_reading,
+                    'highlight_text' => $question->highlight_text,
+                    'question_reading' => $question->questionReadingForStudent(),
                     'kanji' => '',
                     'type' => $question->type,
+                    'stage' => $question->stage,
+                    'disable_question_narration' => (bool) ($question->stage === 'word_to_reading'),
                     'options' => $question->options,
                     'option_readings' => $question->option_readings,
                     'audio_url' => $question->audio_url,

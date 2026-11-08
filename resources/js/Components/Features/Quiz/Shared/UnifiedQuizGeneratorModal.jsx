@@ -58,6 +58,7 @@ export default function UnifiedQuizGeneratorModal({
   onClose,
   type,
   onApplyDraft,
+  applyMode = 'replace',
   initialData = {}
 }) {
   const initialRef = useRef(initialData);
@@ -212,7 +213,7 @@ export default function UnifiedQuizGeneratorModal({
       onApplyDraft(draft, form.settings);
       onClose();
     };
-    if (!initialRef.current.hasContent) {
+    if (applyMode === 'append' || !initialRef.current.hasContent) {
       applyNow();
       return;
     }
@@ -256,7 +257,7 @@ export default function UnifiedQuizGeneratorModal({
                                 </div>
                             </div>
                             {type === 'vocab' && <div className="grid gap-4 sm:grid-cols-2">
-                                <label className="text-sm font-semibold">Mode soal<select className={fieldClass} value={form.input.mode} onChange={e => change('input', 'mode', e.target.value)}><option value="word_to_meaning">Kata ke arti</option><option value="meaning_to_word">Arti ke kata</option><option value="reading_to_word">Cara baca ke kata</option></select></label>
+                                <label className="text-sm font-semibold">Mode soal<select className={fieldClass} value={form.input.mode} onChange={e => change('input', 'mode', e.target.value)}><option value="word_to_meaning">Kata ke arti</option><option value="meaning_to_word">Arti ke kata</option><option value="reading_to_word">Cara baca ke kata</option><option value="word_to_reading">Kata/Kanji ke cara baca</option></select></label>
                                 <label className="text-sm font-semibold">Kategori<input className={fieldClass} value={form.input.category} onChange={e => change('input', 'category', e.target.value)} /></label>
                                 <label className="text-sm font-semibold">Jenis konten<select className={fieldClass} value={form.input.content_type} onChange={e => change('input', 'content_type', e.target.value)}><option value="all">Semua</option><option value="kosakata">Kosakata</option><option value="kanji">Kanji</option><option value="bunpo">Bunpo</option></select></label>
                                 <label className="text-sm font-semibold">Status sumber<select className={fieldClass} value={form.input.status} onChange={e => change('input', 'status', e.target.value)}><option value="published">Published</option><option value="draft">Draft</option><option value="all">Semua</option></select></label>
@@ -326,7 +327,7 @@ export default function UnifiedQuizGeneratorModal({
                     <footer className="flex shrink-0 flex-wrap justify-end gap-3 border-t border-gray-200 p-4 dark:border-gray-800">
                         <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold dark:border-gray-700">Batal</button>
                         <QuizActionButton disabled={busy} onClick={() => run()} className="inline-flex items-center gap-2"><AutoAwesomeIcon fontSize="small" />Buat Draf</QuizActionButton>
-                        {draft && <QuizActionButton disabled={busy} onClick={apply}>Terapkan ke Builder</QuizActionButton>}
+                        {draft && <QuizActionButton disabled={busy} onClick={apply}>{applyMode === 'append' ? 'Tambahkan ke Kuis' : 'Terapkan ke Builder'}</QuizActionButton>}
                     </footer>
                 </DialogPanel>
             </div>
