@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Exam extends Model
 {
-    protected $fillable = ['level_id', 'slug', 'title', 'description', 'type', 'access_type', 'status', 'created_by', 'updated_by'];
+    protected $fillable = ['level_id', 'category', 'ssw_field', 'slug', 'title', 'description', 'type', 'access_type', 'status', 'created_by', 'updated_by'];
 
     public function getRouteKeyName(): string
     {

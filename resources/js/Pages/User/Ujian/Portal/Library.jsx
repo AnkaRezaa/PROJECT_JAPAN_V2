@@ -3,12 +3,14 @@ import { Head } from '@inertiajs/react';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import FilterAltOffRoundedIcon from '@mui/icons-material/FilterAltOffRounded';
 import ExamPortalLayout from '@/Layouts/ExamPortalLayout';
-import { EmptyState, ExamCard, FieldLabel, PageHeading, inputClassName } from '@/Components/Features/ExamPortal/ExamPortalUI';
+import { EmptyState, ExamCard, FieldLabel, PageHeading, examCategoryLabel, inputClassName } from '@/Components/Features/ExamPortal/ExamPortalUI';
 
 const PAGE_SIZE = 6;
 
-export default function Library({ exam_packages = [], levels = [], sessions = [], sections = [] }) {
+export default function Library({ exam_packages = [], levels = [], sessions = [] }) {
     const [type, setType] = useState('all');
+    const [category, setCategory] = useState('all');
+    const [field, setField] = useState('all');
     const [term, setTerm] = useState('');
     const [level, setLevel] = useState('all');
     const [session, setSession] = useState('all');
@@ -16,26 +18,39 @@ export default function Library({ exam_packages = [], levels = [], sessions = []
     const [status, setStatus] = useState('all');
     const [page, setPage] = useState(1);
 
+    const fields = useMemo(() => [...new Set(exam_packages.filter((exam) => exam.category === 'ssw' && exam.ssw_field).map((exam) => exam.ssw_field))].sort(), [exam_packages]);
+    const sectionOptions = useMemo(() => {
+        const options = new Map();
+        exam_packages.filter((exam) => category === 'all' || exam.category === category).forEach((exam) => {
+            (exam.sections || []).forEach((item) => options.set(item.key, item.short_label || item.label));
+        });
+        return [...options].map(([key, label]) => ({ key, label }));
+    }, [exam_packages, category]);
+
     const filtered = useMemo(() => {
         const query = term.trim().toLowerCase();
         return exam_packages.filter((exam) => {
             if (type !== 'all' && exam.type !== type) return false;
+            if (category !== 'all' && exam.category !== category) return false;
+            if (field !== 'all' && exam.ssw_field !== field) return false;
             if (level !== 'all' && exam.level !== level) return false;
             if (session !== 'all' && exam.session !== session) return false;
             if (status !== 'all' && exam.status !== status) return false;
             if (section !== 'all' && !exam.sections?.some((item) => item.key === section)) return false;
-            if (query && !`${exam.title} ${exam.description} ${exam.level} ${exam.session}`.toLowerCase().includes(query)) return false;
+            if (query && !`${exam.title} ${exam.description || ''} ${exam.level || ''} ${exam.session || ''} ${exam.ssw_field || ''} ${examCategoryLabel(exam)}`.toLowerCase().includes(query)) return false;
             return true;
         });
-    }, [exam_packages, level, section, session, status, term, type]);
+    }, [exam_packages, category, field, level, section, session, status, term, type]);
 
     const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     const visibleExams = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-    useEffect(() => setPage(1), [level, section, session, status, term, type]);
+    useEffect(() => setPage(1), [category, field, level, section, session, status, term, type]);
 
     const resetFilters = () => {
         setType('all');
+        setCategory('all');
+        setField('all');
         setTerm('');
         setLevel('all');
         setSession('all');
@@ -51,13 +66,13 @@ export default function Library({ exam_packages = [], levels = [], sessions = []
                     <PageHeading
                         eyebrow="Pustaka ujian"
                         title="Kumpulan Ujian"
-                        description="Temukan latihan singkat atau simulasi lengkap berdasarkan level dan bagian yang ingin kamu ukur."
+                        description="Temukan latihan atau simulasi berdasarkan kategori dan bagian yang ingin kamu ukur."
                     />
                 </div>
             </section>
 
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-10">
-                <div className="grid gap-5 rounded-lg border border-[#dbe5df] bg-white p-4 dark:border-white/10 dark:bg-[#142019] sm:p-5 lg:grid-cols-[minmax(0,1fr)_180px_180px]">
+                <div className={`grid gap-5 rounded-lg border border-[#dbe5df] bg-white p-4 dark:border-white/10 dark:bg-[#142019] sm:p-5 ${(category === 'all' || category === 'jlpt') ? 'lg:grid-cols-[minmax(0,1fr)_180px_180px]' : 'lg:grid-cols-[minmax(0,1fr)_180px]'}`}>
                     <label>
                         <FieldLabel>Cari ujian</FieldLabel>
                         <span className="relative block">
@@ -65,13 +80,15 @@ export default function Library({ exam_packages = [], levels = [], sessions = []
                             <input value={term} onChange={(event) => setTerm(event.target.value)} className={`${inputClassName} pl-10`} placeholder="Judul, level, atau sesi" />
                         </span>
                     </label>
-                    <label>
-                        <FieldLabel>Level</FieldLabel>
-                        <select value={level} onChange={(event) => setLevel(event.target.value)} className={inputClassName}>
-                            <option value="all">Semua level</option>
-                            {levels.map((item) => <option key={item} value={item}>{item}</option>)}
-                        </select>
-                    </label>
+                    {(category === 'all' || category === 'jlpt') && (
+                        <label>
+                            <FieldLabel>Level</FieldLabel>
+                            <select value={level} onChange={(event) => setLevel(event.target.value)} className={inputClassName}>
+                                <option value="all">Semua level</option>
+                                {levels.map((item) => <option key={item} value={item}>{item}</option>)}
+                            </select>
+                        </label>
+                    )}
                     <label>
                         <FieldLabel>Status</FieldLabel>
                         <select value={status} onChange={(event) => setStatus(event.target.value)} className={inputClassName}>
@@ -93,13 +110,23 @@ export default function Library({ exam_packages = [], levels = [], sessions = []
                         </div>
                         <div className="mt-4 space-y-4">
                             <label>
-                                <FieldLabel>Jenis</FieldLabel>
-                                <select value={type} onChange={(event) => setType(event.target.value)} className={inputClassName}>
-                                    <option value="all">Semua jenis</option>
-                                    <option value="practice">Latihan Ujian</option>
-                                    <option value="simulation">Simulasi JLPT</option>
+                                <FieldLabel>Kategori</FieldLabel>
+                                <select value={category} onChange={(event) => { setCategory(event.target.value); setField('all'); setLevel('all'); setSection('all'); }} className={inputClassName}>
+                                    <option value="all">Semua kategori</option>
+                                    <option value="jlpt">JLPT</option>
+                                    <option value="jft_basic">JFT-Basic</option>
+                                    <option value="ssw">SSW</option>
                                 </select>
                             </label>
+                            {category === 'ssw' && fields.length > 0 && (
+                                <label>
+                                    <FieldLabel>Bidang SSW</FieldLabel>
+                                    <select value={field} onChange={(event) => setField(event.target.value)} className={inputClassName}>
+                                        <option value="all">Semua bidang</option>
+                                        {fields.map((item) => <option key={item} value={item}>{item}</option>)}
+                                    </select>
+                                </label>
+                            )}
                             <label>
                                 <FieldLabel>Sesi / paket</FieldLabel>
                                 <select value={session} onChange={(event) => setSession(event.target.value)} className={inputClassName}>
@@ -111,7 +138,7 @@ export default function Library({ exam_packages = [], levels = [], sessions = []
                                 <FieldLabel>Bagian</FieldLabel>
                                 <select value={section} onChange={(event) => setSection(event.target.value)} className={inputClassName}>
                                     <option value="all">Semua bagian</option>
-                                    {sections.map((item) => <option key={item.key} value={item.key}>{item.short_label}</option>)}
+                                    {sectionOptions.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
                                 </select>
                             </label>
                         </div>
@@ -123,9 +150,9 @@ export default function Library({ exam_packages = [], levels = [], sessions = []
                                 {[
                                     ['all', 'Semua'],
                                     ['practice', 'Latihan Ujian'],
-                                    ['simulation', 'Simulasi JLPT'],
+                                    ['simulation', 'Simulasi ujian'],
                                 ].map(([value, label]) => (
-                                    <button key={value} type="button" onClick={() => setType(value)} className={`min-h-9 flex-1 rounded-md px-3 text-xs font-black transition sm:flex-none ${type === value ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/10'}`}>
+                                    <button key={value} type="button" onClick={() => setType(value)} className={`min-h-[36px] flex-1 rounded-md px-3 text-xs font-black transition sm:flex-none ${type === value ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/10'}`}>
                                         {label}
                                     </button>
                                 ))}

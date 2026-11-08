@@ -15,7 +15,9 @@ class StoreExamQuestionBankRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'level_id' => ['required', 'exists:levels,id'],
+            'category' => ['sometimes', Rule::in(['jlpt', 'jft_basic', 'ssw'])],
+            'level_id' => [Rule::requiredIf($this->input('category', 'jlpt') === 'jlpt'), Rule::prohibitedIf($this->input('category', 'jlpt') !== 'jlpt'), 'nullable', 'exists:levels,id'],
+            'ssw_field' => [Rule::requiredIf($this->input('category', 'jlpt') === 'ssw'), Rule::prohibitedIf($this->input('category', 'jlpt') !== 'ssw'), 'nullable', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'source' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],

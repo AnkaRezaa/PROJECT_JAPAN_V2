@@ -10,6 +10,8 @@ class ExamQuestionBank extends Model
 {
     protected $fillable = [
         'level_id',
+        'category',
+        'ssw_field',
         'slug',
         'title',
         'source',

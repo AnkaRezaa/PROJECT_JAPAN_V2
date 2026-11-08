@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ExamVersion extends Model
 {
-    protected $fillable = ['exam_id', 'version_number', 'status', 'attempt_limit', 'result_release_policy', 'review_policy', 'ranking_policy', 'estimated_total_pass_score', 'content_hash', 'published_at', 'published_by'];
+    protected $fillable = ['exam_id', 'version_number', 'status', 'attempt_limit', 'result_release_policy', 'review_policy', 'ranking_policy', 'estimated_total_pass_score', 'total_time_limit_seconds', 'content_hash', 'published_at', 'published_by'];
 
     protected $casts = ['published_at' => 'datetime'];
 

@@ -21,8 +21,6 @@ class ExamAttemptService
 
     public function start(Pengguna $user, ExamSession $session, array $data): ExamAttempt
     {
-        abort_unless($this->access->canStart($user, $session), 403);
-
         return DB::transaction(function () use ($user, $session, $data) {
             $session = ExamSession::whereKey($session->id)->lockForUpdate()->with('version.exam', 'version.sections')->firstOrFail();
             $existing = ExamAttempt::where('submission_token', $data['submission_token'])->first();
@@ -32,10 +30,15 @@ class ExamAttemptService
                 return $existing;
             }
 
+            abort_unless($this->access->canStart($user, $session), 403);
+
             $mode = $data['mode'] ?? 'full';
             $sectionKey = $mode === 'section' ? ($data['section_key'] ?? null) : null;
             if ($session->version->exam->type === 'simulation' && $mode !== 'full') {
-                throw ValidationException::withMessages(['mode' => 'Simulasi JLPT wajib dikerjakan secara penuh.']);
+                throw ValidationException::withMessages(['mode' => 'Simulasi wajib dikerjakan secara penuh.']);
+            }
+            if ($session->version->exam->category === 'jft_basic' && $mode !== 'full') {
+                throw ValidationException::withMessages(['mode' => 'JFT-Basic harus dikerjakan secara penuh.']);
             }
 
             $sections = $session->version->sections;
@@ -52,7 +55,9 @@ class ExamAttemptService
                 throw ValidationException::withMessages(['attempt' => 'Batas pengerjaan untuk sesi ini telah tercapai.']);
             }
 
-            $duration = max(60, (int) $sections->sum('time_limit_seconds'));
+            $duration = ($session->version->exam->category ?? 'jlpt') === 'jft_basic'
+                ? max(60, (int) ($session->version->total_time_limit_seconds ?? 3600))
+                : max(60, (int) $sections->sum('time_limit_seconds'));
             $deadline = now()->addSeconds($duration);
             if ($session->ends_at && $deadline->gt($session->ends_at)) {
                 $deadline = $session->ends_at->copy();
@@ -83,6 +88,12 @@ class ExamAttemptService
     {
         $attempt->load(['version.exam.level', 'sections.section.questions', 'answers']);
         $answers = $attempt->answers->keyBy('exam_version_question_id');
+        $isJft = $attempt->version->exam->category === 'jft_basic';
+        $sections = $attempt->sections->sortBy(fn ($entry) => $entry->section->sort_order)->values();
+        if ($isJft) {
+            $sections = $sections->slice((int) $attempt->active_section_index, 1)->values();
+        }
+        $currentSection = $sections->first()?->section;
 
         return [
             'id' => $attempt->id,
@@ -92,13 +103,21 @@ class ExamAttemptService
             'server_now' => now()->toIso8601String(),
             'deadline_at' => $attempt->deadline_at->toIso8601String(),
             'remaining_seconds' => max(0, (int) floor(now()->diffInSeconds($attempt->deadline_at, false))),
-            'exam' => ['title' => $attempt->version->exam->title, 'level' => $attempt->version->exam->level->level_name, 'type' => $attempt->version->exam->type],
-            'sections' => $attempt->sections->map(fn ($attemptSection) => [
+            'navigation' => $isJft ? [
+                'section_index' => (int) $attempt->active_section_index,
+                'question_index' => (int) $attempt->active_question_index,
+                'section_count' => $attempt->sections->count(),
+                'question_count' => $currentSection?->questions->count() ?? 0,
+                'has_next' => ((int) $attempt->active_section_index + 1 < $attempt->sections->count())
+                    || ($currentSection?->key === 'listening' && (int) $attempt->active_question_index + 1 < $currentSection->questions->count()),
+            ] : null,
+            'exam' => ['title' => $attempt->version->exam->title, 'level' => $attempt->version->exam->level?->level_name, 'type' => $attempt->version->exam->type, 'category' => $attempt->version->exam->category, 'ssw_field' => $attempt->version->exam->ssw_field],
+            'sections' => $sections->map(fn ($attemptSection) => [
                 'id' => $attemptSection->section->id,
                 'key' => $attemptSection->section->key,
                 'title' => $attemptSection->section->title,
                 'time_limit_seconds' => $attemptSection->section->time_limit_seconds,
-                'questions' => $attemptSection->section->questions->map(fn ($question) => [
+                'questions' => ($isJft && $attemptSection->section->key === 'listening' ? $attemptSection->section->questions->slice((int) $attempt->active_question_index, 1) : $attemptSection->section->questions)->map(fn ($question) => [
                     'id' => $question->id,
                     'code' => $question->code,
                     'type' => $question->type,
@@ -131,6 +150,16 @@ class ExamAttemptService
                 ->whereHas('section', fn ($query) => $query->whereIn('id', $attempt->sections()->pluck('exam_section_id')))
                 ->pluck('id')->all();
             $allowed = array_flip($allowedIds);
+            if ($attempt->loadMissing('version.exam')->version->exam->category === 'jft_basic') {
+                $sections = $attempt->sections()->with('section.questions')->get()->sortBy(fn ($entry) => $entry->section->sort_order)->values();
+                $active = $sections->get((int) $attempt->active_section_index);
+                abort_unless($active, 409, 'Bagian ujian tidak ditemukan.');
+                $questions = $active->section->questions;
+                if ($active->section->key === 'listening') {
+                    $questions = $questions->slice((int) $attempt->active_question_index, 1);
+                }
+                $allowed = array_flip($questions->pluck('id')->all());
+            }
             $now = now();
             $rows = [];
             foreach ($data['answers'] as $answer) {
@@ -158,6 +187,30 @@ class ExamAttemptService
         });
     }
 
+    public function advanceJft(ExamAttempt $attempt, int $revision): array
+    {
+        return DB::transaction(function () use ($attempt, $revision) {
+            $attempt = ExamAttempt::whereKey($attempt->id)->lockForUpdate()->firstOrFail();
+            $this->assertWritable($attempt);
+            abort_unless($attempt->loadMissing('version.exam')->version->exam->category === 'jft_basic', 409);
+            abort_if($revision !== (int) $attempt->server_revision, 409, 'Posisi ujian berubah. Muat ulang sebelum melanjutkan.');
+            $sections = $attempt->sections()->with('section.questions')->get()->sortBy(fn ($entry) => $entry->section->sort_order)->values();
+            $section = $sections->get((int) $attempt->active_section_index);
+            abort_unless($section, 409, 'Bagian ujian tidak ditemukan.');
+            $questionIndex = (int) $attempt->active_question_index;
+            if ($section->section->key === 'listening' && $questionIndex + 1 < $section->section->questions->count()) {
+                $attempt->active_question_index = $questionIndex + 1;
+            } else {
+                abort_if((int) $attempt->active_section_index + 1 >= $sections->count(), 409, 'Bagian terakhir telah dicapai.');
+                $attempt->active_section_index++;
+                $attempt->active_question_index = 0;
+            }
+            $attempt->server_revision++;
+            $attempt->save();
+            return $this->state($attempt);
+        });
+    }
+
     public function submit(ExamAttempt $attempt, string $submittedBy = 'user'): ExamAttempt
     {
         return DB::transaction(function () use ($attempt, $submittedBy) {
@@ -176,6 +229,7 @@ class ExamAttemptService
             $totalRaw = 0;
             $totalEstimated = 0;
             $allSectionsPassed = true;
+            $evaluatedAnswers = [];
 
             foreach ($attempt->sections as $attemptSection) {
                 $correct = 0;
@@ -186,10 +240,32 @@ class ExamAttemptService
                     if (! $answer) {
                         continue;
                     }
+                    if (trim((string) $answer->answer_text) === '') {
+                        $answer->forceFill(['is_correct' => false, 'earned_points' => 0]);
+                        $evaluatedAnswers[] = [
+                            'id' => $answer->id,
+                            'exam_attempt_id' => $attempt->id,
+                            'exam_version_question_id' => $question->id,
+                            'is_correct' => false,
+                            'earned_points' => 0,
+                            'updated_at' => now(),
+                        ];
+                        continue;
+                    }
                     $answered++;
-                    $isCorrect = $this->evaluator->benarUntukData($question->type, $question->correct_answer, (array) ($question->options ?? []), $answer->answer_text, (array) ($answer->answer_payload ?? []));
+                    $isCorrect = $question->type === 'sentence_builder'
+                        ? $this->evaluator->jawabanSama((string) $answer->answer_text, $question->correct_answer)
+                        : $this->evaluator->benarUntukData($question->type, $question->correct_answer, (array) ($question->options ?? []), $answer->answer_text, (array) ($answer->answer_payload ?? []));
                     $earned = $isCorrect ? $question->points : 0;
-                    $answer->update(['is_correct' => $isCorrect, 'earned_points' => $earned]);
+                    $answer->forceFill(['is_correct' => $isCorrect, 'earned_points' => $earned]);
+                    $evaluatedAnswers[] = [
+                        'id' => $answer->id,
+                        'exam_attempt_id' => $attempt->id,
+                        'exam_version_question_id' => $question->id,
+                        'is_correct' => $isCorrect,
+                        'earned_points' => $earned,
+                        'updated_at' => now(),
+                    ];
                     $correct += $isCorrect ? 1 : 0;
                     $raw += $earned;
                 }
@@ -210,6 +286,10 @@ class ExamAttemptService
                 $allSectionsPassed = $allSectionsPassed && $passed;
             }
 
+            if (! empty($evaluatedAnswers)) {
+                ExamAttemptAnswer::upsert($evaluatedAnswers, ['id'], ['is_correct', 'earned_points', 'updated_at']);
+            }
+
             $isFullSimulation = $attempt->mode === 'full' && $attempt->version->exam->type === 'simulation';
             $rankingEligible = $isFullSimulation
                 && $attempt->attempt_number === 1
@@ -222,7 +302,7 @@ class ExamAttemptService
                 'submitted_at' => now(),
                 'raw_points' => $totalRaw,
                 'estimated_score' => $totalEstimated,
-                'estimated_passed' => $isFullSimulation ? $allSectionsPassed && $totalEstimated >= $totalPassScore : null,
+                'estimated_passed' => $isFullSimulation ? ($attempt->version->exam->category === 'jft_basic' || $allSectionsPassed) && $totalEstimated >= $totalPassScore : null,
                 'ranking_eligible' => $rankingEligible,
                 'submitted_by' => $submittedBy,
             ]);
@@ -236,17 +316,18 @@ class ExamAttemptService
     public function result(ExamAttempt $attempt): array
     {
         abort_unless($this->access->resultReleased($attempt), 403, 'Hasil ujian belum dirilis.');
-        $attempt->load(['version.exam.level', 'sections.section', 'answers.question']);
+        $attempt->load(['version.exam.level', 'sections.section.questions', 'answers']);
         $showReview = $attempt->version->review_policy !== 'none';
-        $questionCount = $attempt->version->sections()->withCount('questions')->get()->sum('questions_count');
+        $questions = $attempt->sections->sortBy(fn ($item) => $item->section->sort_order)->flatMap(fn ($item) => $item->section->questions);
+        $answers = $attempt->answers->keyBy('exam_version_question_id');
 
         return [
             'id' => $attempt->id,
             'exam_title' => $attempt->version->exam->title,
-            'level' => $attempt->version->exam->level->level_name,
+            'level' => $attempt->version->exam->level?->level_name,
             'score' => $attempt->estimated_score,
             'max_score' => $attempt->sections->sum(fn ($item) => $item->section->estimated_max_score),
-            'question_count' => $questionCount,
+            'question_count' => $questions->count(),
             'status' => $attempt->estimated_passed === null ? 'completed' : ($attempt->estimated_passed ? 'passed' : 'failed'),
             'label' => $attempt->version->exam->type === 'simulation' ? 'Estimasi Simulasi TOKU-UP' : 'Hasil Latihan Ujian',
             'submitted_at' => $attempt->submitted_at?->toIso8601String(),
@@ -258,15 +339,15 @@ class ExamAttemptService
                 'correct_count' => $item->correct_count,
                 'answered_count' => $item->answered_count,
             ])->values(),
-            'review' => $showReview ? $attempt->answers
-                ->filter(fn ($answer) => $attempt->version->review_policy === 'full' || ! $answer->is_correct)
-                ->map(fn ($answer) => [
-                    'question_id' => $answer->question->id,
-                    'question_text' => $answer->question->question_text,
-                    'answer_text' => $answer->answer_text,
-                    'correct_answer' => $answer->question->correct_answer,
-                    'explanation' => $answer->question->explanation,
-                    'is_correct' => $answer->is_correct,
+            'review' => $showReview ? $questions
+                ->filter(fn ($question) => $attempt->version->review_policy === 'full' || ! $answers->get($question->id)?->is_correct)
+                ->map(fn ($question) => [
+                    'question_id' => $question->id,
+                    'question_text' => $question->question_text,
+                    'answer_text' => $answers->get($question->id)?->answer_text,
+                    'correct_answer' => $question->correct_answer,
+                    'explanation' => $question->explanation,
+                    'is_correct' => $answers->get($question->id)?->is_correct ?? false,
                 ])->values() : [],
         ];
     }

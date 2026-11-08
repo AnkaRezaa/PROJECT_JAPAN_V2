@@ -33,7 +33,8 @@ class ExamQuestionBankService
         }
 
         return ExamQuestionBank::create([
-            'level_id' => $data['level_id'],
+            'level_id' => $data['level_id'] ?? null,
+            ...Arr::only($data, ['category', 'ssw_field']),
             'title' => trim($data['title']),
             'slug' => $slug,
             'source' => trim($data['source'] ?? '') ?: null,
@@ -47,7 +48,7 @@ class ExamQuestionBankService
     public function updateBank(ExamQuestionBank $bank, array $data, Pengguna $actor): ExamQuestionBank
     {
         $bank->update([
-            'level_id' => $data['level_id'] ?? $bank->level_id,
+            'level_id' => array_key_exists('level_id', $data) ? $data['level_id'] : $bank->level_id,
             'title' => trim($data['title'] ?? $bank->title),
             'source' => trim($data['source'] ?? $bank->source) ?: null,
             'description' => trim($data['description'] ?? $bank->description) ?: null,
@@ -402,12 +403,22 @@ class ExamQuestionBankService
 
     public function pullToExamSection(ExamSection $section, array $bankQuestionIds): int
     {
-        $questions = ExamBankQuestion::with('wrapper')->whereIn('id', $bankQuestionIds)->get();
-        if ($questions->isEmpty()) {
-            return 0;
-        }
-
-        return DB::transaction(function () use ($section, $questions) {
+        return DB::transaction(function () use ($section, $bankQuestionIds) {
+            $version = $section->version()->lockForUpdate()->with('exam')->firstOrFail();
+            abort_unless($version->status === 'draft', 409, 'Versi ujian yang telah diterbitkan tidak dapat diubah.');
+            $questions = ExamBankQuestion::with(['wrapper', 'bank'])->whereIn('id', $bankQuestionIds)->get();
+            if ($questions->isEmpty()) {
+                return 0;
+            }
+            $exam = $version->exam;
+            foreach ($questions as $question) {
+                $bank = $question->bank;
+                if (($bank->category ?? 'jlpt') !== ($exam->category ?? 'jlpt')
+                    || (($exam->category ?? 'jlpt') === 'jlpt' && (int) $bank->level_id !== (int) $exam->level_id)
+                    || (($exam->category ?? 'jlpt') === 'ssw' && $bank->ssw_field !== $exam->ssw_field)) {
+                    throw ValidationException::withMessages(['bank_question_ids' => 'Kategori, level, atau bidang bank tidak sesuai dengan paket ujian.']);
+                }
+            }
             $baseSort = (int) $section->questions()->max('sort_order');
             $pulled = 0;
 

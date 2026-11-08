@@ -15,7 +15,9 @@ class UpdateExamQuestionBankRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'level_id' => ['sometimes', 'required', 'exists:levels,id'],
+            'category' => ['prohibited'],
+            'ssw_field' => ['prohibited'],
+            'level_id' => ['sometimes', Rule::requiredIf(($this->route('bank')?->category ?? 'jlpt') === 'jlpt'), Rule::prohibitedIf(($this->route('bank')?->category ?? 'jlpt') !== 'jlpt'), 'nullable', 'exists:levels,id'],
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'source' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],

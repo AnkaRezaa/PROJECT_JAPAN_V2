@@ -23,7 +23,7 @@ class ExamPortalDataService
             ->with(['level:id,level_name', 'versions' => fn ($query) => $query
                 ->where('status', 'published')
                 ->with(['sections' => fn ($sections) => $sections->select('id', 'exam_version_id', 'key', 'title', 'short_title', 'sort_order', 'time_limit_seconds', 'estimated_max_score')->withCount('questions'), 'sessions' => fn ($sessions) => $sessions
-                    ->whereIn('status', ['active', 'scheduled'])
+                    ->whereIn('status', ['active', 'scheduled', 'closed'])
                     ->orderBy('starts_at')])])
             ->when($request->filled('level'), fn ($query) => $query->whereHas('level', fn ($level) => $level->where('level_name', (string) $request->string('level'))))
             ->when($request->filled('type'), fn ($query) => $query->where('type', (string) $request->string('type')))
@@ -36,11 +36,29 @@ class ExamPortalDataService
             ->where('user_id', $user->id)
             ->whereIn('exam_version_id', $exams->flatMap(fn ($exam) => $exam->versions)->pluck('id'))
             ->whereIn('status', ['submitted', 'timed_out'])
-            ->selectRaw('exam_version_id, count(*) as attempt_count, max(estimated_score) as last_score')
+            ->selectRaw('exam_version_id, count(*) as attempt_count')
             ->groupBy('exam_version_id')
             ->get()->keyBy('exam_version_id');
 
-        $packages = $exams->map(fn (Exam $exam) => $this->examPayload($exam, $attempts))->values();
+        $releasedScores = ExamAttempt::query()
+            ->join('exam_versions', 'exam_versions.id', '=', 'exam_attempts.exam_version_id')
+            ->join('exams', 'exams.id', '=', 'exam_versions.exam_id')
+            ->join('exam_sessions', 'exam_sessions.id', '=', 'exam_attempts.exam_session_id')
+            ->where('exam_attempts.user_id', $user->id)
+            ->whereIn('exam_attempts.exam_version_id', $exams->flatMap(fn ($exam) => $exam->versions)->pluck('id'))
+            ->whereIn('exam_attempts.status', ['submitted', 'timed_out'])
+            ->where(fn ($query) => $query->where('exam_versions.result_release_policy', 'immediate')
+                ->orWhere('exams.type', 'practice')
+                ->orWhere(fn ($query) => $query->where('exam_versions.result_release_policy', 'after_session')->where('exam_sessions.ends_at', '<', now()))
+                ->orWhere('exam_sessions.result_released_at', '<', now()))
+            ->selectRaw('exam_attempts.exam_version_id, max(exam_attempts.estimated_score) as last_score')
+            ->groupBy('exam_attempts.exam_version_id')->get()->keyBy('exam_version_id');
+
+        $packages = $exams->map(fn (Exam $exam) => $this->examPayload($exam, $attempts, $releasedScores))->values();
+        $rankingSessions = $exams->filter(fn ($exam) => $exam->type === 'simulation')->flatMap(fn ($exam) => $exam->versions->flatMap(fn ($version) => $version->sessions
+            ->filter(fn ($session) => $session->ranking_enabled && in_array($session->status, ['active', 'closed'], true) && ($exam->access_type !== 'cohort' || $this->access->canViewSession($user, $session)))
+            ->map(fn ($session) => ['id' => $session->id, 'name' => $session->name, 'exam_title' => $exam->title, 'category' => $exam->category, 'level' => $exam->level?->level_name, 'ssw_field' => $exam->ssw_field])))->values();
+        $rankingSessionId = $request->integer('session_id') ?: ($rankingSessions->first()['id'] ?? null);
         $historyPaginator = ExamAttempt::query()
             ->where('user_id', $user->id)
             ->whereIn('status', ['submitted', 'timed_out'])
@@ -56,8 +74,10 @@ class ExamPortalDataService
             'sessions' => $packages->pluck('session')->filter()->unique()->values(),
             'levels' => LevelPembelajaran::query()->orderBy('stage')->pluck('level_name'),
             'sections' => $this->sectionTemplates(),
-            'latest_result' => $historyPaginator->getCollection()->first() ? $this->latestResult($historyPaginator->getCollection()->first()) : null,
-            'ranking' => $this->ranking($request),
+            'latest_result' => ($latest = $historyPaginator->getCollection()->first()) && $this->access->resultReleased($latest) ? $this->latestResult($latest) : null,
+            'ranking' => $this->ranking($rankingSessionId, $user),
+            'ranking_sessions' => $rankingSessions,
+            'ranking_session_id' => $rankingSessionId,
             'history' => $historyPaginator->getCollection()->map(fn (ExamAttempt $attempt) => $this->historyPayload($attempt))->values(),
             'history_pagination' => ['current_page' => $historyPaginator->currentPage(), 'last_page' => $historyPaginator->lastPage(), 'next_page_url' => $historyPaginator->nextPageUrl(), 'prev_page_url' => $historyPaginator->previousPageUrl()],
             'viewer' => ['name' => $user->username, 'email' => $user->email, 'current_level' => null],
@@ -98,7 +118,7 @@ class ExamPortalDataService
                 'exam_title' => $session->version->exam->title,
                 'exam_version_id' => $session->exam_version_id,
                 'access' => $session->version->exam->access_type,
-                'level' => $session->version->exam->level->level_name,
+                'level' => $session->version->exam->level?->level_name,
                 'starts_at_value' => $session->starts_at?->format('Y-m-d\TH:i'),
                 'ends_at_value' => $session->ends_at?->format('Y-m-d\TH:i'),
                 'starts_at' => $session->starts_at?->format('d M Y, H.i'),
@@ -153,20 +173,21 @@ class ExamPortalDataService
         ];
     }
 
-    public function ranking(Request $request): Collection
+    public function ranking(?int $sessionId, Pengguna $user): Collection
     {
-        $sessionId = $request->integer('session_id');
         if (! $sessionId) {
-            $sessionId = ExamSession::where('ranking_enabled', true)->whereIn('status', ['active', 'closed'])->latest('starts_at')->value('id');
+            return collect();
         }
-        if (! $sessionId) {
+
+        $session = ExamSession::with('version.exam')->find($sessionId);
+        if (! $session || ! $session->ranking_enabled || ! $this->access->canViewSession($user, $session) || ! $this->access->sessionResultsReleased($session)) {
             return collect();
         }
 
         $cacheKey = 'exam:ranking:'.$sessionId;
         $cachedRanking = Cache::get($cacheKey);
 
-        if ($cachedRanking !== null && ! is_array($cachedRanking)) {
+        if ($cachedRanking !== null && (! is_array($cachedRanking) || ($cachedRanking !== [] && (! isset($cachedRanking[0]['sections']) || ! isset($cachedRanking[0]['max_score']))))) {
             Cache::forget($cacheKey);
         }
 
@@ -184,14 +205,14 @@ class ExamPortalDataService
             ->map(function ($attempt, $index) {
                 $sectionScores = $attempt->sections->mapWithKeys(fn ($section) => [$section->section->key => $section->estimated_score]);
 
-                return ['rank' => $index + 1, 'name' => $attempt->user->username, 'level' => $attempt->version->exam->level->level_name, 'vocabulary' => $sectionScores['vocabulary'] ?? null, 'grammar_reading' => $sectionScores['grammar_reading'] ?? null, 'listening' => $sectionScores['listening'] ?? null, 'total' => $attempt->estimated_score, 'duration' => $this->duration($attempt)];
+                return ['rank' => $index + 1, 'name' => $attempt->user->username, 'level' => $attempt->version->exam->level?->level_name, 'vocabulary' => $sectionScores['vocabulary'] ?? null, 'grammar_reading' => $sectionScores['grammar_reading'] ?? null, 'listening' => $sectionScores['listening'] ?? null, 'sections' => $attempt->sections->sortBy(fn ($item) => $item->section->sort_order)->map(fn ($item) => ['key' => $item->section->key, 'title' => $item->section->short_title ?: $item->section->title, 'score' => $item->estimated_score])->values()->all(), 'total' => $attempt->estimated_score, 'max_score' => $attempt->sections->sum(fn ($item) => $item->section->estimated_max_score), 'duration' => $this->duration($attempt)];
             })
             ->all());
 
         return collect($ranking);
     }
 
-    public function examPayload(Exam $exam, Collection $attempts): array
+    public function examPayload(Exam $exam, Collection $attempts, ?Collection $releasedScores = null): array
     {
         $version = $exam->versions->sortByDesc('version_number')->first();
         $session = $version?->sessions->first(fn ($item) => $item->status === 'active') ?? $version?->sessions->first();
@@ -204,15 +225,18 @@ class ExamPortalDataService
             'title' => $exam->title,
             'description' => $exam->description,
             'type' => $exam->type,
-            'level' => $exam->level->level_name,
+            'category' => $exam->category ?? 'jlpt',
+            'ssw_field' => $exam->ssw_field,
+            'level' => $exam->level?->level_name,
             'session' => $session?->name,
             'session_id' => $session?->id,
-            'duration_minutes' => (int) ceil($sections->sum('time_limit_seconds') / 60),
+            'ranking_enabled' => (bool) $session?->ranking_enabled,
+            'duration_minutes' => (int) ceil((($exam->category === 'jft_basic' ? $version?->total_time_limit_seconds : null) ?? $sections->sum('time_limit_seconds')) / 60),
             'question_count' => (int) $sections->sum(fn ($section) => $section->questions_count ?? $section->questions()->count()),
             'section_count' => $sections->count(),
             'status' => $session?->status === 'active' ? ($attempt ? 'completed' : 'available') : 'locked',
             'attempt_count' => (int) ($attempt?->attempt_count ?? 0),
-            'last_score' => $attempt?->last_score !== null ? (int) $attempt->last_score : null,
+            'last_score' => ($score = $version ? $releasedScores?->get($version->id)?->last_score : null) !== null ? (int) $score : null,
             'max_score' => (int) $sections->sum('estimated_max_score'),
             'scheduled_at' => $session?->starts_at?->format('d F Y'),
             'sections' => $sections->map(fn ($section) => ['key' => $section->key, 'label' => $section->title, 'short_label' => $section->short_title ?: $section->title, 'duration_minutes' => (int) ceil($section->time_limit_seconds / 60), 'question_count' => $section->questions_count ?? $section->questions()->count()])->values(),
@@ -230,8 +254,10 @@ class ExamPortalDataService
             'title' => $exam->title,
             'description' => $exam->description,
             'level_id' => $exam->level_id,
+            'category' => $exam->category ?? 'jlpt',
+            'ssw_field' => $exam->ssw_field,
             'type' => $exam->type,
-            'level' => $exam->level->level_name,
+            'level' => $exam->level?->level_name,
             'duration_minutes' => (int) ceil($sections->sum('time_limit_seconds') / 60),
             'question_count' => (int) $sections->sum('questions_count'),
             'status' => $exam->status,
@@ -261,7 +287,9 @@ class ExamPortalDataService
 
     private function historyPayload(ExamAttempt $attempt): array
     {
-        return ['id' => $attempt->id, 'exam_slug' => $attempt->version->exam->slug, 'title' => $attempt->version->exam->title, 'session' => $attempt->session?->name, 'level' => $attempt->version->exam->level->level_name, 'attempt' => $attempt->attempt_number, 'score' => $attempt->estimated_score, 'max_score' => $attempt->sections->sum(fn ($item) => $item->section->estimated_max_score), 'status' => $attempt->estimated_passed === null ? 'completed' : ($attempt->estimated_passed ? 'passed' : 'failed'), 'duration' => $this->duration($attempt), 'completed_at' => $attempt->submitted_at?->format('d F Y'), 'sections' => $attempt->sections->mapWithKeys(fn ($item) => [$item->section->key => $item->estimated_score])];
+        $released = $this->access->resultReleased($attempt);
+
+        return ['id' => $attempt->id, 'exam_slug' => $attempt->version->exam->slug, 'title' => $attempt->version->exam->title, 'session' => $attempt->session?->name, 'category' => $attempt->version->exam->category, 'ssw_field' => $attempt->version->exam->ssw_field, 'level' => $attempt->version->exam->level?->level_name, 'attempt' => $attempt->attempt_number, 'result_available' => $released, 'score' => $released ? $attempt->estimated_score : null, 'max_score' => $attempt->sections->sum(fn ($item) => $item->section->estimated_max_score), 'status' => ! $released ? 'pending' : ($attempt->estimated_passed === null ? 'completed' : ($attempt->estimated_passed ? 'passed' : 'failed')), 'duration' => $this->duration($attempt), 'completed_at' => $attempt->submitted_at?->format('d F Y'), 'sections' => $released ? $attempt->sections->map(fn ($item) => ['key' => $item->section->key, 'title' => $item->section->short_title ?: $item->section->title, 'score' => $item->estimated_score, 'max_score' => $item->section->estimated_max_score])->values() : []];
     }
 
     private function adminResultPayload(ExamAttempt $attempt): array
@@ -270,7 +298,7 @@ class ExamPortalDataService
             'id' => $attempt->id,
             'name' => $attempt->user->username,
             'exam' => $attempt->version->exam->title,
-            'level' => $attempt->version->exam->level->level_name,
+            'level' => $attempt->version->exam->level?->level_name,
             'score' => $attempt->estimated_score,
             'max_score' => $attempt->sections->sum(fn ($section) => $section->section->estimated_max_score),
             'status' => $attempt->status === 'invalidated' ? 'invalidated' : ($attempt->estimated_passed === null ? 'completed' : ($attempt->estimated_passed ? 'passed' : 'failed')),
@@ -281,7 +309,7 @@ class ExamPortalDataService
 
     private function latestResult(ExamAttempt $attempt): array
     {
-        return ['exam_title' => $attempt->version->exam->title, 'score' => $attempt->estimated_score, 'max_score' => $attempt->sections->sum(fn ($item) => $item->section->estimated_max_score), 'status' => $attempt->estimated_passed ? 'Estimasi lulus' : 'Belum memenuhi estimasi', 'completed_at' => $attempt->submitted_at?->format('d F Y')];
+        return ['exam_title' => $attempt->version->exam->title, 'score' => $attempt->estimated_score, 'max_score' => $attempt->sections->sum(fn ($item) => $item->section->estimated_max_score), 'status' => $attempt->estimated_passed === null ? 'Selesai' : ($attempt->estimated_passed ? 'Estimasi lulus' : 'Belum memenuhi estimasi'), 'completed_at' => $attempt->submitted_at?->format('d F Y')];
     }
 
     private function duration(ExamAttempt $attempt): string

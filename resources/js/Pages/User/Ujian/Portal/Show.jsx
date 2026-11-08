@@ -19,6 +19,7 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import JapaneseSpeechButton from '@/Components/UI/JapaneseSpeechButton';
 import ExamPortalLayout from '@/Layouts/ExamPortalLayout';
 import ExamResultView from '@/Components/Features/ExamPortal/ExamResultView';
+import { examCategoryLabel } from '@/Components/Features/ExamPortal/ExamPortalUI';
 import { pushAnalyticsEvent } from '@/lib/analytics';
 
 const sectionDescriptions = {
@@ -44,6 +45,11 @@ const formatTime = (seconds) => {
         : `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
 };
 
+const examAudioUrl = (path) => {
+    if (!path) return null;
+    return /^https?:\/\//i.test(path) ? path : `/${path.replace(/^\/+/, '')}`;
+};
+
 const LoadingSpinner = () => <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />;
 
 function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
@@ -53,6 +59,7 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
     }));
 
     const localAnswersKey = `toku-up-exam-answers-${initialAttempt.id}`;
+    const localPartsKey = `${localAnswersKey}-parts`;
 
     const [answers, setAnswers] = useState(() => {
         const serverAnswers = Object.fromEntries(
@@ -68,40 +75,114 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
         }
     });
 
-    const [builderParts, setBuilderParts] = useState({});
+    const [builderParts, setBuilderParts] = useState(() => {
+        const saved = Object.fromEntries(initialAttempt.sections.flatMap((section) => section.questions)
+            .filter((question) => question.type === 'sentence_builder' && Array.isArray(question.answer?.answer_payload?.option_indexes))
+            .map((question) => [question.id, question.answer.answer_payload.option_indexes]));
+        try {
+            const cached = JSON.parse(window.localStorage.getItem(localPartsKey) || '{}');
+            return { ...saved, ...cached };
+        } catch {
+            return saved;
+        }
+    });
+    const builderPartsRef = useRef(builderParts);
     const [flagged, setFlagged] = useState(() => new Set(
         initialAttempt.sections.flatMap((section) => section.questions)
             .filter((question) => question.answer?.flagged)
             .map((question) => question.id),
     ));
+    const flaggedRef = useRef(flagged);
 
     const [remaining, setRemaining] = useState(initialAttempt.remaining_seconds);
     const [busy, setBusy] = useState(false);
     const [syncStatus, setSyncStatus] = useState('saved');
     const [error, setError] = useState('');
     const [result, setResult] = useState(null);
+    const [recovering, setRecovering] = useState(false);
     const [showSubmitModal, setShowSubmitModal] = useState(false);
+    const [showAdvanceModal, setShowAdvanceModal] = useState(false);
     const [tabSwitchCount, setTabSwitchCount] = useState(0);
     const [showTabWarning, setShowTabWarning] = useState(false);
-    const [audioPlays, setAudioPlays] = useState({});
+    const [audioPlays, setAudioPlays] = useState(() => {
+        if (typeof window === 'undefined') return {};
+        try {
+            const raw = sessionStorage.getItem(`exam_audio_plays_${initialAttempt?.id}`);
+            return raw ? JSON.parse(raw) : {};
+        } catch {
+            return {};
+        }
+    });
 
     const savePromiseRef = useRef(null);
+    const revisionRef = useRef(Number(initialAttempt.server_revision ?? 0));
+    const displayDeadlineRef = useRef(Date.now() + Math.max(0, Number(initialAttempt.remaining_seconds) || 0) * 1000);
     const hasSubmittedRef = useRef(false);
     const debounceTimeoutRef = useRef(null);
 
-    const questions = useMemo(() => initialAttempt.sections.flatMap((section) => (
+    const isJft = attempt.exam?.category === 'jft_basic';
+    const questions = useMemo(() => attempt.sections.flatMap((section) => (
         section.questions.map((question) => ({
             ...question,
             sectionKey: section.key,
             sectionTitle: section.title,
         }))
-    )), [initialAttempt.sections]);
+    )), [attempt.sections]);
+
+    const recoverResult = async () => {
+        setRecovering(true);
+        setError('');
+        try {
+            const response = await window.axios.get(route('user.exam-attempts.result', initialAttempt.id));
+            setResult(response.data.result);
+            window.localStorage.removeItem(startTokenKey);
+            window.localStorage.removeItem(localAnswersKey);
+            window.localStorage.removeItem(localPartsKey);
+        } catch (requestError) {
+            if (requestError.response?.status === 403) {
+                setResult({ pending: true });
+                window.localStorage.removeItem(startTokenKey);
+                window.localStorage.removeItem(localAnswersKey);
+                window.localStorage.removeItem(localPartsKey);
+            } else {
+                setError('Hasil belum dapat dimuat. Periksa koneksi dan coba lagi.');
+            }
+        } finally {
+            setRecovering(false);
+        }
+    };
 
     useEffect(() => {
-        if (result || remaining <= 0) return undefined;
-        const timer = window.setInterval(() => setRemaining((value) => Math.max(0, value - 1)), 1000);
+        if (['submitted', 'timed_out'].includes(initialAttempt.status)) recoverResult();
+    }, []);
+
+    useEffect(() => {
+        const restored = {};
+        questions.forEach((question) => {
+            if (question.type === 'sentence_builder' && !Object.hasOwn(builderPartsRef.current, question.id) && Array.isArray(question.answer?.answer_payload?.option_indexes)) {
+                restored[question.id] = question.answer.answer_payload.option_indexes;
+            }
+        });
+        if (Object.keys(restored).length) {
+            builderPartsRef.current = { ...builderPartsRef.current, ...restored };
+            setBuilderParts(builderPartsRef.current);
+        }
+    }, [questions]);
+
+    useEffect(() => () => clearTimeout(debounceTimeoutRef.current), []);
+
+    useEffect(() => {
+        if (result || initialAttempt.status !== 'in_progress') return undefined;
+        const tick = () => setRemaining(Math.max(0, Math.ceil((displayDeadlineRef.current - Date.now()) / 1000)));
+        const timer = window.setInterval(tick, 1000);
         return () => window.clearInterval(timer);
-    }, [remaining, result]);
+    }, [result, initialAttempt.status]);
+
+    const syncRemaining = (seconds) => {
+        const safe = Math.max(0, Number(seconds) || 0);
+        displayDeadlineRef.current = Date.now() + safe * 1000;
+        setRemaining(safe);
+    };
 
     useEffect(() => {
         const handleVisibility = () => {
@@ -115,42 +196,54 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
     }, []);
 
     const answerRows = (overrideAnswers = answers) => questions
-        .filter((item) => overrideAnswers[item.id] !== undefined || flagged.has(item.id))
+        .filter((item) => overrideAnswers[item.id] !== undefined || flaggedRef.current.has(item.id))
         .map((item) => ({
             question_id: item.id,
             answer_text: overrideAnswers[item.id] ?? null,
-            flagged: flagged.has(item.id),
+            ...(item.type === 'sentence_builder' ? { answer_payload: { option_indexes: builderPartsRef.current[item.id] || [] } } : {}),
+            flagged: flaggedRef.current.has(item.id),
         }));
 
     const save = async (overrideAnswers = answers) => {
         const rows = answerRows(overrideAnswers);
-        if (rows.length === 0) return;
-        if (savePromiseRef.current) return savePromiseRef.current;
+        if (rows.length === 0) return { ok: true, revision: revisionRef.current };
+        if (savePromiseRef.current) {
+            const previous = await savePromiseRef.current;
+            if (!previous?.ok) return previous;
+            return save(overrideAnswers);
+        }
 
         setSyncStatus('saving');
         savePromiseRef.current = (async () => {
             try {
-                const response = await window.axios.put(route('user.exam-attempts.answers', attempt.id), {
-                    autosave_token: uuid(),
-                    client_revision: Number(attempt.server_revision ?? 0),
-                    answers: rows,
-                });
-                setAttempt((val) => ({ ...val, server_revision: Number(response.data.server_revision ?? val.server_revision) }));
-                if (response.data.remaining_seconds !== undefined) {
-                    setRemaining(response.data.remaining_seconds);
+                for (let offset = 0; offset < rows.length; offset += 100) {
+                    const response = await window.axios.put(route('user.exam-attempts.answers', attempt.id), {
+                        autosave_token: uuid(),
+                        client_revision: revisionRef.current,
+                        answers: rows.slice(offset, offset + 100),
+                    });
+                    revisionRef.current = Number(response.data.server_revision ?? revisionRef.current);
+                    setAttempt((val) => ({ ...val, server_revision: revisionRef.current }));
+                    if (response.data.remaining_seconds !== undefined) {
+                        syncRemaining(response.data.remaining_seconds);
+                    }
                 }
                 setSyncStatus('saved');
                 setError('');
+                return { ok: true, revision: revisionRef.current };
             } catch (requestError) {
                 if (requestError.response?.status === 409) {
                     const syncRes = await window.axios.get(route('user.exam-attempts.show', attempt.id)).catch(() => null);
                     if (syncRes?.data?.attempt) {
-                        setAttempt((val) => ({ ...val, server_revision: Number(syncRes.data.attempt.server_revision ?? 0) }));
+                        revisionRef.current = Number(syncRes.data.attempt.server_revision ?? 0);
+                        setAttempt(syncRes.data.attempt);
                     }
-                    setSyncStatus('saved');
+                    setSyncStatus('error');
                 } else {
                     setSyncStatus(window.navigator.onLine ? 'error' : 'offline');
                 }
+                setError('Jawaban belum tersimpan. Periksa koneksi dan coba lagi.');
+                return { ok: false };
             } finally {
                 savePromiseRef.current = null;
             }
@@ -191,34 +284,53 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
     };
 
     const toggleFlag = (questionId) => {
-        setFlagged((currentFlags) => {
-            const next = new Set(currentFlags);
-            if (next.has(questionId)) next.delete(questionId);
-            else next.add(questionId);
-            return next;
-        });
+        const next = new Set(flaggedRef.current);
+        if (next.has(questionId)) next.delete(questionId);
+        else next.add(questionId);
+        flaggedRef.current = next;
+        setFlagged(next);
+        const nextAnswers = { ...answers, [questionId]: answers[questionId] ?? '' };
+        setAnswers(nextAnswers);
+        try {
+            window.localStorage.setItem(localAnswersKey, JSON.stringify(nextAnswers));
+        } catch {
+            // Autosave remains available when local storage is unavailable.
+        }
 
         if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
         debounceTimeoutRef.current = setTimeout(() => {
-            save();
+            save(nextAnswers);
         }, 800);
     };
 
-    const chooseBuilderPart = (questionId, part) => {
-        const parts = [...(builderParts[questionId] || []), part];
-        setBuilderParts((value) => ({ ...value, [questionId]: parts }));
-        handleAnswerChange(questionId, parts.join(''));
+    const updateBuilderParts = (question, parts) => {
+        const next = { ...builderPartsRef.current, [question.id]: parts };
+        builderPartsRef.current = next;
+        setBuilderParts(next);
+        try {
+            window.localStorage.setItem(localPartsKey, JSON.stringify(next));
+        } catch {
+            // Storage may be unavailable; autosave still persists the selection.
+        }
+        handleAnswerChange(question.id, parts.map((index) => question.options[index]).join(''));
     };
 
-    const resetBuilder = (questionId) => {
-        setBuilderParts((value) => ({ ...value, [questionId]: [] }));
-        handleAnswerChange(questionId, '');
-    };
+    const chooseBuilderPart = (question, index) => updateBuilderParts(question, [...(builderPartsRef.current[question.id] || []), index]);
+
+    const resetBuilder = (question) => updateBuilderParts(question, []);
 
     const handlePlayAudio = (questionId) => {
-        const count = audioPlays[questionId] || 0;
-        if (count >= 2) return false;
-        setAudioPlays((prev) => ({ ...prev, [questionId]: count + 1 }));
+        setAudioPlays((prev) => {
+            const currentCount = prev[questionId] || 0;
+            if (currentCount >= 2) return prev;
+            const updated = { ...prev, [questionId]: currentCount + 1 };
+            if (typeof window !== 'undefined' && initialAttempt?.id) {
+                try {
+                    sessionStorage.setItem(`exam_audio_plays_${initialAttempt.id}`, JSON.stringify(updated));
+                } catch {}
+            }
+            return updated;
+        });
         return true;
     };
 
@@ -229,18 +341,54 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
         }
     };
 
+    const advance = async () => {
+        setBusy(true);
+        setError('');
+        if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+        try {
+            if (savePromiseRef.current) await savePromiseRef.current;
+            const saved = await save();
+            if (!saved?.ok) return;
+            const response = await window.axios.post(route('user.exam-attempts.advance', attempt.id), {
+                client_revision: saved.revision,
+            });
+            const next = response.data.attempt;
+            revisionRef.current = Number(next.server_revision);
+            setAttempt(next);
+            syncRemaining(next.remaining_seconds);
+            setShowAdvanceModal(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (requestError) {
+            if (requestError.response?.status === 409) {
+                const response = await window.axios.get(route('user.exam-attempts.show', attempt.id)).catch(() => null);
+                if (response?.data?.attempt) {
+                    revisionRef.current = Number(response.data.attempt.server_revision);
+                    setAttempt(response.data.attempt);
+                }
+            }
+            setError(requestError.response?.data?.message || 'Bagian berikutnya belum dapat dibuka. Coba lagi.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
     const submit = async () => {
         if (hasSubmittedRef.current) return;
         hasSubmittedRef.current = true;
         setBusy(true);
         setError('');
         try {
+            if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
             if (savePromiseRef.current) await savePromiseRef.current;
-            else if (remaining > 0) await save();
+            if (remaining > 0 && !(await save())?.ok) {
+                hasSubmittedRef.current = false;
+                return;
+            }
 
             const response = await window.axios.post(route('user.exam-attempts.submit', attempt.id));
             window.localStorage.removeItem(startTokenKey);
             window.localStorage.removeItem(localAnswersKey);
+            window.localStorage.removeItem(localPartsKey);
             setResult(response.data.result || { pending: true });
             pushAnalyticsEvent('exam_completed', {
                 exam_type: initialAttempt.exam?.type || 'exam',
@@ -257,7 +405,7 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
     };
 
     useEffect(() => {
-        if (remaining > 0 || result || busy) return;
+        if (initialAttempt.status !== 'in_progress' || remaining > 0 || result || busy) return;
         submit();
     }, [remaining, busy, result]);
 
@@ -268,6 +416,10 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                 <ExamResultView result={result} totalQuestions={questions.length} onExit={onExit} />
             </ExamPortalLayout>
         );
+    }
+
+    if (initialAttempt.status !== 'in_progress') {
+        return <ExamPortalLayout><main className="mx-auto max-w-3xl px-4 py-12"><h1 className="text-xl font-bold">Memuat hasil ujian</h1>{error && <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">{error}</p>}<button type="button" disabled={recovering} onClick={recoverResult} className="mt-4 rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{recovering ? 'Memuat...' : 'Coba lagi'}</button></main></ExamPortalLayout>;
     }
 
     const answeredCount = questions.filter((q) => Boolean(answers[q.id])).length;
@@ -306,7 +458,7 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                 <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#dbe5df] bg-white/95 px-4 py-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-[#142019]/95 sm:px-6 sm:py-4">
                     <div>
                         <span className="text-[11px] font-black uppercase text-brand-700 dark:text-green-400">
-                            {initialAttempt.exam.level} · {initialAttempt.exam.title}
+                            {examCategoryLabel(attempt.exam)} · {initialAttempt.exam.title}
                         </span>
                         <div className="mt-0.5 flex items-center gap-3">
                             <div className="flex items-center gap-1.5 text-xs text-slate-500">
@@ -360,12 +512,16 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                     </div>
                 </header>
 
+                {error && !showAdvanceModal && !showSubmitModal && (
+                    <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p>
+                )}
+
                 {/* Main Content: Split Grid (Continuous Paper Flow + Sticky Anchor Navigator) */}
                 <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_270px]">
                     
                     {/* Left Column: Continuous Paper-Style Questions */}
-                    <div className="space-y-10">
-                        {initialAttempt.sections.map((section, sIdx) => {
+                    <fieldset disabled={busy} className="min-w-0 space-y-10">
+                        {attempt.sections.map((section, sIdx) => {
                             const sectionQuestions = section.questions;
 
                             return (
@@ -379,7 +535,7 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                                         <div className="flex flex-wrap items-center justify-between gap-2">
                                             <div>
                                                 <span className="text-[10px] font-black uppercase tracking-wider text-brand-700 dark:text-green-400">
-                                                    Bagian {sIdx + 1}
+                                                    Bagian {(attempt.navigation?.section_index ?? sIdx) + 1}
                                                 </span>
                                                 <h2 className="text-base font-black text-slate-900 dark:text-white sm:text-lg">
                                                     {section.title}
@@ -415,7 +571,7 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                                                     <div className="flex items-center justify-between gap-4">
                                                         <div className="flex items-center gap-2">
                                                             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-xs font-black text-slate-800 dark:bg-gray-800 dark:text-gray-200">
-                                                                {globalIndex + 1}
+                                                                {isJft && section.key === 'listening' ? (attempt?.navigation?.question_index ?? 0) + 1 : globalIndex + 1}
                                                             </span>
                                                             <span className="text-[11px] font-bold text-slate-400">
                                                                 {q.type === 'multiple_choice' && 'Pilihan Ganda'}
@@ -449,18 +605,17 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                                                     {q.type === 'listening' && (
                                                         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/40 p-3.5 dark:border-brand-900/50 dark:bg-brand-950/20">
                                                             <div className="flex items-center gap-3">
-                                                                <div onClick={() => handlePlayAudio(q.id)}>
-                                                                    <JapaneseSpeechButton
-                                                                        audioUrl={q.audio_path ? `/${q.audio_path.replace(/^\//, '')}` : null}
-                                                                        text={q.question_reading || q.question_text}
-                                                                        disabled={!canPlayAudio}
-                                                                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition ${
-                                                                            canPlayAudio
-                                                                                ? 'bg-brand-600 hover:bg-brand-700'
-                                                                                : 'cursor-not-allowed bg-slate-400 opacity-50'
-                                                                        }`}
-                                                                    />
-                                                                </div>
+                                                                <JapaneseSpeechButton
+                                                                    audioUrl={examAudioUrl(q.audio_path)}
+                                                                    text={q.question_reading || q.question_text}
+                                                                    disabled={!canPlayAudio}
+                                                                    onPlay={() => handlePlayAudio(q.id)}
+                                                                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition ${
+                                                                        canPlayAudio
+                                                                            ? 'bg-brand-600 hover:bg-brand-700'
+                                                                            : 'cursor-not-allowed bg-slate-400 opacity-50'
+                                                                    }`}
+                                                                />
                                                                 <div>
                                                                     <p className="text-xs font-bold text-slate-900 dark:text-white">
                                                                         {q.audio_path ? 'Audio Rekaman Dialog' : 'Audio Percakapan'}
@@ -484,7 +639,7 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                                                             {q.question_text}
                                                         </p>
                                                         {q.question_reading && (
-                                                            <p className="mt-1 text-xs text-slate-500">
+                                                            <p className="mt-1 whitespace-pre-wrap text-xs text-slate-500">
                                                                 {q.question_reading}
                                                             </p>
                                                         )}
@@ -530,7 +685,7 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                                                                                 key={`${part}-${pIdx}`}
                                                                                 className="rounded-lg border border-brand-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 shadow-sm dark:border-green-800 dark:bg-[#142019] dark:text-gray-100"
                                                                             >
-                                                                                {part}
+                                                                                {q.options?.[part]}
                                                                             </span>
                                                                         ))}
                                                                     </div>
@@ -545,8 +700,8 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                                                                     <button
                                                                         key={`${part}-${pIdx}`}
                                                                         type="button"
-                                                                        disabled={selectedParts.includes(part)}
-                                                                        onClick={() => chooseBuilderPart(q.id, part)}
+                                                                        disabled={selectedParts.includes(pIdx)}
+                                                                        onClick={() => chooseBuilderPart(q, pIdx)}
                                                                         className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-sm hover:border-brand-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-[#111b16] dark:text-gray-200"
                                                                     >
                                                                         {part}
@@ -555,7 +710,7 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                                                                 {selectedParts.length > 0 && (
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => resetBuilder(q.id)}
+                                                                        onClick={() => resetBuilder(q)}
                                                                         className="rounded-lg px-2.5 py-1.5 text-xs font-black text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
                                                                     >
                                                                         Ulangi
@@ -590,23 +745,24 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h3 className="text-base font-black text-slate-900 dark:text-white">
-                                        Sudah Selesai Memeriksa Seluruh Soal?
+                                        {isJft && attempt.navigation?.has_next ? 'Selesai dengan bagian ini?' : 'Sudah Selesai Memeriksa Seluruh Soal?'}
                                     </h3>
                                     <p className="mt-0.5 text-xs text-slate-500">
-                                        {answeredCount} dari {questions.length} soal telah Anda isi.
+                                        {answeredCount} dari {questions.length} soal {isJft ? 'yang ditampilkan ' : ''}telah Anda isi.
                                     </p>
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={() => setShowSubmitModal(true)}
+                                    onClick={() => isJft && attempt.navigation?.has_next ? setShowAdvanceModal(true) : setShowSubmitModal(true)}
+                                    disabled={busy}
                                     className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 text-sm font-black text-white shadow-sm transition hover:bg-brand-700"
                                 >
                                     <SendOutlinedIcon sx={{ fontSize: 17 }} />
-                                    <span>Kirim & Akhiri Ujian</span>
+                                    <span>{isJft && attempt.navigation?.has_next ? 'Lanjutkan' : 'Kirim & Akhiri Ujian'}</span>
                                 </button>
                             </div>
                         </div>
-                    </div>
+                    </fieldset>
 
                     {/* Right Column: Sticky Anchor Navigator */}
                     <aside className="self-start rounded-2xl border border-[#dbe5df] bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#142019] lg:sticky lg:top-24">
@@ -615,13 +771,13 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                                 Navigasi Soal
                             </p>
                             <div className="mt-2 flex items-center justify-between text-xs font-bold text-slate-700 dark:text-gray-300">
-                                <span>Progress Pengerjaan</span>
+                                <span>{isJft ? 'Bagian saat ini' : 'Progress Pengerjaan'}</span>
                                 <span className="text-brand-600 font-extrabold">{answeredCount}/{questions.length}</span>
                             </div>
                             <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-gray-800">
                                 <div
                                     className="h-full rounded-full bg-brand-600 transition-all duration-300"
-                                    style={{ width: `${(answeredCount / questions.length) * 100}%` }}
+                                    style={{ width: `${questions.length ? (answeredCount / questions.length) * 100 : 0}%` }}
                                 />
                             </div>
                         </div>
@@ -646,7 +802,7 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                                                     : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-gray-700 dark:bg-[#111b16] dark:text-gray-300'
                                         }`}
                                     >
-                                        {index + 1}
+                                        {isJft && item.sectionKey === 'listening' ? (attempt?.navigation?.question_index ?? 0) + 1 : index + 1}
                                     </button>
                                 );
                             })}
@@ -681,6 +837,20 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
                         </div>
                     </aside>
                 </div>
+
+                {showAdvanceModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true" aria-labelledby="advance-title">
+                        <div className="w-full max-w-md rounded-xl bg-white p-6 dark:bg-[#142019]">
+                            <h2 id="advance-title" className="text-base font-bold">Lanjutkan ujian?</h2>
+                            <p className="mt-2 text-sm text-slate-600 dark:text-gray-300">Setelah melanjutkan, Anda tidak dapat kembali ke bagian atau soal listening ini.</p>
+                            {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
+                            <div className="mt-5 flex justify-end gap-2">
+                                <button type="button" disabled={busy} onClick={() => setShowAdvanceModal(false)} className="rounded-lg border px-4 py-2 text-sm">Kembali</button>
+                                <button type="button" disabled={busy} onClick={advance} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{busy ? 'Menyimpan...' : 'Ya, lanjutkan'}</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Modal Konfirmasi & Rekapitulasi Submit */}
                 {showSubmitModal && (
@@ -747,7 +917,7 @@ function StandaloneExamRunner({ initialAttempt, onExit, startTokenKey }) {
 
                             {unansweredCount > 0 && (
                                 <p className="mt-3 rounded-lg bg-rose-50 p-2.5 text-xs font-semibold leading-relaxed text-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
-                                    Masih ada <strong>{unansweredCount} soal</strong> yang belum dijawab. Nilai Anda akan dihitung berdasarkan jawaban yang sudah terisi.
+                                    Masih ada <strong>{unansweredCount} soal {isJft ? 'yang ditampilkan ' : ''}</strong>yang belum dijawab. Nilai Anda akan dihitung berdasarkan jawaban yang sudah terisi.
                                 </p>
                             )}
 
@@ -837,7 +1007,7 @@ export default function Show({ exam }) {
                     <Link href={route('user.exams.library')} className="inline-flex items-center gap-2 text-sm font-black text-gray-600 hover:text-brand-700 dark:text-gray-300 dark:hover:text-green-300"><ArrowBackRoundedIcon sx={{ fontSize: 19 }} /> Kembali ke kumpulan ujian</Link>
                     <div className="mt-7 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                         <div className="max-w-3xl">
-                            <div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[11px] font-black uppercase ${isSimulation ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200' : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-200'}`}>{isSimulation ? 'Simulasi JLPT' : 'Latihan Ujian'}</span><span className="rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-black text-brand-800 dark:bg-green-950/50 dark:text-green-200">JLPT {exam.level}</span></div>
+                            <div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[11px] font-black uppercase ${isSimulation ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200' : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-200'}`}>{isSimulation ? 'Simulasi Ujian' : 'Latihan Ujian'}</span><span className="rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-black text-brand-800 dark:bg-green-950/50 dark:text-green-200">{examCategoryLabel(exam)}</span></div>
                             <h1 className="mt-4 text-2xl font-black leading-tight text-[#17231d] dark:text-white sm:text-3xl">{exam.title}</h1>
                             <p className="mt-3 text-sm leading-7 text-gray-600 dark:text-gray-300 sm:text-base">{exam.description}</p>
                         </div>
@@ -874,7 +1044,7 @@ export default function Show({ exam }) {
                         </ul>
                     </section>
 
-                    {isSimulation && <section className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-950 dark:border-amber-900 dark:bg-amber-950/35 dark:text-amber-100"><h2 className="font-black">Tentang hasil simulasi</h2><p className="mt-2 text-sm leading-6">Skor yang ditampilkan merupakan estimasi TOKU-UP untuk membantu evaluasi belajar dan bukan nilai resmi penyelenggara JLPT.</p></section>}
+                    {isSimulation && <section className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-950 dark:border-amber-900 dark:bg-amber-950/35 dark:text-amber-100"><h2 className="font-black">Tentang hasil simulasi</h2><p className="mt-2 text-sm leading-6">Skor yang ditampilkan merupakan estimasi TOKU-UP untuk membantu evaluasi belajar dan bukan nilai resmi penyelenggara ujian.</p></section>}
                 </div>
 
                 <aside className="self-start rounded-lg border border-[#dbe5df] bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#142019] lg:sticky lg:top-24">

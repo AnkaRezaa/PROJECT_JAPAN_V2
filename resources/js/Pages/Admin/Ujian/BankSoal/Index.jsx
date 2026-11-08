@@ -30,8 +30,10 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
 
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
 
-    const { data, setData, post, patch, processing, errors, reset, clearErrors } = useForm({
+    const { data, setData, post, patch, processing, errors, reset, clearErrors, transform } = useForm({
         title: '',
+        category: 'jlpt',
+        ssw_field: '',
         level_id: levels[0]?.id || '',
         source: '',
         description: '',
@@ -57,6 +59,8 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
         clearErrors();
         setData({
             title: '',
+            category: 'jlpt',
+            ssw_field: '',
             level_id: levels[0]?.id || '',
             source: '',
             description: '',
@@ -69,6 +73,8 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
         clearErrors();
         setData({
             title: bank.title,
+            category: bank.exam_category || 'jlpt',
+            ssw_field: bank.ssw_field || '',
             level_id: bank.level_id,
             source: bank.source || '',
             description: bank.description || '',
@@ -80,10 +86,12 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
     const handleSubmitBank = (event) => {
         event.preventDefault();
         if (bankModal?.mode === 'create') {
+            transform((values) => ({ ...values, level_id: values.category === 'jlpt' ? values.level_id : null, ssw_field: values.category === 'ssw' ? values.ssw_field : null }));
             post(route('admin.exams.question-banks.store'), {
                 onSuccess: () => closeBankModal(),
             });
         } else if (bankModal?.mode === 'edit') {
+            transform(({ category, ssw_field, ...values }) => values);
             patch(route('admin.exams.question-banks.update', bankModal.bank.slug), {
                 onSuccess: () => closeBankModal(),
             });
@@ -220,7 +228,7 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
                                             <div>
                                                 <div className="flex items-center justify-between gap-2">
                                                     <span className="rounded bg-brand-50 px-2 py-0.5 text-xs font-black text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
-                                                        {bank.level}
+                                                        {bank.exam_category === 'jft_basic' ? 'JFT-Basic' : bank.exam_category === 'ssw' ? `SSW · ${bank.ssw_field}` : bank.level}
                                                     </span>
                                                     <StatusBadge status={bank.status} />
                                                 </div>
@@ -310,6 +318,14 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
             >
                 <form onSubmit={handleSubmitBank} className="space-y-4">
                     <div>
+                        <label className="block text-xs font-black text-gray-700 dark:text-gray-300">Kategori Ujian</label>
+                        <select value={data.category} disabled={bankModal?.mode === 'edit'} onChange={(event) => setData('category', event.target.value)} className={fieldClassName}>
+                            <option value="jlpt">JLPT</option><option value="jft_basic">JFT-Basic</option><option value="ssw">SSW</option>
+                        </select>
+                        {errors.category && <p className="mt-1 text-xs text-rose-600">{errors.category}</p>}
+                    </div>
+                    {data.category === 'ssw' && <div><label className="block text-xs font-black text-gray-700 dark:text-gray-300">Bidang SSW</label><input value={data.ssw_field} disabled={bankModal?.mode === 'edit'} onChange={(event) => setData('ssw_field', event.target.value)} className={fieldClassName} required />{errors.ssw_field && <p className="mt-1 text-xs text-rose-600">{errors.ssw_field}</p>}</div>}
+                    <div>
                         <label className="block text-xs font-black text-gray-700 dark:text-gray-300">Nama Bank Soal</label>
                         <input
                             type="text"
@@ -323,7 +339,7 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <div>
+                        {data.category === 'jlpt' && <div>
                             <label className="block text-xs font-black text-gray-700 dark:text-gray-300">Level JLPT</label>
                             <select
                                 required
@@ -336,7 +352,7 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
                                 ))}
                             </select>
                             {errors.level_id && <p className="mt-1 text-xs text-rose-600">{errors.level_id}</p>}
-                        </div>
+                        </div>}
 
                         <div>
                             <label className="block text-xs font-black text-gray-700 dark:text-gray-300">Status</label>

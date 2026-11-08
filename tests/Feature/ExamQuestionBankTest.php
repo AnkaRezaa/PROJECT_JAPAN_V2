@@ -28,6 +28,26 @@ beforeEach(function () {
     $this->level = LevelPembelajaran::firstOrCreate(['level_name' => 'N3'], ['stage' => 3]);
 });
 
+it('stores category information in the existing exam bank model', function () {
+    $bank = app(ExamQuestionBankService::class)->createBank([
+        'title' => 'Bank keterampilan', 'category' => 'ssw', 'ssw_field' => 'Layanan makanan',
+    ], $this->admin);
+
+    expect($bank->fresh()->category)->toBe('ssw')
+        ->and($bank->fresh()->ssw_field)->toBe('Layanan makanan')
+        ->and($bank->fresh()->level_id)->toBeNull();
+});
+
+it('accepts non jlpt banks without levels and requires a field for ssw', function () {
+    $this->actingAs($this->admin)->post(route('admin.exams.question-banks.store'), [
+        'title' => 'Bank JFT', 'category' => 'jft_basic', 'level_id' => null, 'status' => 'published',
+    ])->assertSessionHasNoErrors();
+    $this->assertDatabaseHas('exam_question_banks', ['title' => 'Bank JFT', 'category' => 'jft_basic', 'level_id' => null]);
+    $this->actingAs($this->admin)->post(route('admin.exams.question-banks.store'), [
+        'title' => 'Bank SSW', 'category' => 'ssw', 'level_id' => null, 'status' => 'published',
+    ])->assertSessionHasErrors('ssw_field');
+});
+
 it('allows admin to view question banks index and denies regular user', function () {
     $bank = ExamQuestionBank::create([
         'level_id' => $this->level->id,
@@ -263,4 +283,17 @@ it('allows pulling questions from bank into an exam section', function () {
     expect($pulledQ->code)->toBe('PULL-01');
     expect($pulledQ->correct_answer)->toBe('Ya');
     expect($pulledQ->question_reading)->toContain('Bacaan contoh stimulus');
+
+    $bank->update(['category' => 'jft_basic']);
+    $this->actingAs($this->admin)->postJson(route('admin.exam-sections.questions.pull', $section->id), [
+        'bank_question_ids' => [$question->id],
+    ])->assertUnprocessable()->assertJsonValidationErrors('bank_question_ids');
+    expect($section->questions()->count())->toBe(1);
+
+    $bank->update(['category' => 'jlpt']);
+    $version->update(['status' => 'published']);
+    $this->actingAs($this->admin)->postJson(route('admin.exam-sections.questions.pull', $section->id), [
+        'bank_question_ids' => [$question->id],
+    ])->assertStatus(409);
+    expect($section->questions()->count())->toBe(1);
 });

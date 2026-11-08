@@ -12,7 +12,7 @@ import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlin
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
 import ExamPortalLayout from '@/Layouts/ExamPortalLayout';
-import { FieldLabel, inputClassName } from '@/Components/Features/ExamPortal/ExamPortalUI';
+import { FieldLabel, examCategoryLabel, inputClassName } from '@/Components/Features/ExamPortal/ExamPortalUI';
 
 const initials = (name = '') => name
     .split(' ')
@@ -28,18 +28,13 @@ const rankTone = {
     3: 'border-[#c87b4d] bg-[#efaa7e] text-[#512712]',
 };
 
-export default function Index({ active_exam, sessions = [], levels = [], latest_result, ranking = [], viewer }) {
+export default function Index({ active_exam, exam_packages = [], sessions = [], latest_result, ranking = [], viewer }) {
     const availableSessions = useMemo(
         () => sessions.filter((item) => item !== 'Paket Latihan'),
         [sessions],
     );
-    const [session, setSession] = useState(active_exam?.session || availableSessions[0] || '');
-    const [level, setLevel] = useState(active_exam?.level || levels[0] || '');
-    const canOpenActiveExam = Boolean(
-        active_exam
-        && session === active_exam.session
-        && level === active_exam.level,
-    );
+    const [selectedId, setSelectedId] = useState(active_exam?.id || '');
+    const selectedExam = exam_packages.find((item) => item.id === Number(selectedId));
     const topRanking = useMemo(() => ranking.slice(0, 3), [ranking]);
     const viewerRank = useMemo(
         () => ranking.find((item) => item.name === viewer?.name)?.rank,
@@ -71,8 +66,8 @@ export default function Index({ active_exam, sessions = [], levels = [], latest_
             tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200',
         },
         {
-            label: 'Target level',
-            value: active_exam?.level ? `JLPT ${active_exam.level}` : 'Belum ada',
+            label: 'Kategori ujian',
+            value: active_exam ? examCategoryLabel(active_exam) : 'Belum ada',
             note: active_exam ? active_exam.session : 'Pilih dari katalog ujian',
             icon: CheckCircleOutlineRoundedIcon,
             tone: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-200',
@@ -116,7 +111,7 @@ export default function Index({ active_exam, sessions = [], levels = [], latest_
                             Siap menguji kemampuan bahasa Jepangmu?
                         </h1>
                         <p className="mt-4 max-w-xl text-sm leading-7 text-[#e1efe7] sm:text-base">
-                            Kerjakan latihan per bagian atau rasakan simulasi JLPT lengkap dengan waktu dan penilaian yang terarah.
+                            Kerjakan latihan atau simulasi sesuai kategori ujian yang kamu pilih.
                         </p>
 
                         {active_exam ? (
@@ -168,24 +163,17 @@ export default function Index({ active_exam, sessions = [], levels = [], latest_
 
             <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:pb-16">
                 <section className="relative z-10 -mt-7 rounded-lg border border-[#d6e2da] bg-white p-4 shadow-[0_18px_45px_-28px_rgba(23,61,43,0.5)] dark:border-white/10 dark:bg-[#142019] sm:p-5">
-                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                         <label>
-                            <FieldLabel>Sesi ujian</FieldLabel>
-                            <select value={session} onChange={(event) => setSession(event.target.value)} className={inputClassName} disabled={!availableSessions.length}>
-                                {!availableSessions.length && <option value="">Belum ada sesi</option>}
-                                {availableSessions.map((item) => <option key={item}>{item}</option>)}
+                            <FieldLabel>Paket ujian</FieldLabel>
+                            <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)} className={inputClassName} disabled={!exam_packages.length}>
+                                {!exam_packages.length && <option value="">Belum ada paket</option>}
+                                {exam_packages.map((item) => <option key={item.id} value={item.id}>{item.title} · {examCategoryLabel(item)}{item.session ? ` · ${item.session}` : ''}</option>)}
                             </select>
                         </label>
-                        <label>
-                            <FieldLabel>Level JLPT</FieldLabel>
-                            <select value={level} onChange={(event) => setLevel(event.target.value)} className={inputClassName} disabled={!levels.length}>
-                                {!levels.length && <option value="">Belum ada level</option>}
-                                {levels.map((item) => <option key={item}>{item}</option>)}
-                            </select>
-                        </label>
-                        {canOpenActiveExam ? (
+                        {selectedExam ? (
                             <a
-                                href={route('user.exams.show', active_exam.slug)}
+                                href={route('user.exams.show', selectedExam.slug)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex h-11 items-center justify-center gap-2 rounded-lg px-5 text-sm font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-focus bg-brand-600 text-white hover:bg-brand-700"
@@ -233,7 +221,7 @@ export default function Index({ active_exam, sessions = [], levels = [], latest_
 
                         <div className="mt-5 grid gap-4 sm:grid-cols-2">
                             {[
-                                { title: 'Kumpulan Ujian', text: 'Temukan simulasi lengkap dan latihan per bagian sesuai target JLPT.', href: route('user.exams.library'), icon: Inventory2OutlinedIcon, eyebrow: 'Mulai latihan', kanji: '試', tone: 'border-[#b9dfc4] bg-[#edf9f0] text-brand-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200' },
+                                { title: 'Kumpulan Ujian', text: 'Temukan simulasi dan latihan sesuai target ujian.', href: route('user.exams.library'), icon: Inventory2OutlinedIcon, eyebrow: 'Mulai latihan', kanji: '試', tone: 'border-[#b9dfc4] bg-[#edf9f0] text-brand-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200' },
                                 { title: 'Riwayat Ujian', text: 'Bandingkan nilai, status kelulusan, dan hasil setiap bagian ujian.', href: route('user.exams.history'), icon: HistoryOutlinedIcon, eyebrow: 'Lihat perkembangan', kanji: '歩', tone: 'border-[#b9dce8] bg-[#eef8fb] text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200' },
                             ].map((item) => {
                                 const Icon = item.icon;

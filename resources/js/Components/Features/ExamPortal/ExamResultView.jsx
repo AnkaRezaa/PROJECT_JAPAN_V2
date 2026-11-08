@@ -9,7 +9,7 @@ export default function ExamResultView({ result, totalQuestions, onExit, exitLab
     const reviewItems = result.review || [];
     const totalCorrect = sections.reduce((total, section) => total + Number(section.correct_count || 0), 0);
     const totalAnswered = sections.reduce((total, section) => total + Number(section.answered_count || 0), 0);
-    const questionCount = Number(totalQuestions ?? result.question_count ?? totalAnswered);
+    const questionCount = Number(result.question_count ?? totalQuestions ?? totalAnswered);
     const totalIncorrect = Math.max(0, totalAnswered - totalCorrect);
     const totalUnanswered = Math.max(0, questionCount - totalAnswered);
     const accuracy = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;

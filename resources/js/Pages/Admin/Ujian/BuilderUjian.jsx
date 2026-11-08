@@ -48,6 +48,12 @@ const emptyQuestion = (sectionKey = 'vocabulary') => ({
 });
 const normalizeSections = (items) => items.map((item) => ({ ...item, estimated_max_score: item.estimated_max_score ?? 60, estimated_pass_score: item.estimated_pass_score ?? 19 }));
 const normalizeQuestions = (items) => items.map((item) => ({ ...item, local_id: String(item.id), options_text: (item.options || []).join('\n') }));
+const jftSections = [
+    { key: 'vocabulary', label: 'Huruf dan Kosakata', short_label: 'Huruf dan Kosakata' },
+    { key: 'conversation', label: 'Percakapan dan Ungkapan', short_label: 'Percakapan' },
+    { key: 'listening', label: 'Mendengarkan', short_label: 'Mendengarkan' },
+    { key: 'reading', label: 'Membaca', short_label: 'Membaca' },
+].map((item) => ({ ...item, duration_minutes: 15, question_count: 0, estimated_max_score: 50, estimated_pass_score: 0 }));
 
 function ActionMessage({ notice, error }) {
     if (!notice && !error) return null;
@@ -55,36 +61,43 @@ function ActionMessage({ notice, error }) {
     return <div className={`mt-4 border px-4 py-3 text-sm font-bold ${error ? 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200' : 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200'}`}>{error || notice}</div>;
 }
 
-function IdentityStep({ form, setForm, levels, readOnly }) {
+function IdentityStep({ form, setForm, levels, readOnly, categoryLocked, identityLocked }) {
     return <div className="grid gap-5 lg:grid-cols-2">
         <Field label="Nama paket ujian" required tooltip="Judul resmi paket ujian yang tampil pada daftar ujian peserta."><input disabled={readOnly} className={fieldClassName} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Contoh: Simulasi JLPT N3 September" /></Field>
-        <Field label="Level" required tooltip="Tingkat kemahiran JLPT sasaran untuk paket ujian ini (N5 hingga N1)."><select disabled={readOnly} className={fieldClassName} value={form.level_id} onChange={(event) => setForm({ ...form, level_id: event.target.value })}><option value="">Pilih level</option>{levels.map((item) => <option key={item.id} value={item.id}>{item.level_name}</option>)}</select></Field>
-        <Field label="Jenis" required tooltip="Simulasi JLPT mencakup batasan waktu dan skor ketat, sedangkan Latihan Ujian lebih fleksibel."><select disabled={readOnly} className={fieldClassName} value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })}><option value="simulation">Simulasi JLPT</option><option value="practice">Latihan ujian</option></select></Field>
+        <Field label="Kategori ujian" required><select disabled={readOnly || categoryLocked} className={fieldClassName} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value, level_id: '', ssw_field: '' })}><option value="jlpt">JLPT</option><option value="jft_basic">JFT-Basic</option><option value="ssw">SSW</option></select></Field>
+        {form.category === 'jlpt' && <Field label="Level" required tooltip="Tingkat kemahiran JLPT sasaran untuk paket ujian ini (N5 hingga N1)."><select disabled={readOnly || identityLocked} className={fieldClassName} value={form.level_id} onChange={(event) => setForm({ ...form, level_id: event.target.value })}><option value="">Pilih level</option>{levels.map((item) => <option key={item.id} value={item.id}>{item.level_name}</option>)}</select></Field>}
+        {form.category === 'ssw' && <Field label="Bidang SSW" required><input disabled={readOnly || categoryLocked} className={fieldClassName} value={form.ssw_field} onChange={(event) => setForm({ ...form, ssw_field: event.target.value })} /></Field>}
+        <Field label="Jenis" required tooltip="Simulasi mencakup batasan waktu dan skor, sedangkan latihan lebih fleksibel."><select disabled={readOnly || identityLocked} className={fieldClassName} value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })}><option value="simulation">Simulasi ujian</option><option value="practice">Latihan ujian</option></select></Field>
         <Field label="Hak akses" required tooltip="Tentukan apakah paket dapat diakses semua siswa, hanya pengguna premium, atau kloter tertentu."><select disabled={readOnly} className={fieldClassName} value={form.access_type} onChange={(event) => setForm({ ...form, access_type: event.target.value })}><option value="premium">Pengguna premium</option><option value="all">Semua pengguna</option><option value="cohort">Kloter tertentu</option></select></Field>
         <Field label="Batas percobaan" hint="Kosongkan jika percobaan tidak dibatasi." tooltip="Berapa kali peserta diizinkan mengulang ujian ini. Kosongkan jika tanpa batasan."><input disabled={readOnly} type="number" min="1" max="100" className={fieldClassName} value={form.attempt_limit} onChange={(event) => setForm({ ...form, attempt_limit: event.target.value })} /></Field>
         <Field label="Rilis hasil" required tooltip="Kapan skor dan status kelulusan diumumkan kepada peserta ujian."><select disabled={readOnly} className={fieldClassName} value={form.result_release_policy} onChange={(event) => setForm({ ...form, result_release_policy: event.target.value })}><option value="immediate">Langsung setelah selesai</option><option value="after_session">Setelah sesi ditutup</option><option value="manual">Dirilis admin</option></select></Field>
         <Field label="Pembahasan peserta" required tooltip="Kebijakan menampilkan kunci jawaban dan ulasan soal setelah ujian selesai."><select disabled={readOnly} className={fieldClassName} value={form.review_policy} onChange={(event) => setForm({ ...form, review_policy: event.target.value })}><option value="none">Tidak ditampilkan</option><option value="wrong_only">Hanya jawaban salah</option><option value="full">Semua jawaban</option></select></Field>
         <Field label="Peringkat" required tooltip="Aturan pencatatan skor peserta ke papan peringkat (leaderboard) global."><select disabled={readOnly} className={fieldClassName} value={form.ranking_policy} onChange={(event) => setForm({ ...form, ranking_policy: event.target.value })}><option value="disabled">Tidak masuk peringkat</option><option value="first_attempt">Percobaan pertama</option></select></Field>
-        {form.type === 'simulation' && <Field label="Estimasi batas lulus total" required hint="Nilai 1-180 dan tidak boleh melebihi total skor bagian." tooltip="Nilai total minimal (1-180) yang harus dicapai peserta untuk dinyatakan lulus simulasi."><input disabled={readOnly} type="number" min="1" max="180" className={fieldClassName} value={form.estimated_total_pass_score} onChange={(event) => setForm({ ...form, estimated_total_pass_score: event.target.value })} /></Field>}
+        {form.type === 'simulation' && <Field label="Estimasi batas lulus total" required hint="Tidak boleh melebihi total skor bagian. Ini bukan penilaian resmi."><input disabled={readOnly} type="number" min="1" max={form.category === 'jlpt' ? 180 : 250} className={fieldClassName} value={form.estimated_total_pass_score} onChange={(event) => setForm({ ...form, estimated_total_pass_score: event.target.value })} /></Field>}
         <div className="lg:col-span-2"><Field label="Deskripsi peserta" hint="Tampil pada detail ujian sebelum peserta memulai." tooltip="Instruksi, silabus singkat, atau informasi awal yang dibaca peserta sebelum mulai mengerjakan."><textarea disabled={readOnly} rows="4" className={`${fieldClassName} h-auto py-3`} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></Field></div>
     </div>;
 }
 
-function StructureStep({ sections, setSections, templates, readOnly }) {
+function StructureStep({ sections, setSections, templates, readOnly, category }) {
     const update = (index, key, value) => setSections(sections.map((section, current) => current === index ? { ...section, [key]: value } : section));
     const addSection = () => {
+        if (category === 'ssw') {
+            const key = `section_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            setSections([...sections, { key, label: '', short_label: '', duration_minutes: 30, question_count: 0, estimated_max_score: 100, estimated_pass_score: 0 }]);
+            return;
+        }
         const template = templates.find((item) => !sections.some((section) => section.key === item.key));
-        if (template) setSections([...sections, { ...template, duration_minutes: 30, question_count: 0, estimated_max_score: 60, estimated_pass_score: 19 }]);
+        if (template) setSections([...sections, { ...template, duration_minutes: template.duration_minutes ?? 30, question_count: 0, estimated_max_score: template.estimated_max_score ?? 60, estimated_pass_score: template.estimated_pass_score ?? 19 }]);
     };
 
     return <div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-black text-gray-950 dark:text-white">Bagian ujian</h2><p className="mt-1 text-sm text-gray-500">Gunakan bagian JLPT yang diperlukan dan atur durasi serta batas nilainya.</p></div><button type="button" disabled={readOnly || sections.length >= templates.length} onClick={addSection} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-gray-300 px-4 text-sm font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200"><AddRoundedIcon fontSize="small" /> Tambah bagian</button></div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-black text-gray-950 dark:text-white">Bagian ujian</h2><p className="mt-1 text-sm text-gray-500">{category === 'jft_basic' ? 'JFT-Basic menggunakan waktu total 60 menit untuk seluruh bagian.' : 'Atur bagian, durasi, dan batas nilai sesuai paket ujian.'}</p></div><button type="button" disabled={readOnly || sections.length >= (category === 'ssw' ? 10 : templates.length)} onClick={addSection} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-gray-300 px-4 text-sm font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200"><AddRoundedIcon fontSize="small" /> Tambah bagian</button></div>
         <div className="mt-5 divide-y divide-gray-100 border-y border-gray-200 dark:divide-gray-800 dark:border-gray-800">
             {sections.map((section, index) => <div key={section.key} className="grid gap-4 py-4 lg:grid-cols-[minmax(220px,1fr)_120px_130px_130px_42px] lg:items-end">
-                <div><p className="text-sm font-black text-gray-950 dark:text-white">{index + 1}. {section.short_label}</p><p className="mt-1 text-xs text-gray-500">{section.label}</p></div>
-                <Field label="Durasi (menit)" required tooltip="Alokasi waktu pengerjaan untuk bagian ujian ini."><input disabled={readOnly} type="number" min="1" className={fieldClassName} value={section.duration_minutes} onChange={(event) => update(index, 'duration_minutes', event.target.value)} /></Field>
-                <Field label="Skor maksimal" required tooltip="Nilai tertinggi yang bisa diraih pada bagian ujian ini (standar JLPT: 60 per bagian)."><input disabled={readOnly} type="number" min="1" max="180" className={fieldClassName} value={section.estimated_max_score} onChange={(event) => update(index, 'estimated_max_score', event.target.value)} /></Field>
-                <Field label="Batas lulus" required tooltip="Nilai batas ambang lulus (sectional benchmark) yang wajib dipenuhi pada bagian ini agar tidak gugur otomatis."><input disabled={readOnly} type="number" min="0" max="180" className={fieldClassName} value={section.estimated_pass_score} onChange={(event) => update(index, 'estimated_pass_score', event.target.value)} /></Field>
+                {category === 'ssw' ? <Field label={`Nama bagian ${index + 1}`} required><input disabled={readOnly} className={fieldClassName} value={section.label} onChange={(event) => setSections(sections.map((item, current) => current === index ? { ...item, label: event.target.value, short_label: event.target.value } : item))} /></Field> : <div><p className="text-sm font-black text-gray-950 dark:text-white">{index + 1}. {section.short_label}</p><p className="mt-1 text-xs text-gray-500">{section.label}</p></div>}
+                {category !== 'jft_basic' && <Field label="Durasi (menit)" required><input disabled={readOnly} type="number" min="1" className={fieldClassName} value={section.duration_minutes} onChange={(event) => update(index, 'duration_minutes', event.target.value)} /></Field>}
+                <Field label="Skor maksimal" required><input disabled={readOnly} type="number" min="1" max="250" className={fieldClassName} value={section.estimated_max_score} onChange={(event) => update(index, 'estimated_max_score', event.target.value)} /></Field>
+                {category !== 'jft_basic' && <Field label="Batas lulus" required><input disabled={readOnly} type="number" min="0" max="250" className={fieldClassName} value={section.estimated_pass_score} onChange={(event) => update(index, 'estimated_pass_score', event.target.value)} /></Field>}
                 <button type="button" disabled={readOnly || sections.length === 1} onClick={() => setSections(sections.filter((_, current) => current !== index))} className="grid h-11 w-10 place-items-center rounded-md text-rose-600 hover:bg-rose-50 disabled:opacity-30 dark:hover:bg-rose-950/30" title="Hapus bagian"><DeleteOutlineRoundedIcon fontSize="small" /></button>
             </div>)}
         </div>
@@ -131,10 +144,12 @@ export default function Editor({ exam, mode = 'create', level_options = [], sect
     const importInput = useRef(null);
     const readOnly = Boolean(exam && (exam.status === 'archived' || exam.version_status !== 'draft'));
     const [form, setForm] = useState({
-        title: exam?.title || '', description: exam?.description || '', level_id: exam?.level_id || '', level_name: exam?.level || '', type: exam?.type || 'simulation', access_type: exam?.access || 'premium',
+        title: exam?.title || '', description: exam?.description || '', category: exam?.category || 'jlpt', ssw_field: exam?.ssw_field || '', level_id: exam?.level_id || '', level_name: exam?.level || '', type: exam?.type || 'simulation', access_type: exam?.access || 'premium',
         attempt_limit: exam?.attempt_limit ?? '', result_release_policy: exam?.result_release_policy || 'manual', review_policy: exam?.review_policy || 'wrong_only', ranking_policy: exam?.ranking_policy || 'first_attempt', estimated_total_pass_score: exam?.estimated_total_pass_score ?? '',
     });
-    const [sections, setSections] = useState(normalizeSections(exam?.sections?.length ? exam.sections : section_templates));
+    const templates = form.category === 'jft_basic' ? jftSections : section_templates;
+    const [sections, setSections] = useState(normalizeSections(exam?.sections?.length ? exam.sections : (form.category === 'ssw' ? [] : templates)));
+    const initialSectionsRef = useRef(JSON.stringify(sections));
     const [questions, setQuestions] = useState(normalizeQuestions(question_samples));
 
     const openPicker = async () => {
@@ -144,7 +159,7 @@ export default function Editor({ exam, mode = 'create', level_options = [], sect
         setPickerTargetSection(sections[0]?.key || 'vocabulary');
         try {
             const res = await window.axios.get(route('admin.exams.question-banks.picker'), {
-                params: { level_id: form.level_id || undefined },
+                params: { level_id: form.level_id || undefined, exam_category: form.category, ssw_field: form.category === 'ssw' ? form.ssw_field : undefined },
             });
             setPickerBanks(res.data.banks || []);
         } catch (e) {
@@ -190,6 +205,7 @@ export default function Editor({ exam, mode = 'create', level_options = [], sect
                 ? `【${bq.wrapper_title}】\n${bq.stimulus_text}\n\n${bq.question_reading || ''}`
                 : (bq.question_reading || ''),
             options_text: (bq.options || []).join('\n'),
+            option_readings: bq.option_readings || null,
             answer: bq.correct_answer,
             correct_answer_reading: bq.correct_answer_reading || '',
             explanation: bq.explanation || '',
@@ -208,9 +224,17 @@ export default function Editor({ exam, mode = 'create', level_options = [], sect
         const selected = level_options.find((item) => String(item.id) === String(form.level_id));
         if (selected && selected.level_name !== form.level_name) setForm((current) => ({ ...current, level_name: selected.level_name }));
     }, [form.level_id, form.level_name, level_options]);
+    useEffect(() => {
+        if (mode !== 'create') return;
+        if (questions.length === 0) {
+            const nextSections = normalizeSections(form.category === 'jft_basic' ? jftSections : (form.category === 'ssw' ? [] : section_templates));
+            setSections(nextSections);
+            initialSectionsRef.current = JSON.stringify(nextSections);
+        }
+    }, [form.category, mode]);
 
     const versionPayload = () => ({ attempt_limit: form.attempt_limit === '' ? null : Number(form.attempt_limit), result_release_policy: form.result_release_policy, review_policy: form.review_policy, ranking_policy: form.ranking_policy, estimated_total_pass_score: form.type === 'simulation' && form.estimated_total_pass_score !== '' ? Number(form.estimated_total_pass_score) : null });
-    const identityPayload = (status = exam?.status || 'draft') => ({ title: form.title, description: form.description || null, level_id: Number(form.level_id), type: form.type, access_type: form.access_type, status });
+    const identityPayload = (status = exam?.status || 'draft') => ({ title: form.title, description: form.description || null, level_id: form.category === 'jlpt' ? (form.level_id ? Number(form.level_id) : null) : null, type: form.type, access_type: form.access_type, status, ...(mode === 'create' ? { category: form.category, ssw_field: form.category === 'ssw' ? form.ssw_field : null } : {}) });
     const run = async (action, success) => {
         setBusy(true); setError(''); setNotice('');
         try { await action(); setNotice(success); return true; } catch (requestError) { setError(apiErrorMessage(requestError)); return false; } finally { setBusy(false); }
@@ -332,6 +356,11 @@ export default function Editor({ exam, mode = 'create', level_options = [], sect
     const previewImport = async (event) => {
         const file = event.target.files?.[0];
         if (!file) return;
+        if (questions.length || JSON.stringify(sections) !== initialSectionsRef.current) {
+            setError('Impor tidak dapat dilakukan saat ada perubahan struktur atau soal di editor. Gunakan draft kosong agar perubahan tidak tertimpa.');
+            event.target.value = '';
+            return;
+        }
         setImportFile(file);
         const data = new FormData(); data.append('file', file);
         await run(async () => { const response = await window.axios.post(route('admin.exam-versions.import.preview', exam.version_id), data); setImportPreview(response.data); }, 'Berkas selesai diperiksa.');
@@ -350,8 +379,8 @@ export default function Editor({ exam, mode = 'create', level_options = [], sect
         {readOnly && <div className="mt-4 border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200">Versi terbit atau arsip tidak dapat diubah. Buat draft revisi untuk memperbarui konten tanpa mengubah riwayat peserta.</div>}
         <div className="mt-6 grid gap-6 xl:grid-cols-[230px_minmax(0,1fr)]"><aside className="self-start border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900 xl:sticky xl:top-24"><ol className="space-y-1">{steps.map((label, index) => <li key={label}><button type="button" disabled={!exam && index > 0} onClick={() => setStep(index)} className={`flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm font-black disabled:opacity-35 ${step === index ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'}`}><span className={`grid h-7 w-7 place-items-center rounded-full text-xs ${step === index ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 dark:bg-gray-800'}`}>{index + 1}</span>{label}</button></li>)}</ol></aside>
             <main className="min-w-0 border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 sm:p-6">
-                {step === 0 && <IdentityStep form={form} setForm={setForm} levels={level_options} readOnly={readOnly} />}
-                {step === 1 && <StructureStep sections={sections} setSections={setSections} templates={section_templates} readOnly={readOnly} />}
+                {step === 0 && <IdentityStep form={form} setForm={setForm} levels={level_options} readOnly={readOnly} categoryLocked={mode !== 'create'} identityLocked={Boolean(exam?.published_version_id)} />}
+                {step === 1 && <StructureStep sections={sections} setSections={setSections} templates={templates} readOnly={readOnly} category={form.category} />}
                 {step === 2 && <QuestionsStep questions={questions} setQuestions={setQuestions} sections={sections} readOnly={readOnly} onImport={previewImport} importInput={importInput} onOpenQuestion={(question = null) => { setQuestionDialogError(''); setQuestionEditor(question ? { ...question } : emptyQuestion(sections[0]?.key)); }} onDuplicateQuestion={handleDuplicateQuestion} onMoveQuestion={handleMoveQuestion} onDeleteQuestion={handleDeleteQuestion} onOpenPicker={openPicker} />}
                 {step === 3 && <ValidationStep readiness={readiness} onValidate={validate} busy={busy} />}
                 {step === 4 && <PreviewStep form={form} sections={sections} questions={questions} />}
@@ -374,7 +403,7 @@ export default function Editor({ exam, mode = 'create', level_options = [], sect
             <div className="sm:col-span-2"><Field label="Pembahasan" hint="Opsional dan mengikuti kebijakan pembahasan paket." tooltip="Penjelasan rinci mengapa jawaban tersebut benar untuk dibaca siswa setelah ujian selesai."><textarea rows="3" className={`${fieldClassName} h-auto py-3`} value={questionEditor.explanation} onChange={(event) => setQuestionEditor({ ...questionEditor, explanation: event.target.value })} /></Field></div>
         </div>}
     </AdminDialog>
-    <AdminDialog open={Boolean(importPreview)} onClose={() => { setImportPreview(null); setImportFile(null); }} eyebrow="Impor massal" title="Konfirmasi impor XLSX" description="Impor mengganti struktur dan naskah pada draft versi ini." footer={<div className="flex justify-end gap-2"><button type="button" onClick={() => { setImportPreview(null); setImportFile(null); }} className="h-10 rounded-md border border-gray-300 px-4 text-sm font-black dark:border-gray-700">Batal</button><button type="button" disabled={busy || !importPreview?.valid} onClick={commitImport} className="h-10 rounded-md bg-brand-600 px-4 text-sm font-black text-white disabled:opacity-40">Impor sekarang</button></div>}><p className="text-sm font-semibold text-gray-600 dark:text-gray-300">{importFile?.name}</p>{importPreview?.valid && <p className="mt-3 text-sm font-black text-emerald-700">{importPreview.summary.sections} bagian dan {importPreview.summary.questions} soal siap diimpor.</p>}{importPreview?.errors?.map((item) => <p key={item} className="mt-2 text-sm font-semibold text-rose-600">{item}</p>)}</AdminDialog>
+    <AdminDialog open={Boolean(importPreview)} onClose={() => { setImportPreview(null); setImportFile(null); }} eyebrow="Impor massal" title="Konfirmasi impor XLSX" description="Impor tersedia pada draft tanpa bagian agar naskah yang ada tidak tertimpa." footer={<div className="flex justify-end gap-2"><button type="button" onClick={() => { setImportPreview(null); setImportFile(null); }} className="h-10 rounded-md border border-gray-300 px-4 text-sm font-black dark:border-gray-700">Batal</button><button type="button" disabled={busy || !importPreview?.valid} onClick={commitImport} className="h-10 rounded-md bg-brand-600 px-4 text-sm font-black text-white disabled:opacity-40">Impor sekarang</button></div>}><p className="text-sm font-semibold text-gray-600 dark:text-gray-300">{importFile?.name}</p>{importPreview?.valid && <p className="mt-3 text-sm font-black text-emerald-700">{importPreview.summary.sections} bagian dan {importPreview.summary.questions} soal siap diimpor.</p>}{importPreview?.errors?.map((item) => <p key={item} className="mt-2 text-sm font-semibold text-rose-600">{item}</p>)}</AdminDialog>
     <AdminDialog
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}

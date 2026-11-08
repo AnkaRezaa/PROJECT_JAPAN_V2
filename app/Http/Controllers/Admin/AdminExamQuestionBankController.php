@@ -64,6 +64,8 @@ class AdminExamQuestionBankController extends Controller
             'source' => $item->source,
             'level' => $item->level?->level_name ?? '-',
             'level_id' => $item->level_id,
+            'exam_category' => $item->category ?? 'jlpt',
+            'ssw_field' => $item->ssw_field,
             'description' => $item->description,
             'status' => $item->status,
             'wrappers_count' => $item->wrappers_count,
@@ -108,6 +110,8 @@ class AdminExamQuestionBankController extends Controller
                 'status' => $bank->status,
                 'level' => $bank->level?->level_name ?? '-',
                 'level_id' => $bank->level_id,
+                'exam_category' => $bank->category ?? 'jlpt',
+                'ssw_field' => $bank->ssw_field,
                 'wrappers' => $bank->wrappers->map(fn (ExamQuestionWrapper $wrapper) => [
                     'id' => $wrapper->id,
                     'wrapper_code' => $wrapper->wrapper_code,
@@ -204,6 +208,8 @@ class AdminExamQuestionBankController extends Controller
         $levelId = $request->input('level_id');
         $category = $request->input('category');
         $search = $request->input('search');
+        $examCategory = $request->input('exam_category', 'jlpt');
+        $sswField = $request->input('ssw_field');
 
         $query = ExamQuestionBank::with([
             'level:id,level_name',
@@ -217,8 +223,12 @@ class AdminExamQuestionBankController extends Controller
                 $qq->whereNull('exam_question_wrapper_id');
             },
         ])->where('status', 'published');
+        $query->where('category', $examCategory);
+        if ($examCategory === 'ssw' && filled($sswField) && $sswField !== 'all') {
+            $query->where('ssw_field', $sswField);
+        }
 
-        if ($levelId) {
+        if ($examCategory === 'jlpt' && $levelId && $levelId !== 'all') {
             $query->where('level_id', $levelId);
         }
 
@@ -234,6 +244,8 @@ class AdminExamQuestionBankController extends Controller
             'title' => $bank->title,
             'source' => $bank->source,
             'level' => $bank->level?->level_name,
+            'exam_category' => $bank->category,
+            'ssw_field' => $bank->ssw_field,
             'wrappers' => $bank->wrappers->map(fn (ExamQuestionWrapper $w) => [
                 'id' => $w->id,
                 'wrapper_code' => $w->wrapper_code,

@@ -32,6 +32,13 @@ const statusConfig = {
     locked: { label: 'Belum tersedia', className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300' },
 };
 
+export const examCategoryLabel = (exam) => {
+    if (exam.category === 'jft_basic') return 'JFT-Basic';
+    if (exam.category === 'ssw') return exam.ssw_field ? `SSW - ${exam.ssw_field}` : 'SSW';
+    if (exam.category === 'jlpt') return exam.level ? `JLPT ${String(exam.level).replace(/^JLPT\s*/i, '')}` : 'JLPT';
+    return exam.level || 'Umum';
+};
+
 export function ExamCard({ exam }) {
     const status = statusConfig[exam.status] || statusConfig.available;
     const isLocked = exam.status === 'locked';
@@ -42,7 +49,7 @@ export function ExamCard({ exam }) {
             <div className="flex flex-1 flex-col p-5">
                 <div className="flex items-start justify-between gap-3">
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-black uppercase ${exam.type === 'simulation' ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200' : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-200'}`}>
-                        {exam.type === 'simulation' ? 'Simulasi JLPT' : 'Latihan Ujian'}
+                        {exam.type === 'simulation' ? 'Simulasi Ujian' : 'Latihan Ujian'}
                     </span>
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${status.className}`}>{status.label}</span>
                 </div>
@@ -55,8 +62,8 @@ export function ExamCard({ exam }) {
                 </div>
                 <div className="mt-auto flex items-end justify-between gap-3 pt-5">
                     <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Level</p>
-                        <p className="mt-0.5 text-sm font-black text-brand-800 dark:text-green-200">JLPT {exam.level}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Kategori</p>
+                        <p className="mt-0.5 text-sm font-black text-brand-800 dark:text-green-200">{examCategoryLabel(exam)}</p>
                     </div>
                     {isLocked ? (
                         <span className="inline-flex h-10 items-center gap-2 rounded-lg bg-gray-100 px-4 text-xs font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-400">

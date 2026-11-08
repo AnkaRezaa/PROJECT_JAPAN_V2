@@ -1,18 +1,15 @@
-import React, { useMemo, useState } from 'react';
-import { Head } from '@inertiajs/react';
+import React from 'react';
+import { Head, router } from '@inertiajs/react';
 import EmojiEventsRoundedIcon from '@mui/icons-material/EmojiEventsRounded';
 import ExamPortalLayout from '@/Layouts/ExamPortalLayout';
-import { EmptyState, FieldLabel, PageHeading, inputClassName } from '@/Components/Features/ExamPortal/ExamPortalUI';
+import { EmptyState, FieldLabel, PageHeading, examCategoryLabel, inputClassName } from '@/Components/Features/ExamPortal/ExamPortalUI';
 
-const initials = (name) => name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
+const initials = (name = '') => String(name || '').trim().split(/\s+/).filter(Boolean).map((part) => part[0]).slice(0, 2).join('').toUpperCase();
 
-export default function Ranking({ ranking = [], sessions = [], levels = [], active_exam }) {
-    const [session, setSession] = useState(active_exam?.session || sessions[0] || '');
-    const [level, setLevel] = useState(active_exam?.level || levels[0] || '');
-    const filtered = useMemo(
-        () => ranking.filter((item) => item.level === level && session === active_exam?.session),
-        [active_exam?.session, level, ranking, session],
-    );
+export default function Ranking({ ranking = [], ranking_sessions = [], ranking_session_id }) {
+    const session = ranking_sessions.find((item) => item.id === Number(ranking_session_id));
+    const filtered = ranking;
+    const sections = filtered[0]?.sections || [];
     const podium = [filtered[1], filtered[0], filtered[2]];
 
     return (
@@ -25,9 +22,8 @@ export default function Ranking({ ranking = [], sessions = [], levels = [], acti
             </section>
 
             <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-10">
-                <div className="grid gap-4 rounded-lg border border-[#dbe5df] bg-white p-4 dark:border-white/10 dark:bg-[#142019] sm:grid-cols-2 sm:p-5">
-                    <label><FieldLabel>Sesi ujian</FieldLabel><select value={session} onChange={(event) => setSession(event.target.value)} className={inputClassName}>{sessions.filter((item) => item !== 'Paket Latihan').map((item) => <option key={item}>{item}</option>)}</select></label>
-                    <label><FieldLabel>Level</FieldLabel><select value={level} onChange={(event) => setLevel(event.target.value)} className={inputClassName}>{levels.map((item) => <option key={item}>{item}</option>)}</select></label>
+                <div className="rounded-lg border border-[#dbe5df] bg-white p-4 dark:border-white/10 dark:bg-[#142019] sm:p-5">
+                    <label><FieldLabel>Sesi ujian</FieldLabel><select value={session?.id || ''} disabled={!ranking_sessions.length} onChange={(event) => router.get(route('user.exams.ranking'), { session_id: event.target.value }, { preserveScroll: true })} className={inputClassName}><option value="" disabled>Pilih sesi</option>{ranking_sessions.map((item) => <option key={item.id} value={item.id}>{item.exam_title} · {item.name} · {examCategoryLabel(item)}</option>)}</select></label>
                 </div>
 
                 {filtered.length > 0 ? (
@@ -42,7 +38,7 @@ export default function Ranking({ ranking = [], sessions = [], levels = [], acti
                                         <div key={item.rank} className="text-center">
                                             <span className={`mx-auto grid place-items-center rounded-full border-4 border-white text-sm font-black shadow-md dark:border-[#142019] ${place === 1 ? 'h-16 w-16 bg-[#f5bd32] text-[#483400] sm:h-20 sm:w-20' : 'h-12 w-12 bg-[#dff5e5] text-brand-800 sm:h-16 sm:w-16 dark:bg-green-950/60 dark:text-green-200'}`}>{initials(item.name)}</span>
                                             <p className="mt-3 truncate text-xs font-black sm:text-sm">{item.name}</p>
-                                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.total}/180</p>
+                                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.total}/{item.max_score}</p>
                                             <div className={`mt-3 flex ${height} items-start justify-center rounded-t-lg border border-b-0 border-[#c8ded0] pt-4 dark:border-white/10 ${place === 1 ? 'bg-[#f5bd32] text-[#483400]' : 'bg-[#dff5e5] text-brand-800 dark:bg-green-950/50 dark:text-green-200'}`}>
                                                 <span className="text-2xl font-black sm:text-4xl">{place}</span>
                                             </div>
@@ -55,17 +51,17 @@ export default function Ranking({ ranking = [], sessions = [], levels = [], acti
                         <section className="mt-8 overflow-hidden rounded-lg border border-[#dbe5df] bg-white dark:border-white/10 dark:bg-[#142019]">
                             <div className="flex items-center gap-3 border-b border-gray-200 px-5 py-4 dark:border-white/10">
                                 <EmojiEventsRoundedIcon className="text-[#d39a00]" />
-                                <div><h2 className="font-black">Papan peringkat</h2><p className="text-xs text-gray-500 dark:text-gray-400">Simulasi penuh · {session} · JLPT {level}</p></div>
+                                <div><h2 className="font-black">Papan peringkat</h2><p className="text-xs text-gray-500 dark:text-gray-400">Simulasi penuh · {session?.name} · {session ? examCategoryLabel(session) : ''}</p></div>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="min-w-[760px] w-full text-left text-sm">
-                                    <thead className="bg-[#f1f6f3] text-xs uppercase text-gray-600 dark:bg-white/5 dark:text-gray-300"><tr><th className="px-5 py-3">#</th><th className="px-5 py-3">Peserta</th><th className="px-4 py-3">Kosakata</th><th className="px-4 py-3">Tata Bahasa</th><th className="px-4 py-3">Listening</th><th className="px-4 py-3">Total</th><th className="px-5 py-3">Durasi</th></tr></thead>
+                                    <thead className="bg-[#f1f6f3] text-xs uppercase text-gray-600 dark:bg-white/5 dark:text-gray-300"><tr><th className="px-5 py-3">#</th><th className="px-5 py-3">Peserta</th>{sections.map((section) => <th key={section.key} className="px-4 py-3">{section.title}</th>)}<th className="px-4 py-3">Total</th><th className="px-5 py-3">Durasi</th></tr></thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-white/10">
                                         {filtered.map((item) => (
                                             <tr key={item.rank} className="hover:bg-[#f7faf8] dark:hover:bg-white/5">
                                                 <td className="px-5 py-4 font-black text-brand-700 dark:text-green-300">{item.rank}</td>
                                                 <td className="px-5 py-4"><div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-full bg-[#e7f8ec] text-xs font-black text-brand-800 dark:bg-green-950/50 dark:text-green-200">{initials(item.name)}</span><strong>{item.name}</strong></div></td>
-                                                <td className="px-4 py-4">{item.vocabulary}</td><td className="px-4 py-4">{item.grammar_reading}</td><td className="px-4 py-4">{item.listening}</td><td className="px-4 py-4 font-black">{item.total}</td><td className="px-5 py-4 text-gray-500 dark:text-gray-400">{item.duration}</td>
+                                                {sections.map((section) => <td key={section.key} className="px-4 py-4">{item.sections?.find((score) => score.key === section.key)?.score ?? '-'}</td>)}<td className="px-4 py-4 font-black">{item.total}/{item.max_score}</td><td className="px-5 py-4 text-gray-500 dark:text-gray-400">{item.duration}</td>
                                             </tr>
                                         ))}
                                     </tbody>

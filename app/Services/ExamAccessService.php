@@ -46,6 +46,9 @@ class ExamAccessService
         }
 
         $exam = $session->version->exam;
+        if ($exam->status !== 'published') {
+            return false;
+        }
         if ($exam->access_type === 'all') {
             return true;
         }
@@ -61,11 +64,29 @@ class ExamAccessService
     public function resultReleased(ExamAttempt $attempt): bool
     {
         $attempt->loadMissing('session', 'version.exam');
-        $policy = $attempt->version->result_release_policy;
+        return $this->sessionResultsReleased($attempt->session);
+    }
+
+    public function sessionResultsReleased(ExamSession $session): bool
+    {
+        $session->loadMissing('version.exam');
+        $policy = $session->version->result_release_policy;
 
         return $policy === 'immediate'
-            || $attempt->version->exam->type === 'practice'
-            || ($policy === 'after_session' && $attempt->session->ends_at?->isPast())
-            || $attempt->session->result_released_at?->isPast();
+            || $session->version->exam->type === 'practice'
+            || ($policy === 'after_session' && $session->ends_at?->isPast())
+            || (bool) $session->result_released_at?->isPast();
+    }
+
+    public function canViewSession(Pengguna $user, ExamSession $session): bool
+    {
+        $session->loadMissing('version.exam');
+        $exam = $session->version->exam;
+        if (! $this->canViewExam($user, $exam)) {
+            return false;
+        }
+
+        return $exam->access_type !== 'cohort' || $session->cohorts()->whereHas('anggota', fn ($query) => $query
+            ->where('user_id', $user->id)->where('status', 'active'))->exists();
     }
 }
