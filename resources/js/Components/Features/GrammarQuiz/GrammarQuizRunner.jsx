@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
+import HighlightedLearningText from '@/Components/Features/Learning/HighlightedLearningText';
 import JapaneseSpeechButton, { isStreamableAudio } from '@/Components/UI/JapaneseSpeechButton';
 import QuizSoundToggle, { japaneseSpeechText, useQuizSoundPreference } from '@/Components/UI/QuizNarration';
 import { QuizActionButton, QuizErrorMessage, QuizOptionButton, QuizSurface } from '@/Components/UI/QuizUI';
@@ -322,7 +323,7 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
                         {stage?.label}
                     </div>
                     {stage?.instruction && <h1 className="text-xl font-black leading-7 text-gray-950 dark:text-white sm:text-2xl">{stage.instruction}</h1>}
-                    <p className="mt-1 text-sm font-medium text-gray-600 dark:text-gray-400">{question.prompt}</p>
+                    <p className="mt-1 text-sm font-medium text-gray-600 dark:text-gray-400"><HighlightedLearningText text={question.prompt} term={question.highlight_text} variant="question" /></p>
 
                     {(question.japanese || question.context) && (
                         <QuizSurface className="my-3 p-4 text-center sm:my-4 sm:p-5">
@@ -461,7 +462,7 @@ function ResultScreen({ quiz, result, correctQuestionIds, onRestart, onClose, pe
                                             <div key={q.id || idx} className="rounded-xl border border-gray-200 bg-white p-3.5 shadow-xs dark:border-gray-800 dark:bg-gray-900">
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div className="min-w-0">
-                                                        <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{q.prompt}</p>
+                                                        <p className="text-xs font-bold text-gray-800 dark:text-gray-200"><HighlightedLearningText text={q.prompt} term={q.highlight_text} variant="question" /></p>
                                                         {target && (
                                                             <p lang="ja" className="mt-1 text-sm font-black font-japanese text-gray-900 dark:text-white">
                                                                 {target}

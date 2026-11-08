@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Support\QuestionHighlight;
+
 use App\Events\KuisSelesai;
 use App\Models\DokkaiAttemptAnswer;
 use App\Models\DokkaiParagraph;
@@ -97,6 +99,7 @@ class KuisDokkaiService
                 'id' => $q->id,
                 'question_number' => $q->question_number,
                 'question_text' => $q->question_text,
+                'highlight_text' => $q->highlight_text,
                 'question_translation' => $q->question_translation,
                 'evidence_paragraph_id' => $q->evidence_paragraph_id,
                 'evidence_paragraph_number' => $q->evidence_paragraph_id
@@ -227,6 +230,7 @@ class KuisDokkaiService
                         [
                             'question_number' => $qNumber,
                             'question_text' => trim($qData['question_text'] ?? ''),
+                            'highlight_text' => QuestionHighlight::validated($qData['highlight_text'] ?? null, (string) ($qData['question_text'] ?? ''), "questions.{$qIdx}.highlight_text"),
                             'question_translation' => isset($qData['question_translation']) ? trim($qData['question_translation']) : null,
                             'evidence_paragraph_id' => $evidenceParagraphId,
                             'evidence_quote' => isset($qData['evidence_quote']) ? trim($qData['evidence_quote']) : null,
@@ -329,6 +333,7 @@ class KuisDokkaiService
                 'id' => $question->id,
                 'question_number' => $question->question_number,
                 'question_text' => $question->question_text,
+                'highlight_text' => $question->highlight_text,
                 'question_translation' => $question->question_translation,
                 'evidence_paragraph_id' => $question->evidence_paragraph_id,
                 'evidence_quote' => $question->evidence_quote,

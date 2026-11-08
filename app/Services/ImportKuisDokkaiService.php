@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\HariModul;
 use App\Models\Kuis;
+use App\Support\QuestionHighlight;
 use Illuminate\Support\Facades\DB;
 
 class ImportKuisDokkaiService
@@ -26,6 +27,7 @@ class ImportKuisDokkaiService
         'opsi_d',
         'kunci',
         'pembahasan',
+        'highlight_text',
     ];
 
     /**
@@ -123,6 +125,9 @@ class ImportKuisDokkaiService
             }
 
             // Susun opsi A, B, C, D
+            if ($error = QuestionHighlight::error($row['highlight_text'] ?? null, $pertanyaan)) {
+                $errors[] = ['row' => $rowNumber, 'column' => 'highlight_text', 'message' => $error];
+            }
             $rawOptions = [
                 'A' => $opsiA,
                 'B' => $opsiB,
@@ -166,6 +171,7 @@ class ImportKuisDokkaiService
             $passages[$currentPassageKey]['questions'][] = [
                 'question_number' => $qNumber,
                 'question_text' => $pertanyaan,
+                'highlight_text' => $row['highlight_text'] ?? null,
                 'question_translation' => null,
                 'evidence_paragraph_number' => 1,
                 'evidence_quote' => null,

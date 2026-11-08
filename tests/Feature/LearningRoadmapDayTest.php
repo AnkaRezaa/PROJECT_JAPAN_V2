@@ -294,6 +294,50 @@ it('saves detailed flashcards through the shared vocabulary source', function ()
         ->and($vocabulary->metadata['stroke_count'])->toBe(7);
 });
 
+it('stores optional kanji example words without losing them when linked flashcards change', function () {
+    $fixture = createDayRoadmapFixture();
+    $admin = Pengguna::factory()->create(['role' => 'admin']);
+    $payload = [
+        'word' => '環', 'reading' => 'かん', 'content_type' => 'kanji',
+        'module_id' => $fixture['module']->id, 'status' => 'published',
+        'metadata' => ['example_word' => '環境', 'onyomi' => 'カン'],
+    ];
+    $this->actingAs($admin)->post(route('admin.vocabulary.store'), $payload)->assertSessionHasNoErrors();
+    $vocabulary = Kosakata::where('word', '環')->firstOrFail();
+    expect($vocabulary->metadata['example_word'])->toBe('環境')->and($vocabulary->example_sentence)->toBeNull();
+
+    $set = SetFlashcard::where('module_day_id', $fixture['dayOne']->id)->firstOrFail();
+    $this->actingAs($admin)->post(route('admin.flashcards.builder.update', $set), [
+        'status' => 'published', 'cards' => [[
+            'vocabulary_id' => $vocabulary->id, 'front_text' => '環', 'reading' => 'かん',
+            'back_text' => 'lingkaran', 'content_type' => 'kanji',
+        ]],
+    ])->assertSessionHasNoErrors();
+    expect($vocabulary->fresh()->metadata['example_word'])->toBe('環境');
+
+    $payload['metadata']['example_word'] = null;
+    $this->actingAs($admin)->put(route('admin.vocabulary.update', $vocabulary), $payload)->assertSessionHasNoErrors();
+    expect($vocabulary->fresh()->metadata['example_word'] ?? null)->toBeNull()
+        ->and($vocabulary->fresh()->metadata['onyomi'])->toBe('カン');
+});
+
+it('imports example words and retains them when an older file has no example word column', function () {
+    $fixture = createDayRoadmapFixture();
+    $admin = Pengguna::factory()->create(['role' => 'admin']);
+    $import = function (string $csv) use ($fixture, $admin) {
+        return $this->actingAs($admin)->post(route('admin.vocabulary.import'), [
+            'program_id' => $fixture['program']->id, 'module_id' => $fixture['module']->id,
+            'import_file' => UploadedFile::fake()->createWithContent('kanji.csv', $csv),
+        ]);
+    };
+    $import("content_type,main_text,reading,example_word,status\nkanji,環,かん,環境,draft")->assertSessionHasNoErrors();
+    expect(Kosakata::where('word', '環')->firstOrFail()->metadata['example_word'])->toBe('環境');
+    $import("content_type,main_text,reading,status\nkanji,環,かん,draft")->assertSessionHasNoErrors();
+    expect(Kosakata::where('word', '環')->firstOrFail()->metadata['example_word'])->toBe('環境');
+    $import("content_type,main_text,reading,example_word,status\nkanji,環,かん,,draft")->assertSessionHasNoErrors();
+    expect(Kosakata::where('word', '環')->firstOrFail()->metadata['example_word'] ?? null)->toBeNull();
+});
+
 it('rejects quiz imports that belong to a different Week or Day', function () {
     $fixture = createDayRoadmapFixture();
     $admin = Pengguna::factory()->create(['role' => 'admin']);

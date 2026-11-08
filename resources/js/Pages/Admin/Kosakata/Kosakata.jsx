@@ -34,6 +34,7 @@ const emptyForm = {
     example_sentence: '',
     example_reading: '',
     example_meaning: '',
+    example_word: '',
     audio_url: '',
     onyomi: '',
     kunyomi: '',
@@ -75,6 +76,7 @@ const toForm = (item) => ({
     example_sentence: item.example_sentence || '',
     example_reading: item.example_reading || '',
     example_meaning: item.example_meaning || '',
+    example_word: item.metadata?.example_word || '',
     audio_url: item.audio_url || '',
     onyomi: item.metadata?.onyomi || '',
     kunyomi: item.metadata?.kunyomi || '',
@@ -188,6 +190,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                 radicals: (data.radicals_text || '').split('|').map((value) => value.trim()).filter(Boolean),
                 stroke_count: data.stroke_count ? Number(data.stroke_count) : null,
                 notes: data.notes || null,
+                example_word: data.content_type === 'kanji' ? (data.example_word || null) : (editing?.metadata?.example_word || null),
             },
         }));
 
@@ -351,7 +354,16 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                                     <h2 className="mt-4 break-words text-4xl font-black text-gray-900 dark:text-white">{item.word}</h2>
                                     <p className="mt-1 break-words text-lg font-bold text-gray-500 dark:text-gray-400">{item.reading || '-'}</p>
                                     <p className="mt-4 rounded-2xl bg-gray-50 p-3 text-sm font-black text-gray-900 dark:bg-gray-950 dark:text-white">{item.meaning_id || item.meaning_en || 'Belum ada arti'}</p>
-                                    <p className="mt-3 line-clamp-2 text-xs font-semibold text-gray-500 dark:text-gray-400">{item.example_sentence || item.source_title || 'Contoh/sumber belum diisi.'}</p>
+                                    {item.content_type === 'kanji' && item.metadata?.example_word && (
+                                        <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                            <span>Contoh kata:</span>
+                                            <span className="font-black">{item.metadata.example_word}</span>
+                                        </div>
+                                    )}
+                                    <p className="mt-2 line-clamp-2 text-xs font-semibold text-gray-500 dark:text-gray-400">{item.example_sentence || item.source_title || 'Contoh/sumber belum diisi.'}</p>
+                                    {item.example_meaning && (
+                                        <p className="mt-1 line-clamp-1 text-[11px] font-medium text-gray-400 dark:text-gray-500">Arti contoh: {item.example_meaning}</p>
+                                    )}
                                 </div>
                             </div>
                             <div className="grid grid-cols-3 gap-2 border-t border-gray-100 p-4 dark:border-gray-800">
@@ -665,6 +677,18 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                                             className={`${inputClass} ${form.errors.tags_text ? '!border-rose-400 focus:!border-rose-500' : ''}`}
                                         />
                                     </Field>
+                                    {form.data.content_type === 'kanji' && <Field label="Contoh Kata" error={form.errors['metadata.example_word']} tooltip="Contoh kata yang menggunakan kanji ini." wide>
+                                        <input
+                                            value={form.data.example_word}
+                                            onChange={(event) => {
+                                                form.setData('example_word', event.target.value);
+                                                form.clearErrors('metadata.example_word');
+                                            }}
+                                            maxLength={255}
+                                            placeholder="Contoh: 環境"
+                                            className={`${inputClass} ${form.errors['metadata.example_word'] ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>}
                                     <Field label="Contoh Kalimat" error={form.errors.example_sentence} tooltip="Contoh penggunaan kata/kanji dalam kalimat bahasa Jepang yang natural." wide>
                                         <textarea
                                             value={form.data.example_sentence}

@@ -48,6 +48,7 @@ export default function DokkaiPreviewDialog({ open, onClose, draft }) {
             id: q.id || qIdx + 1,
             question_number: q.question_number || qIdx + 1,
             question_text: q.question_text || '',
+            highlight_text: q.highlight_text || '',
             question_translation: q.question_translation || '',
             evidence_paragraph_number: q.evidence_paragraph_number || 1,
             evidence_quote: q.evidence_quote || '',

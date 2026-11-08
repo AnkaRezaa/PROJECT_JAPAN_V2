@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\Kuis;
+use App\Models\HariModul;
 use App\Models\ProgramPembelajaran;
+use App\Support\QuestionHighlight;
 use Illuminate\Support\Facades\DB;
 
 class ImportKuisGrammarService
@@ -35,6 +37,9 @@ class ImportKuisGrammarService
         foreach ($questionRows as $index => $row) {
             $rowNumber = $index + 2;
             $stage = trim((string) ($row['stage'] ?? ''));
+            if ($error = QuestionHighlight::error($row['highlight_text'] ?? null, (string) ($row['prompt'] ?? ''))) {
+                $errors[] = $this->error('Soal', $rowNumber, 'highlight_text', $error);
+            }
             $items = $this->pipeValues($row['options_or_tokens'] ?? '');
             $correct = $this->pipeValues($row['correct_answer_or_order'] ?? '');
 
@@ -194,6 +199,7 @@ class ImportKuisGrammarService
         $payload = [
             'type' => $stage,
             'prompt' => trim((string) ($row['prompt'] ?? '')),
+            'highlight_text' => $row['highlight_text'] ?? null,
             'japanese' => trim((string) ($row['source_text'] ?? '')) ?: null,
             'context' => trim((string) ($row['context'] ?? '')) ?: null,
             'explanation' => trim((string) ($row['feedback'] ?? '')) ?: null,
@@ -269,6 +275,9 @@ class ImportKuisGrammarService
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
             $stage = trim((string) ($row['stage'] ?? ''));
+            if ($error = QuestionHighlight::error($row['highlight_text'] ?? null, (string) ($row['prompt'] ?? ''))) {
+                $errors[] = $this->error('CSV', $rowNumber, 'highlight_text', $error);
+            }
             $items = $this->pipeValues($row['options_or_tokens'] ?? '');
             $correct = $this->pipeValues($row['correct_answer_or_order'] ?? '');
 

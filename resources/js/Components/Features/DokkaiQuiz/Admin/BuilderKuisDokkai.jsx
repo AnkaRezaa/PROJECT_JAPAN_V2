@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import QuizField from '@/Components/UI/QuizField';
+import QuestionHighlightField from '@/Components/Features/Quiz/Shared/QuestionHighlightField';
 import UnifiedQuizGeneratorModal from '@/Components/Features/Quiz/Shared/UnifiedQuizGeneratorModal';
 import { dokkaiMaterialFromDraft } from '@/Components/Features/Quiz/Shared/generatorDraftAdapters';
 import { OptionEditorRow, QuestionNavItem, AudioAttachmentField, UnifiedQuizBuilderShell, UnifiedQuestionEditorCanvas } from '@/Components/Features/Quiz/Shared';
@@ -193,6 +194,7 @@ function normalizeDraft(item, day, defaultLevel = 'N3') {
                 id: q.id || null,
                 question_number: q.question_number || idx + 1,
                 question_text: q.question_text || '',
+                highlight_text: q.highlight_text || '',
                 question_translation: q.question_translation || '',
                 evidence_paragraph_number: Number(evNum),
                 evidence_paragraph_id: q.evidence_paragraph_id || null,
@@ -664,6 +666,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
             id: q.id || undefined,
             question_number: idx + 1,
             question_text: q.question_text?.trim() || '',
+            highlight_text: q.highlight_text?.trim() || null,
             question_translation: q.question_translation?.trim() || null,
             evidence_paragraph_number: Number(q.evidence_paragraph_number || 1),
             evidence_quote: q.evidence_quote?.trim() || null,
@@ -1456,6 +1459,7 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
                                                     </div>
 
                                                     {/* PILIHAN GANDA (DENGAN SHARED ATOMS OptionEditorRow) */}
+                                                    <QuestionHighlightField text={activeQuestion.question_text} value={activeQuestion.highlight_text} onChange={(value) => updateQuestion(currentQIndex, 'highlight_text', value)} />
                                                     <div className="space-y-2.5">
                                                         <div className="flex items-center justify-between">
                                                             <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider">

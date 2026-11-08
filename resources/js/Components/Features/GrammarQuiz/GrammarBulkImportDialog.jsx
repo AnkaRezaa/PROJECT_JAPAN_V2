@@ -22,7 +22,7 @@ const sheets = [
     {
         id: 'soal',
         label: 'Soal',
-        columns: ['lesson_key', 'stage', 'order', 'prompt', 'source_text', 'context', 'options_or_tokens', 'correct_answer_or_order', 'feedback', 'points'],
+        columns: ['lesson_key', 'stage', 'order', 'prompt', 'source_text', 'context', 'options_or_tokens', 'correct_answer_or_order', 'feedback', 'points', 'highlight_text'],
     },
 ];
 

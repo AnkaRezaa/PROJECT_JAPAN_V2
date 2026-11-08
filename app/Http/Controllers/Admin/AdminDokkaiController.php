@@ -306,6 +306,7 @@ class AdminDokkaiController extends Controller
             'questions.*.id' => ['nullable', 'integer'],
             'questions.*.question_number' => ['nullable', 'integer'],
             'questions.*.question_text' => ['required', 'string'],
+            'questions.*.highlight_text' => ['nullable', 'string', 'max:500'],
             'questions.*.question_translation' => ['nullable', 'string'],
             'questions.*.evidence_paragraph_id' => ['nullable', 'integer'],
             'questions.*.evidence_paragraph_number' => ['nullable', 'integer'],

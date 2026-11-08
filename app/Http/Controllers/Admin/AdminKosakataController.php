@@ -268,6 +268,16 @@ class AdminKosakataController extends Controller
 
                 $reading = $data['reading'] ?? $data['kana'] ?? $data['onyomi'] ?? $data['struktur'] ?? null;
                 $moduleId = $this->resolveModuleId($data, $validated['module_id']);
+                if (mb_strlen((string) ($data['example_word'] ?? $data['contoh_kata'] ?? '')) > 255) {
+                    throw ValidationException::withMessages(['import_file' => 'Contoh kata maksimal 255 karakter.']);
+                }
+                $metadata = $this->metadataFromImportRow($data, $contentType);
+                if (! array_key_exists('example_word', $data) && ! array_key_exists('contoh_kata', $data)) {
+                    $existing = Kosakata::where('word', $word)->where('reading', $reading)->first();
+                    if (isset($existing?->metadata['example_word'])) {
+                        $metadata['example_word'] = $existing->metadata['example_word'];
+                    }
+                }
 
                 $content = Kosakata::updateOrCreate(
                     [
@@ -291,7 +301,7 @@ class AdminKosakataController extends Controller
                         'audio_url' => $data['audio_url'] ?? null,
                         'source_type' => $data['source_type'] ?? $validated['source_type'] ?? $extension,
                         'source_title' => $data['source_title'] ?? $validated['source_title'] ?? $file->getClientOriginalName(),
-                        'metadata' => $this->metadataFromImportRow($data, $contentType),
+                        'metadata' => $metadata,
                         'status' => $data['status'] ?? 'draft',
                     ]
                 );
@@ -382,6 +392,7 @@ class AdminKosakataController extends Controller
             'metadata.radicals.*' => ['nullable', 'string', 'max:50'],
             'metadata.stroke_count' => ['nullable', 'integer', 'min:1', 'max:64'],
             'metadata.notes' => ['nullable', 'string'],
+            'metadata.example_word' => ['nullable', 'string', 'max:255'],
             'status' => ['required', 'in:draft,published'],
         ]);
 
@@ -406,7 +417,7 @@ class AdminKosakataController extends Controller
 
     private function importHeaders(): array
     {
-        return ['content_type', 'module_id', 'module_week', 'main_text', 'reading', 'meaning_id', 'meaning_en', 'jlpt_level', 'category', 'tags', 'example_sentence', 'example_reading', 'example_meaning', 'notes', 'onyomi', 'kunyomi', 'source_type', 'source_title', 'audio_url', 'status', 'day_number', 'radicals', 'stroke_count'];
+        return ['content_type', 'module_id', 'module_week', 'main_text', 'reading', 'meaning_id', 'meaning_en', 'jlpt_level', 'category', 'tags', 'example_sentence', 'example_reading', 'example_meaning', 'notes', 'onyomi', 'kunyomi', 'source_type', 'source_title', 'audio_url', 'status', 'day_number', 'radicals', 'stroke_count', 'example_word'];
     }
 
     private function templateRows(?string $level = null): array
@@ -417,7 +428,7 @@ class AdminKosakataController extends Controller
             ['bunpo', '', 1, '〜ように', 'Vる/ない + ように', 'agar, supaya', 'so that', $level, 'grammar', 'bunpo|pattern', '忘れないようにメモします。', 'わすれないようにメモします。', 'Saya mencatat supaya tidak lupa.', 'Pakai untuk tujuan atau harapan.', '', '', 'xlsx', 'Sumber materi', '', 'draft'],
         ];
 
-        return array_map(fn (array $row) => [...$row, '', '', ''], $rows);
+        return array_map(fn (array $row) => [...$row, '', '', '', $row[0] === 'kanji' ? '割引' : ''], $rows);
     }
 
     private function resolvedJlptLevel(?int $moduleId, mixed $value): ?string
@@ -526,6 +537,7 @@ class AdminKosakataController extends Controller
     {
         return array_filter([
             'content_type' => $contentType,
+            'example_word' => $row['example_word'] ?? $row['contoh_kata'] ?? null,
             'notes' => $row['notes'] ?? $row['catatan'] ?? null,
             'onyomi' => $row['onyomi'] ?? null,
             'kunyomi' => $row['kunyomi'] ?? null,

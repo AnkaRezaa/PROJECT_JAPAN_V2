@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Kuis;
+use App\Support\QuestionHighlight;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -38,8 +39,9 @@ class KuisGrammarService
             $kept = [];
             $order = 0;
 
-            foreach ($payload['stages'] as $stage) {
-                foreach ($stage['questions'] as $question) {
+            foreach ($payload['stages'] as $stageIndex => $stage) {
+                foreach ($stage['questions'] as $questionIndex => $question) {
+                    QuestionHighlight::validated($question['highlight_text'] ?? null, (string) ($question['prompt'] ?? ''), "stages.{$stageIndex}.questions.{$questionIndex}.highlight_text");
                     $normalized = $this->normalizeQuestion($stage['id'], $question);
                     $attributes = Arr::except($normalized, ['context']);
                     $model = $quiz->questions()->updateOrCreate(
@@ -167,6 +169,7 @@ class KuisGrammarService
             'type' => $question['type'] ?? $normalizedType,
             'stage' => $stage,
             'question_text' => trim((string) ($question['prompt'] ?? '')),
+            'highlight_text' => QuestionHighlight::validated($question['highlight_text'] ?? null, (string) ($question['prompt'] ?? '')),
             'question_reading' => $options['source_reading'],
             'correct_answer' => $correctAnswer,
             'correct_answer_reading' => null,
@@ -188,6 +191,7 @@ class KuisGrammarService
             'id' => $question->id,
             'type' => $question->stage,
             'prompt' => $question->question_text,
+            'highlight_text' => $question->highlight_text,
             'japanese' => ($includeAnswers || $isTransformation) ? Arr::get($options, 'source_text') : null,
             'reading' => ($includeAnswers || $isTransformation) ? Arr::get($options, 'source_reading') : null,
             'translation' => Arr::get($options, 'translation'),

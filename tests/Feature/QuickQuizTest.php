@@ -83,6 +83,20 @@ function quickQuizDayQuestion(Modul $module, int $dayNumber, string $answer): ar
     return compact('day', 'quiz', 'question');
 }
 
+it('hides disabled question reading without changing stored kana or quick quiz identity', function () {
+    $user = Pengguna::factory()->create(['role' => 'user']);
+    $program = quickQuizProgram($user, 'reading');
+    $data = quickQuizDayQuestion($program['module'], 1, 'Food');
+    $data['question']->update(['question_reading' => 'しょくひん', 'show_question_reading' => false]);
+    $sessions = app(QuickQuizSessionService::class);
+    $state = $sessions->start($user);
+    $hidden = $sessions->payload($user, $state)['current_question'];
+    expect($hidden['id'])->toBe($data['question']->id)->and($hidden['question_reading'])->toBeNull();
+    $data['question']->update(['show_question_reading' => true]);
+    $visible = $sessions->payload($user, $state)['current_question'];
+    expect($visible['id'])->toBe($hidden['id'])->and($visible['question_reading'])->toBe('しょくひん');
+});
+
 it('builds a quick quiz only from owned and unlocked daily quizzes', function () {
     Cache::flush();
     $user = Pengguna::factory()->create(['role' => 'user', 'xp' => 25]);

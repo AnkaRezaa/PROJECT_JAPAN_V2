@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import UnifiedQuizGeneratorModal from '@/Components/Features/Quiz/Shared/UnifiedQuizGeneratorModal';
+import QuestionHighlightField from '@/Components/Features/Quiz/Shared/QuestionHighlightField';
 import { grammarQuestionsToDraft, grammarStagesFromDraft } from '@/Components/Features/Quiz/Shared/generatorDraftAdapters';
 import GrammarQuizPreviewDialog from './GrammarQuizPreviewDialog';
 import GrammarBulkImportDialog from './GrammarBulkImportDialog';
@@ -432,6 +433,7 @@ function ReviewQuestions({
                             }
                         >
                             {/* Form Input Komponen */}
+                            <div className="mb-4"><QuestionHighlightField text={activeQuestion.prompt} value={activeQuestion.highlight_text} onChange={(value) => updateActiveQuestion({ ...activeQuestion, highlight_text: value })} /></div>
                             {currentStageId === 'sentence_builder' ? (
                                 <SentenceBuilderEditor question={activeQuestion} onChange={updateActiveQuestion} />
                             ) : (

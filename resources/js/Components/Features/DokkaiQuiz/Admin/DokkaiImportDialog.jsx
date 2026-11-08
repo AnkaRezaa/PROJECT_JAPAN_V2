@@ -22,6 +22,7 @@ const EXPECTED_COLUMNS = [
     { key: 'opsi_d', label: 'Opsi D', desc: 'Pilihan jawaban D' },
     { key: 'kunci', label: 'Kunci', desc: 'A, B, C, atau D' },
     { key: 'pembahasan', label: 'Pembahasan', desc: 'Penjelasan jawaban (opsional)' },
+    { key: 'highlight_text', label: 'Kata/frasa yang disorot', desc: 'Teks persis dari pertanyaan (opsional)' },
 ];
 
 export default function DokkaiImportDialog({ open, day, onClose, onImportSuccess }) {

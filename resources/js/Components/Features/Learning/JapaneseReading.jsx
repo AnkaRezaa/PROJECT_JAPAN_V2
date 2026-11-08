@@ -44,12 +44,13 @@ export default function JapaneseReading({
     className = '',
     forcePreferences = null,
     highlightTerms = {},
+    highlightVariant = 'learning',
 }) {
     const preferences = usePage().props.auth?.user || {};
     const showRomaji = forcePreferences?.showRomaji ?? Boolean(preferences.show_romaji);
     const showTranslation = forcePreferences?.showTranslation ?? Boolean(preferences.show_indonesian_translation);
     const withHighlight = (text, term) => (
-        term ? <HighlightedLearningText text={text} term={term} /> : text
+        term ? <HighlightedLearningText text={text} term={term} variant={highlightVariant} /> : text
     );
 
     return (

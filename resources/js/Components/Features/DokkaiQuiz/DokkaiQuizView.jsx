@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import BackButton from '@/Components/UI/BackButton';
+import HighlightedLearningText from '@/Components/Features/Learning/HighlightedLearningText';
 import ConfirmActionDialog from '@/Components/UI/ConfirmActionDialog';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -373,7 +374,7 @@ export default function DokkaiQuizView({
 
                             {/* Question Text */}
                             <h3 className="text-xl sm:text-2xl font-extrabold font-japanese text-gray-950 dark:text-white leading-relaxed mb-2 tracking-wide">
-                                {currentQuestion.question_text}
+                                <HighlightedLearningText text={currentQuestion.question_text} term={currentQuestion.highlight_text} variant="question" />
                             </h3>
                             {currentQuestion.question_translation && (
                                 <p className="text-sm sm:text-base text-gray-700 dark:text-gray-200 mb-5 leading-relaxed font-normal">

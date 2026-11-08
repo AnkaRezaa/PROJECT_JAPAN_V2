@@ -199,7 +199,7 @@ class AdminGrammarQuizController extends Controller
         $format = $request->query('format', 'xlsx');
 
         if ($format === 'csv') {
-            $headers = ['stage', 'prompt', 'source_text', 'context', 'options_or_tokens', 'correct_answer_or_order', 'feedback', 'points', 'pattern', 'title', 'formula', 'meaning'];
+            $headers = ['stage', 'prompt', 'source_text', 'context', 'options_or_tokens', 'correct_answer_or_order', 'feedback', 'points', 'pattern', 'title', 'formula', 'meaning', 'highlight_text'];
             $sampleRows = [
                 ['transformation', 'Ubah ke bentuk ば.', '勉強する', '', '勉強すれば|勉強したら|勉強して', '勉強すれば', 'する berubah menjadi すれば.', 1, '～ば～ほど', 'Semakin..., semakin...', 'Vば + V辞書形 + ほど', 'Semakin A, semakin B'],
                 ['sentence_builder', 'Susun kalimat yang benar.', '', 'Semakin belajar, semakin mahir.', '勉強すれば|する|ほど|上手になります|まで', '勉強すれば|する|ほど|上手になります', 'Susun pola ば～ほど.', 1, '～ば～ほど', 'Semakin..., semakin...', 'Vば + V辞書形 + ほど', 'Semakin A, semakin B'],
@@ -236,7 +236,7 @@ class AdminGrammarQuizController extends Controller
                 ],
             ],
             'Soal' => [
-                'headers' => ['lesson_key', 'stage', 'order', 'prompt', 'source_text', 'context', 'options_or_tokens', 'correct_answer_or_order', 'feedback', 'points'],
+                'headers' => ['lesson_key', 'stage', 'order', 'prompt', 'source_text', 'context', 'options_or_tokens', 'correct_answer_or_order', 'feedback', 'points', 'highlight_text'],
                 'rows' => [
                     ['n3-ba-hodo', 'transformation', 1, 'Ubah kata kerja ke bentuk yang tepat untuk pola 〜ば〜ほど.', '勉強する', '', '勉強すればほど|勉強したらほど|勉強してほど|勉強しないほど', '勉強すればほど', 'Gunakan bentuk pengandaian ば dari kata 勉強する yaitu 勉強すれば.', 1],
                     ['n3-ba-hodo', 'sentence_builder', 1, 'Susun potongan kata berikut menjadi kalimat utuh.', '', 'Semakin banyak belajar, semakin mahir bahasa Jepang.', '勉強すれば|するほど|日本語が|上手になります|まで', '勉強すれば|するほど|日本語が|上手になります', 'Urutan yang benar mengikuti kaidah V-ば + するほど. Kata sampai (まで) adalah pengecoh.', 1],
@@ -366,6 +366,7 @@ class AdminGrammarQuizController extends Controller
             'stages.*.questions.*.id' => ['nullable', 'integer'],
             'stages.*.questions.*.type' => ['required', Rule::in(KuisGrammarService::STAGES)],
             'stages.*.questions.*.prompt' => ['required', 'string', 'max:5000'],
+            'stages.*.questions.*.highlight_text' => ['nullable', 'string', 'max:500'],
             'stages.*.questions.*.japanese' => ['nullable', 'string', 'max:5000'],
             'stages.*.questions.*.reading' => ['nullable', 'string', 'max:5000'],
             'stages.*.questions.*.translation' => ['nullable', 'string', 'max:5000'],

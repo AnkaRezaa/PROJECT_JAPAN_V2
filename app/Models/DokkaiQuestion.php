@@ -17,6 +17,7 @@ class DokkaiQuestion extends Model
         'dokkai_passage_id',
         'question_number',
         'question_text',
+        'highlight_text',
         'question_translation',
         'evidence_paragraph_id',
         'evidence_quote',
