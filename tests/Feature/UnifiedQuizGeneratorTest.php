@@ -93,7 +93,9 @@ class UnifiedQuizGeneratorTest extends TestCase
         $this->actingAs($this->admin)->post(route('admin.quizzes.questions.generate-vocabulary', $quiz), [
             'count' => '5', 'jlpt_level' => 'N3', 'mode' => 'word_to_meaning', 'status' => 'published',
         ])->assertRedirect()->assertSessionHasNoErrors();
-        $this->assertSame(10, $quiz->questions()->count());
+        // Because only 6 words exist in total and 5 were already saved with mode 'word_to_meaning',
+        // deduplication skips the 5 existing words and only appends the 1 remaining word (total = 6).
+        $this->assertSame(6, $quiz->questions()->count());
     }
 
     public function test_kanji_to_meaning_draft_defaults_to_hidden_reading_without_losing_kana(): void
@@ -347,6 +349,43 @@ class UnifiedQuizGeneratorTest extends TestCase
             $this->assertSame('word_to_reading', $runnerQ['stage']);
             $this->assertTrue($runnerQ['disable_question_narration']);
         }
+    }
+
+    public function test_generated_questions_persist_source_metadata_and_deduplicate_without_throwing_error(): void
+    {
+        $this->words();
+        $quiz = Kuis::create([
+            'module_id' => $this->day->module_id,
+            'module_day_id' => $this->day->id,
+            'type' => 'multiple_choice',
+            'title' => 'Deduplication Quiz',
+            'status' => 'draft',
+        ]);
+
+        $draft = $this->generate('vocab', $this->payload('vocab', ['mode' => 'word_to_meaning'], 3))
+            ->assertOk()
+            ->json('draft');
+
+        $questionsPayload = QuizGeneratorDraft::vocabularyQuestions($draft);
+        $this->assertCount(3, $questionsPayload);
+        $this->assertSame('vocabulary', $questionsPayload[0]['source_type']);
+        $this->assertNotNull($questionsPayload[0]['source_id']);
+        $this->assertSame('word_to_meaning', $questionsPayload[0]['generation_mode']);
+
+        $service = app(\App\Services\SoalKuisService::class);
+        $firstInsertCount = $service->storeGeneratedQuestions($quiz, $questionsPayload);
+        $this->assertSame(3, $firstInsertCount);
+
+        // Repeat with the exact same source and mode: should skip all and return 0
+        $secondInsertCount = $service->storeGeneratedQuestions($quiz, $questionsPayload);
+        $this->assertSame(0, $secondInsertCount);
+        $this->assertSame(3, $quiz->questions()->count());
+
+        // Same source vocabulary, but different mode (meaning_to_word): should be allowed
+        $differentModePayload = array_map(fn ($q) => [...$q, 'generation_mode' => 'meaning_to_word'], $questionsPayload);
+        $thirdInsertCount = $service->storeGeneratedQuestions($quiz, $differentModePayload);
+        $this->assertSame(3, $thirdInsertCount);
+        $this->assertSame(6, $quiz->questions()->count());
     }
 
     public function test_grammar_draft_can_be_saved_through_existing_authoring_endpoint(): void
@@ -727,5 +766,270 @@ class UnifiedQuizGeneratorTest extends TestCase
         $savedVocab = \App\Models\DokkaiVocabulary::where('word', 'テスト')->first();
         $this->assertNotNull($savedVocab);
         $this->assertSame('N4', $savedVocab->jlpt_level);
+    }
+
+    public function test_builder_stale_draft_preserves_concurrently_generated_questions_and_only_deletes_explicit_ids(): void
+    {
+        $this->words();
+        $quiz = Kuis::create([
+            'module_id' => $this->day->module_id,
+            'module_day_id' => $this->day->id,
+            'type' => 'multiple_choice',
+            'status' => 'draft',
+        ]);
+
+        // Tab A loads builder with 2 initial questions
+        $q1 = Soal::create([
+            'quiz_id' => $quiz->id,
+            'type' => 'multiple_choice',
+            'question_text' => 'Manual Question 1',
+            'correct_answer' => 'A',
+            'options' => ['A', 'B'],
+            'order' => 0,
+            'points' => 1,
+        ]);
+        $q2 = Soal::create([
+            'quiz_id' => $quiz->id,
+            'type' => 'multiple_choice',
+            'question_text' => 'Manual Question 2 (To be deleted in Tab A)',
+            'correct_answer' => 'B',
+            'options' => ['A', 'B'],
+            'order' => 1,
+            'points' => 1,
+        ]);
+
+        // Meanwhile, Tab B (or Roadmap Generator) appends 2 generated questions concurrently
+        $draft = $this->generate('vocab', $this->payload('vocab', ['mode' => 'word_to_meaning'], 2))->assertOk()->json('draft');
+        $service = app(\App\Services\SoalKuisService::class);
+        $added = $service->storeGeneratedQuestions($quiz, QuizGeneratorDraft::vocabularyQuestions($draft));
+        $this->assertSame(2, $added);
+        $this->assertSame(4, $quiz->questions()->count());
+
+        // Case 1: Legacy fallback (without deleted_question_ids) that ALSO adds a brand new manual question (id = null)
+        // must use initial snapshot max ID ($q2->id), NOT post-insert max ID, so concurrent generated questions are preserved!
+        $this->actingAs($this->admin)->post(route('admin.quizzes.builder.update', $quiz), [
+            'questions' => [
+                [
+                    'id' => $q1->id,
+                    'type' => 'multiple_choice',
+                    'question_text' => 'Manual Question 1 Edited',
+                    'correct_answer' => 'A',
+                    'options' => ['A', 'B'],
+                    'points' => 1,
+                ],
+                [
+                    'id' => null,
+                    'type' => 'multiple_choice',
+                    'question_text' => 'New Manual Question from Tab A',
+                    'correct_answer' => 'C',
+                    'options' => ['C', 'D'],
+                    'points' => 1,
+                ],
+            ],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $remaining = $quiz->questions()->orderBy('order')->get();
+        // $q2 was deleted (<= initialSnapshotMaxId), $q1 + New Manual + 2 concurrent generated = 4 questions
+        $this->assertCount(4, $remaining);
+        $this->assertSame('Manual Question 1 Edited', $remaining[0]->question_text);
+        $this->assertSame('New Manual Question from Tab A', $remaining[1]->question_text);
+        $this->assertSame('vocabulary', $remaining[2]->source_type);
+        $this->assertSame('vocabulary', $remaining[3]->source_type);
+        $this->assertSame([0, 1, 2, 3], $remaining->pluck('order')->all());
+    }
+
+    public function test_builder_duplicating_generated_question_clears_source_metadata_and_skips_repeated_generated_sources_without_overwriting_admin_edits(): void
+    {
+        $this->words();
+        $quiz = Kuis::create([
+            'module_id' => $this->day->module_id,
+            'module_day_id' => $this->day->id,
+            'type' => 'multiple_choice',
+            'status' => 'draft',
+        ]);
+
+        $draft = $this->generate('vocab', $this->payload('vocab', ['mode' => 'word_to_meaning'], 1))->assertOk()->json('draft');
+        $generated = QuizGeneratorDraft::vocabularyQuestions($draft)[0];
+
+        // 1. Save generated question first, then admin edits its question_text and explanation
+        $this->actingAs($this->admin)->post(route('admin.quizzes.builder.update', $quiz), [
+            'questions' => [$generated],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $existingRow = $quiz->questions()->firstOrFail();
+        $existingRow->update([
+            'question_text' => 'Edited by Admin: Custom Prompt',
+            'explanation' => 'Edited by Admin: Custom Explanation',
+        ]);
+
+        // 2. Now simulate:
+        //    - An unpersisted append of the SAME generated source (id = null) -> must be SKIPPED and NOT overwrite admin edits!
+        //    - A repeated unpersisted generated item in the same payload -> must be SKIPPED (not turned into a manual duplicate)!
+        //    - An explicit manual duplicate from frontend duplicateQuestion (source_type = null) -> must be SAVED as manual copy!
+        $unpersistedSameSourceAppend = [
+            ...$generated,
+            'id' => null,
+            'question_text' => 'Fresh Generator Text That Must Not Overwrite Admin Edit',
+            'explanation' => 'Fresh Generator Explanation',
+        ];
+        $manualDuplicateFromFrontend = [
+            ...$generated,
+            'id' => null,
+            'source_type' => null,
+            'source_id' => null,
+            'generation_mode' => null,
+            'question_text' => 'Manual Copy via Duplicate Button',
+        ];
+
+        $this->actingAs($this->admin)->post(route('admin.quizzes.builder.update', $quiz), [
+            'deleted_question_ids' => [],
+            'questions' => [
+                $unpersistedSameSourceAppend,
+                $unpersistedSameSourceAppend,
+                $manualDuplicateFromFrontend,
+            ],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $saved = $quiz->questions()->orderBy('order')->get();
+        $this->assertCount(2, $saved);
+        $this->assertSame([0, 1], $saved->pluck('order')->all());
+
+        $preservedOriginal = $saved->firstWhere('id', $existingRow->id);
+        $this->assertNotNull($preservedOriginal);
+        $this->assertSame('Edited by Admin: Custom Prompt', $preservedOriginal->question_text);
+        $this->assertSame('Edited by Admin: Custom Explanation', $preservedOriginal->explanation);
+        $this->assertSame('vocabulary', $preservedOriginal->source_type);
+
+        $manualCopy = $saved->firstWhere('question_text', 'Manual Copy via Duplicate Button');
+        $this->assertNotNull($manualCopy);
+        $this->assertNull($manualCopy->source_type);
+        $this->assertNull($manualCopy->source_id);
+        $this->assertNull($manualCopy->generation_mode);
+    }
+
+    public function test_flashcard_generate_quiz_separates_vocabulary_and_flashcard_source_types_without_id_collision(): void
+    {
+        $vocab1 = Kosakata::create([
+            'module_id' => $this->day->module_id,
+            'word' => '食べる',
+            'reading' => 'たべる',
+            'meaning_id' => 'Makan',
+            'jlpt_level' => 'N5',
+            'content_type' => 'kosakata',
+            'status' => 'published',
+        ]);
+        $vocab2 = Kosakata::create([
+            'module_id' => $this->day->module_id,
+            'word' => '飲む',
+            'reading' => 'のむ',
+            'meaning_id' => 'Minum',
+            'jlpt_level' => 'N5',
+            'content_type' => 'kosakata',
+            'status' => 'published',
+        ]);
+
+        $set = \App\Models\SetFlashcard::create([
+            'level_id' => $this->day->module->level_id,
+            'module_id' => $this->day->module_id,
+            'module_day_id' => $this->day->id,
+            'title' => 'Set Day 1',
+            'source_type' => 'day',
+            'status' => 'draft',
+        ]);
+
+        // Card 1 is linked to vocabulary_bank ($vocab1)
+        $cardWithVocab = $set->flashcards()->create([
+            'vocabulary_id' => $vocab1->id,
+            'front_text' => $vocab1->word,
+            'reading' => $vocab1->reading,
+            'back_text' => $vocab1->meaning_id,
+            'order' => 0,
+        ]);
+
+        // Card 2 has NO vocabulary_id (manual card)
+        $manualCard = $set->flashcards()->create([
+            'vocabulary_id' => null,
+            'front_text' => '走る',
+            'reading' => 'はしる',
+            'back_text' => 'Berlari',
+            'order' => 1,
+        ]);
+
+        $quiz = Kuis::create([
+            'module_id' => $this->day->module_id,
+            'module_day_id' => $this->day->id,
+            'type' => 'multiple_choice',
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($this->admin)->post(route('admin.flashcards.generate-quiz', $set), [
+            'quiz_id' => $quiz->id,
+            'mode' => 'word_to_meaning',
+            'count' => 2,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $questions = $quiz->questions()->orderBy('order')->get();
+        $this->assertCount(2, $questions);
+
+        $fromVocab = $questions->firstWhere('source_id', $vocab1->id);
+        $fromManualCard = $questions->firstWhere('source_id', $manualCard->id);
+
+        $this->assertNotNull($fromVocab);
+        $this->assertSame('vocabulary', $fromVocab->source_type);
+
+        $this->assertNotNull($fromManualCard);
+        $this->assertSame('flashcard', $fromManualCard->source_type);
+    }
+
+    public function test_module_day_roadmap_apply_generated_content_creates_draft_targets_deduplicates_and_enforces_mentor_scope(): void
+    {
+        $this->words();
+
+        $draft = $this->generate('vocab', $this->payload('vocab', ['mode' => 'word_to_meaning'], 3))
+            ->assertOk()
+            ->json('draft');
+
+        // 1. Mentor outside scope is forbidden
+        $otherMentor = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'kloter']);
+        $this->actingAs($otherMentor)
+            ->postJson(route('admin.module-days.generate-content', $this->day), [
+                'draft' => $draft,
+            ])
+            ->assertForbidden();
+
+        // 2. First Apply on Day without existing quiz/flashcard set creates draft quiz + draft flashcard set
+        $response1 = $this->actingAs($this->admin)
+            ->postJson(route('admin.module-days.generate-content', $this->day), [
+                'draft' => $draft,
+                'sync_flashcards' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('added_questions', 3)
+            ->assertJsonPath('added_flashcards', 3);
+
+        $quiz = Kuis::findOrFail($response1->json('quiz_id'));
+        $flashcardSet = \App\Models\SetFlashcard::findOrFail($response1->json('flashcard_set_id'));
+
+        $this->assertSame('draft', $quiz->status);
+        $this->assertSame('draft', $flashcardSet->status);
+        $this->assertSame(3, $quiz->questions()->count());
+        $this->assertSame(3, $flashcardSet->flashcards()->count());
+        $this->assertSame(3, $this->day->vocabulary()->count());
+
+        // 3. Second Apply with same draft skips all duplicates and returns "0 ditambahkan"
+        $this->actingAs($this->admin)
+            ->postJson(route('admin.module-days.generate-content', $this->day), [
+                'quiz_id' => $quiz->id,
+                'flashcard_set_id' => $flashcardSet->id,
+                'draft' => $draft,
+                'sync_flashcards' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('added_questions', 0)
+            ->assertJsonPath('added_flashcards', 0)
+            ->assertJsonPath('message', '0 ditambahkan, semuanya sudah tersedia.');
+
+        $this->assertSame(3, $quiz->questions()->count());
+        $this->assertSame(3, $flashcardSet->flashcards()->count());
     }
 }

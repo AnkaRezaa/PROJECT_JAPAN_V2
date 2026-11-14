@@ -5,6 +5,9 @@ export function vocabularyQuestionsFromDraft(draft) {
     id: null,
     type: 'multiple_choice',
     stage: q.stage || null,
+    source_type: q.source?.type || q.source_type || 'vocabulary',
+    source_id: q.source?.id ?? q.source_id ?? null,
+    generation_mode: q.generation_mode || q.source?.mode || q.stage || 'word_to_meaning',
     question_text: q.prompt,
     highlight_text: q.highlight_text || '',
     question_reading: q.reading,
@@ -25,7 +28,19 @@ export function appendVocabularyQuestionsFromDraft(draft, existingQuestions, qui
     Object.entries(existingQuestions[0]).every(([key, value]) =>
       JSON.stringify(value) === JSON.stringify(placeholder[key]));
   const existing = isEmptyPlaceholder ? [] : existingQuestions;
-  const generated = normalizeQuestions(vocabularyQuestionsFromDraft(draft), quizType);
+  const existingKeys = new Set(
+    existing
+      .filter(q => q.source_type && q.source_id && q.generation_mode)
+      .map(q => `${q.source_type}:${q.source_id}:${q.generation_mode}`)
+  );
+  const generated = normalizeQuestions(vocabularyQuestionsFromDraft(draft), quizType)
+    .filter(q => {
+      if (!q.source_type || !q.source_id || !q.generation_mode) return true;
+      const key = `${q.source_type}:${q.source_id}:${q.generation_mode}`;
+      if (existingKeys.has(key)) return false;
+      existingKeys.add(key);
+      return true;
+    });
 
   return [...existing, ...generated];
 }

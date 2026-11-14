@@ -9,13 +9,17 @@ import ModuleDayDialog from '@/Components/Features/Admin/ModuleDayDialog';
 import SearchableSelect from '@/Components/UI/SearchableSelect';
 import BuilderKuisGrammar from '@/Components/Features/GrammarQuiz/BuilderKuisGrammar';
 import BuilderKuisDokkai from '@/Components/Features/DokkaiQuiz/Admin/BuilderKuisDokkai';
+import UnifiedQuizGeneratorModal from '@/Components/Features/Quiz/Shared/UnifiedQuizGeneratorModal';
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
@@ -77,7 +81,7 @@ function ResourceStatus({ resources = [], emptyLabel = 'Belum dibuat' }) {
 
 
 
-function DailyPracticeRow({ module, day, onCreate, focused = false }) {
+function DailyPracticeRow({ module, day, onCreate, onGenerate, focused = false }) {
     const flashcardSets = day.flashcard_sets || [];
     const quizzes = day.quizzes || [];
     const primaryQuiz = quizzes[0] || null;
@@ -115,6 +119,16 @@ function DailyPracticeRow({ module, day, onCreate, focused = false }) {
                     </span>
                 </span>
                 <div className="flex flex-wrap gap-2">
+                    {onGenerate && (
+                        <button
+                            type="button"
+                            onClick={() => onGenerate({ module, day })}
+                            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-orange-300 bg-orange-50 px-3 text-xs font-black text-orange-700 transition hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300"
+                        >
+                            <AutoAwesomeIcon sx={{ fontSize: 15 }} />
+                            Generate dari Bank Konten
+                        </button>
+                    )}
                     {flashcardSets[0] && (
                         <Link
                             href={route('admin.flashcards.builder', flashcardSets[0].id)}
@@ -329,6 +343,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
     const [resourceDialog, setResourceDialog] = useState(null);
     const [grammarBuilder, setGrammarBuilder] = useState(null);
     const [dokkaiBuilder, setDokkaiBuilder] = useState(null);
+    const [dayGenerator, setDayGenerator] = useState(null);
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
 
     const selectedProgram = programs.find((program) => String(program.id) === String(selectedProgramId));
@@ -496,6 +511,31 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
 
     const openResourceCreate = (type, module, day, options = {}) => {
         setResourceDialog({ type, module, day, ...options });
+    };
+
+    const applyDayGeneratedContent = async (draft) => {
+        if (!dayGenerator?.day) return;
+        const targetDay = dayGenerator.day;
+        const primaryQuiz = targetDay.quizzes?.[0] || null;
+        const primaryFlashcardSet = targetDay.flashcard_sets?.[0] || null;
+
+        await window.axios.post(
+            route('admin.module-days.generate-content', targetDay.id),
+            {
+                quiz_id: primaryQuiz?.id || null,
+                flashcard_set_id: primaryFlashcardSet?.id || null,
+                sync_flashcards: true,
+                draft,
+            },
+        );
+
+        await new Promise((resolve) => {
+            router.reload({
+                only: ['modules'],
+                preserveScroll: true,
+                onFinish: () => resolve(),
+            });
+        });
     };
 
     return (
@@ -685,12 +725,51 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                                      </span>
                                                                         <ExpandMoreIcon className={`shrink-0 text-gray-400 transition-transform ${dayOpen ? 'rotate-180' : ''}`} />
                                                                     </button>
-                                                                    <button type="button" onClick={() => setDayDialog({ module, day })} title="Edit Hari" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-500 dark:border-gray-700 dark:text-gray-300">
-                                                                        <EditOutlinedIcon sx={{ fontSize: 16 }} />
-                                                                    </button>
-                                                                    <button type="button" onClick={() => deleteDay(module, day)} title="Hapus Hari" className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-100 text-red-600 dark:border-red-900/40 sm:flex">
-                                                                        <DeleteOutlineIcon sx={{ fontSize: 16 }} />
-                                                                    </button>
+                                                                    <Menu as="div" className="relative shrink-0">
+                                                                        <MenuButton
+                                                                            type="button"
+                                                                            title={`Menu aksi Hari ${day.day_number}`}
+                                                                            aria-label={`Menu aksi Hari ${day.day_number}`}
+                                                                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                                                                        >
+                                                                            <MoreVertIcon sx={{ fontSize: 18 }} />
+                                                                        </MenuButton>
+                                                                        <MenuItems
+                                                                            anchor="bottom end"
+                                                                            className="z-50 mt-1 w-56 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg focus:outline-none dark:border-gray-700 dark:bg-gray-900"
+                                                                        >
+                                                                            <MenuItem>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => setDayGenerator({ module, day })}
+                                                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-black text-orange-700 data-[focus]:bg-orange-50 dark:text-orange-300 dark:data-[focus]:bg-orange-950/40"
+                                                                                >
+                                                                                    <AutoAwesomeIcon sx={{ fontSize: 16 }} />
+                                                                                    Generate dari Bank Konten
+                                                                                </button>
+                                                                            </MenuItem>
+                                                                            <MenuItem>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => setDayDialog({ module, day })}
+                                                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-gray-700 data-[focus]:bg-gray-100 dark:text-gray-200 dark:data-[focus]:bg-gray-800"
+                                                                                >
+                                                                                    <EditOutlinedIcon sx={{ fontSize: 16 }} />
+                                                                                    Edit Hari
+                                                                                </button>
+                                                                            </MenuItem>
+                                                                            <MenuItem>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => deleteDay(module, day)}
+                                                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-red-600 data-[focus]:bg-red-50 dark:text-red-400 dark:data-[focus]:bg-red-950/40"
+                                                                                >
+                                                                                    <DeleteOutlineIcon sx={{ fontSize: 16 }} />
+                                                                                    Hapus Hari
+                                                                                </button>
+                                                                            </MenuItem>
+                                                                        </MenuItems>
+                                                                    </Menu>
                                                                 </div>
 
                                                                  {dayOpen && (
@@ -708,6 +787,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                                             module={module}
                                                                             day={day}
                                                                             onCreate={openResourceCreate}
+                                                                            onGenerate={setDayGenerator}
                                                                             focused={focus === 'flashcard'}
                                                                         />
                                                                         <GrammarPracticeRow
@@ -769,6 +849,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                                      module={module}
                                                                      day={day}
                                                                      onCreate={openResourceCreate}
+                                                                     onGenerate={setDayGenerator}
                                                                      focused
                                                                  />
                                                                   <div className="mt-2">
@@ -1003,6 +1084,23 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                 onClose={() => {
                     setDokkaiBuilder(null);
                     router.reload({ only: ['modules'] });
+                }}
+            />
+
+            <UnifiedQuizGeneratorModal
+                open={Boolean(dayGenerator)}
+                onClose={() => setDayGenerator(null)}
+                type="vocab"
+                applyMode="append"
+                onApplyDraft={applyDayGeneratedContent}
+                initialData={{
+                    quizId: dayGenerator?.day?.quizzes?.[0]?.id || null,
+                    moduleDayId: dayGenerator?.day?.id || null,
+                    level: dayGenerator?.module?.level?.level_name || selectedProgram?.level?.level_name,
+                    hasContent: Boolean(
+                        (dayGenerator?.day?.quizzes || []).some((q) => Number(q.item_count || 0) > 0)
+                        || (dayGenerator?.day?.flashcard_sets || []).some((s) => Number(s.item_count || 0) > 0)
+                    ),
                 }}
             />
 

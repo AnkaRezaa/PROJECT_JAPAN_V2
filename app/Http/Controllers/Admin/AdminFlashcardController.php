@@ -155,12 +155,16 @@ class AdminFlashcardController extends Controller
         $oldStatus = $flashcardSet->status;
 
         DB::transaction(function () use ($flashcardSet, $validated, &$ids) {
+            SetFlashcard::whereKey($flashcardSet->id)->lockForUpdate()->firstOrFail();
             $flashcardSet->update(['status' => $validated['status']]);
 
             foreach ($validated['cards'] as $index => $card) {
                 $vocabulary = $this->syncVocabulary($card, $flashcardSet);
+                $existing = isset($card['id'])
+                    ? null
+                    : $flashcardSet->flashcards()->where('vocabulary_id', $vocabulary->id)->first();
                 $model = $flashcardSet->flashcards()->updateOrCreate(
-                    ['id' => $card['id'] ?? null],
+                    ['id' => $card['id'] ?? $existing?->id],
                     [
                         'vocabulary_id' => $vocabulary->id,
                         ...$this->flashcardAttributes($vocabulary),
@@ -219,10 +223,12 @@ class AdminFlashcardController extends Controller
             'Flashcard set belum memiliki konteks Week dan Day yang valid.'
         );
 
-        $nextOrder = (int) $flashcardSet->flashcards()->max('order') + 1;
         $processed = 0;
 
-        DB::transaction(function () use ($flashcardSet, $rows, $nextOrder, &$processed) {
+        DB::transaction(function () use ($flashcardSet, $rows, &$processed) {
+            SetFlashcard::whereKey($flashcardSet->id)->lockForUpdate()->firstOrFail();
+            $nextOrder = (int) $flashcardSet->flashcards()->max('order') + 1;
+
             foreach ($rows as $index => $row) {
                 $this->assertImportScope($row, $flashcardSet, $index + 2);
                 $frontText = trim((string) ($row['front_text'] ?? $row['word'] ?? $row['kata'] ?? ''));
@@ -260,7 +266,7 @@ class AdminFlashcardController extends Controller
                     [
                         'vocabulary_id' => $vocabulary->id,
                         ...$this->flashcardAttributes($vocabulary),
-                        'order' => $existing?->order ?? ($nextOrder + $index),
+                        'order' => $existing?->order ?? ($nextOrder + $processed),
                     ]
                 );
 
@@ -332,25 +338,47 @@ class AdminFlashcardController extends Controller
             return redirect()->back()->withErrors(['generate' => 'Minimal butuh 2 kartu dengan arti untuk membuat soal pilihan ganda.']);
         }
 
-        $nextOrder = (int) $quiz->questions()->max('order') + 1;
+        $created = 0;
 
-        DB::transaction(function () use ($quiz, $cards, $validated, $nextOrder) {
-            foreach ($cards as $index => $card) {
+        DB::transaction(function () use ($quiz, $cards, $validated, &$created) {
+            Kuis::whereKey($quiz->id)->lockForUpdate()->firstOrFail();
+            $nextOrder = (int) $quiz->questions()->max('order') + 1;
+
+            foreach ($cards as $card) {
                 $question = $this->buildQuestion($card, $cards, $validated['mode']);
+                $sourceType = $card->vocabulary_id ? 'vocabulary' : 'flashcard';
+                $sourceId = (int) ($card->vocabulary_id ?: $card->id);
+                $generationMode = $validated['mode'];
+
+                $isDuplicate = $quiz->questions()
+                    ->where('source_type', $sourceType)
+                    ->where('source_id', $sourceId)
+                    ->where('generation_mode', $generationMode)
+                    ->exists();
+
+                if ($isDuplicate) {
+                    continue;
+                }
 
                 Soal::create([
                     'quiz_id' => $quiz->id,
                     'type' => 'multiple_choice',
+                    'stage' => $validated['mode'] === 'word_to_reading' ? 'word_to_reading' : null,
+                    'source_type' => $sourceType,
+                    'source_id' => $sourceId,
+                    'generation_mode' => $generationMode,
                     'question_text' => $question['question_text'],
                     'correct_answer' => $question['correct_answer'],
                     'options' => $question['options'],
                     'explanation' => $question['explanation'],
-                    'order' => $nextOrder + $index,
+                    'order' => $nextOrder + $created,
                 ]);
+
+                $created++;
             }
         });
 
-        return redirect()->back()->with('success', $cards->count().' soal berhasil dibuat dari flashcard.');
+        return redirect()->back()->with('success', $created.' soal berhasil dibuat dari flashcard.');
     }
 
     private function validateSet(Request $request): array

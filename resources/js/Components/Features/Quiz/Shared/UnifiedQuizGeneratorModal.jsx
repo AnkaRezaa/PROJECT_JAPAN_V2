@@ -208,10 +208,23 @@ export default function UnifiedQuizGeneratorModal({
     }
   };
   const apply = () => {
-    const applyNow = () => {
+    const applyNow = async () => {
       closeConfirm();
-      onApplyDraft(draft, form.settings);
-      onClose();
+      setError('');
+      setBusy(true);
+      try {
+        await onApplyDraft(draft, form.settings);
+        onClose();
+      } catch (err) {
+        setError(
+          Object.values(err?.response?.data?.errors || err?.errors || {}).flat().join(' ')
+          || err?.response?.data?.message
+          || err?.message
+          || 'Gagal menerapkan draf. Silakan coba lagi.'
+        );
+      } finally {
+        setBusy(false);
+      }
     };
     if (applyMode === 'append' || !initialRef.current.hasContent) {
       applyNow();

@@ -4,12 +4,17 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\HariModul;
+use App\Models\Kosakata;
 use App\Models\Kuis;
 use App\Models\Modul;
+use App\Models\SetFlashcard;
 use App\Services\KloterBelajarService;
+use App\Services\QuizGenerator\QuizGeneratorDraft;
+use App\Services\SoalKuisService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class AdminHariModulController extends Controller
 {
@@ -109,6 +114,241 @@ class AdminHariModulController extends Controller
         DB::transaction(fn () => $moduleDay->vocabulary()->sync($sync));
 
         return redirect()->back()->with('success', 'Konten untuk Day berhasil diperbarui.');
+    }
+
+    public function applyGeneratedContent(Request $request, HariModul $moduleDay, SoalKuisService $soalKuisService)
+    {
+        $moduleDay->loadMissing('module');
+        $module = $moduleDay->module;
+        abort_unless($module, 404);
+        $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $module->id);
+
+        $validated = $request->validate([
+            'quiz_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('quizzes', 'id')->where(
+                    fn ($query) => $query
+                        ->where('module_id', $module->id)
+                        ->where('module_day_id', $moduleDay->id)
+                        ->whereNotIn('type', ['grammar', 'dokkai'])
+                ),
+            ],
+            'flashcard_set_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('flashcard_sets', 'id')->where(
+                    fn ($query) => $query
+                        ->where('module_id', $module->id)
+                        ->where('module_day_id', $moduleDay->id)
+                ),
+            ],
+            'sync_flashcards' => ['sometimes', 'boolean'],
+            'draft' => ['required', 'array'],
+            'draft.type' => ['required', 'in:vocab'],
+            'draft.questions' => ['required', 'array', 'min:1', 'max:50'],
+            'draft.questions.*.id' => ['nullable', 'string', 'max:100'],
+            'draft.questions.*.stage' => ['nullable', 'string', 'max:50'],
+            'draft.questions.*.generation_mode' => ['nullable', 'in:word_to_meaning,meaning_to_word,reading_to_word,word_to_reading'],
+            'draft.questions.*.prompt' => ['required', 'string', 'max:5000'],
+            'draft.questions.*.reading' => ['nullable', 'string', 'max:5000'],
+            'draft.questions.*.highlight_text' => ['nullable', 'string', 'max:500'],
+            'draft.questions.*.show_question_reading' => ['sometimes', 'boolean'],
+            'draft.questions.*.choices' => ['required', 'array', 'min:2', 'max:8'],
+            'draft.questions.*.choices.*.id' => ['required', 'string', 'max:100'],
+            'draft.questions.*.choices.*.text' => ['required', 'string', 'max:1000'],
+            'draft.questions.*.choices.*.reading' => ['nullable', 'string', 'max:1000'],
+            'draft.questions.*.answer' => ['required', 'array'],
+            'draft.questions.*.answer.choice_id' => ['required', 'string', 'max:100'],
+            'draft.questions.*.explanation' => ['nullable', 'string', 'max:5000'],
+            'draft.questions.*.explanation_reading' => ['nullable', 'string', 'max:5000'],
+            'draft.questions.*.audio_url' => ['nullable', 'string', 'max:2048'],
+            'draft.questions.*.source' => ['required', 'array'],
+            'draft.questions.*.source.type' => ['required', 'in:vocabulary'],
+            'draft.questions.*.source.id' => [
+                'required',
+                'integer',
+                Rule::exists('vocabulary_bank', 'id')->where(
+                    fn ($query) => $query
+                        ->whereNull('module_id')
+                        ->orWhere('module_id', $module->id)
+                ),
+            ],
+            'draft.questions.*.source.mode' => ['nullable', 'in:word_to_meaning,meaning_to_word,reading_to_word,word_to_reading'],
+        ]);
+
+        foreach ($validated['draft']['questions'] as $index => $q) {
+            $mode = $q['generation_mode'] ?? $q['source']['mode'] ?? null;
+            if (! $mode) {
+                throw ValidationException::withMessages([
+                    "draft.questions.{$index}.generation_mode" => 'Metadata generation_mode wajib diisi untuk setiap soal hasil generate.',
+                ]);
+            }
+            $choiceIds = array_column($q['choices'], 'id');
+            if (! in_array($q['answer']['choice_id'], $choiceIds, true)) {
+                throw ValidationException::withMessages([
+                    "draft.questions.{$index}.answer.choice_id" => 'Kunci jawaban tidak cocok dengan daftar pilihan.',
+                ]);
+            }
+        }
+
+        $questionsPayload = QuizGeneratorDraft::vocabularyQuestions($validated['draft']);
+        $syncFlashcards = (bool) ($validated['sync_flashcards'] ?? true);
+        $sourceIds = collect($validated['draft']['questions'])
+            ->map(fn (array $q) => (int) $q['source']['id'])
+            ->unique()
+            ->values();
+
+        $vocabularies = Kosakata::query()
+            ->whereIn('id', $sourceIds)
+            ->get()
+            ->keyBy('id');
+
+        $addedQuestions = 0;
+        $addedCards = 0;
+        $quizId = null;
+        $flashcardSetId = null;
+
+        DB::transaction(function () use (
+            $module,
+            $moduleDay,
+            $validated,
+            $questionsPayload,
+            $syncFlashcards,
+            $sourceIds,
+            $vocabularies,
+            $soalKuisService,
+            &$addedQuestions,
+            &$addedCards,
+            &$quizId,
+            &$flashcardSetId
+        ) {
+            $lockedDay = HariModul::whereKey($moduleDay->id)->lockForUpdate()->firstOrFail();
+
+            $quiz = null;
+            if (! empty($validated['quiz_id'])) {
+                $quiz = Kuis::whereKey((int) $validated['quiz_id'])
+                    ->where('module_id', $module->id)
+                    ->where('module_day_id', $lockedDay->id)
+                    ->firstOrFail();
+            } else {
+                $quiz = $lockedDay->quizzes()
+                    ->whereNotIn('type', ['grammar', 'dokkai'])
+                    ->orderByRaw('CASE WHEN id = ? THEN 0 ELSE 1 END', [(int) $lockedDay->checkpoint_quiz_id])
+                    ->orderBy('id')
+                    ->first();
+            }
+
+            if (! $quiz) {
+                $quiz = $lockedDay->quizzes()->create([
+                    'module_id' => $module->id,
+                    'type' => 'multiple_choice',
+                    'time_limit' => null,
+                    'passing_score' => 70,
+                    'status' => 'draft',
+                ]);
+
+                if (! $lockedDay->checkpoint_quiz_id) {
+                    $lockedDay->update(['checkpoint_quiz_id' => $quiz->id]);
+                }
+            }
+
+            $quizId = $quiz->id;
+            $addedQuestions = $soalKuisService->storeGeneratedQuestions($quiz, $questionsPayload);
+
+            if ($syncFlashcards) {
+                $flashcardSet = null;
+                if (! empty($validated['flashcard_set_id'])) {
+                    $flashcardSet = SetFlashcard::whereKey((int) $validated['flashcard_set_id'])
+                        ->where('module_id', $module->id)
+                        ->where('module_day_id', $lockedDay->id)
+                        ->firstOrFail();
+                } else {
+                    $flashcardSet = $lockedDay->flashcardSets()
+                        ->orderBy('id')
+                        ->first();
+                }
+
+                if (! $flashcardSet) {
+                    $flashcardSet = $lockedDay->flashcardSets()->create([
+                        'level_id' => $module->level_id,
+                        'module_id' => $module->id,
+                        'title' => $lockedDay->title,
+                        'description' => $lockedDay->description,
+                        'source_type' => 'day',
+                        'status' => 'draft',
+                    ]);
+                }
+
+                $flashcardSetId = $flashcardSet->id;
+                SetFlashcard::whereKey($flashcardSet->id)->lockForUpdate()->firstOrFail();
+                $nextCardOrder = (int) $flashcardSet->flashcards()->max('order') + 1;
+
+                foreach ($sourceIds as $vocabId) {
+                    $vocab = $vocabularies->get($vocabId);
+                    if (! $vocab) {
+                        continue;
+                    }
+
+                    $exists = $flashcardSet->flashcards()
+                        ->where('vocabulary_id', $vocab->id)
+                        ->exists();
+
+                    if ($exists) {
+                        continue;
+                    }
+
+                    $flashcardSet->flashcards()->create([
+                        'vocabulary_id' => $vocab->id,
+                        'front_text' => $vocab->word,
+                        'reading' => $vocab->reading,
+                        'back_text' => $vocab->meaning_id ?: $vocab->meaning_en,
+                        'hint' => $vocab->category,
+                        'example_sentence' => $vocab->example_sentence,
+                        'example_meaning' => $vocab->example_meaning,
+                        'audio_url' => $vocab->audio_url,
+                        'order' => $nextCardOrder + $addedCards,
+                    ]);
+
+                    $addedCards++;
+                }
+            }
+
+            $existingPivotMax = (int) DB::table('module_day_vocabulary')
+                ->where('module_day_id', $lockedDay->id)
+                ->max('sort_order');
+
+            $pivotOffset = 1;
+            foreach ($sourceIds as $vocabId) {
+                $alreadyLinked = DB::table('module_day_vocabulary')
+                    ->where('module_day_id', $lockedDay->id)
+                    ->where('vocabulary_id', $vocabId)
+                    ->exists();
+
+                if (! $alreadyLinked) {
+                    $lockedDay->vocabulary()->attach($vocabId, [
+                        'sort_order' => $existingPivotMax + $pivotOffset,
+                    ]);
+                    $pivotOffset++;
+                }
+            }
+        });
+
+        $message = ($addedQuestions === 0 && $addedCards === 0)
+            ? '0 ditambahkan, semuanya sudah tersedia.'
+            : "{$addedQuestions} soal kuis" . ($syncFlashcards ? " dan {$addedCards} kartu flashcard" : '') . ' berhasil ditambahkan dari Bank Konten.';
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => $message,
+                'added_questions' => $addedQuestions,
+                'added_flashcards' => $addedCards,
+                'quiz_id' => $quizId,
+                'flashcard_set_id' => $flashcardSetId,
+            ]);
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 
     private function validateDay(Request $request, Modul $module, ?HariModul $day = null): array

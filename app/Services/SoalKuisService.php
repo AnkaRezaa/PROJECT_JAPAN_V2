@@ -34,11 +34,21 @@ class SoalKuisService
         }
 
         $questionIds = [];
+        $initialSnapshotMaxId = collect($validated['questions'])
+            ->pluck('id')
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->max();
 
-        DB::transaction(function () use ($quiz, $validated, &$questionIds) {
+        DB::transaction(function () use ($quiz, $validated, &$questionIds, $initialSnapshotMaxId) {
+            Kuis::whereKey($quiz->id)->lockForUpdate()->firstOrFail();
+
             $quiz->update([
                 'time_limit' => $validated['time_limit'] ?? null,
             ]);
+
+            $seenSourceKeys = [];
+            $savedIndex = 0;
 
             foreach ($validated['questions'] as $index => $data) {
                 QuestionHighlight::validated($data['highlight_text'] ?? null, trim((string) ($data['question_text'] ?? '')), "questions.{$index}.highlight_text");
@@ -50,11 +60,60 @@ class SoalKuisService
                     ]);
                 }
 
+                $sourceType = $normalized['source_type'];
+                $sourceId = $normalized['source_id'];
+                $generationMode = $normalized['generation_mode'];
+                $hasCompleteSource = (bool) ($sourceType && $sourceId && $generationMode);
+
+                if (! $hasCompleteSource) {
+                    $sourceType = null;
+                    $sourceId = null;
+                    $generationMode = null;
+                }
+
+                $existingId = isset($data['id']) && is_numeric($data['id']) ? (int) $data['id'] : null;
+
+                if ($hasCompleteSource) {
+                    $sourceKey = "{$sourceType}:{$sourceId}:{$generationMode}";
+
+                    // If this is an unpersisted generated item (id === null) that duplicates an earlier item in the same payload, skip it
+                    if (! $existingId && isset($seenSourceKeys[$sourceKey])) {
+                        continue;
+                    }
+
+                    // If this is an unpersisted generated item (id === null) whose source already exists in DB for this quiz,
+                    // preserve the existing DB row (and any admin edits on it) instead of overwriting it.
+                    if (! $existingId) {
+                        $existingSourceRowId = $quiz->questions()
+                            ->where('source_type', $sourceType)
+                            ->where('source_id', $sourceId)
+                            ->where('generation_mode', $generationMode)
+                            ->value('id');
+
+                        if ($existingSourceRowId) {
+                            $seenSourceKeys[$sourceKey] = true;
+                            if (! in_array((int) $existingSourceRowId, $questionIds, true)) {
+                                $quiz->questions()
+                                    ->whereKey((int) $existingSourceRowId)
+                                    ->update(['order' => $savedIndex]);
+                                $questionIds[] = (int) $existingSourceRowId;
+                                $savedIndex++;
+                            }
+                            continue;
+                        }
+                    }
+
+                    $seenSourceKeys[$sourceKey] = true;
+                }
+
                 $question = $quiz->questions()->updateOrCreate(
-                    ['id' => $data['id'] ?? null],
+                    ['id' => $existingId],
                     [
                         'type' => $normalized['type'],
                         'stage' => $normalized['stage'],
+                        'source_type' => $sourceType,
+                        'source_id' => $sourceId,
+                        'generation_mode' => $generationMode,
                         'question_text' => $normalized['question_text'],
                         'highlight_text' => $normalized['highlight_text'],
                         'question_reading' => $normalized['question_reading'],
@@ -66,18 +125,35 @@ class SoalKuisService
                         'explanation' => $normalized['explanation'],
                         'explanation_reading' => $normalized['explanation_reading'],
                         'audio_url' => $normalized['audio_url'],
-                        'order' => $index,
+                        'order' => $savedIndex,
                         'points' => $normalized['points'],
                     ]
                 );
 
-                $questionIds[] = $question->id;
+                $questionIds[] = (int) $question->id;
+                $savedIndex++;
             }
 
-            $questionsToDelete = $quiz->questions()
+            $explicitDeletes = array_key_exists('deleted_question_ids', $validated)
+                ? array_values(array_unique(array_map('intval', $validated['deleted_question_ids'] ?? [])))
+                : null;
+
+            $deleteQuery = $quiz->questions()
                 ->where('type', '!=', 'handwriting')
-                ->whereNotIn('id', $questionIds)
-                ->get();
+                ->whereNotIn('id', $questionIds);
+
+            if ($explicitDeletes !== null) {
+                $deleteQuery->whereIn('id', $explicitDeletes);
+            } elseif ($initialSnapshotMaxId !== null) {
+                $deleteQuery->where(function ($query) use ($initialSnapshotMaxId) {
+                    $query->where('id', '<=', $initialSnapshotMaxId)
+                        ->orWhereNull('source_type');
+                });
+            } else {
+                $deleteQuery->whereNull('source_type');
+            }
+
+            $questionsToDelete = $deleteQuery->get();
 
             foreach ($questionsToDelete as $qToDelete) {
                 if ($qToDelete->attemptAnswers()->exists()) {
@@ -87,6 +163,21 @@ class SoalKuisService
                     ]);
                 }
                 $qToDelete->delete();
+            }
+
+            $preservedConcurrentQuestions = $quiz->questions()
+                ->where('type', '!=', 'handwriting')
+                ->whereNotIn('id', $questionIds)
+                ->orderBy('order')
+                ->orderBy('id')
+                ->get();
+
+            $nextOrder = count($questionIds);
+            foreach ($preservedConcurrentQuestions as $concurrentQuestion) {
+                if ((int) $concurrentQuestion->order !== $nextOrder) {
+                    $concurrentQuestion->update(['order' => $nextOrder]);
+                }
+                $nextOrder++;
             }
         });
     }
@@ -102,10 +193,12 @@ class SoalKuisService
             }
         }
 
-        $nextOrder = (int) $quiz->questions()->max('order') + 1;
         $created = 0;
 
-        DB::transaction(function () use ($rows, $quiz, $nextOrder, &$created) {
+        DB::transaction(function () use ($rows, $quiz, &$created) {
+            Kuis::whereKey($quiz->id)->lockForUpdate()->firstOrFail();
+            $nextOrder = (int) $quiz->questions()->max('order') + 1;
+
             foreach ($rows as $index => $row) {
                 $normalized = $this->normalizeImportRow($quiz, $row, $index);
 
@@ -128,7 +221,7 @@ class SoalKuisService
                     'explanation' => $normalized['explanation'],
                     'explanation_reading' => $normalized['explanation_reading'],
                     'audio_url' => $normalized['audio_url'],
-                    'order' => $nextOrder + $index,
+                    'order' => $nextOrder + $created,
                     'points' => $normalized['points'],
                 ]);
 
@@ -193,39 +286,73 @@ class SoalKuisService
 
     public function storeGeneratedQuestions(Kuis $quiz, array $generated): int
     {
-        $nextOrder = (int) $quiz->questions()->max('order') + 1;
+        if (empty($generated)) {
+            throw ValidationException::withMessages([
+                'generate' => 'Tidak ada konten valid yang bisa dijadikan soal.',
+            ]);
+        }
+
         $created = 0;
 
-        DB::transaction(function () use ($quiz, $generated, $nextOrder, &$created) {
-            foreach ($generated as $payload) {
+        DB::transaction(function () use ($quiz, $generated, &$created) {
+            Kuis::whereKey($quiz->id)->lockForUpdate()->firstOrFail();
+            $nextOrder = (int) $quiz->questions()->max('order') + 1;
+
+            foreach ($generated as $index => $payload) {
+                $normalized = $this->normalizePayload($payload, (int) $index);
+                if ($normalized['error']) {
+                    throw ValidationException::withMessages([
+                        'generate' => $normalized['error'],
+                    ]);
+                }
+
+                $sourceType = $this->nullableText($payload['source_type'] ?? 'vocabulary');
+                $sourceId = isset($payload['source_id']) && is_numeric($payload['source_id'])
+                    ? (int) $payload['source_id']
+                    : (isset($payload['vocabulary_id']) && is_numeric($payload['vocabulary_id']) ? (int) $payload['vocabulary_id'] : null);
+                $generationMode = $this->nullableText($payload['generation_mode'] ?? $payload['stage'] ?? 'word_to_meaning');
+
+                if (! $sourceType || ! $sourceId || ! $generationMode) {
+                    throw ValidationException::withMessages([
+                        'generate' => 'Metadata sumber hasil generate tidak lengkap.',
+                    ]);
+                }
+
+                $isDuplicate = $quiz->questions()
+                    ->where('source_type', $sourceType)
+                    ->where('source_id', $sourceId)
+                    ->where('generation_mode', $generationMode)
+                    ->exists();
+
+                if ($isDuplicate) {
+                    continue;
+                }
+
                 Soal::create([
                     'quiz_id' => $quiz->id,
-                    'type' => $payload['type'] ?? 'multiple_choice',
-                    'stage' => $payload['stage'] ?? null,
-                    'question_text' => $payload['question_text'],
-                    'highlight_text' => QuestionHighlight::validated($payload['highlight_text'] ?? null, $payload['question_text']),
-                    'question_reading' => $payload['question_reading'] ?? null,
-                    'show_question_reading' => $payload['show_question_reading'] ?? false,
-                    'correct_answer' => $payload['correct_answer'],
-                    'correct_answer_reading' => $payload['correct_answer_reading'] ?? null,
-                    'options' => $payload['options'],
-                    'option_readings' => $payload['option_readings'] ?? null,
-                    'explanation' => $payload['explanation'],
-                    'explanation_reading' => $payload['explanation_reading'] ?? null,
-                    'audio_url' => $payload['audio_url'],
+                    'type' => $normalized['type'],
+                    'stage' => $normalized['stage'],
+                    'source_type' => $sourceType,
+                    'source_id' => $sourceId,
+                    'generation_mode' => $generationMode,
+                    'question_text' => $normalized['question_text'],
+                    'highlight_text' => $normalized['highlight_text'],
+                    'question_reading' => $normalized['question_reading'],
+                    'show_question_reading' => $normalized['show_question_reading'],
+                    'correct_answer' => $normalized['correct_answer'],
+                    'correct_answer_reading' => $normalized['correct_answer_reading'],
+                    'options' => $normalized['options'],
+                    'option_readings' => $normalized['option_readings'],
+                    'explanation' => $normalized['explanation'],
+                    'explanation_reading' => $normalized['explanation_reading'],
+                    'audio_url' => $normalized['audio_url'],
                     'order' => $nextOrder + $created,
-                    'points' => 1,
+                    'points' => $normalized['points'],
                 ]);
 
                 $created++;
             }
         });
-
-        if ($created === 0) {
-            throw ValidationException::withMessages([
-                'generate' => 'Tidak ada konten valid yang bisa dijadikan soal.',
-            ]);
-        }
 
         return $created;
     }
@@ -240,6 +367,9 @@ class SoalKuisService
             'questions' => collect($generated)->map(fn (array $payload) => [
                 'type' => $payload['type'] ?? 'multiple_choice',
                 'stage' => $payload['stage'] ?? null,
+                'source_type' => $payload['source_type'] ?? 'vocabulary',
+                'source_id' => $payload['source_id'] ?? $payload['vocabulary_id'] ?? null,
+                'generation_mode' => $payload['generation_mode'] ?? ($filters['mode'] ?? 'word_to_meaning'),
                 'question_text' => $payload['question_text'],
                 'question_reading' => $payload['question_reading'] ?? null,
                 'show_question_reading' => $payload['show_question_reading'] ?? false,
@@ -341,7 +471,13 @@ class SoalKuisService
             ->map(function (Kosakata $vocabulary) use ($pool, $mode) {
                 $payload = $this->questionPayloadFromVocabulary($vocabulary, $pool, $mode);
 
-                return $payload ? [...$payload, 'vocabulary_id' => $vocabulary->id] : null;
+                return $payload ? [
+                    ...$payload,
+                    'vocabulary_id' => $vocabulary->id,
+                    'source_type' => 'vocabulary',
+                    'source_id' => $vocabulary->id,
+                    'generation_mode' => $mode,
+                ] : null;
             })
             ->filter()
             ->values()
@@ -420,6 +556,9 @@ class SoalKuisService
             'error' => $error,
             'type' => $type,
             'stage' => $this->nullableText($data['stage'] ?? null),
+            'source_type' => $this->nullableText($data['source_type'] ?? null),
+            'source_id' => isset($data['source_id']) && is_numeric($data['source_id']) ? (int) $data['source_id'] : null,
+            'generation_mode' => $this->nullableText($data['generation_mode'] ?? null),
             'question_text' => $questionText,
             'highlight_text' => $highlightError ? null : QuestionHighlight::validated($data['highlight_text'] ?? null, $questionText),
             'question_reading' => $this->nullableText($data['question_reading'] ?? null),

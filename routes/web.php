@@ -376,6 +376,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/module-days/{moduleDay}', [AdminHariModulController::class, 'update'])->name('module-days.update');
         Route::delete('/module-days/{moduleDay}', [AdminHariModulController::class, 'destroy'])->name('module-days.destroy');
         Route::put('/module-days/{moduleDay}/vocabulary', [AdminHariModulController::class, 'syncVocabulary'])->name('module-days.vocabulary.sync');
+        Route::post('/module-days/{moduleDay}/generate-content', [AdminHariModulController::class, 'applyGeneratedContent'])->middleware('throttle:admin-generator')->name('module-days.generate-content');
 
         // Soal lama diarahkan ke Builder Kuis agar tidak ada dua jalur edit soal.
         Route::get('/questions', [AdminKuisController::class, 'legacyQuestionsIndex'])->name('questions.index');

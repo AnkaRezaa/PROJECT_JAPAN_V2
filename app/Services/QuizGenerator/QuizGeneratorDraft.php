@@ -15,7 +15,7 @@ final class QuizGeneratorDraft
     public static function question(array $fields): array
     {
         return array_replace([
-            'id' => (string) Str::uuid(), 'kind' => 'choice', 'stage' => null,
+            'id' => (string) Str::uuid(), 'kind' => 'choice', 'stage' => null, 'generation_mode' => null,
             'prompt' => '', 'japanese' => '', 'reading' => null, 'translation' => null,
             'highlight_text' => null,
             'context' => null, 'choices' => [], 'tokens' => [], 'answer' => [],
@@ -41,7 +41,12 @@ final class QuizGeneratorDraft
     public static function vocabularyQuestions(array $draft): array
     {
         return array_map(fn (array $q) => [
-            'type' => 'multiple_choice', 'stage' => $q['stage'] ?? null, 'question_text' => $q['prompt'], 'question_reading' => $q['reading'],
+            'type' => 'multiple_choice',
+            'stage' => $q['stage'] ?? null,
+            'source_type' => $q['source']['type'] ?? $q['source_type'] ?? null,
+            'source_id' => isset($q['source']['id']) ? (int) $q['source']['id'] : ($q['source_id'] ?? null),
+            'generation_mode' => $q['generation_mode'] ?? $q['source']['mode'] ?? null,
+            'question_text' => $q['prompt'], 'question_reading' => $q['reading'],
             'highlight_text' => $q['highlight_text'] ?? null,
             'show_question_reading' => $q['show_question_reading'] ?? false,
             'correct_answer' => collect($q['choices'])->firstWhere('id', $q['answer']['choice_id'])['text'],

@@ -78,6 +78,7 @@ export default function QuizBuilder({
         time_limit: quiz?.time_limit ?? '',
         passing_score: quiz?.passing_score ?? 70,
         questions: normalizeQuestions(initialQuestions, quiz?.type),
+        deleted_question_ids: [],
     };
     const cleanSnapshotRef = useRef(JSON.stringify(initialForm));
 
@@ -98,11 +99,16 @@ export default function QuizBuilder({
     useEffect(() => {
         if (hasUnsavedChanges) return;
         const normalized = normalizeQuestions(initialQuestions, quiz?.type);
-        setData('questions', normalized);
+        setData((current) => ({
+            ...current,
+            questions: normalized,
+            deleted_question_ids: [],
+        }));
         cleanSnapshotRef.current = JSON.stringify({
             time_limit: quiz?.time_limit ?? '',
             passing_score: quiz?.passing_score ?? 70,
             questions: normalized,
+            deleted_question_ids: [],
         });
     }, [initialQuestions]);
 
@@ -220,8 +226,15 @@ export default function QuizBuilder({
     const removeQuestion = (index) => {
         if (data.questions.length <= 1) return;
         clearErrors();
+        const removed = data.questions[index];
         const updated = data.questions.filter((_, i) => i !== index);
-        setData('questions', updated);
+        setData((current) => ({
+            ...current,
+            questions: updated,
+            deleted_question_ids: removed?.id
+                ? Array.from(new Set([...(current.deleted_question_ids || []), removed.id]))
+                : (current.deleted_question_ids || []),
+        }));
         if (activeIndex >= updated.length) setActiveIndex(updated.length - 1);
     };
 
@@ -231,6 +244,9 @@ export default function QuizBuilder({
         if (!target) return;
         const cloned = JSON.parse(JSON.stringify(target));
         delete cloned.id;
+        cloned.source_type = null;
+        cloned.source_id = null;
+        cloned.generation_mode = null;
         const nextQuestions = [...data.questions];
         nextQuestions.splice(index + 1, 0, cloned);
         setData('questions', nextQuestions.map((q, idx) => ({ ...q, order: idx })));
