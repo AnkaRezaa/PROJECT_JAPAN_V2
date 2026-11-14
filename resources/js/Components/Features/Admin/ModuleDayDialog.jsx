@@ -2,16 +2,18 @@ import React, { useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminDialog from '@/Components/UI/AdminDialog';
 import FormField from '@/Components/UI/FormField';
+import { examCategoryLabel } from '@/Components/Features/ExamPortal/ExamPortalUI';
 
 const inputClass = 'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:focus:ring-orange-900/30';
 
-export default function ModuleDayDialog({ open, onClose, module, day = null, nextDayNumber = 1 }) {
+export default function ModuleDayDialog({ open, onClose, module, day = null, nextDayNumber = 1, examOptions = [] }) {
     const form = useForm({
         day_number: nextDayNumber,
         title: '',
         description: '',
         status: 'draft',
         handwriting_enabled: true,
+        exam_id: '',
     });
 
     useEffect(() => {
@@ -23,6 +25,7 @@ export default function ModuleDayDialog({ open, onClose, module, day = null, nex
             description: day?.description || '',
             status: day?.status || 'draft',
             handwriting_enabled: day?.handwriting_enabled ?? true,
+            exam_id: day?.exam_id ? String(day.exam_id) : '',
         });
         form.clearErrors();
         // The form instance is stable; reopening is intentionally keyed by context.
@@ -40,10 +43,12 @@ export default function ModuleDayDialog({ open, onClose, module, day = null, nex
         };
 
         if (day) {
+            form.transform((data) => ({ ...data, exam_id: data.exam_id === '' ? null : Number(data.exam_id) }));
             form.put(route('admin.module-days.update', day.id), options);
             return;
         }
 
+        form.transform(({ exam_id, ...data }) => data);
         form.post(route('admin.module-days.store', module.id), options);
     };
 
@@ -129,6 +134,31 @@ export default function ModuleDayDialog({ open, onClose, module, day = null, nex
                     </select>
                 </FormField>
 
+                {day && (
+                    <FormField label="Ujian" tooltip="Opsional. Maks. 1 ujian per hari." error={form.errors.exam_id}>
+                        <select
+                            aria-label="Ujian"
+                            value={form.data.exam_id}
+                            disabled={form.processing}
+                            onChange={(event) => {
+                                form.setData('exam_id', event.target.value);
+                                form.clearErrors('exam_id');
+                            }}
+                            className={inputClass}
+                        >
+                            <option value="">Tanpa ujian</option>
+                            {day.exam_id && !examOptions.some((exam) => String(exam.id) === String(day.exam_id)) && (
+                                <option value={String(day.exam_id)} disabled>
+                                    {day.exam?.title || `Ujian #${day.exam_id}`} (Tidak tersedia)
+                                </option>
+                            )}
+                            {examOptions.map((exam) => (
+                                <option key={exam.id} value={String(exam.id)}>{exam.title} · {examCategoryLabel(exam)}</option>
+                            ))}
+                        </select>
+                    </FormField>
+                )}
+
                 <FormField label="Latihan menulis kanji" error={form.errors.handwriting_enabled}>
                     <label className="inline-flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-gray-800 dark:text-gray-100">
                         <input
@@ -154,7 +184,7 @@ export default function ModuleDayDialog({ open, onClose, module, day = null, nex
                     </p>
                 )}
 
-                {Object.values(form.errors).length > 0 && !form.errors.day_number && !form.errors.title && !form.errors.description && !form.errors.status && !form.errors.handwriting_enabled && (
+                {Object.values(form.errors).length > 0 && !form.errors.day_number && !form.errors.title && !form.errors.description && !form.errors.status && !form.errors.handwriting_enabled && !form.errors.exam_id && (
                     <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700 dark:bg-red-900/20 dark:text-red-300">
                         {Object.values(form.errors)[0]}
                     </p>

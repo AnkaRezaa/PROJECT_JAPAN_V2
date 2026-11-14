@@ -29,6 +29,123 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
+function createDayLinkedExam(Pengguna $admin, string $access = 'all'): array
+{
+    $exam = \App\Models\Exam::create([
+        'slug' => 'day-exam-'.Str::uuid(), 'title' => 'Ujian Hari', 'category' => 'jft_basic',
+        'type' => 'practice', 'access_type' => $access, 'status' => 'published',
+        'created_by' => $admin->id, 'updated_by' => $admin->id,
+    ]);
+    $version = $exam->versions()->create(['version_number' => 1, 'status' => 'published', 'content_hash' => str_repeat('a', 64)]);
+    $session = $version->sessions()->create(['name' => 'Sesi Hari', 'status' => 'active', 'created_by' => $admin->id]);
+
+    return compact('exam', 'version', 'session');
+}
+
+it('day exam link retains omitted values and unavailable links and detaches without deleting exams', function () {
+    $fixture = createDayRoadmapFixture();
+    $admin = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'global']);
+    ['exam' => $exam, 'version' => $version] = createDayLinkedExam($admin);
+    $day = $fixture['dayOne'];
+    $url = route('admin.module-days.update', $day);
+    $payload = ['day_number' => 1, 'title' => $day->title, 'status' => 'published'];
+    $this->actingAs($admin)->put($url, [...$payload, 'exam_id' => $exam->id])->assertSessionHasNoErrors();
+    expect($day->fresh()->exam_id)->toBe($exam->id);
+    $this->get(route('admin.modules.index', ['program_id' => $fixture['program']->id]))->assertInertia(fn (Assert $page) => $page
+        ->where('exam_options.0.id', $exam->id)->where('modules.data.0.days.0.exam.is_available', true));
+    $exam->update(['status' => 'draft']);
+    $this->put($url, $payload)->assertSessionHasNoErrors();
+    $this->put($url, [...$payload, 'exam_id' => $exam->id])->assertSessionHasNoErrors();
+    expect($day->fresh()->exam_id)->toBe($exam->id);
+    $this->get(route('admin.modules.index', ['program_id' => $fixture['program']->id]))->assertInertia(fn (Assert $page) => $page
+        ->has('exam_options', 0)->where('modules.data.0.days.0.exam.is_available', false));
+    $this->put($url, [...$payload, 'exam_id' => null])->assertSessionHasNoErrors();
+    expect($day->fresh()->exam_id)->toBeNull()->and($exam->fresh())->not->toBeNull()->and($version->fresh())->not->toBeNull();
+    $this->put($url, [...$payload, 'exam_id' => $exam->id])->assertSessionHasErrors('exam_id');
+    $exam->update(['status' => 'published']);
+    $version->update(['status' => 'draft']);
+    $this->put($url, [...$payload, 'exam_id' => $exam->id])->assertSessionHasErrors('exam_id');
+});
+
+it('day exam link scopes cohort selection to target program mentor and latest published version', function () {
+    $fixture = createDayRoadmapFixture();
+    $mentor = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'kloter']);
+    $otherMentor = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'kloter']);
+    $cohort = \App\Models\KloterBelajar::create([
+        'program_pembelajaran_id' => $fixture['program']->id, 'admin_id' => $mentor->id,
+        'nama' => 'Day cohort', 'kode' => 'DAY-EXAM', 'status' => 'active',
+        'tanggal_mulai' => now()->toDateString(), 'tanggal_selesai' => now()->addMonth()->toDateString(),
+    ]);
+    ['exam' => $exam, 'version' => $version, 'session' => $session] = createDayLinkedExam($mentor, 'cohort');
+    $session->cohorts()->attach($cohort);
+    $service = app(\App\Services\ExamAccessService::class);
+    $student = Pengguna::factory()->create(['role' => 'user']);
+    \App\Models\AnggotaKloter::create([
+        'kloter_belajar_id' => $cohort->id, 'user_id' => $student->id, 'status' => 'active', 'joined_at' => now(),
+    ]);
+    expect($service->viewableExamMap($student, collect([$exam]))[$exam->id])->toBeTrue()
+        ->and($service->canViewExam($student, $exam))->toBeTrue();
+    expect($service->selectableExamsQuery($mentor, $fixture['program']->id)->whereKey($exam->id)->exists())->toBeTrue()
+        ->and($service->selectableExamsQuery($otherMentor, $fixture['program']->id)->whereKey($exam->id)->exists())->toBeFalse()
+        ->and($service->selectableExamsQuery($mentor, $fixture['program']->id + 999)->whereKey($exam->id)->exists())->toBeFalse();
+    $day = $fixture['dayOne'];
+    $payload = ['day_number' => 1, 'title' => $day->title, 'status' => 'published', 'exam_id' => $exam->id];
+    $this->actingAs($mentor)->put(route('admin.module-days.update', $day), $payload)->assertSessionHasNoErrors();
+    $cohort->replicate()->fill(['kode' => 'DAY-EXAM-SECOND'])->save();
+    $cohort->update(['admin_id' => $otherMentor->id]);
+    $day->update(['exam_id' => null]);
+    $this->put(route('admin.module-days.update', $day), $payload)->assertSessionHasErrors('exam_id');
+    $cohort->update(['admin_id' => $mentor->id]);
+    $exam->versions()->create(['version_number' => 2, 'status' => 'published', 'content_hash' => str_repeat('b', 64)]);
+    expect($service->selectableExamsQuery($mentor, $fixture['program']->id)->whereKey($exam->id)->exists())->toBeFalse();
+    $this->put(route('admin.module-days.update', $day), $payload)->assertSessionHasErrors('exam_id');
+});
+
+it('day exam link respects student locks and never starts an attempt or changes readiness', function () {
+    $fixture = createDayRoadmapFixture();
+    $admin = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'global']);
+    $user = Pengguna::factory()->create(['role' => 'user']);
+    ['exam' => $exam] = createDayLinkedExam($admin);
+    $fixture['dayOne']->update(['exam_id' => $exam->id]);
+    $fixture['dayTwo']->update(['exam_id' => $exam->id]);
+    $url = route('user.modul.program', $fixture['program']->slug);
+    $this->actingAs($user)->get($url)->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('weeks.0.days.0.exam_summary.url', route('user.exams.show', $exam->slug))
+        ->where('weeks.0.days.0.exam_summary.category', 'jft_basic')
+        ->where('weeks.0.days.0.exam_summary.locked', false)
+        ->where('weeks.0.days.1.exam_summary.locked', true)
+        ->where('weeks.0.days.1.exam_summary.url', null));
+    $this->get(route('user.exams.show', $exam->slug))->assertOk();
+    expect(\App\Models\ExamAttempt::count())->toBe(0);
+    $exam->update(['access_type' => 'premium']);
+    $this->get($url)->assertInertia(fn (Assert $page) => $page
+        ->where('weeks.0.days.0.exam_summary.locked', true)->where('weeks.0.days.0.exam_summary.url', null));
+    $exam->update(['status' => 'draft']);
+    $this->get($url)->assertInertia(fn (Assert $page) => $page->where('weeks.0.days.0.exam_summary', null));
+    $exam->update(['status' => 'published', 'access_type' => 'all']);
+    $fixture['dayOne']->flashcardSets()->update(['status' => 'draft']);
+    $this->get($url)->assertInertia(fn (Assert $page) => $page
+        ->where('weeks.0.days.0.status', 'unavailable')->where('weeks.0.days.0.completion_method', null)
+        ->where('weeks.0.days.0.exam_summary.locked', true));
+    expect(\App\Models\ExamAttempt::count())->toBe(0);
+});
+
+it('day exam link batches cohort access checks with the same semantics as portal access', function () {
+    $admin = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'global']);
+    $user = Pengguna::factory()->create(['role' => 'user']);
+    $exams = collect(range(1, 4))->map(fn () => createDayLinkedExam($admin, 'cohort')['exam']);
+    $service = app(\App\Services\ExamAccessService::class);
+    \Illuminate\Support\Facades\DB::enableQueryLog();
+    \Illuminate\Support\Facades\DB::flushQueryLog();
+    $map = $service->viewableExamMap($user, $exams->concat($exams));
+    $queries = \Illuminate\Support\Facades\DB::getQueryLog();
+    \Illuminate\Support\Facades\DB::disableQueryLog();
+    expect($queries)->toHaveCount(1)->and($map)->toHaveCount(4);
+    foreach ($exams as $exam) {
+        expect($map[$exam->id])->toBe($service->canViewExam($user, $exam));
+    }
+});
+
 function createDayRoadmapFixture(): array
 {
     $level = LevelPembelajaran::create([

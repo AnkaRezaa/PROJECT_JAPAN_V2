@@ -17,8 +17,12 @@ import { createRoot } from 'react-dom/client';
 import { createInertiaApp, router } from '@inertiajs/react';
 import Canvas from '@/Components/Features/Handwriting/KanjiHandwritingCanvas';
 import Quiz from '@/Pages/User/Kuis/KerjakanKuis';
+import BuilderKuisKosakata from '@/Pages/Admin/Kuis/BuilderKuisKosakata';
+import ModuleDayDialog from '@/Components/Features/Admin/ModuleDayDialog';
+import { DayDetailContent } from '@/Pages/User/Modul/DaftarModul';
 import '/resources/css/app.css';
-const scenario = new URLSearchParams(location.search).get('scenario') || 'canvas';
+const params = new URLSearchParams(location.search);
+const scenario = params.get('scenario') || 'canvas';
 window.route = (name, id = '') => '/fixture/' + name + '/' + id;
 window.__writing = { requests: [], fail: false, delay: 60, completions: [] };
 window.axios = { post: async (url, data) => {
@@ -28,16 +32,38 @@ window.axios = { post: async (url, data) => {
 router.post = (url, data, options) => {
     window.__writing.requests.push({ url, data });
     setTimeout(() => {
-        if (data.skill === 'writing' && window.__writing.fail) options.onError?.({ action: 'Failed fixture' });
+        if ((data.skill === 'writing' && window.__writing.fail) || (!data.skill && window.__writing.failReading)) options.onError?.({ action: 'Failed fixture' });
         else options.onSuccess?.();
         options.onFinish?.();
     }, window.__writing.delay);
 };
+router.put = (url, data, options) => {
+    window.__writing.requests.push({ url, data });
+    window.__persistDay?.(data);
+    options.onSuccess?.();
+    options.onFinish?.();
+};
 function Fixture() {
     const [width, setWidth] = React.useState(5);
+    const [writingEnabled, setWritingEnabled] = React.useState(params.get('writing') !== 'off');
+    const [dayOpen, setDayOpen] = React.useState(true);
+    const [day, setDay] = React.useState({ id: 881, day_number: 1, title: 'Day fixture', status: 'draft', handwriting_enabled: true });
+    window.__setWritingPreference = setWritingEnabled;
+    window.__openDay = () => setDayOpen(true);
+    window.__persistDay = (data) => setDay(current => ({ ...current, ...data }));
+    if (scenario === 'day' || scenario === 'day-exam') return <ModuleDayDialog open={dayOpen} onClose={() => setDayOpen(false)} module={{ id: 1, week_number: 1, title: 'Week fixture' }} day={day}
+        examOptions={scenario === 'day-exam' ? [{ id: 901, title: 'JFT reading', category: 'jft_basic' }] : []} />;
+    if (scenario === 'student-exam') return <DayDetailContent onClose={() => {}} mobile={true} day={{ id: 881, day_number: 1, title: 'Day fixture', status: 'active', exam_summary: {
+        id: 901, title: 'JFT reading', category: 'jft_basic', type: 'practice', locked: params.has('locked'), lock_reason: 'Ujian ini memerlukan akses premium.', url: params.has('locked') ? null : '/user/exams/jft-reading',
+    } }} />;
+    if (scenario === 'builder') return <BuilderKuisKosakata
+        quiz={{ id: 8801, title: 'Writing fixture', passing_score: 70, time_limit: 0, handwriting_enabled: writingEnabled, day: { id: 881, day_number: 1, title: 'Day fixture', handwriting_enabled: writingEnabled } }}
+        questions={[1, 2].map(id => ({ id, type: 'multiple_choice', question_text: 'Question '+id, options: ['Answer A','Answer B','Answer C','Answer D'], correct_answer: 'Answer A', points: 10 }))}
+        flashcardWorkspace={{ sets: [{ id: 501, title: 'Set 1', flashcards: [{ id: 881, front_text: '\u4e00\u4e8c', back_text: 'One two', writing_characters: [] }] }] }} />;
     if (scenario === 'quiz') return <Quiz
-        quiz={{ id: 8801, title: 'Writing fixture', passing_score: 70, time_limit: 0 }}
-        questions={[1,2].map(id => ({ id, type: 'multiple_choice', question: 'Question '+id, options: ['Answer A','Answer B'] }))}
+        quiz={{ id: 8801, title: 'Writing fixture', passing_score: 70, time_limit: 0, handwriting_enabled: writingEnabled }}
+        questions={(params.get('single') ? [1] : [1,2]).map(id => ({ id, type: 'multiple_choice', question: 'Question '+id, options: ['Answer A','Answer B'], correct_answer: 'Answer A' }))}
+        preview={params.get('preview') === '1'}
         flashcards={[{ id: 881, front_text: '\u4e00\u4e8c', back_text: 'One two', writing_characters: [] }]} />;
     return <main className="p-4"><Canvas character={scenario === 'error' ? '\u{20000}' : '\u4e00'} mode="quiz" selfEvaluation
         {...(scenario === 'legacy' ? {} : { strokeWidth: width, onStrokeWidthChange: setWidth, onSkip: () => window.__writing.completions.push('skipped') })}
@@ -50,10 +76,12 @@ await createInertiaApp({
 });
 window.__ready = true;
 `;
+const roadmapDependencies = ['axios', '@mui/material/Dialog', '@mui/material/Popper', ...['AccessTime', 'AccessTimeRounded', 'ArrowForward', 'ArrowForwardRounded', 'BackspaceOutlined', 'CalendarMonth', 'ChevronLeft', 'ChevronRight', 'DescriptionOutlined', 'EditCalendar', 'ExpandMore', 'FindInPage', 'Groups', 'HighlightOff', 'Inventory2Outlined', 'LayersOutlined', 'Lock', 'LockOutlined', 'Quiz', 'QuizOutlined', 'Slideshow'].map(name => '@mui/icons-material/'+name)];
 const server = await createServer({ configFile: false, root, cacheDir: path.join(temp, 'vite'),
-    optimizeDeps: { entries: [], include: ['react', 'react-dom', 'react-dom/client', '@inertiajs/react', 'kanji-recognizer', 'framer-motion', 'react-confetti', '@headlessui/react', 'tiny-segmenter', ...['AutoAwesome','CheckCircle','Close','CloseRounded','EmojiEvents','ErrorOutlineOutlined','Favorite','FlagOutlined','InfoOutlined','LightbulbOutlined','PlayArrow','PlayArrowRounded','Refresh','RestartAltRounded','Restore','SkipNextRounded','Star','StarBorder','UndoRounded','VisibilityOutlined','VolumeOff','VolumeUp','WarningAmber'].map(name => '@mui/icons-material/'+name)] },
+    optimizeDeps: { entries: [], include: ['react', 'react-dom', 'react-dom/client', '@inertiajs/react', 'kanji-recognizer', 'framer-motion', 'react-confetti', '@headlessui/react', '@mui/material/Tooltip', 'tiny-segmenter', ...['Add','ArrowBack','ArrowDownward','ArrowUpward','Assessment','AutoAwesome','AutoStories','BarChart','ChatBubbleOutlined','Check','CheckCircle','CheckCircleOutlineRounded','CheckCircleOutlined','Close','CloseRounded','ContentCopy','DarkMode','Dashboard','DeleteOutlineOutlined','DrawOutlined','EmojiEvents','ErrorOutlineOutlined','ErrorOutlineRounded','Explore','FactCheckOutlined','Favorite','FeedbackOutlined','FlagOutlined','FormatListBulleted','GraphicEq','HelpOutlineOutlined','ImageOutlined','InfoOutlined','KeyboardArrowDown','KeyboardArrowRight','LibraryBooks','LightMode','LightbulbOutlined','LogoutOutlined','Menu','MenuBook','MicNoneOutlined','MonitorHeart','NotificationsOutlined','OpenInNew','People','PlayArrow','PlayArrowRounded','RadioButtonUnchecked','ReceiptLongOutlined','Refresh','Replay','RestartAltRounded','Restore','SaveOutlined','School','SearchRounded','Settings','SettingsOutlined','Shield','Shuffle','SkipNextRounded','Star','StarBorder','StyleOutlined','TimerOutlined','TrendingUp','UndoRounded','UploadFile','VideoCameraFront','Visibility','VisibilityOutlined','VolumeOff','VolumeUp','WarningAmber','WorkspacePremium'].map(name => '@mui/icons-material/'+name)] },
     resolve: { alias: { '@': path.join(root, 'resources/js') } }, plugins: [react(), {
         name: 'writing-fixture',
+        config() { return { optimizeDeps: { include: roadmapDependencies } }; },
         configureServer(vite) { vite.middlewares.use(async (req,res,next) => {
             if (req.url.split('?')[0] !== '/__writing') return next();
             res.setHeader('Content-Type','text/html');
@@ -85,7 +113,8 @@ async function click(text) {
     await evaluate(`(()=>{const b=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim().endsWith(${JSON.stringify(text)})&&!b.disabled);if(!b)throw new Error('Button missing: '+${JSON.stringify(text)});b.click()})()`);
     await sleep(120);
 }
-async function open(scenario) {
+async function open(scenario, preserveCheckpoint = false) {
+    if (!preserveCheckpoint) await evaluate(`(()=>{try{localStorage.removeItem('japanlingo_cp_vocab_8801_u881')}catch{}})()`);
     await send('Page.navigate',{url:server.resolvedUrls.local[0]+'__writing?scenario='+scenario});
     await waitFor('window.__ready');
 }
@@ -142,8 +171,100 @@ try {
     const writes=await evaluate('window.__writing.requests.filter(r=>r.data.skill==="writing")');
     assert.equal(writes.length,2,'One failed request and one retry');
     assert(writes.every(r=>r.data.action==='learning'&&!r.data.completed));
+
+    await open('quiz&writing=off'); await waitFor('document.body.innerText.includes("Answer A")');
+    await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
+    await waitFor('document.body.innerText.includes("Sudah Paham")');
+    await evaluate('window.__writing.failReading=true'); await click('Sudah Paham');
+    await waitFor('window.__writing.requests.some(r=>r.url.includes("user.flashcards.review"))');
+    await sleep(200);
+    assert(await evaluate('document.body.innerText.includes("Sudah Paham")'),'Failed flashcard review must not advance');
+    await evaluate('window.__writing.failReading=false;window.__setWritingPreference(true)');
+    await click('Sudah Paham'); await waitFor('document.body.innerText.includes("Question 2")');
+    assert.equal(await evaluate('Boolean(document.querySelector("[id^=kanji-writer-]"))'),false,'Disabled session must skip canvas despite changed props');
+    assert.equal(await evaluate('window.__writing.requests.filter(r=>r.data.skill==="writing").length'),0,'Disabled writing creates no writing review');
+    assert.equal(await evaluate('JSON.parse(localStorage.getItem("japanlingo_cp_vocab_8801_u881")).handwriting_enabled'),false);
+
+    await open('quiz&writing=on', true); await waitFor('document.body.innerText.includes("Lanjutkan Latihan?")');
+    await click('Lanjutkan'); await waitFor('document.body.innerText.includes("Question 2")');
+    await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
+    await waitFor('document.body.innerText.includes("Sudah Paham")'); await click('Sudah Paham');
+    await waitFor('window.__writing.requests.some(r=>r.url.includes("user.attempts.store"))');
+    assert.equal(await evaluate('window.__writing.requests.filter(r=>r.data.skill==="writing").length'),0,'Resume retains disabled checkpoint even when current Day is enabled');
+
+    await open('quiz&writing=off&single=1'); await waitFor('document.body.innerText.includes("Answer A")');
+    await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
+    await waitFor('document.body.innerText.includes("Sudah Paham")'); await click('Sudah Paham');
+    await waitFor('document.title.includes("Hasil Kuis")');
+    assert.equal(await evaluate('window.__writing.requests.filter(r=>r.url.includes("user.attempts.store")).length'),1,'Last flashcard finishes exactly once');
+    assert.equal(await evaluate('window.__writing.requests.filter(r=>r.data.skill==="writing").length'),0);
+
+    await evaluate(`localStorage.setItem('japanlingo_cp_vocab_8801_u881',JSON.stringify({currentIndex:1,lives:5,score:1,completedIds:[1],answerEvents:[{question_id:1,answer_text:'Answer A'}],savedAt:Date.now()}))`);
+    await open('quiz&writing=off', true); await waitFor('document.body.innerText.includes("Lanjutkan Latihan?")');
+    await click('Lanjutkan'); await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
+    await waitFor('document.body.innerText.includes("Sudah Paham")'); await click('Sudah Paham');
+    await waitFor('document.body.innerText.includes("Karakter 1 dari 2")');
+
+    await evaluate(`localStorage.setItem('japanlingo_cp_vocab_8801_u881',JSON.stringify({currentIndex:1,lives:5,score:1,completedIds:[1],answerEvents:[{question_id:1,answer_text:'Answer A'}],handwriting_enabled:false,savedAt:Date.now()}))`);
+    await open('quiz&writing=on', true); await waitFor('document.body.innerText.includes("Lanjutkan Latihan?")');
+    await click('Mulai dari Awal'); await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
+    await waitFor('document.body.innerText.includes("Sudah Paham")'); await click('Sudah Paham');
+    await waitFor('document.body.innerText.includes("Karakter 1 dari 2")');
+
+    await open('builder&writing=off'); await waitFor('document.body.innerText.includes("Preview Siswa")');
+    await click('Preview Siswa'); await waitFor('document.body.innerText.includes("Answer A")');
+    await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
+    await waitFor('document.body.innerText.includes("Sudah Paham")'); await click('Sudah Paham');
+    await waitFor('document.body.innerText.includes("Question 2")');
+    assert.equal(await evaluate('window.__writing.requests.length'),0,'Disabled builder preview uses .flashcards and does not persist reviews or open writing');
+
+    await open('day'); await waitFor('document.querySelector("[role=switch]")');
+    assert.equal(await evaluate('document.querySelector("[role=switch]").checked'),true);
+    for(const [width,dark] of [[390,false],[1366,true]]) {
+        await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width===390});
+        await evaluate(`document.documentElement.classList.toggle('dark',${dark})`);
+        assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+2'),'Day toggle must fit');
+        const {data}=await send('Page.captureScreenshot',{format:'png'});
+        writeFileSync(path.join(temp,'day-toggle-'+width+'.png'),Buffer.from(data,'base64'));
+    }
+    await evaluate('document.querySelector("[role=switch]").focus()');
+    await send('Input.dispatchKeyEvent',{type:'keyDown',key:' ',code:'Space',windowsVirtualKeyCode:32});
+    await send('Input.dispatchKeyEvent',{type:'keyUp',key:' ',code:'Space',windowsVirtualKeyCode:32});
+    await waitFor('document.querySelector("[role=switch]").checked===false');
+    await click('Simpan Hari'); await waitFor('window.__writing.requests.some(r=>r.url.includes("admin.module-days.update"))');
+    assert.equal(await evaluate('window.__writing.requests.find(r=>r.url.includes("admin.module-days.update")).data.handwriting_enabled'),false);
+    await evaluate('window.__openDay()'); await waitFor('document.querySelector("[role=switch]")');
+    assert.equal(await evaluate('document.querySelector("[role=switch]").checked'),false,'Reopened Day retains preference');
+    await open('day-exam'); await waitFor('document.querySelector("select[aria-label]")');
+    await evaluate(`(()=>{const s=document.querySelector('select[aria-label="Ujian"]');s.value='901';s.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+    await click('Simpan Hari');
+    assert.equal(await evaluate('window.__writing.requests.at(-1).data.exam_id'),901,'Edit Day sends numeric exam ID');
+    await evaluate('window.__openDay()'); await waitFor('document.querySelector("select[aria-label]")');
+    assert.equal(await evaluate('document.querySelector("select[aria-label]").value'),'901','Reopened Day retains exam');
+    await evaluate('window.__persistDay({exam_id:902,exam:{title:"Old exam"}})');
+    await click('Batal'); await evaluate('window.__openDay()');
+    await waitFor('document.querySelector("select[aria-label]")?.selectedOptions[0]?.disabled');
+    await click('Simpan Hari');
+    assert.equal(await evaluate('window.__writing.requests.at(-1).data.exam_id'),902,'Unavailable selection can be retained');
+    await evaluate('window.__openDay()'); await waitFor('document.querySelector("select[aria-label]")');
+    await evaluate(`(()=>{const s=document.querySelector('select[aria-label="Ujian"]');s.value='';s.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+    await click('Simpan Hari');
+    assert.equal(await evaluate('window.__writing.requests.at(-1).data.exam_id'),null,'Empty selection detaches');
+    for (const locked of [false,true]) {
+        await open('student-exam'+(locked?'&locked=1':''));
+        await waitFor('document.body.innerText.includes("JFT reading")');
+        assert.equal(await evaluate('Array.from(document.querySelectorAll("a")).some(a=>a.getAttribute("href")==="/user/exams/jft-reading")'),!locked);
+        for (const [width,dark] of [[390,false],[1366,true]]) {
+            await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width===390});
+            await evaluate('document.documentElement.classList.toggle("dark",'+dark+')');
+            assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+2'),'Exam card must fit');
+            const {data}=await send('Page.captureScreenshot',{format:'png'});
+            writeFileSync(path.join(temp,'exam-'+locked+'-'+width+'.png'),Buffer.from(data,'base64'));
+        }
+        assert.equal(await evaluate('window.__writing.requests.length'),0,'Opening exam card creates no attempt');
+    }
     assert.deepEqual(errors,[],'No uncaught runtime errors');
-    console.log(JSON.stringify({passed:true,checks:['width preserves SVG and geometry','light/dark responsive','skip missing asset','optional props unchanged','actual quiz multi-character skip','double click','review error and retry','learning without completion bonus'],screenshots:'temporary; removed'},null,2));
+    console.log(JSON.stringify({passed:true,checks:['width preserves SVG and geometry','light/dark responsive','skip missing asset','optional props unchanged','actual quiz multi-character skip','double click','review error and retry','learning without completion bonus','disabled writing skips canvas and review','flashcard review failure stays put','session preference survives prop update and resume','last flashcard finishes','legacy checkpoint stays enabled','restart uses latest preference','admin toggle keyboard and retention'],screenshots:'temporary; removed'},null,2));
 } catch(error) {
     console.error('Writing browser failure:', error.message, errors);
     throw error;

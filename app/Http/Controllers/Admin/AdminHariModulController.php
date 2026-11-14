@@ -365,6 +365,7 @@ class AdminHariModulController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'handwriting_enabled' => ['sometimes', 'boolean'],
+            'exam_id' => ['sometimes', 'nullable', 'integer', Rule::exists('exams', 'id')],
             'status' => ['required', 'in:draft,published'],
             'checkpoint_quiz_id' => [
                 'nullable',
@@ -380,6 +381,17 @@ class AdminHariModulController extends Controller
                 ->exists()
         ) {
             abort(422, 'Kuis checkpoint harus berasal dari Day yang sama.');
+        }
+
+        if (isset($validated['exam_id']) && (! $day || (int) $day->exam_id !== (int) $validated['exam_id'])) {
+            $allowed = app(\App\Services\ExamAccessService::class)
+                ->selectableExamsQuery($request->user(), (int) $module->program_pembelajaran_id)
+                ->whereKey($validated['exam_id'])->exists();
+            if (! $allowed) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'exam_id' => 'Ujian tidak tersedia atau berada di luar cakupan kelas ini.',
+                ]);
+            }
         }
 
         return $validated;

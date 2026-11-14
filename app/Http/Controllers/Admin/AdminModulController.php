@@ -171,6 +171,12 @@ class AdminModulController extends Controller
 
         $this->kloterService->abortJikaProgramDiLuarCakupan($request->user(), $request->integer('program_id'));
 
+        $examOptions = app(\App\Services\ExamAccessService::class)
+            ->selectableExamsQuery($request->user(), $request->integer('program_id'))
+            ->with('level:id,level_name')
+            ->orderBy('title')->get(['id', 'slug', 'title', 'category', 'ssw_field', 'level_id', 'type']);
+        $selectableExamIds = $examOptions->modelKeys();
+
         $query = Modul::with([
             'level',
             'programPembelajaran',
@@ -188,9 +194,14 @@ class AdminModulController extends Controller
                     'description',
                     'status',
                     'checkpoint_quiz_id',
+                    'exam_id',
+                    'handwriting_enabled',
                 ])
                 ->withCount('vocabulary')
                 ->with([
+                    'exam' => fn ($query) => $query
+                        ->select(['id', 'slug', 'title', 'category', 'ssw_field', 'level_id', 'type', 'access_type', 'status'])
+                        ->with('level:id,level_name'),
                     'flashcardSets' => fn ($resourceQuery) => $resourceQuery
                         ->select(['id', 'module_id', 'module_day_id', 'title', 'status'])
                         ->withCount('flashcards'),
@@ -248,7 +259,7 @@ class AdminModulController extends Controller
                 ->map(fn ($deck) => $this->presentationPayload($deck))
                 ->values(),
             'weekly_exams' => [],
-            'days' => $module->days->map(function ($day) {
+            'days' => $module->days->map(function ($day) use ($selectableExamIds) {
                 $publishedFlashcardCount = $day->flashcardSets
                     ->where('status', 'published')
                     ->sum('flashcards_count');
@@ -267,6 +278,19 @@ class AdminModulController extends Controller
                     'status' => $day->status,
                     'checkpoint_quiz_id' => $day->checkpoint_quiz_id,
                     'handwriting_enabled' => (bool) $day->handwriting_enabled,
+                    'exam_id' => $day->exam_id,
+                    'exam' => $day->exam ? [
+                        'id' => $day->exam->id,
+                        'slug' => $day->exam->slug,
+                        'title' => $day->exam->title,
+                        'category' => $day->exam->category,
+                        'ssw_field' => $day->exam->ssw_field,
+                        'level' => $day->exam->level?->level_name,
+                        'type' => $day->exam->type,
+                        'access_type' => $day->exam->access_type,
+                        'status' => $day->exam->status,
+                        'is_available' => in_array($day->exam_id, $selectableExamIds, true),
+                    ] : null,
                     'completion_method' => $completionMethod,
                     'is_ready' => $completionMethod !== null,
                     'vocabulary_count' => $day->vocabulary_count,
@@ -312,6 +336,13 @@ class AdminModulController extends Controller
 
         return Inertia::render('Admin/ModulMateri/ManajemenModulMateri', [
             'modules' => $modules,
+            'exam_options' => $examOptions->map(fn ($exam) => [
+                'id' => $exam->id,
+                'title' => $exam->title,
+                'category' => $exam->category,
+                'ssw_field' => $exam->ssw_field,
+                'level' => $exam->level?->level_name,
+            ])->values(),
             'levels' => LevelPembelajaran::orderBy('stage')->get(),
             'programs' => $availablePrograms,
             'filters' => [

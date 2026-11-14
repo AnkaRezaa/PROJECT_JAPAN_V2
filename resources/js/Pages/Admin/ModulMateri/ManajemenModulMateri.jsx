@@ -332,7 +332,7 @@ function WeeklyPresentationRow({ module, focused = false }) {
     );
 }
 
-export default function ModulesIndex({ modules, levels = [], programs = [], filters = {} }) {
+export default function ModulesIndex({ modules, levels = [], programs = [], filters = {}, exam_options = [] }) {
     const moduleItems = modules?.data || modules || [];
     const [selectedProgramId, setSelectedProgramId] = useState(filters.program_id || '');
     const [openModuleId, setOpenModuleId] = useState(filters.week_id ? Number(filters.week_id) : null);
@@ -716,6 +716,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                                          <span className="flex flex-wrap items-center gap-2">
                                                                              <span className="truncate text-sm font-black text-gray-900 dark:text-white">{day.title}</span>
                                                                              <StatusBadge status={day.status} />
+                                                                             {day.exam && <span className="max-w-full break-words rounded bg-sky-100 px-2 py-1 text-xs font-semibold text-sky-900 dark:bg-sky-950 dark:text-sky-200">{day.exam.title}{!day.exam.is_available ? ' (Tidak tersedia)' : ''}</span>}
                                                                              {!day.is_ready && (
                                                                                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
                                                                                      Belum siap
@@ -1051,6 +1052,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                 onClose={() => setDayDialog(null)}
                 module={dayDialog?.module}
                 day={dayDialog?.day}
+                examOptions={exam_options}
                 nextDayNumber={dayDialog?.module?.days?.length
                     ? Math.max(...dayDialog.module.days.map((day) => Number(day.day_number))) + 1
                     : 1}

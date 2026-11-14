@@ -10,6 +10,7 @@ import { useScrollLock } from '@/lib/scrollLock';
 import GrammarQuizPreviewDialog from '@/Components/Features/GrammarQuiz/GrammarQuizPreviewDialog';
 import Popper from '@mui/material/Popper';
 import LiveSessionDialog from '@/Components/Features/LiveClass/LiveSessionDialog';
+import { examCategoryLabel } from '@/Components/Features/ExamPortal/ExamPortalUI';
 
 const DokkaiQuizRunner = lazy(() => import('@/Components/Features/DokkaiQuiz/DokkaiQuizRunner'));
 
@@ -927,7 +928,7 @@ function SoumatomeNodeBadge({ type = 'kanji', levelOverride = null, locked = fal
     );
 }
 
-function DayDetailContent({ day, onClose, mobile = false, dragControls = null, onOpenGrammarQuiz = null, dokkaiPreview = null, onRetryDokkai = null, onOpenDokkai = null }) {
+export function DayDetailContent({ day, onClose, mobile = false, dragControls = null, onOpenGrammarQuiz = null, dokkaiPreview = null, onRetryDokkai = null, onOpenDokkai = null }) {
     const items = dayChildItems(day);
     const dokkaiQuiz = dokkaiPreview?.payload?.quiz;
     const completed = day.status === 'done';
@@ -1017,6 +1018,26 @@ function DayDetailContent({ day, onClose, mobile = false, dragControls = null, o
             </div>
 
             <div className={`space-y-2 sm:space-y-2.5 bg-[#f8faf8] p-2.5 min-[380px]:p-3 sm:p-4 dark:bg-gray-900 overscroll-contain ${mobile ? 'max-h-[58dvh] overflow-y-auto' : ''}`}>
+                {day.exam_summary && (() => {
+                    const exam = day.exam_summary;
+                    const unlocked = !exam.locked && Boolean(exam.url);
+                    const content = <>
+                        <QuizIcon className="shrink-0 text-amber-700 dark:text-amber-300" />
+                        <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap gap-2 text-xs font-semibold text-amber-900 dark:text-amber-200">
+                                <span>{exam.type === 'simulation' ? 'Simulasi Ujian' : 'Latihan Ujian'}</span>
+                                <span>{examCategoryLabel(exam)}</span>
+                            </span>
+                            <span className="mt-1 block break-words text-sm font-bold text-gray-900 dark:text-white">{exam.title}</span>
+                            {!unlocked && <span className="mt-1 block text-xs text-gray-600 dark:text-gray-300">{exam.lock_reason}</span>}
+                        </span>
+                        {unlocked ? <ChevronRightIcon className="shrink-0 text-gray-600 dark:text-gray-300" /> : <LockIcon className="shrink-0 text-gray-500 dark:text-gray-300" />}
+                    </>;
+                    const className = 'flex min-h-16 items-center gap-3 rounded-lg border border-amber-200 bg-white p-3 dark:border-amber-900 dark:bg-gray-800';
+                    return unlocked
+                        ? <Link href={exam.url} className={`${className} transition hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 dark:hover:bg-amber-950/30`}>{content}</Link>
+                        : <div aria-disabled="true" className={className}>{content}</div>;
+                })()}
                 {items.map((item, index) => {
                     const locked = ['locked', 'unavailable'].includes(item.status);
                     const passed = item.progressStatus === 'passed';

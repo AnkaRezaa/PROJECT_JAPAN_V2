@@ -21,11 +21,13 @@ class HariModul extends Model
         'description',
         'status',
         'checkpoint_quiz_id',
+        'exam_id',
         'handwriting_enabled',
     ];
 
     protected $casts = [
         'day_number' => 'integer',
+        'exam_id' => 'integer',
         'handwriting_enabled' => 'boolean',
     ];
 
@@ -37,6 +39,11 @@ class HariModul extends Model
     public function checkpointQuiz(): BelongsTo
     {
         return $this->belongsTo(Kuis::class, 'checkpoint_quiz_id');
+    }
+
+    public function exam(): BelongsTo
+    {
+        return $this->belongsTo(Exam::class);
     }
 
     public function quizzes(): HasMany

@@ -19,6 +19,7 @@ use App\Models\Soal;
 use App\Models\TargetUjianPengguna;
 use App\Services\AksesKuisPenggunaService;
 use App\Services\AksesPremiumService;
+use App\Services\ExamAccessService;
 use App\Services\KelasPenggunaPayloadService;
 use App\Services\KloterBelajarService;
 use App\Services\PembelajaranPenggunaService;
@@ -37,7 +38,8 @@ class ModulController extends Controller
         AksesPremiumService $aksesPremium,
         KloterBelajarService $kloterService,
         AksesKuisPenggunaService $aksesKuis,
-        KelasPenggunaPayloadService $kelasPayload
+        KelasPenggunaPayloadService $kelasPayload,
+        ExamAccessService $examAccess
     ) {
         $user = Auth::user();
 
@@ -63,6 +65,10 @@ class ModulController extends Controller
                     ->where('status', 'published')
                     ->with([
                         'checkpointQuiz.questions',
+                        'exam' => fn ($query) => $query
+                            ->select(['id', 'slug', 'title', 'category', 'ssw_field', 'level_id', 'type', 'access_type', 'status'])
+                            ->with(['level:id,level_name', 'publishedVersion' => fn ($versions) => $versions
+                                ->select(['exam_versions.id', 'exam_versions.exam_id', 'exam_versions.version_number', 'exam_versions.status'])]),
                         'flashcardSets' => fn ($query) => $query
                             ->where('status', 'published')
                             ->withCount('flashcards')
@@ -147,8 +153,9 @@ class ModulController extends Controller
             ->pluck('live_class_session_id')->all();
 
         $completedModulIds = collect();
+        $viewableExamMap = $examAccess->viewableExamMap($user, $moduls->flatMap(fn ($module) => $module->days->pluck('exam'))->filter());
 
-        $weeks = $moduls->values()->map(function (Modul $modul, int $index) use (&$completedModulIds, $user, $aksesPremium, $moduls, $program, $kloterAktif, $mingguAktifKloter, $aksesKuis, $liveSessionsByModule, $liveRsvps, $canAccessLiveMaterials, $kickedLiveSessionIds) {
+        $weeks = $moduls->values()->map(function (Modul $modul, int $index) use (&$completedModulIds, $user, $aksesPremium, $moduls, $program, $kloterAktif, $mingguAktifKloter, $aksesKuis, $liveSessionsByModule, $liveRsvps, $canAccessLiveMaterials, $kickedLiveSessionIds, $viewableExamMap) {
             $flashcardSet = $this->firstFlashcardSetFor($modul);
             $flashcardStats = $this->flashcardStats($user->id, $flashcardSet);
             $presentationCount = $modul->presentationDecks->count();
@@ -206,7 +213,7 @@ class ModulController extends Controller
                 ->get(['id', 'quiz_id', 'score'])
                 ->groupBy('quiz_id');
 
-            $days = $modul->days->values()->map(function (HariModul $day, int $dayIndex) use ($program, $modul, $weekCanOpen, $completedDayIds, $mixedAttemptsByQuiz, $aksesKuis, $user) {
+            $days = $modul->days->values()->map(function (HariModul $day, int $dayIndex) use ($program, $modul, $weekCanOpen, $completedDayIds, $mixedAttemptsByQuiz, $aksesKuis, $user, $viewableExamMap) {
                 $checkpointQuiz = $day->checkpointQuiz?->status === 'published' && $day->checkpointQuiz?->questions?->isNotEmpty()
                     ? $day->checkpointQuiz
                     : null;
@@ -276,6 +283,27 @@ class ModulController extends Controller
                 $hasContent = $presentationCount > 0 || $flashcardCount > 0 || $questionCount > 0 || $day->vocabulary->isNotEmpty();
                 $completionMethod = $checkpointQuiz ? 'checkpoint' : ($flashcardCount > 0 ? 'flashcard' : null);
                 $isReady = $hasContent && $completionMethod;
+                $examSummary = null;
+                if ($day->exam?->status === 'published' && $day->exam->publishedVersion) {
+                    $canViewExam = $viewableExamMap[$day->exam->id] ?? false;
+                    $dayLockedForExam = ! $weekCanOpen || ! $previousDayDone || ! $isReady;
+                    $examLocked = $dayLockedForExam || ! $canViewExam;
+                    $examSummary = [
+                        'id' => $day->exam->id,
+                        'slug' => $day->exam->slug,
+                        'title' => $day->exam->title,
+                        'category' => $day->exam->category,
+                        'ssw_field' => $day->exam->ssw_field,
+                        'level' => $day->exam->level?->level_name,
+                        'type' => $day->exam->type,
+                        'access_type' => $day->exam->access_type,
+                        'locked' => $examLocked,
+                        'lock_reason' => $dayLockedForExam
+                            ? (! $isReady ? 'Materi Hari ini belum siap.' : (! $weekCanOpen ? 'Minggu ini belum terbuka.' : 'Selesaikan Hari sebelumnya.'))
+                            : (! $canViewExam ? ($day->exam->access_type === 'premium' ? 'Ujian ini memerlukan akses premium.' : 'Ujian ini khusus peserta kloter yang ditentukan.') : null),
+                        'url' => $examLocked ? null : route('user.exams.show', $day->exam->slug),
+                    ];
+                }
                 $presentationPreviews = $day->presentationDecks
                     ->take(3)
                     ->map(function (DeckPresentasi $deck) {
@@ -322,6 +350,7 @@ class ModulController extends Controller
                     'has_content' => $hasContent,
                     'completion_method' => $completionMethod,
                     'checkpoint_quiz_id' => $checkpointQuiz?->id,
+                    'exam_summary' => $examSummary,
                     'presentations_count' => $presentationCount,
                     'presentation_previews' => $presentationPreviews,
                     'vocabulary_count' => $day->vocabulary->count(),
