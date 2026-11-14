@@ -60,6 +60,11 @@ class ProgramPembelajaran extends Model
         return $this->hasMany(TargetUjianPengguna::class, 'program_pembelajaran_id');
     }
 
+    public function courseReviews(): HasMany
+    {
+        return $this->hasMany(UlasanKelas::class, 'program_pembelajaran_id');
+    }
+
     public function accessKeys(): HasMany
     {
         return $this->hasMany(KodeAkses::class, 'program_pembelajaran_id');

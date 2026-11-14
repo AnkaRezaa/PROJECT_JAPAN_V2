@@ -26,6 +26,7 @@ export default function FeedbackRatingStars({
                             disabled={disabled}
                             onClick={() => onRatingChange(star)}
                             aria-label={`${star} bintang`}
+                            aria-pressed={rating === star}
                             className={`p-1 rounded-lg transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
                                 isFilled
                                     ? 'text-amber-400 dark:text-amber-300'

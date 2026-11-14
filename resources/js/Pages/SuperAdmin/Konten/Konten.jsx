@@ -358,6 +358,7 @@ export default function Konten({
                             Buat News
                         </button>
                     )}
+                    <Link href={route('superadmin.course-reviews.index')} className="inline-flex min-h-[44px] items-center rounded-md border border-gray-300 px-4 text-sm font-semibold text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Ulasan kelas</Link>
                 </div>
 
                 <div className="flex border-b border-gray-200 dark:border-gray-800">

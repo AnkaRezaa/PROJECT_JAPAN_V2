@@ -137,6 +137,7 @@ export default function PublicClassShow({ program, seo = {} }) {
                     Lihat Pilihan Paket
                   </a>
                 )}
+                <Link href={route('public.classes.reviews', program.slug)} className="inline-flex min-h-[44px] items-center px-3 text-sm font-bold text-brand-700 hover:underline">Ulasan</Link>
               </div>
             </div>
 

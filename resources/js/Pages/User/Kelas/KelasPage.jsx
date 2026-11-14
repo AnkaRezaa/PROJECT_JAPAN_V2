@@ -173,6 +173,7 @@ function OwnedCourseCard({ item }) {
                             <span>Kelas Live</span>
                         </Link>
                     )}
+                    <Link href={route('user.kelas.reviews.index', item.slug)} className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-slate-700 hover:text-emerald-700 dark:text-gray-200">Ulasan<ArrowForwardIcon sx={{ fontSize: 16 }} /></Link>
                 </div>
             )}
         </article>

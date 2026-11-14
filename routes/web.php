@@ -63,6 +63,7 @@ Route::get('/pricing', [HalamanController::class, 'pricing'])->name('pricing');
 Route::get('/katalog', [HalamanController::class, 'pricing'])->name('katalog');
 Route::get('/roadmap', [HalamanController::class, 'roadmap'])->name('roadmap');
 Route::get('/kelas/{programSlug}', [HalamanController::class, 'publicClass'])->name('public.classes.show');
+Route::get('/kelas/{program:slug}/ulasan', [\App\Http\Controllers\User\UlasanKelasController::class, 'index'])->name('public.classes.reviews');
 Route::get('/privacy-policy', [HalamanController::class, 'privacyPolicy'])->name('privacy-policy');
 Route::get('/terms', [HalamanController::class, 'terms'])->name('terms');
 Route::get('/cookie-policy', [HalamanController::class, 'cookiePolicy'])->name('cookie-policy');
@@ -149,6 +150,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/admins/{user}', [SuperAdminPengelolaAdminController::class, 'destroy'])->name('admins.destroy');
         Route::post('/admins/{user}/anonymize', [SuperAdminPengelolaAdminController::class, 'anonymize'])->name('admins.anonymize');
         Route::get('/content', SuperAdminKontenController::class)->name('content');
+        Route::get('/course-reviews', [\App\Http\Controllers\SuperAdmin\SuperAdminUlasanKelasController::class, 'index'])->name('course-reviews.index');
+        Route::patch('/course-reviews/{review}', [\App\Http\Controllers\SuperAdmin\SuperAdminUlasanKelasController::class, 'update'])->name('course-reviews.update');
         Route::post('/content/news', [SuperAdminKontenController::class, 'store'])->name('content.news.store');
         Route::put('/content/news/{news}', [SuperAdminKontenController::class, 'update'])->name('content.news.update');
         Route::delete('/content/news/{news}', [SuperAdminKontenController::class, 'destroy'])->name('content.news.destroy');
@@ -395,6 +398,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('role:user')->prefix('user')->name('user.')->group(function () {
         Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('dashboard');
         Route::get('/kelas', [HalamanController::class, 'userKelas'])->name('kelas.index');
+        Route::get('/kelas/{program:slug}/ulasan', [\App\Http\Controllers\User\UlasanKelasController::class, 'index'])->name('kelas.reviews.index');
+        Route::put('/kelas/{program:slug}/ulasan', [\App\Http\Controllers\User\UlasanKelasController::class, 'update'])->middleware('throttle:course-reviews')->name('kelas.reviews.update');
+        Route::delete('/kelas/{program:slug}/ulasan', [\App\Http\Controllers\User\UlasanKelasController::class, 'destroy'])->middleware('throttle:course-reviews')->name('kelas.reviews.destroy');
         Route::get('/checkout/{transactionCode}', [HalamanController::class, 'userCheckout'])->name('checkout');
 
         // Modul Mingguan

@@ -2190,6 +2190,10 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                                             {program?.access_mode_label && <span className="rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-gray-600 dark:bg-gray-900/80 dark:text-gray-300">{program.access_mode_label}</span>}
                                         </div>
                                         <h1 className="mt-3 text-2xl font-black text-gray-900 sm:text-3xl dark:text-white">{program?.title || 'Roadmap Mingguan'}</h1>
+                                        {program?.slug && <nav aria-label="Navigasi kelas" className="mt-3 flex gap-5 text-sm font-semibold">
+                                            <span aria-current="page" className="inline-flex min-h-[44px] items-center border-b-2 border-emerald-700 text-emerald-800 dark:border-emerald-400 dark:text-emerald-300">Materi</span>
+                                            <Link href={route('user.kelas.reviews.index', program.slug)} className="inline-flex min-h-[44px] items-center text-gray-600 hover:text-emerald-700 dark:text-gray-300">Ulasan</Link>
+                                        </nav>}
                                         {program?.description && <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600 dark:text-gray-300">{program.description}</p>}
                                         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-bold text-gray-500 dark:text-gray-400">
                                             {program?.instructor_name && <span className="inline-flex items-center gap-1.5"><GroupsIcon sx={{ fontSize: 16 }} />{program.instructor_name}</span>}
