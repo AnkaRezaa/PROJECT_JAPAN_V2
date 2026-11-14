@@ -16,6 +16,7 @@ import { DarumaIcon, SakuraIcon, ScrollIcon, ToriiIcon } from '@/Components/Japa
 import Button from '@/Components/UI/Button';
 import GuestNavbar from '@/Components/Layout/GuestNavbar';
 import Footer from '@/Components/Layout/GuestFooter';
+import SocialLinks from '@/Components/Marketing/SocialLinks';
 import PromoPopup from '@/Components/Marketing/PromoPopup';
 import FallEffect from '@/Components/theme/FallEffect';
 import SeoHead from '@/Components/SEO/SeoHead';
@@ -193,6 +194,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
                 </Button>
               </div>
 
+              <SocialLinks />
               <div className="mt-7 flex min-w-0 max-w-md items-start gap-4 border-t border-ink-900/10 pt-4 text-sm text-ink-700 sm:items-center">
                 <div className="flex -space-x-2" aria-hidden="true">
                   {['N5', 'N3', 'N2'].map((label, index) => (

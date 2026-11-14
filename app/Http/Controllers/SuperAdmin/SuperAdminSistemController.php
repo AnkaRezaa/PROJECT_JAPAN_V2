@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
+use App\Services\SocialLinksSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -97,6 +98,7 @@ class SuperAdminSistemController extends SuperAdminDasarController
             'diagnostics' => $systemDiagnostics,
             'stats' => [],
             'themeSettings' => $this->themeSettings(),
+            'socialLinks' => app(SocialLinksSettings::class)->all(),
             'analyticsStatus' => [
                 'gtm' => [
                     'enabled' => (bool) config('beta.google_tag_manager.enabled'),
@@ -108,6 +110,27 @@ class SuperAdminSistemController extends SuperAdminDasarController
                 ],
             ],
         ]);
+    }
+
+    public function updateSocialLinks(Request $request, SocialLinksSettings $settings)
+    {
+        $rules = ['links' => ['required', 'array:'.implode(',', array_keys(SocialLinksSettings::HOSTS))]];
+        foreach (SocialLinksSettings::HOSTS as $channel => $hosts) {
+            $rules['links.'.$channel] = ['present', 'nullable', 'string', 'max:500',
+                function ($attribute, $value, $fail) use ($settings, $channel) {
+                    if (! $settings->isAllowedUrl($channel, trim($value))) {
+                        $fail('Gunakan URL HTTPS resmi kanal ini.');
+                    }
+                },
+            ];
+        }
+        $validated = $request->validate($rules);
+        DB::transaction(function () use ($request, $settings, $validated) {
+            $settings->save($validated['links']);
+            $this->logActivity($request, 'update_social_links', 'system', null, 'Tautan medsos diperbarui.');
+        });
+
+        return back()->with('success', 'Medsos tersimpan.');
     }
 
     public function runMaintenance(Request $request)

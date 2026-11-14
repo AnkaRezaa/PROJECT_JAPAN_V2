@@ -1,13 +1,6 @@
 import { Link } from '@inertiajs/react';
 import SupportChatWidget from '@/Components/Marketing/SupportChatWidget';
-
-const IconGlobe = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="2" y1="12" x2="22" y2="12"/>
-        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-    </svg>
-);
+import SocialLinks from '@/Components/Marketing/SocialLinks';
 
 const footerLinks = {
     Produk: [
@@ -24,10 +17,6 @@ const footerLinks = {
     ],
 };
 
-const socials = [
-    { href: '/', icon: <IconGlobe />, label: 'Website' },
-];
-
 export default function Footer() {
     return (
         <>
@@ -42,20 +31,7 @@ export default function Footer() {
                         <p className="text-sm leading-relaxed mb-6">
                             Platform belajar Bahasa Jepang berbasis gamifikasi dengan kurikulum standar JLPT internasional.
                         </p>
-                        <div className="flex gap-4">
-                            {socials.map((s, i) => (
-                                <a
-                                    key={i}
-                                    href={s.href}
-                                    aria-label={s.label}
-                                    target={s.href.startsWith('http') ? '_blank' : undefined}
-                                    rel={s.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                                    className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-gray-400 hover:bg-brand-600 hover:text-white transition-all no-underline"
-                                >
-                                    {s.icon}
-                                </a>
-                            ))}
-                        </div>
+                        <SocialLinks variant="footer" />
                     </div>
 
                     {/* Links */}
