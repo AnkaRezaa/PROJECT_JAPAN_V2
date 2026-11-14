@@ -165,11 +165,16 @@ try{
     await waitFor('window.__ready&&document.querySelector("[role=dialog]")');
     await evaluate(`(()=>{const selects=Array.from(document.querySelectorAll('select'));const mode=selects.find(s=>Array.from(s.options).some(o=>o.value==='meaning_to_word'));mode.value='meaning_to_word';mode.dispatchEvent(new Event('change',{bubbles:true}));const content=selects.find(s=>Array.from(s.options).some(o=>o.value==='kanji'));content.value='kanji';content.dispatchEvent(new Event('change',{bubbles:true}));})()`);
     await click('Buat Draf');await waitFor('document.body.innerText.includes("Pratinjau:")');
+    const flashcardInput = `Array.from(document.querySelectorAll('label')).find(label=>label.textContent.trim()==='Sertakan flashcard').querySelector('input')`;
+    assert.equal(await evaluate(flashcardInput+'.checked'),true,'Day generator includes flashcards by default');
+    await evaluate(flashcardInput+'.click()');
+    assert(await evaluate('document.body.innerText.includes("Pratinjau:")'),'Flashcard selection retains preview');
     assert.equal(await evaluate('window.__generator.calls[0].body.input.mode'),'meaning_to_word');
     assert.equal(await evaluate('window.__generator.calls[0].body.input.content_type'),'kanji');
     await capture('vocab-append-mobile');
     await click('Tambahkan ke Kuis');
     await waitFor('window.__generator.applied.length===1');
+    assert.equal(await evaluate('window.__generator.settings.syncFlashcards'),false,'Apply preserves explicit flashcard opt-out');
     assert.equal(await evaluate('document.body.innerText.includes("Ganti isi draf editor?")'),false);
     assert.equal(await evaluate('window.__generator.applied[0].length'),3);
     assert.equal(await evaluate('window.__generator.applied[0][0].id'),42);
@@ -182,7 +187,7 @@ try{
     assert.equal(await evaluate('window.__appendVocabulary(window.__generator.draft,[{...window.__emptyQuestion(),audio_url:"/draft-audio.mp3"}]).length'),3,'Keep partially edited placeholder');
     await click('Open generator');await click('Buat Draf');await waitFor('document.body.innerText.includes("Pratinjau:")');
     await click('Tambahkan ke Kuis');await waitFor('window.__generator.applied.length===2');
-    assert.equal(await evaluate('window.__generator.applied[1].length'),5,'Repeated append keeps existing questions');
+    assert.equal(await evaluate('window.__generator.applied[1].length'),3,'Repeated append deduplicates generated sources and keeps existing questions');
     assert(await evaluate('window.__generator.applied[1].slice(1).every(q=>q.id===null)'),'Generated IDs must remain database-safe');
     await click('Open generator');
     await evaluate('window.__generator.mode="fail"');await click('Buat Draf');

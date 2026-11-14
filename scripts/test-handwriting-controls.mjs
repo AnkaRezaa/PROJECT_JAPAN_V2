@@ -24,7 +24,7 @@ import '/resources/css/app.css';
 const params = new URLSearchParams(location.search);
 const scenario = params.get('scenario') || 'canvas';
 window.route = (name, id = '') => '/fixture/' + name + '/' + id;
-window.__writing = { requests: [], fail: false, delay: 60, completions: [] };
+window.__writing = { requests: [], fail: false, delay: 60, completions: [], created: [] };
 window.axios = { post: async (url, data) => {
     window.__writing.requests.push({ url, data });
     return { data: { is_correct: true, explanation: 'Correct', score: 100, xp_earned: 0 } };
@@ -32,7 +32,13 @@ window.axios = { post: async (url, data) => {
 router.post = (url, data, options) => {
     window.__writing.requests.push({ url, data });
     setTimeout(() => {
-        if ((data.skill === 'writing' && window.__writing.fail) || (!data.skill && window.__writing.failReading)) options.onError?.({ action: 'Failed fixture' });
+        if (url.includes('admin.module-days.store')) {
+            if (window.__writing.failCreate) options.onError?.({ title: 'Failed creation fixture' });
+            else options.onSuccess?.({ props: { modules: { data: window.__writing.missingCreated ? [] : [
+                { id: 1, days: [{ ...data, id: 881 }] },
+            ] } } });
+        }
+        else if ((data.skill === 'writing' && window.__writing.fail) || (!data.skill && window.__writing.failReading)) options.onError?.({ action: 'Failed fixture' });
         else options.onSuccess?.();
         options.onFinish?.();
     }, window.__writing.delay);
@@ -51,6 +57,7 @@ function Fixture() {
     window.__setWritingPreference = setWritingEnabled;
     window.__openDay = () => setDayOpen(true);
     window.__persistDay = (data) => setDay(current => ({ ...current, ...data }));
+    if (scenario === 'day-create') return <ModuleDayDialog open={dayOpen} onClose={() => setDayOpen(false)} module={{ id: 1, week_number: 1, title: 'Week fixture' }} onCreated={result => window.__writing.created.push(result)} />;
     if (scenario === 'day' || scenario === 'day-exam') return <ModuleDayDialog open={dayOpen} onClose={() => setDayOpen(false)} module={{ id: 1, week_number: 1, title: 'Week fixture' }} day={day}
         examOptions={scenario === 'day-exam' ? [{ id: 901, title: 'JFT reading', category: 'jft_basic' }] : []} />;
     if (scenario === 'student-exam') return <DayDetailContent onClose={() => {}} mobile={true} day={{ id: 881, day_number: 1, title: 'Day fixture', status: 'active', exam_summary: {
@@ -263,6 +270,35 @@ try {
         }
         assert.equal(await evaluate('window.__writing.requests.length'),0,'Opening exam card creates no attempt');
     }
+    await open('day-create');
+    await waitFor('document.querySelector("input[aria-label^=Lanjut]")');
+    assert.equal(await evaluate('document.querySelector("input[aria-label^=Lanjut]").checked'),true);
+    for (const width of [390,1366]) {
+        await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width===390});
+        for (const dark of [false,true]) {
+            await evaluate('document.documentElement.classList.toggle("dark",'+dark+')');
+            assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+2'),'Create Day toggle fits');
+        }
+    }
+    await click('Tambah & Generate'); await waitFor('window.__writing.created.length===1');
+    assert.equal(await evaluate('window.__writing.created[0].openGenerator'),true);
+    assert.equal(await evaluate('window.__writing.created[0].day.id'),881);
+    assert.equal(await evaluate('"continueToGenerator" in window.__writing.requests[0].data'),false,'UI preference is not persisted');
+    await evaluate('window.__openDay()'); await waitFor('document.querySelector("input[aria-label^=Lanjut]")');
+    await evaluate('document.querySelector("input[aria-label^=Lanjut]").click()');
+    await click('Tambah Hari'); await waitFor('window.__writing.created.length===2');
+    assert.equal(await evaluate('window.__writing.created[1].openGenerator'),false);
+    await evaluate('window.__openDay()'); await waitFor('document.querySelector("input[aria-label^=Lanjut]")');
+    assert.equal(await evaluate('document.querySelector("input[aria-label^=Lanjut]").checked'),true,'Reopening resets opt-out');
+    await evaluate('window.__writing.failCreate=true'); await click('Tambah & Generate');
+    await waitFor('document.body.innerText.includes("Failed creation fixture")');
+    assert.equal(await evaluate('window.__writing.created.length'),2,'Failed creation must not open generator');
+    await evaluate('window.__writing.failCreate=false;window.__writing.missingCreated=true'); await click('Tambah & Generate');
+    await waitFor('!document.querySelector("input[aria-label^=Lanjut]")');
+    assert.equal(await evaluate('window.__writing.created.length'),2,'Missing created Day must not open generator');
+    assert.equal(await evaluate('window.__writing.requests.length'),4,'No automatic duplicate creation request');
+    await open('day'); await waitFor('document.querySelector("[role=switch]")');
+    assert.equal(await evaluate('Boolean(document.querySelector("input[aria-label^=Lanjut]"))'),false,'Edit keeps existing workflow');
     assert.deepEqual(errors,[],'No uncaught runtime errors');
     console.log(JSON.stringify({passed:true,checks:['width preserves SVG and geometry','light/dark responsive','skip missing asset','optional props unchanged','actual quiz multi-character skip','double click','review error and retry','learning without completion bonus','disabled writing skips canvas and review','flashcard review failure stays put','session preference survives prop update and resume','last flashcard finishes','legacy checkpoint stays enabled','restart uses latest preference','admin toggle keyboard and retention'],screenshots:'temporary; removed'},null,2));
 } catch(error) {

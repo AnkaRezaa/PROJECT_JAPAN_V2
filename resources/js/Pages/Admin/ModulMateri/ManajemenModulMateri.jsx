@@ -513,7 +513,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
         setResourceDialog({ type, module, day, ...options });
     };
 
-    const applyDayGeneratedContent = async (draft) => {
+    const applyDayGeneratedContent = async (draft, settings) => {
         if (!dayGenerator?.day) return;
         const targetDay = dayGenerator.day;
         const primaryQuiz = targetDay.quizzes?.[0] || null;
@@ -524,7 +524,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
             {
                 quiz_id: primaryQuiz?.id || null,
                 flashcard_set_id: primaryFlashcardSet?.id || null,
-                sync_flashcards: true,
+                sync_flashcards: settings?.syncFlashcards ?? true,
                 draft,
             },
         );
@@ -1050,6 +1050,11 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
             <ModuleDayDialog
                 open={Boolean(dayDialog)}
                 onClose={() => setDayDialog(null)}
+                onCreated={({ module, day, openGenerator }) => {
+                    setOpenModuleId(module.id);
+                    setOpenDayId(day.id);
+                    if (openGenerator) setDayGenerator({ module, day });
+                }}
                 module={dayDialog?.module}
                 day={dayDialog?.day}
                 examOptions={exam_options}

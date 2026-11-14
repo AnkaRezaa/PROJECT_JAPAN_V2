@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminDialog from '@/Components/UI/AdminDialog';
 import FormField from '@/Components/UI/FormField';
@@ -6,7 +6,8 @@ import { examCategoryLabel } from '@/Components/Features/ExamPortal/ExamPortalUI
 
 const inputClass = 'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:focus:ring-orange-900/30';
 
-export default function ModuleDayDialog({ open, onClose, module, day = null, nextDayNumber = 1, examOptions = [] }) {
+export default function ModuleDayDialog({ open, onClose, onCreated = null, module, day = null, nextDayNumber = 1, examOptions = [] }) {
+    const [continueToGenerator, setContinueToGenerator] = useState(true);
     const form = useForm({
         day_number: nextDayNumber,
         title: '',
@@ -28,6 +29,7 @@ export default function ModuleDayDialog({ open, onClose, module, day = null, nex
             exam_id: day?.exam_id ? String(day.exam_id) : '',
         });
         form.clearErrors();
+        setContinueToGenerator(true);
         // The form instance is stable; reopening is intentionally keyed by context.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, day?.id, module?.id, nextDayNumber]);
@@ -48,8 +50,22 @@ export default function ModuleDayDialog({ open, onClose, module, day = null, nex
             return;
         }
 
+        const submittedDayNumber = Number(form.data.day_number);
+        const openGenerator = continueToGenerator;
         form.transform(({ exam_id, ...data }) => data);
-        form.post(route('admin.module-days.store', module.id), options);
+        form.post(route('admin.module-days.store', module.id), {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                const modules = page?.props?.modules;
+                const moduleList = Array.isArray(modules?.data) ? modules.data : (Array.isArray(modules) ? modules : []);
+                const updatedModule = moduleList.find(item => Number(item.id) === Number(module.id));
+                const createdDay = (updatedModule?.days || []).find(item => Number(item.day_number) === submittedDayNumber);
+                onClose();
+                if (updatedModule && createdDay) {
+                    onCreated?.({ module: updatedModule, day: createdDay, openGenerator });
+                }
+            },
+        });
     };
 
     return (
@@ -179,9 +195,14 @@ export default function ModuleDayDialog({ open, onClose, module, day = null, nex
                 </FormField>
 
                 {!day && (
-                    <p className="rounded-xl border border-teal-100 bg-teal-50 px-4 py-3 text-sm font-bold text-teal-800 dark:border-teal-900/40 dark:bg-teal-900/15 dark:text-teal-200">
-                        Flashcard dan kuis checkpoint draft akan disiapkan otomatis untuk Day ini.
-                    </p>
+                    <FormField label="Lanjut generate soal">
+                        <label className="inline-flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-gray-800 dark:text-gray-100">
+                            <input type="checkbox" role="switch" aria-label="Lanjut generate soal" checked={continueToGenerator}
+                                disabled={form.processing} onChange={event => setContinueToGenerator(event.target.checked)} className="peer sr-only" />
+                            <span aria-hidden="true" className="relative h-6 w-11 shrink-0 rounded-full bg-gray-300 transition-colors after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-orange-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-500 peer-focus-visible:ring-offset-2 peer-disabled:opacity-50 dark:bg-gray-600 dark:peer-focus-visible:ring-offset-gray-900" />
+                            {continueToGenerator ? 'Aktif' : 'Nonaktif'}
+                        </label>
+                    </FormField>
                 )}
 
                 {Object.values(form.errors).length > 0 && !form.errors.day_number && !form.errors.title && !form.errors.description && !form.errors.status && !form.errors.handwriting_enabled && !form.errors.exam_id && (
@@ -195,7 +216,7 @@ export default function ModuleDayDialog({ open, onClose, module, day = null, nex
                         Batal
                     </button>
                     <button type="submit" disabled={form.processing} className="h-11 rounded-xl bg-orange-600 text-sm font-black text-white hover:bg-orange-700 transition disabled:opacity-50">
-                        {form.processing ? 'Menyimpan...' : day ? 'Simpan Hari' : 'Tambah Hari'}
+                        {form.processing ? 'Menyimpan...' : day ? 'Simpan Hari' : continueToGenerator ? 'Tambah & Generate' : 'Tambah Hari'}
                     </button>
                 </div>
             </form>

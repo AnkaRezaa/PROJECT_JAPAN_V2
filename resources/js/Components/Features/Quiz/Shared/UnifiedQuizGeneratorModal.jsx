@@ -49,6 +49,7 @@ function initialForm(data, type) {
       target_form: 'auto',
       useDistractors: true,
       autoMeaning: true,
+      syncFlashcards: true,
       ...data.settings
     }
   };
@@ -274,6 +275,13 @@ export default function UnifiedQuizGeneratorModal({
                                 <label className="text-sm font-semibold">Kategori<input className={fieldClass} value={form.input.category} onChange={e => change('input', 'category', e.target.value)} /></label>
                                 <label className="text-sm font-semibold">Jenis konten<select className={fieldClass} value={form.input.content_type} onChange={e => change('input', 'content_type', e.target.value)}><option value="all">Semua</option><option value="kosakata">Kosakata</option><option value="kanji">Kanji</option><option value="bunpo">Bunpo</option></select></label>
                                 <label className="text-sm font-semibold">Status sumber<select className={fieldClass} value={form.input.status} onChange={e => change('input', 'status', e.target.value)}><option value="published">Published</option><option value="draft">Draft</option><option value="all">Semua</option></select></label>
+                                {Boolean(initialRef.current.moduleDayId) && <label className="flex min-h-11 items-center gap-2 text-sm font-semibold sm:col-span-2">
+                                    <input type="checkbox" checked={Boolean(form.settings.syncFlashcards)} onChange={event => {
+                                        const checked = event.target.checked;
+                                        setForm(current => ({ ...current, settings: { ...current.settings, syncFlashcards: checked } }));
+                                    }} />
+                                    Sertakan flashcard
+                                </label>}
                             </div>}
                             {type === 'grammar' && <>
                                 <div className="grid gap-4 sm:grid-cols-2">{[['pattern', 'Pola'], ['formula', 'Rumus'], ['meaning', 'Arti']].map(([key, label]) => <label key={key} className="text-sm font-semibold">{label}<input className={fieldClass} value={form.input[key] || ''} onChange={e => change('input', key, e.target.value)} /></label>)}
