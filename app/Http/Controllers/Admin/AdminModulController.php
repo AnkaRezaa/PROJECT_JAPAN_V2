@@ -5,16 +5,18 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ModulRequest;
 use App\Models\CurriculumTrack;
-use App\Models\Kuis;
 use App\Models\LevelPembelajaran;
 use App\Models\Modul;
 use App\Models\ProgramPembelajaran;
+use App\Services\ExamAccessService;
 use App\Services\KloterBelajarService;
 use App\Services\NotifikasiPenggunaService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class AdminModulController extends Controller
@@ -27,6 +29,9 @@ class AdminModulController extends Controller
             ->withCount([
                 'modules' => fn ($query) => $query->where('status', 'published'),
                 'kloterBelajar',
+                'liveClassSessions',
+                'paymentPlans' => fn ($q) => $q->nonTechnical(),
+                'subscriptions', 'transactions', 'accessKeys',
             ])
             ->orderBy('sort_order')
             ->orderBy('id');
@@ -45,27 +50,18 @@ class AdminModulController extends Controller
         }
 
         if ($request->filled('type') && in_array($request->type, ['mandiri', 'mentor'], true)) {
-            if ($request->type === 'mentor') {
-                $query->where(function ($q) {
-                    $q->whereHas('kloterBelajar')
-                      ->orWhere('title', 'like', '%mentor%')
-                      ->orWhere('slug', 'like', '%mentor%');
-                });
-            } else {
-                $query->whereDoesntHave('kloterBelajar')
-                      ->where('title', 'not like', '%mentor%')
-                      ->where('slug', 'not like', '%mentor%');
-            }
+            $query->where('learning_type', $request->type);
         }
 
         $programs = $query->paginate(12)->through(function ($program) {
-            $isMentor = $program->kloter_belajar_count > 0
-                || str_contains(strtolower($program->title), 'mentor')
-                || str_contains(strtolower($program->slug), 'mentor');
+            $isMentor = $program->isMentor();
+            $lockReason = $program->learningTypeLockReason();
 
             return [
                 ...$program->toArray(),
                 'is_mentor' => $isMentor,
+                'can_change_learning_type' => $lockReason === null,
+                'learning_type_lock_reason' => $lockReason,
                 'learning_type' => $isMentor ? 'mentor' : 'mandiri',
                 'learning_type_label' => $isMentor ? 'Kelas Mentor (Bimbingan Guru)' : 'Kelas Mandiri (Self-Paced)',
                 'kloters_count' => (int) $program->kloter_belajar_count,
@@ -95,7 +91,12 @@ class AdminModulController extends Controller
     {
         abort_unless($request->user()->isAdminGlobal(), 403, 'Hanya Admin Global yang dapat mengubah informasi kelas.');
         $previousThumbnailUrl = $program->thumbnail_url;
-        $program->update($this->prepareProgramInput($request, $program));
+        DB::transaction(function () use ($request, $program) {
+            $locked = ProgramPembelajaran::whereKey($program->id)->lockForUpdate()->firstOrFail();
+            $validated = $this->prepareProgramInput($request, $locked);
+            $locked->update($validated);
+            $program->setRawAttributes($locked->getAttributes(), true);
+        });
 
         if ($previousThumbnailUrl !== $program->thumbnail_url) {
             $this->deleteManagedThumbnail($previousThumbnailUrl);
@@ -125,6 +126,7 @@ class AdminModulController extends Controller
             $program->delete();
         } catch (\Throwable $e) {
             report($e);
+
             return redirect()->back()->with('error', 'Gagal menghapus kelas karena terdapat data transaksi atau paket terkait.');
         }
 
@@ -145,9 +147,7 @@ class AdminModulController extends Controller
             ->orderBy('id');
         $this->kloterService->batasiProgramDikelola($availableProgramsQuery, $request->user());
         $availablePrograms = $availableProgramsQuery->get()->map(function ($p) {
-            $isMentor = $p->kloter_belajar_count > 0
-                || str_contains(strtolower($p->title), 'mentor')
-                || str_contains(strtolower($p->slug), 'mentor');
+            $isMentor = $p->isMentor();
 
             return [
                 ...$p->toArray(),
@@ -171,7 +171,7 @@ class AdminModulController extends Controller
 
         $this->kloterService->abortJikaProgramDiLuarCakupan($request->user(), $request->integer('program_id'));
 
-        $examOptions = app(\App\Services\ExamAccessService::class)
+        $examOptions = app(ExamAccessService::class)
             ->selectableExamsQuery($request->user(), $request->integer('program_id'))
             ->with('level:id,level_name')
             ->orderBy('title')->get(['id', 'slug', 'title', 'category', 'ssw_field', 'level_id', 'type']);
@@ -429,6 +429,7 @@ class AdminModulController extends Controller
 
         $validated = $request->validate([
             'curriculum_track_id' => ['required', 'exists:curriculum_tracks,id'],
+            'learning_type' => [$program ? 'sometimes' : 'required', 'required', Rule::in(['mandiri', 'mentor'])],
             'level_id' => [
                 Rule::requiredIf($track?->code === 'jlpt'),
                 'nullable',
@@ -444,6 +445,11 @@ class AdminModulController extends Controller
             'status' => ['required', Rule::in(['draft', 'published'])],
             'sort_order' => ['required', 'integer', 'min:1'],
         ]);
+
+        if ($program && isset($validated['learning_type']) && $validated['learning_type'] !== $program->learning_type
+            && ($reason = $program->learningTypeLockReason(true))) {
+            throw ValidationException::withMessages(['learning_type' => $reason]);
+        }
 
         if ($request->hasFile('thumbnail_file')) {
             $thumbnailPath = $request->file('thumbnail_file')->store('kelas-thumbnails', 'public');

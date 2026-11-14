@@ -97,7 +97,7 @@ class SuperAdminKloterController extends SuperAdminDasarController
                 ->values(),
             'kloters' => $kloters->through(fn (KloterBelajar $kloter) => $this->kloterPayload($kloter)),
             'selectedKloter' => $selectedKloter ? $this->selectedKloterPayload($selectedKloter) : null,
-            'programs' => ProgramPembelajaran::where('status', 'published')
+            'programs' => ProgramPembelajaran::where('status', 'published')->where('learning_type', 'mentor')
                 ->orderBy('sort_order')
                 ->orderBy('title')
                 ->get(['id', 'title'])
@@ -121,6 +121,7 @@ class SuperAdminKloterController extends SuperAdminDasarController
         $validated = $this->validateKloter($request);
 
         $kloter = DB::transaction(function () use ($request, $validated) {
+            ProgramPembelajaran::whereKey($validated['program_pembelajaran_id'])->lockForUpdate()->firstOrFail()->assertMentorClass();
             if ($validated['is_default'] ?? false) {
                 $this->resetDefaultKloter((int) $validated['program_pembelajaran_id']);
             }
@@ -144,6 +145,13 @@ class SuperAdminKloterController extends SuperAdminDasarController
         $validated = $this->validateKloter($request);
 
         DB::transaction(function () use ($request, $kloter, $validated) {
+            $parents = ProgramPembelajaran::whereIn('id', [$kloter->program_pembelajaran_id, $validated['program_pembelajaran_id']])
+                ->orderBy('id')->lockForUpdate()->get();
+            $program = $parents->firstWhere('id', (int) $validated['program_pembelajaran_id']);
+            abort_unless($program, 404);
+            if ((int) $kloter->program_pembelajaran_id !== (int) $program->id) {
+                $program->assertMentorClass();
+            }
             if ($validated['is_default'] ?? false) {
                 $this->resetDefaultKloter((int) $validated['program_pembelajaran_id'], $kloter->id);
             }
@@ -286,24 +294,27 @@ class SuperAdminKloterController extends SuperAdminDasarController
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $kloter->loadMissing('programPembelajaran');
-        $plan = app(AksesLanggananService::class)->accessKeyPlanForProgram($kloter->programPembelajaran);
+        $accessKey = DB::transaction(function () use ($kloter, $validated, $request) {
+            ProgramPembelajaran::whereKey($kloter->program_pembelajaran_id)->lockForUpdate()->firstOrFail();
+            $kloter->loadMissing('programPembelajaran');
+            $plan = app(AksesLanggananService::class)->accessKeyPlanForProgram($kloter->programPembelajaran);
 
-        $accessKey = KodeAkses::create([
-            'payment_plan_id' => $plan->id,
-            'scope_type' => AksesLanggananService::SCOPE_PROGRAM,
-            'program_pembelajaran_id' => $kloter->program_pembelajaran_id,
-            'kloter_belajar_id' => $kloter->id,
-            'created_by' => $request->user()->id,
-            'code' => $this->generateAccessCode(),
-            'name' => $validated['name'] ?: "Access {$kloter->nama}",
-            'duration_days' => $validated['duration_days'],
-            'max_uses' => $validated['max_uses'],
-            'expires_at' => $validated['expires_at'] ?? null,
-            'notes' => $validated['notes'] ?? null,
-            'status' => 'active',
-        ]);
+            return KodeAkses::create([
+                'payment_plan_id' => $plan->id,
+                'scope_type' => AksesLanggananService::SCOPE_PROGRAM,
+                'program_pembelajaran_id' => $kloter->program_pembelajaran_id,
+                'kloter_belajar_id' => $kloter->id,
+                'created_by' => $request->user()->id,
+                'code' => $this->generateAccessCode(),
+                'name' => $validated['name'] ?: "Access {$kloter->nama}",
+                'duration_days' => $validated['duration_days'],
+                'max_uses' => $validated['max_uses'],
+                'expires_at' => $validated['expires_at'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+                'status' => 'active',
+            ]);
 
+        });
         $this->logActivity($request, 'kloter.access_key_created', 'access_key', $accessKey->id, "Membuat access key {$accessKey->code} untuk {$kloter->nama}");
 
         return redirect()->route('superadmin.kloters', ['selected' => $kloter->id])->with('success', 'Access key kloter berhasil dibuat.');

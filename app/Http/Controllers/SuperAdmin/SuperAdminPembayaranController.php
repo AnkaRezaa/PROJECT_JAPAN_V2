@@ -149,10 +149,11 @@ class SuperAdminPembayaranController extends SuperAdminDasarController
                 ->where('status', 'published')
                 ->orderBy('sort_order')
                 ->orderBy('title')
-                ->get(['id', 'title'])
+                ->get(['id', 'title', 'learning_type'])
                 ->map(fn (ProgramPembelajaran $program) => [
                     'id' => $program->id,
                     'title' => $program->title,
+                    'learning_type' => $program->learning_type,
                 ]),
             'kloters' => KloterBelajar::query()
                 ->with(['programPembelajaran:id,title', 'admin:id,username'])
@@ -210,16 +211,22 @@ class SuperAdminPembayaranController extends SuperAdminDasarController
             $validated['scope_type'],
             $validated['program_pembelajaran_id'] ?? null
         );
-        $this->assertSingleActiveMode($scope, (bool) ($validated['is_active'] ?? false));
+        $plan = DB::transaction(function () use ($scope, $validated) {
+            $program = ProgramPembelajaran::whereKey($scope['program_pembelajaran_id'])->lockForUpdate()->firstOrFail();
+            if (! (new PaketPembayaran($validated))->isTechnicalAccessKeyPlan()) {
+                $program->assertPlanScope($scope['scope_type']);
+            }
+            $this->assertSingleActiveMode($scope, (bool) $validated['is_active']);
 
-        $plan = PaketPembayaran::create([
-            ...$validated,
-            ...$scope,
-            'features' => $validated['features']
-                ? collect(explode("\n", $validated['features']))->map(fn ($item) => trim($item))->filter()->values()->all()
-                : [],
-        ]);
+            return PaketPembayaran::create([
+                ...$validated,
+                ...$scope,
+                'features' => ($validated['features'] ?? '')
+                    ? collect(explode("\n", $validated['features']))->map(fn ($item) => trim($item))->filter()->values()->all()
+                    : [],
+            ]);
 
+        });
         $this->logActivity($request, 'payment.plan_created', 'payment_plan', $plan->id, "Membuat payment plan {$plan->name}");
 
         return redirect()->back()->with('success', 'Payment plan berhasil dibuat');
@@ -246,16 +253,24 @@ class SuperAdminPembayaranController extends SuperAdminDasarController
             $validated['scope_type'],
             $validated['program_pembelajaran_id'] ?? null
         );
-        $this->assertSingleActiveMode($scope, (bool) ($validated['is_active'] ?? false), $plan->id);
+        DB::transaction(function () use ($scope, $validated, $plan) {
+            $parents = ProgramPembelajaran::whereIn('id', [$plan->program_pembelajaran_id, $scope['program_pembelajaran_id']])
+                ->orderBy('id')->lockForUpdate()->get();
+            $program = $parents->firstWhere('id', (int) $scope['program_pembelajaran_id']);
+            abort_unless($program, 404);
+            if (! (new PaketPembayaran($validated))->isTechnicalAccessKeyPlan()) {
+                $program->assertPlanScope($scope['scope_type']);
+            }
+            $this->assertSingleActiveMode($scope, (bool) $validated['is_active'], $plan->id);
+            $plan->update([
+                ...$validated,
+                ...$scope,
+                'features' => ($validated['features'] ?? '')
+                    ? collect(explode("\n", $validated['features']))->map(fn ($item) => trim($item))->filter()->values()->all()
+                    : [],
+            ]);
 
-        $plan->update([
-            ...$validated,
-            ...$scope,
-            'features' => $validated['features']
-                ? collect(explode("\n", $validated['features']))->map(fn ($item) => trim($item))->filter()->values()->all()
-                : [],
-        ]);
-
+        });
         $this->logActivity($request, 'payment.plan_updated', 'payment_plan', $plan->id, "Mengubah payment plan {$plan->name}");
 
         return redirect()->back()->with('success', 'Payment plan berhasil diperbarui');
@@ -433,38 +448,47 @@ class SuperAdminPembayaranController extends SuperAdminDasarController
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        if (! empty($validated['payment_plan_id'])) {
-            $plan = PaketPembayaran::with('programPembelajaran')->findOrFail($validated['payment_plan_id']);
-            $program = $plan->programPembelajaran ?: ProgramPembelajaran::findOrFail($plan->program_pembelajaran_id);
-            $scope = app(AksesLanggananService::class)->scopeFromPlan($plan);
-        } else {
-            abort_unless(! empty($validated['program_pembelajaran_id']), 422, 'Pilih kelas atau paket langganan.');
-            $program = ProgramPembelajaran::findOrFail($validated['program_pembelajaran_id']);
-            $plan = app(AksesLanggananService::class)->accessKeyPlanForProgram($program);
-            $scope = app(AksesLanggananService::class)->scopeFromPlan($plan);
-        }
+        $accessKey = DB::transaction(function () use ($validated, $request) {
+            $programId = ! empty($validated['payment_plan_id'])
+                ? PaketPembayaran::findOrFail($validated['payment_plan_id'])->program_pembelajaran_id
+                : ($validated['program_pembelajaran_id'] ?? null);
+            ProgramPembelajaran::whereKey($programId)->lockForUpdate()->firstOrFail();
+            if (! empty($validated['payment_plan_id'])) {
+                $plan = PaketPembayaran::with('programPembelajaran')->findOrFail($validated['payment_plan_id']);
+                $program = $plan->programPembelajaran ?: ProgramPembelajaran::findOrFail($plan->program_pembelajaran_id);
+                $scope = app(AksesLanggananService::class)->scopeFromPlan($plan);
+            } else {
+                abort_unless(! empty($validated['program_pembelajaran_id']), 422, 'Pilih kelas atau paket langganan.');
+                $program = ProgramPembelajaran::findOrFail($validated['program_pembelajaran_id']);
+                $plan = app(AksesLanggananService::class)->accessKeyPlanForProgram($program);
+                $scope = app(AksesLanggananService::class)->scopeFromPlan($plan);
+            }
 
-        abort_unless(
-            $scope['scope_type'] === AksesLanggananService::SCOPE_PROGRAM
-                && (int) $scope['program_pembelajaran_id'] === (int) $program->id,
-            422,
-            'Access key hanya dapat memakai plan kelas mandiri yang sesuai.'
-        );
+            abort_unless(
+                $scope['scope_type'] === AksesLanggananService::SCOPE_PROGRAM
+                    && (int) $scope['program_pembelajaran_id'] === (int) $program->id,
+                422,
+                'Access key hanya dapat memakai plan kelas mandiri yang sesuai.'
+            );
 
-        $accessKey = KodeAkses::create([
-            'payment_plan_id' => $plan->id,
-            ...$scope,
-            'kloter_belajar_id' => null,
-            'created_by' => $request->user()->id,
-            'code' => $this->generateAccessCode(),
-            'name' => $validated['name'] ?? null,
-            'duration_days' => $validated['duration_days'],
-            'max_uses' => $validated['max_uses'],
-            'expires_at' => $validated['expires_at'] ?? null,
-            'notes' => $validated['notes'] ?? null,
-            'status' => 'active',
-        ]);
+            return KodeAkses::create([
+                'payment_plan_id' => $plan->id,
+                ...$scope,
+                'kloter_belajar_id' => null,
+                'created_by' => $request->user()->id,
+                'code' => $this->generateAccessCode(),
+                'name' => $validated['name'] ?? null,
+                'duration_days' => $validated['duration_days'],
+                'max_uses' => $validated['max_uses'],
+                'expires_at' => $validated['expires_at'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+                'status' => 'active',
+            ]);
 
+        });
+        $accessKey->load('paymentPlan', 'programPembelajaran');
+        $plan = $accessKey->paymentPlan;
+        $program = $accessKey->programPembelajaran;
         $this->logActivity($request, 'access_key.created', 'access_key', $accessKey->id, "Membuat access key {$accessKey->code}");
 
         return redirect()->back()

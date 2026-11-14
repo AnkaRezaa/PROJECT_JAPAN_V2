@@ -9,6 +9,11 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('subscriptions:expire')->dailyAt('00:10');
+Artisan::command('classes:audit-types', function () {
+    foreach (app(\App\Services\ProgramLearningTypeBackfill::class)->mapping() as $id => $type) {
+        $this->line("{$id}: {$type}");
+    }
+})->purpose('Read-only legacy class type preflight; fails on ambiguous data');
 Schedule::command('presentations:cleanup-imports --days=14')->dailyAt('00:30');
 Schedule::command('logs:prune --days=90')->dailyAt('00:45');
 Schedule::command('payments:reconcile-pending --hours=48')->everyTenMinutes()->withoutOverlapping();

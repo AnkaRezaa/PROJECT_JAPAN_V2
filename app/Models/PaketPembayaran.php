@@ -28,6 +28,17 @@ class PaketPembayaran extends Model
         'is_active' => 'boolean',
     ];
 
+    public function scopeNonTechnical($query)
+    {
+        return $query->where(fn ($q) => $q->where('price', '!=', 0)
+            ->orWhere('is_active', true)->orWhere('slug', 'not like', 'access-key-%'));
+    }
+
+    public function isTechnicalAccessKeyPlan(): bool
+    {
+        return str_starts_with((string) $this->slug, 'access-key-') && (int) $this->price === 0 && ! $this->is_active;
+    }
+
     public function subscriptions()
     {
         return $this->hasMany(Langganan::class, 'payment_plan_id');

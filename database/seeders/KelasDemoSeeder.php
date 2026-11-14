@@ -43,6 +43,7 @@ class KelasDemoSeeder extends Seeder
                     'curriculum_track_id' => $track->id,
                     'level_id' => $level->id,
                     'title' => $programData['title'],
+                    'learning_type' => $programData['slug'] === self::MENTOR_SLUG ? 'mentor' : 'mandiri',
                     'description' => $programData['description'],
                     'instructor_name' => $programData['instructor_name'],
                     'thumbnail_url' => $programData['thumbnail_url'],

@@ -61,7 +61,7 @@ class KelasPenggunaPayloadService
             'waiting_for_approval' => (bool) $pendingEnrollment,
             'refund_required' => (bool) $rejectedEnrollment,
             'access_mode' => $mode,
-            'access_mode_label' => $mode === AksesLanggananService::SCOPE_KLOTER ? 'Kelas Mentor' : 'Kelas Mandiri',
+            'access_mode_label' => ($mode !== null ? $mode === AksesLanggananService::SCOPE_KLOTER : $program->isMentor()) ? 'Kelas Mentor' : 'Kelas Mandiri',
             'kloter' => $kloterAktif ? [
                 'id' => $kloterAktif->id,
                 'nama' => $kloterAktif->nama,

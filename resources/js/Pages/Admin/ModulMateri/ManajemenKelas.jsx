@@ -23,6 +23,7 @@ import VideoCameraFrontIcon from '@mui/icons-material/VideoCameraFront';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 const emptyForm = {
+    learning_type: 'mandiri',
     curriculum_track_id: '',
     level_id: '',
     title: '',
@@ -185,6 +186,7 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
     const openEdit = (program) => {
         setEditing(program);
         form.setData({
+            learning_type: program.learning_type,
             curriculum_track_id: program.curriculum_track_id || '',
             level_id: program.level_id || '',
             title: program.title || '',
@@ -624,6 +626,12 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                             placeholder="Contoh: JLPT N4 Mingguan atau SSW Careworker"
                                             className={`${inputClass} ${form.errors.title ? '!border-rose-400 focus:!border-rose-500 focus:!ring-rose-500/20' : ''}`}
                                         />
+                                    </Field>
+                                    <Field label="Tipe kelas" required error={form.errors.learning_type} hint={editing?.learning_type_lock_reason}>
+                                        <select aria-label="Tipe kelas" value={form.data.learning_type} disabled={form.processing || Boolean(editing && !editing.can_change_learning_type)}
+                                            onChange={event => { form.setData('learning_type', event.target.value); form.clearErrors('learning_type'); }} className={inputClass}>
+                                            <option value="mandiri">Mandiri</option><option value="mentor">Mentor</option>
+                                        </select>
                                     </Field>
                                     <Field label="Nama Pengajar" error={form.errors.instructor_name} tooltip="Nama sensei / instruktur penanggung jawab materi kelas.">
                                         <input

@@ -582,7 +582,9 @@ export default function Pemasukan({
                                 <SearchableSelect
                                     value={planForm.data.program_pembelajaran_id}
                                     onChange={(programId) => {
-                                        planForm.setData('program_pembelajaran_id', programId);
+                                        const program = programs.find(item => String(item.id) === String(programId));
+                                        planForm.setData(current => ({ ...current, program_pembelajaran_id: programId,
+                                            scope_type: program ? (program.learning_type === 'mentor' ? 'kloter' : 'program') : current.scope_type }));
                                         planForm.clearErrors('program_pembelajaran_id');
                                     }}
                                     disabled={!['program', 'kloter'].includes(planForm.data.scope_type)}

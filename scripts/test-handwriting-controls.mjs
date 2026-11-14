@@ -19,6 +19,7 @@ import Canvas from '@/Components/Features/Handwriting/KanjiHandwritingCanvas';
 import Quiz from '@/Pages/User/Kuis/KerjakanKuis';
 import BuilderKuisKosakata from '@/Pages/Admin/Kuis/BuilderKuisKosakata';
 import ModuleDayDialog from '@/Components/Features/Admin/ModuleDayDialog';
+import ManajemenKelas from '@/Pages/Admin/ModulMateri/ManajemenKelas';
 import { DayDetailContent } from '@/Pages/User/Modul/DaftarModul';
 import '/resources/css/app.css';
 const params = new URLSearchParams(location.search);
@@ -57,6 +58,7 @@ function Fixture() {
     window.__setWritingPreference = setWritingEnabled;
     window.__openDay = () => setDayOpen(true);
     window.__persistDay = (data) => setDay(current => ({ ...current, ...data }));
+    if (scenario === 'class-type') return <ManajemenKelas programs={{data:[],links:[]}} tracks={[{id:1,code:'regular',name:'Regular'}]} />;
     if (scenario === 'day-create') return <ModuleDayDialog open={dayOpen} onClose={() => setDayOpen(false)} module={{ id: 1, week_number: 1, title: 'Week fixture' }} onCreated={result => window.__writing.created.push(result)} />;
     if (scenario === 'day' || scenario === 'day-exam') return <ModuleDayDialog open={dayOpen} onClose={() => setDayOpen(false)} module={{ id: 1, week_number: 1, title: 'Week fixture' }} day={day}
         examOptions={scenario === 'day-exam' ? [{ id: 901, title: 'JFT reading', category: 'jft_basic' }] : []} />;
@@ -83,7 +85,7 @@ await createInertiaApp({
 });
 window.__ready = true;
 `;
-const roadmapDependencies = ['axios', '@mui/material/Dialog', '@mui/material/Popper', ...['AccessTime', 'AccessTimeRounded', 'ArrowForward', 'ArrowForwardRounded', 'BackspaceOutlined', 'CalendarMonth', 'ChevronLeft', 'ChevronRight', 'DescriptionOutlined', 'EditCalendar', 'ExpandMore', 'FindInPage', 'Groups', 'HighlightOff', 'Inventory2Outlined', 'LayersOutlined', 'Lock', 'LockOutlined', 'Quiz', 'QuizOutlined', 'Slideshow'].map(name => '@mui/icons-material/'+name)];
+const roadmapDependencies = ['axios', '@mui/material/Dialog', '@mui/material/Popper', ...['AccountTree', 'EditOutlined', 'Search', 'AccessTime', 'AccessTimeRounded', 'ArrowForward', 'ArrowForwardRounded', 'BackspaceOutlined', 'CalendarMonth', 'ChevronLeft', 'ChevronRight', 'DescriptionOutlined', 'EditCalendar', 'ExpandMore', 'FindInPage', 'Groups', 'HighlightOff', 'Inventory2Outlined', 'LayersOutlined', 'Lock', 'LockOutlined', 'Quiz', 'QuizOutlined', 'Slideshow'].map(name => '@mui/icons-material/'+name)];
 const server = await createServer({ configFile: false, root, cacheDir: path.join(temp, 'vite'),
     optimizeDeps: { entries: [], include: ['react', 'react-dom', 'react-dom/client', '@inertiajs/react', 'kanji-recognizer', 'framer-motion', 'react-confetti', '@headlessui/react', '@mui/material/Tooltip', 'tiny-segmenter', ...['Add','ArrowBack','ArrowDownward','ArrowUpward','Assessment','AutoAwesome','AutoStories','BarChart','ChatBubbleOutlined','Check','CheckCircle','CheckCircleOutlineRounded','CheckCircleOutlined','Close','CloseRounded','ContentCopy','DarkMode','Dashboard','DeleteOutlineOutlined','DrawOutlined','EmojiEvents','ErrorOutlineOutlined','ErrorOutlineRounded','Explore','FactCheckOutlined','Favorite','FeedbackOutlined','FlagOutlined','FormatListBulleted','GraphicEq','HelpOutlineOutlined','ImageOutlined','InfoOutlined','KeyboardArrowDown','KeyboardArrowRight','LibraryBooks','LightMode','LightbulbOutlined','LogoutOutlined','Menu','MenuBook','MicNoneOutlined','MonitorHeart','NotificationsOutlined','OpenInNew','People','PlayArrow','PlayArrowRounded','RadioButtonUnchecked','ReceiptLongOutlined','Refresh','Replay','RestartAltRounded','Restore','SaveOutlined','School','SearchRounded','Settings','SettingsOutlined','Shield','Shuffle','SkipNextRounded','Star','StarBorder','StyleOutlined','TimerOutlined','TrendingUp','UndoRounded','UploadFile','VideoCameraFront','Visibility','VisibilityOutlined','VolumeOff','VolumeUp','WarningAmber','WorkspacePremium'].map(name => '@mui/icons-material/'+name)] },
     resolve: { alias: { '@': path.join(root, 'resources/js') } }, plugins: [react(), {
@@ -299,6 +301,18 @@ try {
     assert.equal(await evaluate('window.__writing.requests.length'),4,'No automatic duplicate creation request');
     await open('day'); await waitFor('document.querySelector("[role=switch]")');
     assert.equal(await evaluate('Boolean(document.querySelector("input[aria-label^=Lanjut]"))'),false,'Edit keeps existing workflow');
+    await open('class-type'); await waitFor('document.body.innerText.includes("Tambah Kelas")');
+    await click('Tambah Kelas'); await waitFor('document.querySelector("select[aria-label^=Tipe]")');
+    assert.equal(await evaluate('document.querySelector("select[aria-label^=Tipe]").value'),'mandiri');
+    await evaluate(`(()=>{const s=document.querySelector('select[aria-label="Tipe kelas"]');s.value='mentor';s.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+    assert.equal(await evaluate('document.querySelector("select[aria-label^=Tipe]").value'),'mentor');
+    for (const width of [390,1366]) {
+        await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width===390});
+        assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+2'),'Class type form fits');
+        await evaluate('document.querySelector("select[aria-label^=Tipe]").scrollIntoView({block:"center"})');
+        const {data}=await send('Page.captureScreenshot',{format:'png'});
+        writeFileSync(path.join(temp,'class-type-'+width+'.png'),Buffer.from(data,'base64'));
+    }
     assert.deepEqual(errors,[],'No uncaught runtime errors');
     console.log(JSON.stringify({passed:true,checks:['width preserves SVG and geometry','light/dark responsive','skip missing asset','optional props unchanged','actual quiz multi-character skip','double click','review error and retry','learning without completion bonus','disabled writing skips canvas and review','flashcard review failure stays put','session preference survives prop update and resume','last flashcard finishes','legacy checkpoint stays enabled','restart uses latest preference','admin toggle keyboard and retention'],screenshots:'temporary; removed'},null,2));
 } catch(error) {
@@ -309,7 +323,8 @@ try {
     if(chrome&&chrome.exitCode===null){await Promise.race([new Promise(resolve=>chrome.once('exit',resolve)),sleep(3000)]);if(chrome.exitCode===null)chrome.kill();}
     await server.close();
     const resolved=path.resolve(temp);
-    if(resolved.startsWith(path.resolve(tmpdir())+path.sep)&&path.basename(resolved).startsWith('tokuup-writing-test-')){
+    if(process.env.KEEP_WRITING_SCREENSHOTS) console.log('Review screenshots: '+temp);
+    if(!process.env.KEEP_WRITING_SCREENSHOTS && resolved.startsWith(path.resolve(tmpdir())+path.sep)&&path.basename(resolved).startsWith('tokuup-writing-test-')){
         try{rmSync(resolved,{recursive:true,force:true,maxRetries:5,retryDelay:300});}catch(error){console.warn('Temporary test cleanup:',error.code,resolved);}
     }
 }
