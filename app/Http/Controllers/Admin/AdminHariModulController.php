@@ -364,6 +364,7 @@ class AdminHariModulController extends Controller
             ],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'handwriting_enabled' => ['sometimes', 'boolean'],
             'status' => ['required', 'in:draft,published'],
             'checkpoint_quiz_id' => [
                 'nullable',

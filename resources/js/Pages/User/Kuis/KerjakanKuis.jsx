@@ -216,6 +216,13 @@ export default function Quiz({
         return Boolean(initialCheckpointData?.currentIndex > 0 || (initialCheckpointData?.answerEvents && initialCheckpointData.answerEvents.length > 0));
     });
 
+    const [sessionHandwritingEnabled, setSessionHandwritingEnabled] = useState(() => {
+        const resumable = !isWeakspotQuiz && hasCheckpoint && (
+            initialCheckpointData?.currentIndex > 0 || initialCheckpointData?.answerEvents?.length > 0
+        );
+        return resumable ? (initialCheckpointData.handwriting_enabled ?? true) : (quiz?.handwriting_enabled ?? true);
+    });
+
     const handleResumeCheckpoint = () => {
         if (initialCheckpointData) {
             if (typeof initialCheckpointData.currentIndex === 'number') {
@@ -246,6 +253,7 @@ export default function Quiz({
 
     const handleRestartCheckpoint = () => {
         clearCheckpoint();
+        setSessionHandwritingEnabled(quiz?.handwriting_enabled ?? true);
         setIsResumeModalOpen(false);
     };
 
@@ -589,6 +597,7 @@ export default function Quiz({
         setCurrentIndex(nextIdx);
         if (!preview) {
             saveCheckpoint({
+                handwriting_enabled: sessionHandwritingEnabled,
                 currentIndex: nextIdx,
                 lives,
                 score,
@@ -622,6 +631,7 @@ export default function Quiz({
         setCurrentIndex(nextIdx);
         if (!preview) {
             saveCheckpoint({
+                handwriting_enabled: sessionHandwritingEnabled,
                 currentIndex: nextIdx,
                 lives,
                 score,
@@ -634,6 +644,10 @@ export default function Quiz({
     };
 
     const continueWithHandwriting = async () => {
+        if (!sessionHandwritingEnabled) {
+            continueAfterFlashcard();
+            return;
+        }
         try {
             const characters = await resolveAvailableCharacters(
                 activeFlashcard?.front_text,
@@ -854,6 +868,7 @@ export default function Quiz({
                 answerEventsRef.current = [];
                 correctMapRef.current = {};
                 setCurrentIndex(0);
+                setSessionHandwritingEnabled(quiz?.handwriting_enabled ?? true);
                 setSelectedAnswer(null);
                 setTextAnswer('');
                 setAnswerFeedback(null);

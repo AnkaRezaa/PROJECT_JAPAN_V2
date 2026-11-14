@@ -48,7 +48,8 @@ export default function KosakataQuizPreviewDialog({
         title: quiz?.title || 'Pratinjau Kuis Kosakata',
         passing_score: Number(quiz?.passing_score || 70),
         time_limit: quiz?.time_limit ? Number(quiz.time_limit) : null,
-    }), [quiz?.id, quiz?.title, quiz?.passing_score, quiz?.time_limit]);
+        handwriting_enabled: quiz?.handwriting_enabled ?? true,
+    }), [quiz?.id, quiz?.title, quiz?.passing_score, quiz?.time_limit, quiz?.handwriting_enabled]);
 
     if (!open || typeof document === 'undefined') return null;
 

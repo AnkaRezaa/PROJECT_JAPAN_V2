@@ -82,6 +82,71 @@ function createDayRoadmapFixture(): array
     return compact('level', 'program', 'module', 'dayOne', 'dayTwo');
 }
 
+it('daily handwriting preference persists per Day and preserves old requests', function () {
+    $fixture = createDayRoadmapFixture();
+    $admin = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'global']);
+    $day = $fixture['dayOne'];
+    expect($day->fresh()->handwriting_enabled)->toBeTrue();
+    $payload = ['day_number' => $day->day_number, 'title' => $day->title, 'status' => $day->status];
+    $this->actingAs($admin)->put(route('admin.module-days.update', $day), [...$payload, 'handwriting_enabled' => false])
+        ->assertRedirect()->assertSessionHasNoErrors();
+    expect($day->fresh()->handwriting_enabled)->toBeFalse()
+        ->and($fixture['dayTwo']->fresh()->handwriting_enabled)->toBeTrue();
+    $this->actingAs($admin)->put(route('admin.module-days.update', $day), $payload)->assertSessionHasNoErrors();
+    expect($day->fresh()->handwriting_enabled)->toBeFalse();
+    $this->actingAs($admin)->get(route('admin.modules.index', ['program_id' => $fixture['program']->id]))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page->where('modules.data.0.days.0.handwriting_enabled', false));
+    $this->actingAs($admin)->put(route('admin.module-days.update', $day), [...$payload, 'handwriting_enabled' => true])->assertSessionHasNoErrors();
+    expect($day->fresh()->handwriting_enabled)->toBeTrue();
+    $this->actingAs($admin)->post(route('admin.module-days.store', $fixture['module']), [
+        'day_number' => 3, 'title' => 'Optional writing', 'status' => 'draft', 'handwriting_enabled' => false,
+    ])->assertSessionHasNoErrors();
+    expect($fixture['module']->days()->where('day_number', 3)->firstOrFail()->handwriting_enabled)->toBeFalse();
+    $this->actingAs($admin)->post(route('admin.module-days.store', $fixture['module']), [
+        'day_number' => 4, 'title' => 'Legacy default', 'status' => 'draft',
+    ])->assertSessionHasNoErrors();
+    expect($fixture['module']->days()->where('day_number', 4)->firstOrFail()->handwriting_enabled)->toBeTrue();
+});
+
+it('daily handwriting preference rejects invalid values and out of scope mentors', function () {
+    $fixture = createDayRoadmapFixture();
+    $day = $fixture['dayOne'];
+    $payload = ['day_number' => $day->day_number, 'title' => $day->title, 'status' => $day->status, 'handwriting_enabled' => false];
+    $mentor = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'kloter']);
+    $this->actingAs($mentor)->put(route('admin.module-days.update', $day), $payload)->assertForbidden();
+    $admin = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'global']);
+    $this->actingAs($admin)->put(route('admin.module-days.update', $day), [...$payload, 'handwriting_enabled' => 'invalid'])
+        ->assertSessionHasErrors('handwriting_enabled');
+    expect($day->fresh()->handwriting_enabled)->toBeTrue();
+});
+
+it('daily handwriting preference reaches student and builder preview without mutating learning data', function () {
+    $fixture = createDayRoadmapFixture();
+    $day = $fixture['dayOne'];
+    $day->update(['handwriting_enabled' => false]);
+    $quiz = Kuis::create(['module_id' => $fixture['module']->id, 'module_day_id' => $day->id, 'type' => 'multiple_choice', 'status' => 'published']);
+    $question = $quiz->questions()->create(['type' => 'multiple_choice', 'question_text' => 'Choose A', 'correct_answer' => 'A', 'options' => ['A', 'B'], 'points' => 1, 'order' => 0]);
+    $user = Pengguna::factory()->create(['role' => 'user']);
+    $xp = $user->fresh()->xp;
+    $service = app(\App\Services\PembelajaranPenggunaService::class);
+    $payload = $service->quizPayload($user, $quiz->fresh()->load(['module', 'questions']));
+    expect($payload['quiz']['handwriting_enabled'])->toBeFalse()
+        ->and($payload['questions'])->toHaveCount(1)
+        ->and($payload['flashcards'])->not->toBeEmpty();
+    $admin = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'global']);
+    $this->actingAs($admin)->get(route('admin.quizzes.builder', $quiz))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('quiz.handwriting_enabled', false)->where('quiz.day.handwriting_enabled', false));
+    $day->update(['handwriting_enabled' => true]);
+    expect($service->quizPayload($user, $quiz->fresh()->load(['module', 'questions']))['quiz']['handwriting_enabled'])->toBeTrue();
+    $standalone = Kuis::create(['module_id' => $fixture['module']->id, 'type' => 'multiple_choice', 'status' => 'draft']);
+    expect($service->quizPayload($user, $standalone->load(['module', 'questions']))['quiz']['handwriting_enabled'])->toBeTrue()
+        ->and($user->fresh()->xp)->toBe($xp)
+        ->and($quiz->questions()->count())->toBe(1)
+        ->and(ReviewFlashcard::where('user_id', $user->id)->count())->toBe(0)
+        ->and(PengerjaanKuis::where('user_id', $user->id)->count())->toBe(0)
+        ->and(LogReward::where('user_id', $user->id)->count())->toBe(0);
+});
+
 it('keeps Day assignments inside the selected Week', function () {
     $fixture = createDayRoadmapFixture();
     $admin = Pengguna::factory()->create(['role' => 'admin']);

@@ -150,7 +150,7 @@ class AdminKuisController extends Controller
             'module.level:id,level_name',
             'module.programPembelajaran:id,curriculum_track_id,level_id,title',
             'module.programPembelajaran.curriculumTrack:id,code,name',
-            'day:id,module_id,day_number,title',
+            'day:id,module_id,day_number,title,handwriting_enabled',
             'questions' => fn ($query) => $query
                 ->withCount([
                     'attemptAnswers as attempts_count',
@@ -212,6 +212,7 @@ class AdminKuisController extends Controller
                 'type' => $quiz->type,
                 'time_limit' => $quiz->time_limit,
                 'passing_score' => $quiz->passing_score ?? 70,
+                'handwriting_enabled' => $quiz->day?->handwriting_enabled ?? true,
                 'available_at' => $quiz->available_at?->toISOString(),
                 'status' => $quiz->status ?? 'published',
                 'module' => $quiz->module,

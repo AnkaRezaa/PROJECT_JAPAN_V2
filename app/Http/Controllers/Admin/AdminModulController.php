@@ -266,6 +266,7 @@ class AdminModulController extends Controller
                     'description' => $day->description,
                     'status' => $day->status,
                     'checkpoint_quiz_id' => $day->checkpoint_quiz_id,
+                    'handwriting_enabled' => (bool) $day->handwriting_enabled,
                     'completion_method' => $completionMethod,
                     'is_ready' => $completionMethod !== null,
                     'vocabulary_count' => $day->vocabulary_count,

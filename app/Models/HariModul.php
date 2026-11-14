@@ -21,10 +21,12 @@ class HariModul extends Model
         'description',
         'status',
         'checkpoint_quiz_id',
+        'handwriting_enabled',
     ];
 
     protected $casts = [
         'day_number' => 'integer',
+        'handwriting_enabled' => 'boolean',
     ];
 
     public function module(): BelongsTo

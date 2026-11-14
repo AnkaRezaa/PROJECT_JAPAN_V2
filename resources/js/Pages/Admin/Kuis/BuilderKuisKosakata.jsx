@@ -996,9 +996,10 @@ export default function QuizBuilder({
                             title: quiz?.title || 'Kuis Kosakata',
                             time_limit: data.time_limit,
                             passing_score: data.passing_score,
+                            handwriting_enabled: quiz?.handwriting_enabled ?? quiz?.day?.handwriting_enabled ?? true,
                         }}
                         questions={data.questions}
-                        flashcards={activeFlashcardSet?.cards || []}
+                        flashcards={activeFlashcardSet?.flashcards || activeFlashcardSet?.cards || []}
                     />
                     <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
                 </>

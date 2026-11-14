@@ -11,6 +11,7 @@ export default function ModuleDayDialog({ open, onClose, module, day = null, nex
         title: '',
         description: '',
         status: 'draft',
+        handwriting_enabled: true,
     });
 
     useEffect(() => {
@@ -21,6 +22,7 @@ export default function ModuleDayDialog({ open, onClose, module, day = null, nex
             title: day?.title || `Hari ${nextDayNumber}`,
             description: day?.description || '',
             status: day?.status || 'draft',
+            handwriting_enabled: day?.handwriting_enabled ?? true,
         });
         form.clearErrors();
         // The form instance is stable; reopening is intentionally keyed by context.
@@ -127,13 +129,32 @@ export default function ModuleDayDialog({ open, onClose, module, day = null, nex
                     </select>
                 </FormField>
 
+                <FormField label="Latihan menulis kanji" error={form.errors.handwriting_enabled}>
+                    <label className="inline-flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-gray-800 dark:text-gray-100">
+                        <input
+                            type="checkbox"
+                            role="switch"
+                            aria-label="Latihan menulis kanji"
+                            checked={form.data.handwriting_enabled}
+                            disabled={form.processing}
+                            onChange={(event) => {
+                                form.setData('handwriting_enabled', event.target.checked);
+                                form.clearErrors('handwriting_enabled');
+                            }}
+                            className="peer sr-only"
+                        />
+                        <span aria-hidden="true" className="relative h-6 w-11 shrink-0 rounded-full bg-gray-300 transition-colors after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-orange-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-500 peer-focus-visible:ring-offset-2 peer-disabled:opacity-50 dark:bg-gray-600 dark:peer-focus-visible:ring-offset-gray-900" />
+                        {form.data.handwriting_enabled ? 'Aktif' : 'Nonaktif'}
+                    </label>
+                </FormField>
+
                 {!day && (
                     <p className="rounded-xl border border-teal-100 bg-teal-50 px-4 py-3 text-sm font-bold text-teal-800 dark:border-teal-900/40 dark:bg-teal-900/15 dark:text-teal-200">
                         Flashcard dan kuis checkpoint draft akan disiapkan otomatis untuk Day ini.
                     </p>
                 )}
 
-                {Object.values(form.errors).length > 0 && !form.errors.day_number && !form.errors.title && !form.errors.description && !form.errors.status && (
+                {Object.values(form.errors).length > 0 && !form.errors.day_number && !form.errors.title && !form.errors.description && !form.errors.status && !form.errors.handwriting_enabled && (
                     <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700 dark:bg-red-900/20 dark:text-red-300">
                         {Object.values(form.errors)[0]}
                     </p>

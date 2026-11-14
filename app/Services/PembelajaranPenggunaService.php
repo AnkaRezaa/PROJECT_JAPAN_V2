@@ -64,6 +64,7 @@ class PembelajaranPenggunaService
                 'type' => $quiz->type,
                 'time_limit' => $quiz->time_limit,
                 'passing_score' => $quiz->passing_score ?? 70,
+                'handwriting_enabled' => $quiz->day?->handwriting_enabled ?? true,
                 'available_at' => $quiz->available_at?->toISOString(),
                 'lesson' => [
                     'id' => $module?->id,
