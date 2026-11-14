@@ -58,6 +58,8 @@ Route::post('/payments/midtrans/notification', [PembayaranMidtransController::cl
 
 // Guest Routes
 Route::get('/', [HalamanController::class, 'home'])->name('home');
+Route::get('/berita', [HalamanController::class, 'news'])->name('public.news.index');
+Route::get('/berita/{news}', [HalamanController::class, 'newsShow'])->name('public.news.show');
 Route::get('/about', [HalamanController::class, 'about'])->name('about');
 Route::get('/pricing', [HalamanController::class, 'pricing'])->name('pricing');
 Route::get('/katalog', [HalamanController::class, 'pricing'])->name('katalog');

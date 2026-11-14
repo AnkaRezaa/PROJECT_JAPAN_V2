@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Auth\LoginSosialController;
 use App\Models\AnggotaKloter;
 use App\Models\BroadcastPopup;
+use App\Models\Berita;
 use App\Models\DeckPresentasi;
 use App\Models\HariModul;
 use App\Models\Kosakata;
@@ -20,6 +21,7 @@ use App\Services\AksesLanggananService;
 use App\Services\AksesPremiumService;
 use App\Services\GamifikasiConfigService;
 use App\Services\KelasPenggunaPayloadService;
+use App\Services\PublicNewsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -27,7 +29,7 @@ use Inertia\Inertia;
 
 class HalamanController extends Controller
 {
-    public function home(KelasPenggunaPayloadService $kelasPayload)
+    public function home(KelasPenggunaPayloadService $kelasPayload, PublicNewsService $newsService)
     {
         $activePopup = BroadcastPopup::query()
             ->active()
@@ -38,6 +40,7 @@ class HalamanController extends Controller
 
         return Inertia::render('LandingPage', [
             'programs' => $this->publicPricingPrograms($kelasPayload),
+            'latestNews' => $newsService->summariesQuery()->limit(3)->get()->map($newsService->summary(...)),
             'activePopup' => $activePopup ? [
                 'id' => $activePopup->id,
                 'title' => $activePopup->title,
@@ -54,6 +57,46 @@ class HalamanController extends Controller
                 route('home'),
                 structuredData: [$this->websiteSchema()]
             ),
+        ]);
+    }
+
+    public function news(Request $request, PublicNewsService $newsService)
+    {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:150'],
+            'category' => ['nullable', 'string', 'max:50'],
+        ]);
+        $search = trim($filters['search'] ?? '');
+        $category = $filters['category'] ?? '';
+        $news = $newsService->summariesQuery()
+            ->when($search !== '', fn ($q) => $q->where(fn ($q) => $q
+                ->where('title', 'like', '%'.$search.'%')->orWhere('excerpt', 'like', '%'.$search.'%')))
+            ->when($category !== '', fn ($q) => $q->where('category', $category))
+            ->paginate(9)->withQueryString()->through($newsService->summary(...));
+
+        return Inertia::render('Public/Berita/Index', [
+            'news' => $news,
+            'filters' => ['search' => $search, 'category' => $category],
+            'categories' => Berita::query()->publiclyVisible()->whereNotNull('category')
+                ->distinct()->orderBy('category')->pluck('category'),
+            'seo' => $this->seo('Berita', 'Berita dan artikel pembelajaran bahasa Jepang dari TOKU-UP.', route('public.news.index')),
+        ]);
+    }
+
+    public function newsShow(Berita $news, PublicNewsService $newsService)
+    {
+        abort_unless(Berita::query()->publiclyVisible()->whereKey($news->id)->exists(), 404);
+        $item = $newsService->detail($news);
+
+        return Inertia::render('User/Berita/DetailBerita', [
+            'publicView' => true,
+            'newsItem' => $item,
+            'relatedNews' => $newsService->summariesQuery()->whereKeyNot($news->id)
+                ->when($news->category, fn ($q, $category) => $q->where('category', $category))
+                ->limit(3)->get()->map($newsService->summary(...)),
+            'seo' => $this->seo($news->seo_title ?: $news->title,
+                $news->seo_description ?: ($news->excerpt ?: $news->title),
+                $item['url'], 'article', $item['thumbnail_url']),
         ]);
     }
 
@@ -252,8 +295,15 @@ class HalamanController extends Controller
                 'lastmod' => optional($program->updated_at)->toAtomString(),
             ]);
 
+        $newsUrls = Berita::query()->publiclyVisible()->select(['id', 'slug', 'updated_at'])
+            ->get()->map(fn (Berita $news) => [
+                'loc' => route('public.news.show', $news->getRouteKey()),
+                'lastmod' => $news->updated_at?->toAtomString(),
+            ]);
+        $staticUrls->push(['loc' => route('public.news.index'), 'lastmod' => null]);
+
         return response()
-            ->view('seo.sitemap', ['urls' => $staticUrls->concat($classUrls)])
+            ->view('seo.sitemap', ['urls' => $staticUrls->concat($classUrls)->concat($newsUrls)])
             ->header('Content-Type', 'application/xml; charset=UTF-8');
     }
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Berita extends Model
@@ -21,6 +22,7 @@ class Berita extends Model
         'reading_blocks',
         'status',
         'audience',
+        'is_public',
         'category',
         'is_pinned',
         'published_at',
@@ -35,6 +37,7 @@ class Berita extends Model
     ];
 
     protected $casts = [
+        'is_public' => 'boolean',
         'is_pinned' => 'boolean',
         'reading_blocks' => 'array',
         'published_at' => 'datetime',
@@ -42,6 +45,18 @@ class Berita extends Model
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
     ];
+
+    public function scopePubliclyVisible(Builder $query): Builder
+    {
+        $now = now();
+
+        return $query->where('is_public', true)
+            ->where('audience', 'all')
+            ->where('status', 'published')
+            ->where(fn (Builder $q) => $q->whereNull('published_at')->orWhere('published_at', '<=', $now))
+            ->where(fn (Builder $q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now))
+            ->where(fn (Builder $q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', $now));
+    }
 
     public function creator()
     {

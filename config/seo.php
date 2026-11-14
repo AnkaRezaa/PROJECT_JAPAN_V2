@@ -18,6 +18,8 @@ return [
         'terms',
         'cookie-policy',
         'public.classes.show',
+        'public.news.index',
+        'public.news.show',
         'robots',
         'sitemap',
     ],

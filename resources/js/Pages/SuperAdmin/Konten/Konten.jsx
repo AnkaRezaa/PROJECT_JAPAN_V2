@@ -22,7 +22,8 @@ const emptyNews = {
     slug: '',
     category: 'platform',
     status: 'draft',
-    audience: 'students',
+    audience: 'all',
+    is_public: true,
     is_pinned: false,
     scheduled_at: '',
     starts_at: '',
@@ -149,6 +150,7 @@ export default function Konten({
             category: item.category || 'platform',
             status: item.raw_status || 'draft',
             audience: item.raw_audience || 'students',
+            is_public: Boolean(item.is_public),
             is_pinned: Boolean(item.is_pinned),
             scheduled_at: item.scheduled_at || '',
             starts_at: item.starts_at || '',
@@ -494,6 +496,7 @@ export default function Konten({
                                             </div>
 
                                             <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-bold text-gray-700 dark:bg-gray-800 dark:text-gray-200">{item.is_public && item.raw_audience === 'all' ? 'Publik' : 'Internal'}</span>
                                                 <span className="rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-700 dark:bg-brand-900/20 dark:text-brand-300">
                                                     🏷️ {item.category?.replaceAll('-', ' ')}
                                                 </span>
@@ -793,16 +796,22 @@ export default function Konten({
                                         </label>
                                         <select
                                             value={data.audience}
-                                            onChange={(e) => setData('audience', e.target.value)}
+                                            onChange={(e) => setData(values => ({ ...values, audience: e.target.value, is_public: e.target.value === 'all' && values.is_public }))}
                                             className={`h-11 w-full rounded-xl border bg-white px-4 text-sm font-bold text-gray-900 dark:bg-gray-900 dark:text-white ${
                                                 errors.audience ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700'
                                             }`}
                                         >
-                                            <option value="students">Students</option>
-                                            <option value="admins">Admins</option>
-                                            <option value="all">All</option>
+                                            <option value="students">Siswa</option>
+                                            <option value="admins">Admin</option>
+                                            <option value="all">Semua</option>
                                         </select>
                                         {errors.audience && <p className="mt-1 text-xs font-bold text-red-500">{errors.audience}</p>}
+                                        <label className="mt-3 flex min-h-11 items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                            <input type="checkbox" checked={data.is_public} disabled={data.audience !== 'all'} onChange={e => setData('is_public', e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 disabled:opacity-50" />
+                                            Tampil publik
+                                            <TooltipHelp text="Tersedia untuk target Semua. Tampil di website setelah berita terbit dan sesuai jadwal." />
+                                        </label>
+                                        {errors.is_public && <p role="alert" className="mt-1 text-xs text-red-600">{errors.is_public}</p>}
                                     </div>
                                     {data.status === 'scheduled' && (
                                         <div>

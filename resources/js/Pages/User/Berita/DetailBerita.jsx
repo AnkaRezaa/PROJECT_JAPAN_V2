@@ -6,28 +6,35 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import ArticleBody from '@/Components/Features/News/ArticleBody';
 import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
+import GuestNavbar from '@/Components/Layout/GuestNavbar';
+import GuestFooter from '@/Components/Layout/GuestFooter';
+import SeoHead from '@/Components/SEO/SeoHead';
 
-export default function NewsShow({ newsItem, relatedNews = [] }) {
+function NewsLayout({ publicView, children }) {
+    return publicView ? <><GuestNavbar />{children}<GuestFooter /></> : <AuthenticatedLayout>{children}</AuthenticatedLayout>;
+}
+
+export default function NewsShow({ newsItem, relatedNews = [], publicView = false, seo = {} }) {
     const images = newsItem.attachments.filter((item) => item.file_type === 'image');
     const documents = newsItem.attachments.filter((item) => item.file_type === 'document');
     const videos = newsItem.attachments.filter((item) => item.file_type === 'video_embed');
     const cover = newsItem.thumbnail_url || newsItem.cover_url || images[0]?.url;
 
     return (
-        <AuthenticatedLayout>
-            <Head title={newsItem.seo_title || `${newsItem.title} - TOKU-UP News`}>
+        <NewsLayout publicView={publicView}>
+            {publicView ? <SeoHead seo={seo} /> : <Head title={newsItem.seo_title || `${newsItem.title} - TOKU-UP News`}>
                 <meta name="description" content={newsItem.seo_description || newsItem.excerpt || 'Berita terbaru dari TOKU-UP.'} />
-            </Head>
+            </Head>}
 
-            <main className="min-h-screen bg-transparent pb-16 dark:bg-gray-950">
+            <main className={`min-h-screen pb-16 dark:bg-gray-950 ${publicView ? 'bg-white [overflow-wrap:anywhere]' : 'bg-transparent'}`}>
                 <article>
                     <header className="border-b border-gray-100 bg-gray-50 py-8 dark:border-gray-800 dark:bg-gray-900/40">
                         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-                            <Link href={route('user.news.index')} className="inline-flex items-center gap-2 text-sm font-black text-brand-600 dark:text-brand-400">
+                            <Link href={route(publicView ? 'public.news.index' : 'user.news.index')} className="inline-flex min-h-11 items-center gap-2 text-sm font-black text-brand-600 dark:text-brand-400">
                                 <ArrowBackIcon sx={{ fontSize: 18 }} />
                                 Kembali ke Portal Berita
                             </Link>
-                            <div className="mt-8 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
+                            <div className={`mt-8 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400 ${publicView ? 'flex-wrap' : ''}`}>
                 <span className="rounded-full bg-brand-50 px-3 py-1 text-brand-700 dark:bg-[#12351f] dark:text-green-200">{newsItem.category?.replaceAll('-', ' ') || 'platform'}</span>
                                 <AccessTimeIcon sx={{ fontSize: 15 }} />
                                 {newsItem.published_label || 'TOKU-UP News'}
@@ -56,13 +63,13 @@ export default function NewsShow({ newsItem, relatedNews = [] }) {
 
                     <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-8">
                         <div className="min-w-0">
-                            <ArticleBody html={newsItem.body} />
+                            <ArticleBody html={newsItem.body} className={publicView ? 'public-news-body' : ''} />
 
                             {newsItem.reading_blocks?.length > 0 && (
                                 <section className="mt-8 space-y-4 border-t border-gray-100 pt-8 dark:border-gray-800">
                                     <div>
                                         <h2 className="text-lg font-black text-gray-900 dark:text-white">Bantuan Baca</h2>
-                                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Romaji dan terjemahan mengikuti pengaturan akun Anda.</p>
+                                        {!publicView && <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Romaji dan terjemahan mengikuti pengaturan akun Anda.</p>}
                                     </div>
                                     {newsItem.reading_blocks.map((block, index) => (
                                         <div key={`${block.japanese}-${index}`} className="rounded-2xl border border-sky-100 bg-sky-50/50 p-5 dark:border-sky-900/40 dark:bg-sky-950/20">
@@ -120,7 +127,7 @@ export default function NewsShow({ newsItem, relatedNews = [] }) {
                                 <h2 className="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">Berita Lainnya</h2>
                                 <div className="mt-4 space-y-4">
                                     {relatedNews.map((item) => (
-                                        <Link key={item.id} href={route('user.news.show', item.slug || item.id)} className="block border-b border-gray-100 pb-4 last:border-0 last:pb-0 dark:border-gray-800">
+                                        <Link key={item.id} href={publicView ? item.url : route('user.news.show', item.slug || item.id)} className="block border-b border-gray-100 pb-4 last:border-0 last:pb-0 dark:border-gray-800">
                                             <p className="text-sm font-black leading-snug text-gray-900 hover:text-brand-600 dark:text-white dark:hover:text-brand-400">{item.title}</p>
                                             <p className="mt-1 text-xs font-bold text-gray-400">{item.published_label}</p>
                                         </Link>
@@ -134,6 +141,6 @@ export default function NewsShow({ newsItem, relatedNews = [] }) {
                     </div>
                 </article>
             </main>
-        </AuthenticatedLayout>
+        </NewsLayout>
     );
 }

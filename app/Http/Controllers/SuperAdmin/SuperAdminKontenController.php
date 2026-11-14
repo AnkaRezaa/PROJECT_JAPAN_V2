@@ -262,6 +262,7 @@ class SuperAdminKontenController extends SuperAdminDasarController
             'reading_blocks.*.translation' => ['nullable', 'string', 'max:2000'],
             'status' => ['required', 'in:draft,scheduled,published,archived'],
             'audience' => ['required', 'in:students,admins,all'],
+            'is_public' => ['sometimes', 'boolean'],
             'category' => ['required', 'in:'.implode(',', $this->categories())],
             'is_pinned' => ['boolean'],
             'scheduled_at' => ['nullable', 'required_if:status,scheduled', 'date'],
@@ -302,6 +303,9 @@ class SuperAdminKontenController extends SuperAdminDasarController
     private function prepareNewsAttributes(array $validated, ?Berita $news = null): array
     {
         unset($validated['cover_image']);
+
+        $validated['is_public'] = $validated['audience'] === 'all'
+            && ($validated['is_public'] ?? $news?->is_public ?? true);
 
         if ($validated['status'] === 'scheduled') {
             $validated['published_at'] = null;
@@ -366,6 +370,7 @@ class SuperAdminKontenController extends SuperAdminDasarController
             'reading_blocks_count' => count($news->reading_blocks ?? []),
             'raw_status' => $news->status,
             'raw_audience' => $news->audience,
+            'is_public' => $news->is_public,
             'category' => $news->category,
             'is_pinned' => $news->is_pinned,
             'thumbnail_url' => $news->thumbnailUrl(),

@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+    .public-news-body {
+        @apply min-w-0 text-base leading-8 text-gray-700 dark:text-gray-200;
+        overflow-wrap: anywhere;
+    }
+    .public-news-body :is(h1, h2, h3, h4) {
+        @apply mb-4 mt-8 font-bold leading-snug text-gray-900 dark:text-white;
+    }
+    .public-news-body :is(h1, h2) { @apply text-2xl; }
+    .public-news-body :is(h3, h4) { @apply text-xl; }
+    .public-news-body :is(p, ul, ol, blockquote, pre, table) { @apply my-5; }
+    .public-news-body ul { @apply list-disc pl-6; }
+    .public-news-body ol { @apply list-decimal pl-6; }
+    .public-news-body li { @apply my-2; }
+    .public-news-body a { @apply text-emerald-800 underline underline-offset-4 dark:text-emerald-300; }
+    .public-news-body blockquote { @apply border-l-4 border-emerald-600 pl-5; }
+    .public-news-body :is(pre, table) { @apply block max-w-full overflow-x-auto; }
+    .public-news-body pre { @apply rounded-lg bg-gray-100 p-4 dark:bg-gray-900; }
+    .public-news-body :is(th, td) { @apply border border-gray-300 px-3 py-2 dark:border-gray-600; }
+    .public-news-body img { @apply h-auto max-w-full rounded-lg; }
+}
+
 @layer base {
     :root {
         --toku-theme-primary: #30c060;

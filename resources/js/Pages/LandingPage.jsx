@@ -21,6 +21,8 @@ import PromoPopup from '@/Components/Marketing/PromoPopup';
 import FallEffect from '@/Components/theme/FallEffect';
 import SeoHead from '@/Components/SEO/SeoHead';
 import heroStaticImage from '@/../Images/Mount-Fuji-New.jpg';
+import { Link } from '@inertiajs/react';
+import NewsPreview from '@/Components/Features/News/NewsPreview';
 
 const sampleFlashcards = [
   {
@@ -118,7 +120,7 @@ const weekTone = {
   ink: 'border-ink-700 bg-ink-900 text-white',
 };
 
-export default function LandingPage({ programs = [], seo = {}, activePopup = null }) {
+export default function LandingPage({ programs = [], seo = {}, activePopup = null, latestNews = [] }) {
   const reduceMotion = useReducedMotion();
   const publicPlans = programs.flatMap((program) => (program.payment_plans || []).map((plan) => ({
     ...plan,
@@ -195,6 +197,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
               </div>
 
               <SocialLinks />
+
               <div className="mt-7 flex min-w-0 max-w-md items-start gap-4 border-t border-ink-900/10 pt-4 text-sm text-ink-700 sm:items-center">
                 <div className="flex -space-x-2" aria-hidden="true">
                   {['N5', 'N3', 'N2'].map((label, index) => (
@@ -400,6 +403,16 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
             </div>
           </div>
         </motion.section>
+
+        {latestNews.length > 0 && <section aria-labelledby="latest-news-heading" className="bg-white px-4 py-12 dark:bg-gray-950 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-7 flex flex-wrap items-center justify-between gap-3">
+              <h2 id="latest-news-heading" className="text-2xl font-bold text-gray-900 dark:text-white">Berita Terbaru</h2>
+              <Link href={route('public.news.index')} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-emerald-800 hover:underline dark:text-emerald-300">Semua berita <ArrowForwardIcon aria-hidden="true" sx={{ fontSize: 18 }} /></Link>
+            </div>
+            <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">{latestNews.map(item => <NewsPreview key={item.id} item={item} />)}</div>
+          </div>
+        </section>}
 
         <motion.section {...reveal} className="bg-slate-900 px-4 py-16 text-white sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-6xl">

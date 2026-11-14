@@ -10,6 +10,7 @@ const footerLinks = {
         { href: '/pricing', label: 'Harga Premium' },
     ],
     Perusahaan: [
+        { href: '/berita', label: 'Berita' },
         { href: '/about', label: 'Tentang Kami' },
         { href: '/#fitur', label: 'Fitur Belajar' },
         { href: '/privacy-policy', label: 'Kebijakan Privasi' },
