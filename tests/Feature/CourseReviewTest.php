@@ -31,6 +31,60 @@ function createCourseReviewFixture(bool $access = true, bool $learned = true): a
     return compact('program', 'module', 'day', 'user', 'subscription');
 }
 
+it('exposes the same public rating on all marketing pages without leaking review content', function () {
+    config(['beta.prelaunch_enabled' => false]);
+    $f = createCourseReviewFixture();
+    foreach ([5, 4, 4] as $rating) {
+        $review = new UlasanKelas;
+        $review->forceFill(['user_id' => Pengguna::factory()->create()->id, 'program_pembelajaran_id' => $f['program']->id, 'rating' => $rating, 'comment' => 'Private to the review page', 'status' => 'published'])->save();
+    }
+    $hidden = new UlasanKelas;
+    $hidden->forceFill(['user_id' => Pengguna::factory()->create()->id, 'program_pembelajaran_id' => $f['program']->id, 'rating' => 1, 'status' => 'hidden'])->save();
+    $deleted = new UlasanKelas;
+    $deleted->forceFill(['user_id' => Pengguna::factory()->create()->id, 'program_pembelajaran_id' => $f['program']->id, 'rating' => 1, 'status' => 'published'])->save();
+    $deleted->delete();
+
+    foreach (['home', 'pricing', 'katalog'] as $route) {
+        $this->get(route($route))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('programs', fn ($items) => collect($items)->firstWhere('id', $f['program']->id)['review_summary'] === [
+                'count' => 3, 'average' => 4.3, 'url' => route('public.classes.reviews', $f['program']->slug),
+            ])
+            ->missing('programs.0.reviews'));
+    }
+    $this->get(route('public.classes.show', $f['program']->slug))->assertInertia(fn (Assert $page) => $page
+        ->where('program.review_summary.count', 3)->where('program.review_summary.average', 4.3));
+    $this->get(route('public.classes.reviews', $f['program']->slug))->assertInertia(fn (Assert $page) => $page
+        ->where('summary.count', 3)->where('summary.average', 4.3));
+    $hidden->forceFill(['status' => 'published'])->save();
+    $this->get(route('public.classes.show', $f['program']->slug))->assertInertia(fn (Assert $page) => $page
+        ->where('program.review_summary.count', 4)->where('program.review_summary.average', 3.5));
+});
+
+it('keeps rating aggregates isolated per class with bounded query counts', function () {
+    config(['beta.prelaunch_enabled' => false]);
+    $f = createCourseReviewFixture();
+    $this->get(route('public.classes.show', $f['program']->slug))->assertInertia(fn (Assert $page) => $page
+        ->where('program.review_summary.count', 0)->where('program.review_summary.average', null));
+
+    $queries = [];
+    DB::listen(function ($query) use (&$queries) {
+        if (str_contains($query->sql, 'course_reviews')) $queries[] = $query->sql;
+    });
+    $queries = [];
+    $this->get(route('pricing'))->assertOk();
+    $baseline = count($queries);
+    foreach (range(1, 4) as $i) {
+        $other = ProgramPembelajaran::create(['title' => 'Other '.$i, 'slug' => 'other-'.$i, 'status' => 'published']);
+        $review = new UlasanKelas;
+        $review->forceFill(['user_id' => $f['user']->id, 'program_pembelajaran_id' => $other->id, 'rating' => 5, 'status' => 'published'])->save();
+    }
+    $queries = [];
+    $this->get(route('pricing'))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('programs', fn ($items) => collect($items)->firstWhere('id', $f['program']->id)['review_summary']['count'] === 0
+            && (float) collect($items)->firstWhere('slug', 'other-1')['review_summary']['average'] === 5.0));
+    expect(count($queries))->toBe($baseline)->and($baseline)->toBeGreaterThan(0);
+});
+
 it('allows public course reviews but keeps unpublished classes and write routes protected', function () {
     $f = createCourseReviewFixture();
     $this->get(route('public.classes.reviews', $f['program']->slug))->assertOk()->assertInertia(fn (Assert $page) => $page
