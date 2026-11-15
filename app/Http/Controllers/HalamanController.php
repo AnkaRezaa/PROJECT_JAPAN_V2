@@ -31,12 +31,38 @@ class HalamanController extends Controller
 {
     public function home(KelasPenggunaPayloadService $kelasPayload, PublicNewsService $newsService)
     {
+        return config('beta.prelaunch_enabled')
+            ? $this->releaseSoon()
+            : $this->renderLandingPage($kelasPayload, $newsService);
+    }
+
+    public function landingPreview(KelasPenggunaPayloadService $kelasPayload, PublicNewsService $newsService)
+    {
+        if (! config('beta.prelaunch_enabled')) {
+            return redirect()->route('home', [], 302);
+        }
+
+        return $this->renderLandingPage($kelasPayload, $newsService, preview: true);
+    }
+
+    private function renderLandingPage(KelasPenggunaPayloadService $kelasPayload, PublicNewsService $newsService, bool $preview = false)
+    {
         $activePopup = BroadcastPopup::query()
             ->active()
             ->forPage('landing_page')
             ->whereIn('target_audience', ['all', 'guest'])
             ->latest()
             ->first();
+
+        $seo = $this->seo(
+            'Belajar Bahasa Jepang Online dengan Kelas dan Latihan Interaktif',
+            config('seo.default_description'),
+            route($preview ? 'public.landing-preview' : 'home'),
+            structuredData: $preview ? [] : [$this->websiteSchema()]
+        );
+        if ($preview) {
+            $seo['robots'] = 'noindex, nofollow';
+        }
 
         return Inertia::render('LandingPage', [
             'programs' => $this->publicPricingPrograms($kelasPayload),
@@ -51,12 +77,7 @@ class HalamanController extends Controller
                 'cta_label' => $activePopup->cta_label,
                 'cta_url' => $activePopup->cta_url,
             ] : null,
-            'seo' => $this->seo(
-                'Belajar Bahasa Jepang Online dengan Kelas dan Latihan Interaktif',
-                config('seo.default_description'),
-                route('home'),
-                structuredData: [$this->websiteSchema()]
-            ),
+            'seo' => $seo,
         ]);
     }
 
@@ -65,7 +86,7 @@ class HalamanController extends Controller
         $seo = $this->seo(
             'TOKU-UP - Release Soon',
             'TOKU-UP segera hadir. Pendaftaran beta untuk 50 peserta akan segera dibuka.',
-            route('public.release-soon'),
+            route(request()->routeIs('home') ? 'home' : 'public.release-soon'),
         );
 
         $seo['robots'] = 'noindex, nofollow';
