@@ -31,10 +31,6 @@ class HalamanController extends Controller
 {
     public function home(KelasPenggunaPayloadService $kelasPayload, PublicNewsService $newsService)
     {
-        if (config('beta.prelaunch_enabled')) {
-            return $this->releaseSoon();
-        }
-
         $activePopup = BroadcastPopup::query()
             ->active()
             ->forPage('landing_page')
@@ -69,12 +65,10 @@ class HalamanController extends Controller
         $seo = $this->seo(
             'TOKU-UP - Release Soon',
             'TOKU-UP segera hadir. Pendaftaran beta untuk 50 peserta akan segera dibuka.',
-            route('home'),
+            route('public.release-soon'),
         );
 
-        if (request()->routeIs('public.release-soon')) {
-            $seo['robots'] = 'noindex, nofollow';
-        }
+        $seo['robots'] = 'noindex, nofollow';
 
         return Inertia::render('Public/ReleaseSoon', ['seo' => $seo]);
     }

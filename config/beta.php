@@ -1,7 +1,6 @@
 <?php
 
 return [
-    'prelaunch_enabled' => (bool) env('BETA_PRELAUNCH_ENABLED', false),
     'contextual_feedback_enabled' => (bool) env('BETA_CONTEXTUAL_FEEDBACK_ENABLED', false),
     'google_tag_manager' => [
         'enabled' => (bool) env('GTM_ENABLED', false),
