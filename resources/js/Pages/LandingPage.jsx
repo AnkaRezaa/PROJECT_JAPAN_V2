@@ -23,6 +23,7 @@ import SeoHead from '@/Components/SEO/SeoHead';
 import heroStaticImage from '@/../Images/Mount-Fuji-New.jpg';
 import { Link } from '@inertiajs/react';
 import NewsPreview from '@/Components/Features/News/NewsPreview';
+import CourseRatingSummary from '@/Components/Features/CourseReviews/CourseRatingSummary';
 
 const sampleFlashcards = [
   {
@@ -126,6 +127,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
     ...plan,
     programId: program.id,
     programTitle: program.title,
+    review_summary: program.review_summary,
   })));
   const reveal = reduceMotion
     ? {}
@@ -446,6 +448,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
                   )}
                   <p className="pr-24 text-[10px] font-bold uppercase tracking-wider text-emerald-300">{plan.programTitle}</p>
                   <h3 className="mt-2 text-lg font-black text-white">{plan.name}</h3>
+                  <CourseRatingSummary summary={plan.review_summary} title={plan.programTitle} tone="dark" />
                   <p className="mt-3 text-2xl font-black text-white">{plan.price_formatted}</p>
                   <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-medium text-slate-300">
                     <span className="rounded-md bg-white/10 px-2 py-0.5">{plan.scope_label}</span>

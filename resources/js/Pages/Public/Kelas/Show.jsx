@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CourseRatingSummary from '@/Components/Features/CourseReviews/CourseRatingSummary';
 import { Link, usePage } from '@inertiajs/react';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -114,6 +115,7 @@ export default function PublicClassShow({ program, seo = {} }) {
               </div>
 
               <h1 className="mt-5 max-w-3xl text-3xl font-black leading-tight sm:text-4xl lg:text-5xl">{program.title}</h1>
+              <CourseRatingSummary summary={program.review_summary} title={program.title} />
               {program.description && <p className="mt-5 max-w-2xl text-base leading-7 text-gray-600 sm:text-lg">{program.description}</p>}
               {program.instructor_name && (
                 <p className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-gray-700">
@@ -137,7 +139,6 @@ export default function PublicClassShow({ program, seo = {} }) {
                     Lihat Pilihan Paket
                   </a>
                 )}
-                <Link href={route('public.classes.reviews', program.slug)} className="inline-flex min-h-[44px] items-center px-3 text-sm font-bold text-brand-700 hover:underline">Ulasan</Link>
               </div>
             </div>
 

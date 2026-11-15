@@ -713,6 +713,8 @@ class HalamanController extends Controller
     private function publicPricingProgramQuery()
     {
         return ProgramPembelajaran::query()
+            ->withCount(['courseReviews as published_reviews_count' => fn ($query) => $query->published()])
+            ->withAvg(['courseReviews as published_reviews_average' => fn ($query) => $query->published()], 'rating')
             ->with(['level:id,level_name', 'curriculumTrack:id,code,name'])
             ->with(['modules' => fn ($query) => $query
                 ->where('status', 'published')
@@ -742,6 +744,11 @@ class HalamanController extends Controller
             'id' => $program->id,
             'title' => $program->title,
             'slug' => $program->slug,
+            'review_summary' => [
+                'count' => (int) $program->published_reviews_count,
+                'average' => $program->published_reviews_average !== null ? round((float) $program->published_reviews_average, 1) : null,
+                'url' => route('public.classes.reviews', $program->slug),
+            ],
             'description' => $program->description,
             'instructor_name' => $program->instructor_name,
             'thumbnail_url' => $kelasPayload->thumbnailUrl($program->thumbnail_url),

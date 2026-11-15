@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -15,6 +16,11 @@ class UlasanKelas extends Model
     protected $fillable = ['rating', 'comment'];
 
     protected $casts = ['rating' => 'integer', 'moderated_at' => 'datetime'];
+
+    public function scopePublished(Builder $query): Builder
+    {
+        return $query->where('status', 'published');
+    }
 
     public function user(): BelongsTo
     {

@@ -37,7 +37,7 @@ class UlasanKelasService
             'sort' => ['nullable', 'in:newest,highest,lowest'],
         ]);
         $sort = $filters['sort'] ?? 'newest';
-        $base = UlasanKelas::query()->where('program_pembelajaran_id', $program->id)->where('status', 'published');
+        $base = UlasanKelas::query()->published()->where('program_pembelajaran_id', $program->id);
         $distribution = (clone $base)->selectRaw('rating, COUNT(*) as total')->groupBy('rating')->pluck('total', 'rating');
         $count = (int) $distribution->sum();
         $sum = $distribution->sum(fn ($total, $rating) => (int) $rating * (int) $total);

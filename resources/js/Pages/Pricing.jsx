@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import CourseRatingSummary from '@/Components/Features/CourseReviews/CourseRatingSummary';
 import { Link, usePage } from '@inertiajs/react';
 import { motion, useReducedMotion } from 'framer-motion';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -162,6 +163,7 @@ function ClassCard({ program, auth }) {
         </div>
 
         <h2 className="mt-4 text-xl font-black leading-snug text-white">{program.title}</h2>
+        <CourseRatingSummary summary={program.review_summary} title={program.title} tone="dark" />
         {program.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-300">{program.description}</p>}
 
         <div className="mt-4 flex items-center gap-2 rounded-xl border border-brand-400/20 bg-brand-400/5 px-3 py-2 text-xs font-semibold text-brand-200">
