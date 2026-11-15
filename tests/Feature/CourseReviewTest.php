@@ -32,7 +32,6 @@ function createCourseReviewFixture(bool $access = true, bool $learned = true): a
 }
 
 it('exposes the same public rating on all marketing pages without leaking review content', function () {
-    config(['beta.prelaunch_enabled' => false]);
     $f = createCourseReviewFixture();
     foreach ([5, 4, 4] as $rating) {
         $review = new UlasanKelas;
@@ -61,7 +60,6 @@ it('exposes the same public rating on all marketing pages without leaking review
 });
 
 it('keeps rating aggregates isolated per class with bounded query counts', function () {
-    config(['beta.prelaunch_enabled' => false]);
     $f = createCourseReviewFixture();
     $this->get(route('public.classes.show', $f['program']->slug))->assertInertia(fn (Assert $page) => $page
         ->where('program.review_summary.count', 0)->where('program.review_summary.average', null));
