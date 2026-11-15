@@ -67,9 +67,12 @@ try {
         for (const dark of [false, true]) {
             await evaluate(`document.documentElement.classList.toggle('dark', ${dark})`);
             assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'No horizontal overflow at ' + width);
-            assert(await evaluate('document.querySelector("main button").disabled'), 'Registration stays disabled');
-            assert(await evaluate('Array.from(document.querySelectorAll("footer a")).every(a=>a.getAttribute("aria-label")==="Instagram TOKU-UP (tab baru)")'), 'Only Instagram can appear');
-            assert(await evaluate('document.querySelector("main h1").getBoundingClientRect().bottom < document.querySelector("main button").getBoundingClientRect().top'), 'Heading and CTA do not overlap');
+            assert(await evaluate('document.querySelector("[data-registration-button]").disabled'), 'Registration stays disabled');
+            assert.equal(await evaluate('document.querySelectorAll("[data-instagram-action]").length'), 1, 'Instagram is visible even before configuration');
+            assert(await evaluate(`(()=>{const item=document.querySelector('[data-instagram-action]');return item.tagName==='A'?item.getAttribute('aria-label')==='Instagram TOKU-UP (tab baru)'&&item.target==='_blank'&&new URL(item.href).hostname.replace(/^www\\./,'')==='instagram.com':item.disabled&&item.getAttribute('aria-label')==='Instagram belum tersedia'})()`), 'Instagram is an official link or explicitly disabled');
+            assert(await evaluate('document.querySelector("[data-registration-button]").parentElement === document.querySelector("[data-instagram-action]").parentElement'), 'Instagram is next to registration');
+            assert(await evaluate('document.querySelector("main h1").getBoundingClientRect().bottom < document.querySelector("[data-registration-button]").getBoundingClientRect().top'), 'Heading and CTA do not overlap');
+            assert(await evaluate('getComputedStyle(document.querySelector("section[aria-labelledby=release-heading] > div")).backgroundColor === "rgba(0, 0, 0, 0.2)"'), 'Photo is no longer washed out');
             assert(await evaluate('Array.from(document.querySelectorAll("a")).every(a=>!a.href.includes("forms.gle")&&!a.href.includes("docs.google.com"))'), 'No placeholder Google Form');
         }
         await evaluate("document.documentElement.classList.remove('dark')");
@@ -77,7 +80,7 @@ try {
         writeFileSync(path.join(temp, 'release-' + width + '.png'), Buffer.from(data, 'base64'));
     }
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ passed: true, screenshots: temp, checks: ['320/390/1366/1920 layouts', 'light/dark inherited preference', 'loaded logo/photo', 'disabled registration without fake URL', 'only configured Instagram'] }, null, 2));
+    console.log(JSON.stringify({ passed: true, screenshots: temp, checks: ['320/390/1366/1920 layouts', 'light/dark inherited preference', 'loaded logo/photo', 'disabled registration without fake URL', 'visible Instagram beside registration'] }, null, 2));
 } finally {
     if (socket?.readyState === WebSocket.OPEN) { try { await send('Browser.close', {}, null); } catch {} socket.close(); }
     if (chrome && chrome.exitCode === null) { await Promise.race([new Promise(resolve => chrome.once('exit', resolve)), sleep(3000)]); if (chrome.exitCode === null) chrome.kill(); }
