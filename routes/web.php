@@ -94,6 +94,7 @@ Route::get('/exams', function (Request $request) {
 
 // Authenticated Routes
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/user/beta/waiting', \App\Http\Controllers\User\BetaWaitingController::class)->middleware('role:user')->name('user.beta.waiting');
     Route::get('/user/referrals', [\App\Http\Controllers\User\ReferralController::class, 'index'])
         ->middleware('role:user')->name('user.referrals.index');
     Route::post('/user/referrals/code', [\App\Http\Controllers\User\ReferralController::class, 'store'])
@@ -144,6 +145,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('role:superadmin')->prefix('superadmin')->name('superadmin.')->group(function () {
         Route::get('/dashboard', SuperAdminBerandaController::class)->name('dashboard');
         Route::get('/users', SuperAdminPenggunaController::class)->name('users');
+        Route::put('/system/beta', [SuperAdminSistemController::class, 'updateBeta'])->name('system.beta.update');
         Route::get('/users/{user}', [SuperAdminPenggunaController::class, 'show'])->name('users.show');
         Route::patch('/users/{user}/status', [SuperAdminPenggunaController::class, 'updateStatus'])->name('users.status');
         Route::post('/users/{user}/reset-password', [SuperAdminPenggunaController::class, 'resetPassword'])->name('users.reset-password');

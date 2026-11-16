@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 import Card from '@/Components/UI/Card';
 import SocialLinksForm from '@/Components/Features/Admin/SocialLinksForm';
+import BetaSettingsForm from '@/Components/Features/Admin/BetaSettingsForm';
 import { DEFAULT_THEME, THEME_PRESETS } from '@/Components/theme/themes';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import DnsIcon from '@mui/icons-material/Dns';
@@ -55,6 +56,7 @@ export default function System({
     diagnostics = {},
     stats = [],
     socialLinks = {},
+    betaSettings = null,
     themeSettings = { activeTheme: DEFAULT_THEME, customTheme: {} },
     analyticsStatus = { gtm: { enabled: false, id: null }, ga4: { configured: false, url: null } },
 }) {
@@ -175,6 +177,7 @@ export default function System({
                 </section>
 
                 <SocialLinksForm links={socialLinks} />
+                {betaSettings && <BetaSettingsForm settings={betaSettings} />}
 
                 {/* System-like Telemetry Cards */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

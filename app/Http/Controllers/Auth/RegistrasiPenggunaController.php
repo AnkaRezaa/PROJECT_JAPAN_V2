@@ -26,6 +26,7 @@ class RegistrasiPenggunaController extends Controller
         $request->validate(['ref' => ['nullable', 'string', 'max:32']]);
 
         return Inertia::render('Auth/Register', [
+            'beta' => app(\App\Services\BetaAccessService::class)->payload(),
             'referralsEnabled' => (bool) config('referrals.enabled'),
             'referralCode' => config('referrals.enabled') ? app(ReferralService::class)->normalize($request->query('ref')) : '',
         ]);
@@ -49,6 +50,7 @@ class RegistrasiPenggunaController extends Controller
         $username = $request->input('username') ?: $request->input('name');
 
         $user = DB::transaction(function () use ($request, $username) {
+            $betaTimestamp = app(\App\Services\BetaAccessService::class)->registrationTimestamp();
             $referrerId = app(ReferralService::class)->resolve($request->input('referral_code'));
             $user = Pengguna::create([
                 'username' => $username,
@@ -56,7 +58,7 @@ class RegistrasiPenggunaController extends Controller
                 'password' => Hash::make($request->password),
                 'password_login_enabled' => true,
             ]);
-            $user->forceFill(['referred_by_user_id' => $referrerId])->save();
+            $user->forceFill(['referred_by_user_id' => $referrerId, 'beta_registered_at' => $betaTimestamp])->save();
 
             return $user;
         });

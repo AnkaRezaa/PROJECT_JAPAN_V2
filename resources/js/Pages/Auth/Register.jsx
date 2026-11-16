@@ -4,7 +4,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
 import LockIcon from '@mui/icons-material/Lock';
 
-export default function Register({ referralsEnabled = false, referralCode = '' }) {
+export default function Register({ referralsEnabled = false, referralCode = '', beta = {} }) {
+    const betaClosed = beta.enabled && (!beta.registration_open || beta.participants >= beta.limit);
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
@@ -38,6 +39,7 @@ export default function Register({ referralsEnabled = false, referralCode = '' }
                 <p className="mb-6 text-sm text-[#55616D]">Mulai perjalanan belajar bahasa Jepang Anda hari ini.</p>
 
                 <form onSubmit={submit} className="space-y-4">
+                    {(errors.beta || betaClosed) && <p role="alert" className="text-sm font-semibold text-red-700">{errors.beta || (beta.participants >= beta.limit ? 'Kuota beta penuh.' : 'Pendaftaran beta belum dibuka.')}</p>}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Nama Lengkap</label>
                         <div className="relative">
@@ -121,7 +123,7 @@ export default function Register({ referralsEnabled = false, referralCode = '' }
                         {errors.terms_accepted && <p className="mt-1 text-xs text-red-600">{errors.terms_accepted}</p>}
                     </div>
 
-                    <button type="submit" disabled={processing || !data.terms_accepted} className="flex min-h-[44px] w-full items-center justify-center rounded-xl bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                    <button type="submit" disabled={processing || !data.terms_accepted || betaClosed} className="flex min-h-[44px] w-full items-center justify-center rounded-xl bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
                         Daftar Akun (登録する)
                     </button>
 

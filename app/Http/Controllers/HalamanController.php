@@ -91,7 +91,7 @@ class HalamanController extends Controller
 
         $seo['robots'] = 'noindex, nofollow';
 
-        return Inertia::render('Public/ReleaseSoon', ['seo' => $seo]);
+        return Inertia::render('Public/ReleaseSoon', ['seo' => $seo, 'beta' => app(\App\Services\BetaAccessService::class)->payload()]);
     }
 
     public function news(Request $request, PublicNewsService $newsService)

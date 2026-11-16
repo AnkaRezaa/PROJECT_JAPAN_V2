@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->authenticateSessions();
 
         $middleware->web(append: [
+            \App\Http\Middleware\EnsureBetaAccess::class,
             HandleInertiaRequests::class,
             SearchEngineIndexing::class,
         ]);

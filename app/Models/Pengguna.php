@@ -74,6 +74,7 @@ class Pengguna extends Authenticatable implements MustVerifyEmailContract
     {
         return [
             'email_verified_at' => 'datetime',
+            'beta_registered_at' => 'datetime',
             'last_activity_date' => 'date',
             'suspended_at' => 'datetime',
             'scheduled_anonymization_at' => 'datetime',

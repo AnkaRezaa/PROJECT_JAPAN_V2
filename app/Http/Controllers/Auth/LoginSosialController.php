@@ -132,6 +132,7 @@ class LoginSosialController extends Controller
                         DB::table('password_reset_tokens')->where('email', $user->email)->delete();
                     }
                 } else {
+                    $betaTimestamp = app(\App\Services\BetaAccessService::class)->registrationTimestamp();
                     if ($referral && ($referral['expires_at'] ?? 0) <= now()->timestamp) {
                         throw ValidationException::withMessages(['referral_code' => 'Kode undangan kedaluwarsa. Silakan mulai kembali.']);
                     }
@@ -149,7 +150,7 @@ class LoginSosialController extends Controller
                         'avatar' => $googleUser->getAvatar(),
                     ]);
 
-                    $user->forceFill(['email_verified_at' => now(), 'referred_by_user_id' => $referrerId])->save();
+                    $user->forceFill(['email_verified_at' => now(), 'referred_by_user_id' => $referrerId, 'beta_registered_at' => $betaTimestamp])->save();
                 }
 
                 return [$user, $recovered, false];

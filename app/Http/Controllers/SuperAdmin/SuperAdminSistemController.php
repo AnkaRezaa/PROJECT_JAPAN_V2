@@ -98,6 +98,7 @@ class SuperAdminSistemController extends SuperAdminDasarController
             'diagnostics' => $systemDiagnostics,
             'stats' => [],
             'themeSettings' => $this->themeSettings(),
+            'betaSettings' => app(\App\Services\BetaAccessService::class)->payload(),
             'socialLinks' => app(SocialLinksSettings::class)->all(),
             'analyticsStatus' => [
                 'gtm' => [
@@ -131,6 +132,24 @@ class SuperAdminSistemController extends SuperAdminDasarController
         });
 
         return back()->with('success', 'Medsos tersimpan.');
+    }
+
+    public function updateBeta(Request $request, \App\Services\BetaAccessService $beta)
+    {
+        $input = $request->validate([
+            'enabled' => ['required', 'boolean'], 'registration_open' => ['required', 'boolean'],
+            'opens_at' => ['nullable', 'date_format:Y-m-d\TH:i'], 'open_now' => ['sometimes', 'boolean'],
+            'confirm_disable' => ['sometimes', 'boolean'],
+        ]);
+        DB::transaction(function () use ($request, $beta, $input) {
+            $old = $beta->settings(true);
+            if ($old['enabled'] && ! $input['enabled'] && ! ($input['confirm_disable'] ?? false)) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['enabled' => 'Konfirmasi penonaktifan mode beta diperlukan.']);
+            }
+            $beta->update($input);
+            $this->logActivity($request, 'beta.updated', 'system', null, 'Pengaturan beta diperbarui.');
+        });
+        return back()->with('success', 'Pengaturan beta tersimpan.');
     }
 
     public function runMaintenance(Request $request)
