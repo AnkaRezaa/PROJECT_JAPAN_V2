@@ -458,6 +458,7 @@ class HalamanController extends Controller
         );
 
         return Inertia::render('User/Profil/Profil', [
+            'referralsEnabled' => config('referrals.enabled') && app(\App\Services\ReferralService::class)->eligible($user),
             'deletionAuth' => [
                 'password_login_enabled' => $user?->password_login_enabled !== false,
                 'google_reauthenticated' => filled($user?->google_id)

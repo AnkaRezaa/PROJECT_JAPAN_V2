@@ -17,6 +17,7 @@ export default function DetailUser({ student, filters = {}, studentActivitySerie
     return (
         <AuthenticatedLayout>
             <Head title={`${student.username} - Detail Murid`} />
+            {student.referral && <section className="mx-auto max-w-7xl border-b border-gray-200 px-4 py-4 text-sm dark:border-gray-700"><h2 className="font-bold">Referral</h2><p className="mt-2">Diundang oleh: {student.referral.referrer || '-'}</p><p>Terdaftar: {student.referral.registered} · Terverifikasi: {student.referral.verified}</p></section>}
             <div className="space-y-5 px-4 py-5 sm:px-6 lg:px-8">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-center gap-4">

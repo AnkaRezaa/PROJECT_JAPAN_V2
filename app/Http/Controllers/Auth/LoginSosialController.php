@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Pengguna;
 use App\Models\RiwayatLogin;
+use App\Services\ReferralService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Laravel\Socialite\Facades\Socialite;
 
 class LoginSosialController extends Controller
@@ -32,6 +34,17 @@ class LoginSosialController extends Controller
 
     public function redirectToGoogle(Request $request): RedirectResponse
     {
+        $request->session()->forget('referrals.google');
+        $request->validate(['referral_code' => ['nullable', 'string', 'max:32']]);
+        $code = app(ReferralService::class)->normalize($request->input('referral_code'));
+        if ($code !== '') {
+            try {
+                DB::transaction(fn () => app(ReferralService::class)->resolve($code));
+            } catch (ValidationException $exception) {
+                return redirect()->route('register', ['ref' => $code])->withErrors($exception->errors());
+            }
+            $request->session()->put('referrals.google', ['code' => $code, 'expires_at' => now()->addDay()->timestamp]);
+        }
         $request->session()->put(self::OAUTH_INTENT, self::OAUTH_INTENT_LOGIN);
         $request->session()->forget([
             self::OAUTH_INTENT_USER_ID,
@@ -50,6 +63,7 @@ class LoginSosialController extends Controller
     {
         $intent = (string) $request->session()->get(self::OAUTH_INTENT, '');
         $intentUserId = (int) $request->session()->get(self::OAUTH_INTENT_USER_ID, 0);
+        $referral = $request->session()->pull('referrals.google');
 
         if (! in_array($intent, [self::OAUTH_INTENT_LOGIN, self::OAUTH_INTENT_DELETE_ACCOUNT], true)) {
             return $this->oauthContextFailure();
@@ -79,62 +93,70 @@ class LoginSosialController extends Controller
             ]);
         }
 
-        [$user, $recovered, $googleConflict] = DB::transaction(function () use ($googleUser, $email): array {
-            $user = Pengguna::where('google_id', $googleUser->getId())->lockForUpdate()->first()
-                ?? Pengguna::where('email', $email)->lockForUpdate()->first();
+        try {
+            [$user, $recovered, $googleConflict] = DB::transaction(function () use ($googleUser, $email, $referral): array {
+                $user = Pengguna::where('google_id', $googleUser->getId())->lockForUpdate()->first()
+                    ?? Pengguna::where('email', $email)->lockForUpdate()->first();
 
-            if ($user && $user->status !== 'active') {
-                return [$user, false, false];
-            }
+                if ($user && $user->status !== 'active') {
+                    return [$user, false, false];
+                }
 
-            if ($user && filled($user->google_id)
-                && ! hash_equals((string) $user->google_id, (string) $googleUser->getId())) {
-                return [$user, false, true];
-            }
+                if ($user && filled($user->google_id)
+                    && ! hash_equals((string) $user->google_id, (string) $googleUser->getId())) {
+                    return [$user, false, true];
+                }
 
-            $recovered = $user && ! $user->hasVerifiedEmail() && blank($user->google_id);
+                $recovered = $user && ! $user->hasVerifiedEmail() && blank($user->google_id);
 
-            if ($user) {
-                $attributes = [
-                    'google_id' => $user->google_id ?: $googleUser->getId(),
-                    'avatar' => $googleUser->getAvatar(),
-                    'email_verified_at' => $user->email_verified_at ?: now(),
-                ];
-
-                if ($recovered) {
+                if ($user) {
                     $attributes = [
-                        ...$attributes,
-                        'auth_provider' => 'google',
-                        'password_login_enabled' => false,
-                        'password' => Hash::make(Str::random(64)),
-                        'remember_token' => Str::random(60),
+                        'google_id' => $user->google_id ?: $googleUser->getId(),
+                        'avatar' => $googleUser->getAvatar(),
+                        'email_verified_at' => $user->email_verified_at ?: now(),
                     ];
+
+                    if ($recovered) {
+                        $attributes = [
+                            ...$attributes,
+                            'auth_provider' => 'google',
+                            'password_login_enabled' => false,
+                            'password' => Hash::make(Str::random(64)),
+                            'remember_token' => Str::random(60),
+                        ];
+                    }
+
+                    $user->forceFill($attributes)->save();
+
+                    if ($recovered) {
+                        DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+                    }
+                } else {
+                    if ($referral && ($referral['expires_at'] ?? 0) <= now()->timestamp) {
+                        throw ValidationException::withMessages(['referral_code' => 'Kode undangan kedaluwarsa. Silakan mulai kembali.']);
+                    }
+                    $referrerId = app(ReferralService::class)->resolve($referral['code'] ?? null);
+                    $user = new Pengguna([
+                        'username' => $this->usernameFromGoogle($googleUser->getName(), $email),
+                        'email' => $email,
+                        'password' => Hash::make(Str::random(40)),
+                        'password_login_enabled' => false,
+                        'role' => 'user',
+                        'subscription_status' => 'free',
+                        'status' => 'active',
+                        'auth_provider' => 'google',
+                        'google_id' => $googleUser->getId(),
+                        'avatar' => $googleUser->getAvatar(),
+                    ]);
+
+                    $user->forceFill(['email_verified_at' => now(), 'referred_by_user_id' => $referrerId])->save();
                 }
 
-                $user->forceFill($attributes)->save();
-
-                if ($recovered) {
-                    DB::table('password_reset_tokens')->where('email', $user->email)->delete();
-                }
-            } else {
-                $user = new Pengguna([
-                    'username' => $this->usernameFromGoogle($googleUser->getName(), $email),
-                    'email' => $email,
-                    'password' => Hash::make(Str::random(40)),
-                    'password_login_enabled' => false,
-                    'role' => 'user',
-                    'subscription_status' => 'free',
-                    'status' => 'active',
-                    'auth_provider' => 'google',
-                    'google_id' => $googleUser->getId(),
-                    'avatar' => $googleUser->getAvatar(),
-                ]);
-
-                $user->forceFill(['email_verified_at' => now()])->save();
-            }
-
-            return [$user, $recovered, false];
-        });
+                return [$user, $recovered, false];
+            });
+        } catch (ValidationException $exception) {
+            return redirect()->route('register', ['ref' => $referral['code'] ?? ''])->withErrors($exception->errors());
+        }
 
         if ($googleConflict) {
             return redirect()->route('login')->withErrors([
@@ -188,6 +210,7 @@ class LoginSosialController extends Controller
 
     public function redirectForAccountDeletion(Request $request): RedirectResponse
     {
+        $request->session()->forget('referrals.google');
         $user = $request->user();
 
         abort_unless(filled($user->google_id), 403);

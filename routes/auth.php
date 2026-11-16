@@ -25,6 +25,7 @@ Route::middleware('guest')->group(function () {
         ->middleware('throttle:login');
 
     Route::get('auth/google/redirect', [LoginSosialController::class, 'redirectToGoogle'])
+        ->middleware('throttle:guest-sensitive')
         ->name('auth.google.redirect');
 
     Route::get('forgot-password', [LinkResetPasswordController::class, 'create'])

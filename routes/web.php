@@ -94,6 +94,10 @@ Route::get('/exams', function (Request $request) {
 
 // Authenticated Routes
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/user/referrals', [\App\Http\Controllers\User\ReferralController::class, 'index'])
+        ->middleware('role:user')->name('user.referrals.index');
+    Route::post('/user/referrals/code', [\App\Http\Controllers\User\ReferralController::class, 'store'])
+        ->middleware(['role:user', 'throttle:10,1'])->name('user.referrals.code');
     // Profile
     Route::get('/profile', [HalamanController::class, 'userProfile'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

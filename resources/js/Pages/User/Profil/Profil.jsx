@@ -180,7 +180,7 @@ const resolveThemeLabel = () => {
     return 'System';
 };
 
-export default function Profile({ recentTransactions = [], achievements = [], gamificationSettings = {}, deletionAuth = {} }) {
+export default function Profile({ recentTransactions = [], achievements = [], gamificationSettings = {}, deletionAuth = {}, referralsEnabled = false }) {
     const { user } = usePage().props.auth;
     const passwordLoginEnabled = deletionAuth.password_login_enabled !== false;
     const googleReauthenticated = Boolean(deletionAuth.google_reauthenticated);
@@ -340,6 +340,7 @@ export default function Profile({ recentTransactions = [], achievements = [], ga
                 <JapanesePattern />
 
                 <div className="max-w-6xl mx-auto relative z-10">
+                    {referralsEnabled && <div className="mb-5 flex justify-end"><Link href={route('user.referrals.index')} className="inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-brand-700 underline underline-offset-4 dark:text-brand-300"><PersonIcon fontSize="small" />Undang Teman</Link></div>}
                     {/* Bento Grid Container */}
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                         {/* ── SIDEBAR KIRI ── */}

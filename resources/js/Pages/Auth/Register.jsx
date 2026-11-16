@@ -4,13 +4,14 @@ import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
 import LockIcon from '@mui/icons-material/Lock';
 
-export default function Register() {
+export default function Register({ referralsEnabled = false, referralCode = '' }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
         password: '',
         password_confirmation: '',
         terms_accepted: false,
+        referral_code: referralCode,
     });
 
     const submit = (e) => {
@@ -67,6 +68,11 @@ export default function Register() {
                         {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
                     </div>
 
+                    {referralsEnabled && <div>
+                        <label htmlFor="referral-code" className="mb-1.5 block text-sm font-medium text-gray-700">Kode referral</label>
+                        <input id="referral-code" value={data.referral_code} maxLength={32} placeholder="Opsional" autoCapitalize="characters" spellCheck={false} onChange={(event) => setData('referral_code', event.target.value.toUpperCase())} aria-invalid={Boolean(errors.referral_code)} aria-describedby={errors.referral_code ? 'referral-error' : undefined} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm text-gray-900" />
+                        {errors.referral_code && <p id="referral-error" className="mt-1 text-xs text-red-600">{errors.referral_code}</p>}
+                    </div>}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Kata Sandi</label>
@@ -125,7 +131,7 @@ export default function Register() {
                     </div>
 
                    <div>
-                        <a href={route('auth.google.redirect')} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-2.5 text-sm font-bold text-gray-700 shadow-sm no-underline transition-all hover:border-gray-400 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
+                        <a href={route('auth.google.redirect', referralsEnabled && data.referral_code ? { referral_code: data.referral_code } : {})} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-2.5 text-sm font-bold text-gray-700 shadow-sm no-underline transition-all hover:border-gray-400 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
                             <img src="https://img.icons8.com/?size=100&id=V5cGWnc9R4xj&format=png&color=000000" className="w-5 h-5" alt="" />
                             <span>Daftar dengan Google</span>
                         </a>

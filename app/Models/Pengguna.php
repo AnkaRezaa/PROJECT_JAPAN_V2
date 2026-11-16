@@ -59,6 +59,8 @@ class Pengguna extends Authenticatable implements MustVerifyEmailContract
      * @var list<string>
      */
     protected $hidden = [
+        'referral_code',
+        'referred_by_user_id',
         'password',
         'remember_token',
     ];

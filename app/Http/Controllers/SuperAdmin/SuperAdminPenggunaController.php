@@ -138,6 +138,10 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
             'filters' => ['period' => $period],
             'studentActivitySeries' => $activity,
             'student' => [
+                'referral' => [
+                    ...app(\App\Services\ReferralService::class)->summary($user),
+                    'referrer' => Pengguna::whereKey($user->referred_by_user_id)->value('username'),
+                ],
                 'id' => $user->id,
                 'username' => $user->username,
                 'email' => $user->email,
