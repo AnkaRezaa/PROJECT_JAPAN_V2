@@ -61,7 +61,7 @@ export default function GuestNavbar() {
                 }}
             />
             <div className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-2 sm:px-6 sm:py-2.5 lg:px-8">
-                <ApplicationLogo />
+                <ApplicationLogo adaptive={false} />
                 <ul className="hidden list-none items-center gap-6 md:flex lg:gap-7">
                     {navigationItems.map((item) => (
                         <li key={item.href}>

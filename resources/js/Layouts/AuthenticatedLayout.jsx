@@ -1,3 +1,4 @@
+import BrandWordmark from '@/Components/Navigation/BrandWordmark';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import Tooltip from '@mui/material/Tooltip';
@@ -837,7 +838,7 @@ export default function AuthenticatedLayout({ children }) {
                         <MenuIcon sx={{ fontSize: 26 }} />
                     </button>
                     <div className="min-w-0">
-                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="block h-5 w-auto max-w-[9rem] object-contain object-left dark:invert dark:hue-rotate-180 dark:brightness-110" />
+                        <BrandWordmark className="block h-5 w-auto max-w-[9rem] object-contain object-left   " />
                         <span className="block truncate text-[11px] font-semibold text-gray-700 dark:text-gray-300">{workspaceTitle}</span>
                     </div>
                 </div>
@@ -885,7 +886,7 @@ export default function AuthenticatedLayout({ children }) {
                 <div className="relative mb-4 border-b border-gray-100 dark:border-gray-800">
                     <div className="flex h-14 items-center justify-between px-3 lg:hidden">
                         <div className="flex min-w-0 items-center gap-2.5">
-                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-8 w-auto max-w-[10rem] shrink-0 object-contain object-left dark:invert dark:hue-rotate-180 dark:brightness-110" />
+                            <BrandWordmark className="h-8 w-auto max-w-[10rem] shrink-0 object-contain object-left   " />
                         </div>
                         <button
                             type="button"
@@ -897,9 +898,9 @@ export default function AuthenticatedLayout({ children }) {
                         </button>
                     </div>
                     <div className={`hidden h-14 items-center px-3 lg:flex ${isExpanded ? 'gap-3' : 'justify-center'}`}>
-                        <img src="/images/logos/toku-up-mark.png" alt="TOKU-UP" className={`${isExpanded ? 'h-8 w-8' : 'h-7 w-7'} shrink-0 object-contain rounded-full transition-all duration-300 dark:ring-1 dark:ring-white/20 dark:shadow-[0_0_12px_rgba(34,197,94,0.35)]`} />
+                        <img src="/images/logos/tokuup-mark.png" alt="TOKU-UP" className={`${isExpanded ? 'h-8 w-8' : 'h-7 w-7'} shrink-0 object-contain rounded-full transition-all duration-300 dark:ring-1 dark:ring-white/20 dark:shadow-[0_0_12px_rgba(34,197,94,0.35)]`} />
                         {isExpanded && (
-                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-6 w-auto max-w-[7.5rem] object-contain object-left dark:invert dark:hue-rotate-180 dark:brightness-110 animate-in fade-in slide-in-from-left-2 duration-300" />
+                            <BrandWordmark className="h-6 w-auto max-w-[7.5rem] object-contain object-left    animate-in fade-in slide-in-from-left-2 duration-300" />
                         )}
                     </div>
                     <button
@@ -1076,7 +1077,7 @@ export default function AuthenticatedLayout({ children }) {
             <div className={`flex-1 w-full transition-all duration-300 ${isExpanded ? 'lg:ml-[224px]' : 'lg:ml-[80px]'}`}>
                 <header className="sticky top-0 z-20 hidden min-h-[56px] items-center justify-between border-b border-gray-200/80 bg-white/85 px-5 shadow-sm backdrop-blur-xl transition-colors duration-300 dark:border-gray-800 dark:bg-gray-950/80 lg:flex">
                     <div className="min-w-0">
-                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-4 w-auto max-w-[7.5rem] object-contain object-left dark:invert dark:hue-rotate-180 dark:brightness-110" />
+                        <BrandWordmark className="h-4 w-auto max-w-[7.5rem] object-contain object-left   " />
                         <p className="truncate text-sm font-semibold text-slate-600 dark:text-slate-300">
                             {workspaceTitle}
                         </p>

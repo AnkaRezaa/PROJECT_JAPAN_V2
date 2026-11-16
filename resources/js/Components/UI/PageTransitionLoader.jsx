@@ -111,7 +111,7 @@ export default function PageTransitionLoader() {
                 <div className="h-20 w-20 rounded-full border-2 border-emerald-500/20 border-t-emerald-600 animate-spin" />
                 <div className="absolute inset-0 m-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/60 dark:bg-slate-900/60 shadow-sm shadow-emerald-500/10">
                     <img
-                        src="/images/logos/toku-up-mark.png"
+                        src="/images/logos/tokuup-mark.png"
                         alt="TOKU-UP"
                         className="h-9 w-9 object-contain drop-shadow-sm animate-pulse"
                     />

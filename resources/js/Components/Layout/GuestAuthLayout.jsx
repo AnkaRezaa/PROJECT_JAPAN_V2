@@ -1,3 +1,4 @@
+import BrandWordmark from '@/Components/Navigation/BrandWordmark';
 import { Link } from '@inertiajs/react';
 import fujiImage from '@/../Images/Mount-Fuji-New.jpg';
 
@@ -16,7 +17,7 @@ export default function GuestAuthLayout({ children }) {
 
                 <div className="relative z-10 flex min-h-full w-full flex-col justify-between">
                     <Link href="/" aria-label="TOKU-UP - Beranda" className="flex items-center gap-2.5 no-underline">
-                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-10 w-auto object-contain invert hue-rotate-180 brightness-110" />
+                        <BrandWordmark light className="h-10 w-auto object-contain   " />
                     </Link>
 
                     <div className="max-w-xl pb-8">
@@ -48,7 +49,7 @@ export default function GuestAuthLayout({ children }) {
                 <div className="relative overflow-hidden border-b border-[#9DDCB3] bg-[#D2F0DD] px-5 py-4 sm:p-6 lg:hidden">
                     <div className="absolute -right-5 -top-8 text-8xl font-black text-[#2D3742]/5" aria-hidden="true">N3</div>
                     <Link href="/" aria-label="TOKU-UP - Beranda" className="relative flex items-center gap-2.5 no-underline">
-                        <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-8 w-auto object-contain" />
+                        <BrandWordmark adaptive={false} className="h-8 w-auto object-contain" />
                     </Link>
                     <p className="relative mt-2 text-xs font-semibold tracking-wide text-[#55616D]">JLPT N3 STRUCTURED LEARNING</p>
                 </div>

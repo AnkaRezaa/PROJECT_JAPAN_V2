@@ -55,9 +55,9 @@
         </script>
 
         <!-- Favicon TOKU-UP -->
-        <link rel="icon" type="image/png" href="{{ asset('images/logos/toku-up-mark.png') }}" />
-        <link rel="shortcut icon" href="{{ asset('images/logos/toku-up-mark.png') }}" />
-        <link rel="apple-touch-icon" href="{{ asset('images/logos/toku-up-mark.png') }}" />
+        <link rel="icon" type="image/png" href="{{ asset('images/logos/tokuup-mark.png') }}" />
+        <link rel="shortcut icon" href="{{ asset('images/logos/tokuup-mark.png') }}" />
+        <link rel="apple-touch-icon" href="{{ asset('images/logos/tokuup-mark.png') }}" />
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">

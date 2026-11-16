@@ -1,3 +1,4 @@
+import BrandWordmark from '@/Components/Navigation/BrandWordmark';
 import { Link } from '@inertiajs/react';
 import SupportChatWidget from '@/Components/Marketing/SupportChatWidget';
 import SocialLinks from '@/Components/Marketing/SocialLinks';
@@ -27,7 +28,7 @@ export default function Footer() {
                     {/* Brand */}
                     <div className="col-span-1 md:col-span-1">
                         <div className="flex items-center gap-3 text-white mb-6">
-                            <img src="/images/logos/toku-up-wordmark.png" alt="TOKU-UP" className="h-10 w-auto object-contain invert hue-rotate-180 brightness-110" />
+                            <BrandWordmark light className="h-10 w-auto object-contain   " />
                         </div>
                         <p className="text-sm leading-relaxed mb-6">
                             Platform belajar Bahasa Jepang berbasis gamifikasi dengan kurikulum standar JLPT internasional.
