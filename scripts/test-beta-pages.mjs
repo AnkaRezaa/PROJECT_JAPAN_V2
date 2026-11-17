@@ -20,6 +20,8 @@ const browser = process.env.CHROME_PATH || ['C:/Program Files/Google/Chrome/Appl
 assert(browser);
 const temp = mkdtempSync(path.join(tmpdir(), 'tokuup-beta-'));
 const pending = new Map(), errors = [];
+let submitMode = 'validation';
+const submissions = [];
 let chrome, socket, session, sequence = 0, view = 'User/Referral/Index';
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 function send(method, params = {}, sessionId = session) {
@@ -55,6 +57,12 @@ try {
         if (message.method === 'Fetch.requestPaused') {
             const settings = { enabled: true, registration_open: true, participants: 12, limit: 50, opens_at: '2026-12-01T02:00:00+00:00', opened_at: null, released: false };
             const fixture = { ...page, component: view, url: '/__beta-fixture', props: { ...page.props, auth: { user: view === 'Public/ReleaseSoon' || view === 'Auth/Register' ? null : { id: 123, username: 'Beta Browser Test', email: 'fixture@example.com', role: view.startsWith('SuperAdmin') ? 'superadmin' : 'user', status: 'active', email_verified_at: '2026-11-16', xp: 0, level: 1, streak_count: 0 } }, beta: settings, betaSettings: settings, seo: {}, flash: {}, socialLinks: {} } };
+            if (message.params.request.method === 'PUT') {
+                submissions.push(JSON.parse(message.params.request.postData || '{}'));
+                fixture.props.errors = submitMode === 'validation' ? { opens_at: 'Jadwal buka harus berupa tanggal dan jam yang valid (WIB).' } : {};
+                await send('Fetch.fulfillRequest', { requestId: message.params.requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'X-Inertia', value: 'true' }], body: Buffer.from(JSON.stringify(fixture)).toString('base64') });
+                return;
+            }
             const html = template.replace(attribute[0], 'data-page="' + encodeXML(JSON.stringify(fixture)) + '"');
             await send('Fetch.fulfillRequest', { requestId: message.params.requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'text/html; charset=utf-8' }], body: Buffer.from(html).toString('base64') });
         }
@@ -62,7 +70,7 @@ try {
     const { targetInfos } = await send('Target.getTargets', {}, null);
     ({ sessionId: session } = await send('Target.attachToTarget', { targetId: targetInfos.find(target => target.type === 'page').targetId, flatten: true }, null));
     await send('Page.enable'); await send('Runtime.enable');
-    await send('Fetch.enable', { patterns: [{ urlPattern: '*__beta-fixture*', resourceType: 'Document', requestStage: 'Request' }] });
+    await send('Fetch.enable', { patterns: [{ urlPattern: '*__beta-fixture*', resourceType: 'Document', requestStage: 'Request' }, { urlPattern: '*superadmin/system/beta', requestStage: 'Request' }] });
     await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
     for (const width of [320, 390, 768, 1366]) {
         await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 500 });
@@ -82,6 +90,15 @@ try {
                 assert(await evaluate('document.querySelector("[data-registration-button]").tagName === "A"'));
                 assert(await evaluate('!Array.from(document.images).some(i=>i.src.includes("Mount-Fuji"))'));
             } else if (view === 'SuperAdmin/Sistem/Sistem') {
+                submitMode = 'validation';
+                await evaluate('document.querySelector("input[type=datetime-local]").closest("form").requestSubmit()');
+                await waitFor('document.querySelector("#beta-opens-at-error")');
+                assert.equal(submissions.at(-1).opens_at, '2026-12-01T09:00');
+                assert(await evaluate('document.querySelector("input[type=datetime-local]").getAttribute("aria-invalid")==="true"'));
+                submitMode = 'success';
+                await evaluate('document.querySelector("input[type=datetime-local]").closest("form").requestSubmit()');
+                await waitFor('Array.from(document.querySelectorAll("[role=status]")).some(el=>el.textContent.includes("Pengaturan beta tersimpan."))');
+                assert(!('open_now' in submissions.at(-1)));
                 await evaluate('Array.from(document.querySelectorAll("button")).find(b=>b.textContent.includes("Buka Sekarang")).click()');
                 await waitFor('document.querySelector("[role=alertdialog]")');
                 await evaluate('Array.from(document.querySelectorAll("[role=alertdialog] button")).find(b=>b.textContent.includes("Batal")).click()');
