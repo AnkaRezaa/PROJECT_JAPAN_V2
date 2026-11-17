@@ -14,6 +14,12 @@ Superadmin -> Sistem -> Beta:
 
 ## Perilaku
 
+- Tombol Daftar Beta di Coming Soon menuju `/daftar-beta`, bukan `/register`. Form sementara ini menyimpan akun asli tanpa login otomatis, kemudian mengarahkan ke `/daftar-beta/selesai`. Form reguler `/register` tetap memakai alur existing.
+- Form beta meminta nama, email, kata sandi, konfirmasi, dan persetujuan ketentuan. Kode referral opsional mengikuti pengaturan existing. Tidak ada tombol Google pada form prapendaftaran ini.
+- Email peserta beta menggunakan tautan signed kedaluwarsa `/daftar-beta/verifikasi/{id}/{hash}` yang bisa dibuka tanpa login. Verifikasi hanya mengonfirmasi email, tidak membuat sesi login atau memberi akses belajar. Pengiriman awal menggunakan satu email verifikasi, tanpa email sambutan tambahan.
+- Konfirmasi dan kirim ulang hanya membaca akun yang tersimpan pada sesi browser pendaftaran atau sesi setelah tautan signed berhasil dibuka. ID/email yang dikirim client tidak dapat memilih akun lain. Kirim ulang memakai cooldown 3 menit dan maksimal 5 pengiriman per 2 jam, termasuk email awal.
+- Jika layanan email gagal, akun tetap tersimpan sebagai belum terverifikasi dan halaman konfirmasi menampilkan pesan gangguan. Pengguna dapat mengirim ulang nanti tanpa mendaftar lagi.
+- Sifat sementara: mematikan **Pendaftaran** menutup form untuk akun baru. Ketika Mode beta dimatikan atau akses beta sudah dibuka (manual/jadwal), GET `/daftar-beta` kembali ke `/`, dan POST ditolak, bukan berubah menjadi registrasi normal. Konfirmasi, verifikasi, dan kirim ulang peserta lama tetap tersedia; akun tidak dihapus. Halaman konfirmasi menyediakan tombol Masuk hanya setelah email terverifikasi dan akses dibuka.
 - Hanya akun baru yang mendaftar saat Mode beta aktif memiliki penanda beta. Akun lama, admin dan mentor tidak diberi penanda otomatis.
 - Email dan Google memakai pengaman kuota server yang sama. Login/pemulihan Google untuk akun existing tidak mengambil slot.
 - Sebelum pembukaan, peserta boleh mengakses halaman publik, akun/profil, verifikasi, password dan logout. Endpoint aplikasi lain ditolak sebelum controller, termasuk kuis, ujian, pembayaran, token live dan redeem access key.
@@ -29,5 +35,7 @@ Superadmin -> Sistem -> Beta:
 Tes concurrency memakai dua proses PHP pada MySQL `Project_japan_test` lokal, dengan fixture committed dan cleanup. Jangan menjalankannya bersamaan dengan suite lain pada database testing yang sama. Worker tidak ditujukan untuk database produksi.
 
 `node scripts/test-beta-pages.mjs` menguji komponen produksi dengan fixture respons browser, bukan membuat akun pada database aplikasi. `KEEP_BETA_SCREENSHOTS=1` mempertahankan screenshot sementara untuk ditinjau; hapus sesudahnya.
+
+`php artisan test --compact tests/Feature/Auth/BetaRegistrationTest.php` memverifikasi prapendaftaran guest, validasi, kuota/penutupan, link signed/idempotensi/expiry, isolasi sesi, cooldown, dan pemulihan kegagalan email. `BETA_FORMS_ONLY=1` membatasi harness browser pada Coming Soon dan kedua halaman prapendaftaran; harness juga memeriksa submit form dan error inline.
 
 Keterbatasan: email terverifikasi tidak membuktikan satu akun per orang. Tidak ada pelepasan slot pending otomatis, pengiriman pengumuman massal, atau pemberian kelas beta gratis. Tidak ada klaim uji kapasitas produksi.

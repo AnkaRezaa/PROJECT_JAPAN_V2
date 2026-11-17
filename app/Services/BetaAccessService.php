@@ -38,9 +38,13 @@ class BetaAccessService
     }
 
     // Must be called inside the same transaction that creates the user.
-    public function registrationTimestamp(): ?Carbon
+    public function registrationTimestamp(bool $betaOnly = false): ?Carbon
     {
         $settings = $this->settings(true);
+        if ($betaOnly && (! $settings['enabled'] || $this->released($settings))) {
+            throw ValidationException::withMessages(['beta' => 'Prapendaftaran beta sudah ditutup.']);
+        }
+
         if (! $settings['enabled']) {
             return null;
         }

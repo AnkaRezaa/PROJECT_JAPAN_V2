@@ -56,7 +56,21 @@ try {
         if (message.method === 'Runtime.exceptionThrown') errors.push(message.params.exceptionDetails.text);
         if (message.method === 'Fetch.requestPaused') {
             const settings = { enabled: true, registration_open: true, participants: 12, limit: 50, opens_at: '2026-12-01T02:00:00+00:00', opened_at: null, released: false };
-            const fixture = { ...page, component: view, url: '/__beta-fixture', props: { ...page.props, auth: { user: view === 'Public/ReleaseSoon' || view === 'Auth/Register' ? null : { id: 123, username: 'Beta Browser Test', email: 'fixture@example.com', role: view.startsWith('SuperAdmin') ? 'superadmin' : 'user', status: 'active', email_verified_at: '2026-11-16', xp: 0, level: 1, streak_count: 0 } }, beta: settings, betaSettings: settings, seo: {}, flash: {}, socialLinks: {} } };
+            const fixture = { ...page, component: view, url: '/__beta-fixture', props: { ...page.props, auth: { user: view.startsWith('Public/') || view === 'Auth/Register' ? null : { id: 123, username: 'Beta Browser Test', email: 'fixture@example.com', role: view.startsWith('SuperAdmin') ? 'superadmin' : 'user', status: 'active', email_verified_at: '2026-11-16', xp: 0, level: 1, streak_count: 0 } }, beta: settings, betaSettings: settings, registration: { email: 'fixture@example.com', verified: false }, released: false, status: null, sentAt: null, errors: {}, seo: {}, flash: {}, socialLinks: {} } };
+            if (message.params.request.method === 'POST') {
+                const payload = JSON.parse(message.params.request.postData || '{}');
+                submissions.push(payload);
+                if (submitMode === 'beta-validation') {
+                    fixture.props.errors = { name: 'Nama wajib diisi.', terms_accepted: 'Setujui ketentuan dan kebijakan privasi untuk melanjutkan.' };
+                } else {
+                    fixture.component = 'Public/Beta/Confirmation';
+                    fixture.props.status = 'verification-link-sent';
+                    fixture.props.sentAt = new Date().toISOString();
+                    fixture.props.registration.email = payload.email || 'fixture@example.com';
+                }
+                await send('Fetch.fulfillRequest', { requestId: message.params.requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'X-Inertia', value: 'true' }], body: Buffer.from(JSON.stringify(fixture)).toString('base64') });
+                return;
+            }
             if (message.params.request.method === 'PUT') {
                 submissions.push(JSON.parse(message.params.request.postData || '{}'));
                 fixture.props.errors = submitMode === 'validation' ? { opens_at: 'Jadwal buka harus berupa tanggal dan jam yang valid (WIB).' } : {};
@@ -70,13 +84,14 @@ try {
     const { targetInfos } = await send('Target.getTargets', {}, null);
     ({ sessionId: session } = await send('Target.attachToTarget', { targetId: targetInfos.find(target => target.type === 'page').targetId, flatten: true }, null));
     await send('Page.enable'); await send('Runtime.enable');
-    await send('Fetch.enable', { patterns: [{ urlPattern: '*__beta-fixture*', resourceType: 'Document', requestStage: 'Request' }, { urlPattern: '*superadmin/system/beta', requestStage: 'Request' }] });
+    await send('Fetch.enable', { patterns: [{ urlPattern: '*__beta-fixture*', resourceType: 'Document', requestStage: 'Request' }, { urlPattern: '*superadmin/system/beta', requestStage: 'Request' }, { urlPattern: '*daftar-beta*', requestStage: 'Request' }] });
     await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
     for (const width of [320, 390, 768, 1366]) {
         await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 500 });
-        for (view of ['Public/ReleaseSoon', 'User/Beta/Waiting', 'SuperAdmin/Sistem/Sistem', 'Auth/Register']) {
+        const views = process.env.BETA_FORMS_ONLY ? ['Public/ReleaseSoon', 'Public/Beta/Register', 'Public/Beta/Confirmation'] : ['Public/ReleaseSoon', 'User/Beta/Waiting', 'SuperAdmin/Sistem/Sistem', 'Auth/Register', 'Public/Beta/Register', 'Public/Beta/Confirmation'];
+        for (view of views) {
             await send('Page.navigate', { url: base + '/__beta-fixture?view=' + encodeURIComponent(view) });
-            await waitFor(view === 'SuperAdmin/Sistem/Sistem' ? 'document.querySelector("input[type=datetime-local]")' : view === 'Auth/Register' ? 'document.querySelector("input[type=email]")' : 'document.querySelector("img[data-brand-logo]")?.naturalWidth > 0');
+            await waitFor(view === 'SuperAdmin/Sistem/Sistem' ? 'document.querySelector("input[type=datetime-local]")' : view === 'Auth/Register' || view === 'Public/Beta/Register' ? 'document.querySelector("input[type=email]")' : 'document.querySelector("img[data-brand-logo]")?.naturalWidth > 0');
             for (const dark of [false, true]) {
                 await evaluate(`document.documentElement.classList.toggle('dark',${dark});document.getAnimations().forEach(a=>{try{a.finish()}catch{a.cancel()}})`);
                 assert(await evaluate('document.documentElement.scrollWidth <= innerWidth + 2'), 'No overflow ' + view + width);
@@ -88,7 +103,17 @@ try {
             } else if (view === 'Public/ReleaseSoon') {
                 assert(await evaluate('document.querySelector("img[data-brand-logo]").src.endsWith("/images/logos/tokuup-full.png")'));
                 assert(await evaluate('document.querySelector("[data-registration-button]").tagName === "A"'));
+                assert(await evaluate('document.querySelector("[data-registration-button]").getAttribute("href").includes("/daftar-beta")'));
                 assert(await evaluate('!Array.from(document.images).some(i=>i.src.includes("Mount-Fuji"))'));
+            } else if (view === 'Public/Beta/Register') {
+                assert(await evaluate(`document.querySelector('form[aria-label="Pendaftaran beta"]') !== null`));
+                assert(await evaluate('!document.body.innerText.includes("Masuk")'));
+                await evaluate(`document.querySelector('button[aria-label="Tampilkan kata sandi"]').click()`);
+                assert(await evaluate('document.querySelector("#beta-password").type === "text"'));
+                await evaluate(`document.querySelector('button[aria-label="Sembunyikan kata sandi"]').click()`);
+            } else if (view === 'Public/Beta/Confirmation') {
+                assert(await evaluate('!document.body.innerText.includes("Masuk") && document.body.innerText.includes("belum masuk ke aplikasi")'));
+                assert(await evaluate('document.body.innerText.includes("fixture@example.com")'));
             } else if (view === 'SuperAdmin/Sistem/Sistem') {
                 submitMode = 'validation';
                 await evaluate('document.querySelector("input[type=datetime-local]").closest("form").requestSubmit()');
@@ -105,12 +130,33 @@ try {
                 await waitFor('!document.querySelector("[role=alertdialog]")');
             }
             if (view === 'SuperAdmin/Sistem/Sistem') await evaluate('document.querySelector("input[type=datetime-local]").closest("section").scrollIntoView({block:"center"})');
-            const { data } = await send('Page.captureScreenshot', { format: 'png' });
+            const { cssContentSize } = await send('Page.getLayoutMetrics');
+            const { data } = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width: Math.ceil(cssContentSize.width), height: Math.ceil(cssContentSize.height), scale: 1 } });
             writeFileSync(path.join(temp, view.replaceAll('/', '-') + '-' + width + '.png'), Buffer.from(data, 'base64'));
+            if (view === 'Public/Beta/Register' && width === 1366) {
+                submitMode = 'beta-validation';
+                await evaluate('document.querySelector("form").noValidate = true; document.querySelector("form").requestSubmit()');
+                await waitFor('document.querySelector("#beta-name-error")');
+                assert(await evaluate('document.querySelector("#beta-name").getAttribute("aria-invalid") === "true"'));
+                submitMode = 'beta-success';
+                await evaluate(`
+                    for (const [id, value] of Object.entries({'beta-name':'Browser Beta','beta-email':'browser-beta@example.test','beta-password':'password-123','beta-password_confirmation':'password-123'})) {
+                        const input = document.getElementById(id);
+                        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);
+                        input.dispatchEvent(new Event('input',{bubbles:true}));
+                    }
+                    document.querySelector('input[type=checkbox]').click();
+                `);
+                await evaluate('document.querySelector("form").requestSubmit()');
+                await waitFor('document.querySelector("[data-beta-confirmation]")');
+                assert.equal(submissions.at(-1).email, 'browser-beta@example.test');
+                assert.equal(submissions.at(-1).terms_accepted, true);
+                assert(await evaluate('document.body.innerText.includes("browser-beta@example.test") && !document.body.innerText.includes("Masuk")'));
+            }
         }
     }
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ passed: true, screenshots: temp, checks: ['real built components', '320/390/768/1366', 'WIB schedule', 'new logo loaded', 'no photo background', 'confirmation cancel', 'light/dark overflow'] }));
+    console.log(JSON.stringify({ passed: true, screenshots: temp, checks: ['real built components', '320/390/768/1366', 'new logo loaded', 'light/dark overflow', 'beta form submission', 'inline validation', 'password visibility', 'no automatic login UI', ...(process.env.BETA_FORMS_ONLY ? [] : ['WIB schedule', 'settings submission', 'confirmation cancel'])] }));
 } finally {
     if (socket?.readyState === WebSocket.OPEN) { try { await send('Browser.close', {}, null); } catch {} socket.close(); }
     if (chrome && chrome.exitCode === null) { await Promise.race([new Promise(resolve => chrome.once('exit', resolve)), sleep(3000)]); if (chrome.exitCode === null) chrome.kill(); }

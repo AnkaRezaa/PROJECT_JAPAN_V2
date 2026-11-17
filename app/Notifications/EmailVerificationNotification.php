@@ -6,9 +6,22 @@ use App\Notifications\Channels\MailtrapTemplateChannel;
 use App\Services\MailtrapTemplateService;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\URL;
 
 class EmailVerificationNotification extends VerifyEmail
 {
+    protected function verificationUrl($notifiable)
+    {
+        if (! $notifiable->beta_registered_at) {
+            return parent::verificationUrl($notifiable);
+        }
+
+        return URL::temporarySignedRoute('public.beta.verify', now()->addMinutes(config('auth.verification.expire', 60)), [
+            'id' => $notifiable->getKey(),
+            'hash' => sha1($notifiable->getEmailForVerification()),
+        ]);
+    }
+
     public function via($notifiable): array
     {
         return app(MailtrapTemplateService::class)->shouldUse('verify_email')

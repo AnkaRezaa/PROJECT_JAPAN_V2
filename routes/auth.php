@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\BetaRegistrationController;
 use App\Http\Controllers\Auth\KataSandiController;
 use App\Http\Controllers\Auth\KonfirmasiPasswordController;
 use App\Http\Controllers\Auth\LinkResetPasswordController;
@@ -13,6 +14,9 @@ use App\Http\Controllers\Auth\VerifikasiEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
+    Route::get('daftar-beta', [BetaRegistrationController::class, 'create'])->name('public.beta.register');
+    Route::post('daftar-beta', [RegistrasiPenggunaController::class, 'store'])
+        ->middleware('throttle:guest-sensitive')->name('public.beta.register.store');
     Route::get('register', [RegistrasiPenggunaController::class, 'create'])
         ->name('register');
 
@@ -42,6 +46,12 @@ Route::middleware('guest')->group(function () {
         ->middleware('throttle:guest-sensitive')
         ->name('password.store');
 });
+
+Route::get('daftar-beta/selesai', [BetaRegistrationController::class, 'confirmation'])->name('public.beta.confirmation');
+Route::post('daftar-beta/kirim-ulang', [BetaRegistrationController::class, 'resend'])
+    ->middleware('throttle:6,1')->name('public.beta.resend');
+Route::get('daftar-beta/verifikasi/{id}/{hash}', [BetaRegistrationController::class, 'verify'])
+    ->whereNumber('id')->middleware(['signed', 'throttle:6,1'])->name('public.beta.verify');
 
 Route::get('auth/google/callback', [LoginSosialController::class, 'handleGoogleCallback'])
     ->name('auth.google.callback');
