@@ -140,6 +140,12 @@ class SuperAdminSistemController extends SuperAdminDasarController
             'enabled' => ['required', 'boolean'], 'registration_open' => ['required', 'boolean'],
             'opens_at' => ['nullable', 'date_format:Y-m-d\TH:i'], 'open_now' => ['sometimes', 'boolean'],
             'confirm_disable' => ['sometimes', 'boolean'],
+        ], [
+            'opens_at.date_format' => 'Jadwal buka harus berupa tanggal dan jam yang valid (WIB).',
+            'enabled.required' => 'Pilih status mode beta.',
+            'enabled.boolean' => 'Status mode beta tidak valid.',
+            'registration_open.required' => 'Pilih status pendaftaran.',
+            'registration_open.boolean' => 'Status pendaftaran tidak valid.',
         ]);
         DB::transaction(function () use ($request, $beta, $input) {
             $old = $beta->settings(true);
