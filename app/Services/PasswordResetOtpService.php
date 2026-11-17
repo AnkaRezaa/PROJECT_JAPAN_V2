@@ -2,20 +2,22 @@
 
 namespace App\Services;
 
+use App\Exceptions\EmailDeliveryUnavailable;
 use App\Models\Pengguna;
 use App\Notifications\PasswordResetOtpNotification;
 use Carbon\Carbon;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 class PasswordResetOtpService
 {
     public const EXPIRES_MINUTES = 10;
+
     public const RESEND_SECONDS = 60;
+
     public const MAX_VERIFY_ATTEMPTS = 5;
 
     public function request(string $email, string $ipAddress): void
@@ -46,14 +48,14 @@ class PasswordResetOtpService
         );
 
         try {
-            $user->notify(new PasswordResetOtpNotification($code, self::EXPIRES_MINUTES));
-        } catch (\Throwable $exception) {
+            app(EmailDeliveryService::class)->send(
+                fn () => $user->notify(new PasswordResetOtpNotification($code, self::EXPIRES_MINUTES))
+            );
+        } catch (EmailDeliveryUnavailable) {
             DB::table('password_reset_tokens')->where('email', $email)->delete();
+            RateLimiter::clear($sendKey);
 
-            Log::error('Pengiriman OTP reset password gagal.', [
-                'user_id' => $user->id,
-                'exception' => $exception->getMessage(),
-            ]);
+            // Keep the public reset response identical for registered and unknown email addresses.
         }
     }
 

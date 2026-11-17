@@ -26,18 +26,20 @@ class MailtrapTemplateService
     public function send(Pengguna $recipient, string $template, array $variables): void
     {
         $response = Http::withToken((string) config('services.mailtrap.api_token'))
+            ->connectTimeout(5)
+            ->timeout(15)
             ->acceptJson()
             ->post($this->endpoint(), [
-            'from' => [
-                'email' => config('mail.from.address'),
-                'name' => config('mail.from.name'),
-            ],
-            'to' => [[
-                'email' => $recipient->email,
-                'name' => $recipient->username,
-            ]],
-            'template_uuid' => $this->templateUuid($template),
-            'template_variables' => $variables,
+                'from' => [
+                    'email' => config('mail.from.address'),
+                    'name' => config('mail.from.name'),
+                ],
+                'to' => [[
+                    'email' => $recipient->email,
+                    'name' => $recipient->username,
+                ]],
+                'template_uuid' => $this->templateUuid($template),
+                'template_variables' => $variables,
             ]);
 
         $response->throw();

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Exceptions\EmailDeliveryUnavailable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,7 +12,9 @@ use Illuminate\Validation\ValidationException;
 class NotifikasiVerifikasiEmailController extends Controller
 {
     private const COOLDOWN_SECONDS = 180;
+
     private const MAX_SENDS_PER_WINDOW = 5;
+
     private const LOCK_SECONDS = 7200;
 
     /**
@@ -48,7 +51,13 @@ class NotifikasiVerifikasiEmailController extends Controller
             ]);
         }
 
-        $user->sendEmailVerificationNotification();
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (EmailDeliveryUnavailable) {
+            throw ValidationException::withMessages([
+                'verification' => EmailDeliveryUnavailable::USER_MESSAGE,
+            ]);
+        }
         RateLimiter::hit($cooldownKey, self::COOLDOWN_SECONDS);
         RateLimiter::hit($windowKey, self::LOCK_SECONDS);
 

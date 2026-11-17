@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Exceptions\EmailDeliveryUnavailable;
 use App\Http\Controllers\Controller;
 use App\Models\Pengguna;
 use App\Services\ReferralService;
@@ -63,7 +64,16 @@ class RegistrasiPenggunaController extends Controller
             return $user;
         });
 
-        event(new Registered($user));
+        try {
+            event(new Registered($user));
+        } catch (EmailDeliveryUnavailable) {
+            // The account is already committed; allow verification retry without registering twice.
+            Auth::login($user);
+
+            return redirect()->route('verification.notice')->withErrors([
+                'verification' => 'Akun Anda sudah tersimpan. '.EmailDeliveryUnavailable::USER_MESSAGE,
+            ]);
+        }
 
         Auth::login($user);
 

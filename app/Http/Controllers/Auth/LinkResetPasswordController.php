@@ -31,7 +31,7 @@ class LinkResetPasswordController extends Controller
         $otp->request($email, $request->ip());
 
         return redirect()->route('password.reset', ['email' => $email])
-            ->with('status', 'Jika alamat email tersebut dapat menggunakan kata sandi, kode OTP telah dikirim.')
+            ->with('status', 'Jika alamat email tersebut dapat menggunakan kata sandi, Anda akan menerima kode OTP. Jika email belum diterima, silakan coba lagi nanti atau hubungi admin melalui chat.')
             ->with('password_reset_otp_sent_at', now()->toIso8601String());
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Notifications\EmailVerificationNotification;
+use App\Services\EmailDeliveryService;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\PenggunaFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
@@ -88,7 +89,7 @@ class Pengguna extends Authenticatable implements MustVerifyEmailContract
 
     public function sendEmailVerificationNotification(): void
     {
-        $this->notify(new EmailVerificationNotification);
+        app(EmailDeliveryService::class)->send(fn () => $this->notify(new EmailVerificationNotification));
     }
 
     public function attempts(): HasMany
@@ -120,7 +121,6 @@ class Pengguna extends Authenticatable implements MustVerifyEmailContract
     {
         return $this->hasMany(ProgresHariModul::class, 'user_id');
     }
-
 
     public function achievements(): BelongsToMany
     {

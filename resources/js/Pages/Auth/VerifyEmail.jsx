@@ -43,7 +43,7 @@ export default function VerifyEmail({ status, sentAt = null }) {
                     </div>
                     <h1 className="text-xl font-extrabold text-gray-900">Verifikasi alamat email</h1>
                     <p className="mt-2 text-sm leading-relaxed text-gray-500">
-                        Kami telah mengirim tautan verifikasi ke alamat email Anda. Buka email tersebut untuk mengaktifkan akun.
+                        Buka tautan verifikasi di email Anda untuk mengaktifkan akun. Jika belum menerima email, gunakan tombol kirim ulang.
                     </p>
                 </div>
 
@@ -54,7 +54,7 @@ export default function VerifyEmail({ status, sentAt = null }) {
                 )}
 
                 {errors.verification && (
-                    <div className="mb-5 rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 text-sm leading-relaxed text-brand-700">
+                    <div role="alert" className="mb-5 rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 text-sm leading-relaxed text-brand-700">
                         {errors.verification}
                     </div>
                 )}

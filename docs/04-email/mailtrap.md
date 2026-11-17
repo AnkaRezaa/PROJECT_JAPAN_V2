@@ -75,7 +75,23 @@ Username production SMTP adalah `apismtp@mailtrap.io`; password-nya token API ya
 
 ## Cara Pengiriman di Kode
 
-`MailtrapTemplateChannel` memanggil `MailtrapTemplateService` jika template API aktif dan UUID tersedia. Bila template tidak dikonfigurasi atau pengiriman template gagal sesuai fallback notification, email Laravel SMTP digunakan. Frontend tidak menerima token atau UUID.
+`MailtrapTemplateChannel` memanggil `MailtrapTemplateService` jika template API aktif dan UUID tersedia. Bila template tidak dikonfigurasi, email Laravel SMTP digunakan. Fallback dari API ke SMTP hanya dilakukan untuk error template/input (400/404/422), bukan penolakan kuota, rate limit, otorisasi, timeout, atau gangguan server. Frontend tidak menerima token atau UUID.
+
+## Pengaman Kegagalan Pengiriman
+
+Pengiriman verifikasi akun dan OTP menggunakan `EmailDeliveryService`. Jika SMTP/API menolak pengiriman, termasuk saat kuota bulanan atau harian habis, pengguna menerima pesan:
+
+> Maaf, layanan email sedang mengalami gangguan. Silakan coba lagi nanti atau hubungi admin melalui chat.
+
+- Registrasi: akun yang sudah tersimpan tetap ada dan belum terverifikasi. Alur autentikasi existing dipertahankan; pengguna diarahkan ke halaman verifikasi dengan pesan kegagalan dan dapat mengirim ulang nanti, tanpa mendaftar ulang.
+- Kirim ulang verifikasi: tidak menampilkan status berhasil atau mencatat cooldown pengiriman sukses jika provider gagal.
+- Reset password: OTP yang gagal dikirim dibersihkan dan dapat dicoba kembali setelah layanan pulih. Respons publik tetap netral dan identik untuk akun terdaftar maupun email tidak dikenal, agar kegagalan provider tidak membocorkan keberadaan akun. Pesan tidak mengklaim email sudah terkirim dan menyertakan arahan menghubungi admin; alur ke halaman OTP existing tetap dipertahankan.
+- Timeout HTTP adalah 15 detik dengan connect timeout 5 detik; timeout SMTP 15 detik.
+- Log pengaman hanya mencatat kelas exception dan status HTTP, tanpa credential, isi email, atau respons mentah provider.
+
+Pengaman ini bereaksi terhadap penolakan provider, bukan penghitung lokal 4.000 email. Pengiriman dari aplikasi lain pada akun yang sama dan siklus reset kuota tetap dikelola Mailtrap. Email yang diterima provider belum tentu masuk inbox; bounce dan spam tetap diperiksa melalui Email Logs. Pengiriman invoice via queue tetap mengikuti retry/failed-job existing dan tidak dibatalkan menjadi respons sukses oleh pengaman ini.
+
+Tidak memerlukan migrasi, credential baru, atau perubahan paket. Setelah deployment jalankan `php artisan optimize:clear`, `php artisan config:cache`, dan `php artisan queue:restart`; build frontend diperlukan untuk pembaruan teks halaman verifikasi.
 
 Jika `QUEUE_CONNECTION=sync`, request mengirim email langsung. Jika notification masuk antrean database, worker harus hidup:
 
