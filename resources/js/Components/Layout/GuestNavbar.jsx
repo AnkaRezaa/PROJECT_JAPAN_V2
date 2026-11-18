@@ -18,11 +18,16 @@ export default function GuestNavbar() {
     const [hasScrolled, setHasScrolled] = useState(false);
     const { url, props } = usePage();
     const isAuthenticated = Boolean(props.auth?.user);
+    const hidePublicMarketing = Boolean(props.featureFlags?.hidePublicMarketing);
+    const registrationHref = hidePublicMarketing ? '/daftar-beta' : '/register';
+    const registrationLabel = hidePublicMarketing ? 'Daftar Beta' : 'Daftar Gratis';
 
     const navigationItems = [
         { href: '/', label: 'Beranda' },
-        { href: '/pricing', label: 'Harga' },
-        { href: '/about', label: 'Tentang Kami' },
+        ...(!hidePublicMarketing ? [
+            { href: '/pricing', label: 'Harga' },
+            { href: '/about', label: 'Tentang Kami' },
+        ] : []),
         { href: '/roadmap', label: 'Roadmap' },
     ];
 
@@ -96,10 +101,10 @@ export default function GuestNavbar() {
                                 Masuk
                             </Button>
                             <Button
-                                href="/register"
+                                href={registrationHref}
                                 className="!h-[38px] !min-h-[38px] !rounded-xl !bg-brand-600 !px-4 !py-1.5 !text-xs !font-bold !text-white shadow-sm transition-colors hover:!bg-brand-700 hover:!translate-y-0 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
                             >
-                                Daftar Gratis
+                                {registrationLabel}
                             </Button>
                         </>
                     )}
@@ -141,7 +146,7 @@ export default function GuestNavbar() {
                             ) : (
                                 <>
                                     <Button variant="outline" href="/login" onClick={closeMenu} className="w-full !min-h-[44px] !rounded-xl !border-slate-300 !text-slate-700 transition-colors hover:!border-brand-500 hover:!bg-brand-50 hover:!text-brand-700 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">Masuk</Button>
-                                    <Button href="/register" onClick={closeMenu} className="w-full !min-h-[44px] !rounded-xl !bg-brand-600 !text-white shadow-sm transition-colors hover:!bg-brand-700 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">Daftar Gratis</Button>
+                                    <Button href={registrationHref} onClick={closeMenu} className="w-full !min-h-[44px] !rounded-xl !bg-brand-600 !text-white shadow-sm transition-colors hover:!bg-brand-700 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">{registrationLabel}</Button>
                                 </>
                             )}
                         </div>

@@ -67,7 +67,7 @@ try {
         for (const dark of [false, true]) {
             await evaluate(`document.documentElement.classList.toggle('dark', ${dark})`);
             assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'No horizontal overflow at ' + width);
-            assert(await evaluate('(()=>{const button=document.querySelector("[data-registration-button]");return button.tagName==="A"?new URL(button.href).pathname==="/register":button.disabled})()'), 'Registration links internally or is disabled');
+            assert(await evaluate('(()=>{const button=document.querySelector("[data-registration-button]");return button.tagName==="A"?new URL(button.href).pathname==="/daftar-beta":button.disabled})()'), 'Registration links to beta signup or is disabled');
             assert.equal(await evaluate('document.querySelectorAll("[data-instagram-action]").length'), 1, 'Instagram is visible even before configuration');
             assert(await evaluate(`(()=>{const item=document.querySelector('[data-instagram-action]');return item.tagName==='A'?item.getAttribute('aria-label')==='Instagram TOKU-UP (tab baru)'&&item.target==='_blank'&&new URL(item.href).hostname.replace(/^www\\./,'')==='instagram.com':item.getAttribute('aria-disabled')==='true'&&item.getAttribute('aria-label')==='Instagram belum tersedia'})()`), 'Instagram is an official link or explicitly disabled');
             assert(await evaluate('document.querySelector("main h1").getBoundingClientRect().bottom < document.querySelector("[data-registration-button]").getBoundingClientRect().top'), 'Heading and CTA do not overlap');
@@ -77,6 +77,25 @@ try {
         await evaluate("document.documentElement.classList.remove('dark')");
         const { data } = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
         writeFileSync(path.join(temp, 'release-' + width + '.png'), Buffer.from(data, 'base64'));
+    }
+    if (process.env.CHECK_PRELAUNCH_MARKETING) {
+        for (const width of [390, 1366]) {
+            await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 500 });
+            for (const pathname of ['/roadmap', '/preview/landing']) {
+                await send('Page.navigate', { url: new URL(pathname, liveUrl).href });
+                await waitFor('location.pathname === ' + JSON.stringify(pathname) + ' && document.querySelector("nav button[aria-controls], nav ul")');
+                if (width < 500) {
+                    await evaluate('document.querySelector("button[aria-controls=guest-mobile-menu]").click()');
+                    await waitFor('document.getElementById("guest-mobile-menu")');
+                }
+                assert(await evaluate('!Array.from(document.links).some(link=>["/pricing","/about","/katalog"].includes(new URL(link.href).pathname))'), pathname + ' hides pricing and about links');
+                assert(await evaluate('Array.from(document.links).some(link=>new URL(link.href).pathname==="/daftar-beta")'), pathname + ' links to beta signup');
+            }
+        }
+        for (const pathname of ['/pricing', '/about', '/katalog']) {
+            await send('Page.navigate', { url: new URL(pathname, liveUrl).href });
+            await waitFor('location.pathname === "/" && document.querySelector("[data-registration-button]")');
+        }
     }
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({ passed: true, screenshots: temp, checks: ['320/390/1366/1920 layouts', 'light/dark inherited preference', 'official logo without photo', 'controlled internal registration', 'Instagram status'] }, null, 2));

@@ -1,4 +1,5 @@
 import React from 'react';
+import { usePage } from '@inertiajs/react';
 import { motion, useReducedMotion } from 'framer-motion';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -122,6 +123,7 @@ const weekTone = {
 };
 
 export default function LandingPage({ programs = [], seo = {}, activePopup = null, latestNews = [] }) {
+  const hidePublicMarketing = Boolean(usePage().props.featureFlags?.hidePublicMarketing);
   const reduceMotion = useReducedMotion();
   const publicPlans = programs.flatMap((program) => (program.payment_plans || []).map((plan) => ({
     ...plan,
@@ -416,7 +418,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
           </div>
         </section>}
 
-        <motion.section {...reveal} className="bg-slate-900 px-4 py-16 text-white sm:px-6 lg:px-8 lg:py-20">
+        {!hidePublicMarketing && <motion.section {...reveal} className="bg-slate-900 px-4 py-16 text-white sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-6xl">
             <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div>
@@ -480,7 +482,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
               </Button>
             </div>
           </div>
-        </motion.section>
+        </motion.section>}
       </main>
 
       <PromoPopup popup={activePopup} />

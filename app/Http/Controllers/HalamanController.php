@@ -45,6 +45,11 @@ class HalamanController extends Controller
         return $this->renderLandingPage($kelasPayload, $newsService, preview: true);
     }
 
+    private function hideMarketingFromGuest(): bool
+    {
+        return config('beta.prelaunch_enabled') && Auth::guest();
+    }
+
     private function renderLandingPage(KelasPenggunaPayloadService $kelasPayload, PublicNewsService $newsService, bool $preview = false)
     {
         $activePopup = BroadcastPopup::query()
@@ -65,7 +70,7 @@ class HalamanController extends Controller
         }
 
         return Inertia::render('LandingPage', [
-            'programs' => $this->publicPricingPrograms($kelasPayload),
+            'programs' => $this->hideMarketingFromGuest() ? [] : $this->publicPricingPrograms($kelasPayload),
             'latestNews' => $newsService->summariesQuery()->limit(3)->get()->map($newsService->summary(...)),
             'activePopup' => $activePopup ? [
                 'id' => $activePopup->id,
@@ -136,6 +141,10 @@ class HalamanController extends Controller
 
     public function about()
     {
+        if ($this->hideMarketingFromGuest()) {
+            return redirect()->route('home');
+        }
+
         return Inertia::render('About', [
             'seo' => $this->seo(
                 'Tentang Platform Belajar Bahasa Jepang',
@@ -147,6 +156,10 @@ class HalamanController extends Controller
 
     public function pricing(KelasPenggunaPayloadService $kelasPayload)
     {
+        if ($this->hideMarketingFromGuest()) {
+            return redirect()->route('home');
+        }
+
         return Inertia::render('Pricing', [
             'programs' => $this->publicPricingPrograms($kelasPayload),
             'seo' => $this->seo(
@@ -315,8 +328,6 @@ class HalamanController extends Controller
 
         $staticUrls = collect([
             ['loc' => route('home'), 'lastmod' => null],
-            ['loc' => route('about'), 'lastmod' => null],
-            ['loc' => route('pricing'), 'lastmod' => null],
             ['loc' => route('roadmap'), 'lastmod' => null],
             ['loc' => route('privacy-policy'), 'lastmod' => null],
             ['loc' => route('terms'), 'lastmod' => null],
@@ -328,6 +339,13 @@ class HalamanController extends Controller
                 'loc' => route('public.classes.show', $program->slug),
                 'lastmod' => optional($program->updated_at)->toAtomString(),
             ]);
+
+        if (! config('beta.prelaunch_enabled')) {
+            $staticUrls->push(
+                ['loc' => route('about'), 'lastmod' => null],
+                ['loc' => route('pricing'), 'lastmod' => null],
+            );
+        }
 
         $newsUrls = Berita::query()->publiclyVisible()->select(['id', 'slug', 'updated_at'])
             ->get()->map(fn (Berita $news) => [

@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -100,6 +100,9 @@ function WeekNode({ week, index, selected, onSelect }) {
 }
 
 export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, seo = {} }) {
+    const hidePublicMarketing = Boolean(usePage().props.featureFlags?.hidePublicMarketing);
+    const actionHref = hidePublicMarketing ? '/daftar-beta' : '/pricing';
+    const actionLabel = hidePublicMarketing ? 'Daftar Beta' : 'Lihat Kelas dan Harga';
     const [selectedWeekId, setSelectedWeekId] = useState(selectedRoadmap?.weeks?.[0]?.id ?? null);
     const [isClassMenuOpen, setIsClassMenuOpen] = useState(false);
     const [isRoadmapLoading, setIsRoadmapLoading] = useState(false);
@@ -187,8 +190,8 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                                 Satu jalur belajar untuk mengikuti materi kelas, memperkuat kosakata, berlatih dengan flashcard, dan mengevaluasi pemahaman lewat kuis.
                             </p>
                             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                                <Link href="/pricing" className="inline-flex min-h-12 items-center justify-center gap-1 rounded-xl bg-brand-600 px-5 text-sm font-black text-white shadow-lg shadow-brand-950/40 transition hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
-                                    Lihat Kelas dan Harga <ChevronRightIcon sx={{ fontSize: 18 }} />
+                                <Link href={actionHref} className="inline-flex min-h-12 items-center justify-center gap-1 rounded-xl bg-brand-600 px-5 text-sm font-black text-white shadow-lg shadow-brand-950/40 transition hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                                    {actionLabel} <ChevronRightIcon sx={{ fontSize: 18 }} />
                                 </Link>
                                 <Link href="/register" className="inline-flex min-h-12 items-center justify-center gap-1 rounded-xl border border-white/40 bg-white/10 px-5 text-sm font-black text-white backdrop-blur-sm transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
                                     Daftar untuk Preview
@@ -372,9 +375,9 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                                 <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600">Isi Modul Mingguan</p>
                                 <h2 className="mt-3 text-3xl font-black leading-tight text-slate-950">Materi dan latihan tidak berjalan sendiri-sendiri.</h2>
                                 <p className="mt-4 text-sm font-medium leading-7 text-slate-600">Setiap modul dirancang sebagai jalur belajar: pahami dulu, ulangi seperlunya, lalu uji pemahamanmu.</p>
-                                <Link href="/pricing" className="mt-6 inline-flex min-h-11 items-center gap-1 text-sm font-black text-brand-600 transition hover:text-brand-700">
+                                {!hidePublicMarketing && <Link href="/pricing" className="mt-6 inline-flex min-h-11 items-center gap-1 text-sm font-black text-brand-600 transition hover:text-brand-700">
                                     Lihat pilihan kelas <ChevronRightIcon sx={{ fontSize: 19 }} />
-                                </Link>
+                                </Link>}
                             </div>
 
                             <div className="grid gap-3 sm:grid-cols-2">
@@ -440,9 +443,9 @@ export default function Roadmap({ roadmapOptions = [], selectedRoadmap = null, s
                     <div className="relative mx-auto max-w-2xl">
                         <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-amber-200"><FlashOnIcon sx={{ fontSize: 28 }} /></span>
                         <h2 className="mt-5 text-3xl font-black">Siap memilih roadmap belajar?</h2>
-                        <p className="mt-3 text-sm font-medium leading-6 text-brand-100">Lihat pilihan kelas dan harga sebelum memulai perjalanan belajarmu.</p>
-                        <Link href="/pricing" className="mt-7 inline-flex min-h-12 items-center justify-center gap-1 rounded-xl bg-white px-5 text-sm font-black text-brand-700 shadow-lg transition hover:bg-brand-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
-                            Lihat Kelas dan Harga <ChevronRightIcon sx={{ fontSize: 18 }} />
+                        {!hidePublicMarketing && <p className="mt-3 text-sm font-medium leading-6 text-brand-100">Lihat pilihan kelas dan harga sebelum memulai perjalanan belajarmu.</p>}
+                        <Link href={actionHref} className="mt-7 inline-flex min-h-12 items-center justify-center gap-1 rounded-xl bg-white px-5 text-sm font-black text-brand-700 shadow-lg transition hover:bg-brand-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                            {actionLabel} <ChevronRightIcon sx={{ fontSize: 18 }} />
                         </Link>
                     </div>
                 </section>
