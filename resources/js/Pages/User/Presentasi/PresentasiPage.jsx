@@ -174,11 +174,13 @@ function SlideCarousel({ deck }) {
         <section ref={stageRef} aria-label="Penampil slide" role={fullscreen.expanded ? 'dialog' : undefined} aria-modal={fullscreen.expanded || undefined} className={`min-w-0 overflow-hidden bg-white dark:bg-slate-900 ${fullscreen.fallback ? 'fixed inset-0 z-[120] h-dvh' : 'rounded-lg border border-slate-200 dark:border-slate-800 fullscreen:rounded-none fullscreen:border-0'}`}>
             <div className={fullscreen.expanded ? 'flex h-full flex-col pb-[env(safe-area-inset-bottom)]' : 'mx-auto max-w-6xl'}>
                 <div ref={slideViewportRef} role="region" aria-label="Area slide" tabIndex={fullscreen.expanded || hasVisual ? 0 : undefined} className={fullscreen.expanded ? 'min-h-0 flex-1 overflow-auto overscroll-contain bg-slate-100 [container-type:size] dark:bg-slate-950' : hasVisual ? 'max-h-[65dvh] overflow-auto overscroll-contain' : undefined}>
-                    <div className={fullscreen.expanded && hasVisual ? 'grid min-h-full min-w-full w-max place-items-center' : undefined}>
+                    <div className={fullscreen.expanded ? (
+                        hasVisual ? 'grid min-h-full min-w-full w-max place-items-center max-lg:min-h-[100cqh]' : 'max-lg:grid max-lg:min-h-[100cqh] max-lg:place-items-center'
+                    ) : undefined}>
                         <AnimatePresence mode="wait" initial={false}>
                             <motion.div
                                 key={activeSlide.id || `slide-${activeIndex}`}
-                                className={fullscreen.expanded && !hasVisual ? 'mx-auto max-w-5xl' : undefined}
+                                className={fullscreen.expanded && !hasVisual ? 'mx-auto max-w-5xl max-lg:w-full' : undefined}
                                 style={fullscreen.expanded && hasVisual ? { width: fullscreenSlideWidth } : canZoom ? { width: `${zoom * 100}%` } : undefined}
                                 initial={prefersReducedMotion ? false : { opacity: 0 }}
                                 animate={{ opacity: 1 }}

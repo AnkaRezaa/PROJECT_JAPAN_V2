@@ -314,8 +314,8 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi', studentRead
             <section ref={readerRef} aria-label={`Penampil PDF: ${title}`} role={expanded ? 'dialog' : undefined} aria-modal={expanded || undefined} className={`min-w-0 overflow-hidden bg-white dark:bg-slate-900 ${readerFullscreen.fallback ? 'fixed inset-0 z-[120] h-dvh' : 'rounded-lg border border-slate-200 dark:border-slate-800 fullscreen:rounded-none fullscreen:border-0'}`}>
                 <div className={expanded ? 'flex h-full flex-col pb-[env(safe-area-inset-bottom)]' : 'mx-auto max-w-6xl'}>
                     {status === 'ready' ? (
-                            <div ref={viewportRef} onContextMenu={(event) => event.preventDefault()} className={`w-full overflow-auto overscroll-contain bg-slate-100 [scrollbar-gutter:stable] dark:bg-slate-950 ${expanded ? 'min-h-0 flex-1' : 'max-h-[65dvh]'}`} tabIndex={0} aria-label="Halaman PDF">
-                                <div className={`grid w-max min-w-full justify-items-center ${expanded ? 'min-h-full content-center' : ''}`}>
+                            <div ref={viewportRef} onContextMenu={(event) => event.preventDefault()} className={`w-full overflow-auto overscroll-contain bg-slate-100 [scrollbar-gutter:stable] dark:bg-slate-950 ${expanded ? 'min-h-0 flex-1 max-lg:[container-type:size]' : 'max-h-[65dvh]'}`} tabIndex={0} aria-label="Halaman PDF">
+                                <div className={`grid w-max min-w-full justify-items-center ${expanded ? 'min-h-full content-center max-lg:min-h-[100cqh]' : ''}`}>
                                     <canvas
                                         ref={canvasRef}
                                         aria-label={`${title}, halaman ${pageNumber}`}
