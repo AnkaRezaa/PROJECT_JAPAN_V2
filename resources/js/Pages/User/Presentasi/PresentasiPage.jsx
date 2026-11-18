@@ -27,26 +27,19 @@ const slideDimensions = (slide = {}) => {
     const sourceWidth = Number(slide.canvas_width);
     const sourceHeight = Number(slide.canvas_height);
 
-    if (sourceWidth > 0 && sourceHeight > 0) {
+    if (Number.isFinite(sourceWidth) && Number.isFinite(sourceHeight) && sourceWidth > 0 && sourceHeight > 0) {
         return {
             width: sourceWidth,
             height: sourceHeight,
         };
     }
 
-    return {
-        width: 16,
-        height: 9,
-    };
+    return null;
 };
 
-const slideAspectStyle = (slide) => {
-    const size = slideDimensions(slide);
+const slideAspectStyle = (size) => ({ aspectRatio: size ? `${size.width} / ${size.height}` : '16 / 9' });
 
-    return { aspectRatio: `${size.width} / ${size.height}` };
-};
-
-function SlideFrame({ slide }) {
+function SlideFrame({ slide, size }) {
     const snapshot = slide.snapshot_url || slide.snapshot_data || slide.jamboard_snapshot;
     const visualUrl = snapshot || slide.media_url;
     const isEditableMedia = slide.layout === 'media' && slide.media_url;
@@ -54,8 +47,9 @@ function SlideFrame({ slide }) {
     const title = slide.title || 'Slide Presentasi';
 
     if (!visualUrl) {
+        const hasCanvas = slide.layout === 'canvas' && size;
         return (
-            <article className={`flex min-h-48 flex-col justify-center px-4 py-5 sm:min-h-64 sm:px-8 sm:py-8 ${backdrop}`}>
+            <article style={hasCanvas ? slideAspectStyle(size) : undefined} className={`flex flex-col justify-center px-4 py-5 sm:px-8 sm:py-8 ${hasCanvas ? 'min-h-min' : 'min-h-48 sm:min-h-64'} ${backdrop}`}>
                 <h3 className="text-xl font-bold leading-snug [overflow-wrap:anywhere] sm:text-3xl">{title}</h3>
                 <p className="mt-3 max-w-prose whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere] sm:text-lg sm:leading-8">{slide.content || 'Konten slide belum tersedia.'}</p>
             </article>
@@ -65,7 +59,7 @@ function SlideFrame({ slide }) {
     const mediaUrl = isEditableMedia ? slide.media_url : visualUrl;
     const isExternalLink = (isEditableMedia || !snapshot) && !isImageUrl(mediaUrl) && !isVideoUrl(mediaUrl) && !isEmbeddableUrl(mediaUrl);
     return (
-        <figure style={slideAspectStyle(slide)} className={`relative w-full overflow-hidden ${isExternalLink ? 'min-h-[220px]' : ''} ${backdrop}`}>
+        <figure style={slideAspectStyle(size)} className={`relative w-full overflow-hidden ${isExternalLink ? 'min-h-[220px]' : ''} ${backdrop}`}>
             <div className="absolute inset-0">
                 {snapshot && !isEditableMedia
                     ? <img src={snapshot} alt={title} className="h-full w-full object-contain" />
@@ -168,26 +162,26 @@ function SlideCarousel({ deck }) {
         if (value === 1) slideViewportRef.current?.scrollTo(0, 0);
     };
     const slideSize = slideDimensions(activeSlide);
-    const fullscreenSlideWidth = `calc(min(100cqw, 100cqh * ${slideSize.width / slideSize.height}) * ${zoom})`;
+    const hasSizedFrame = hasVisual || (activeSlide.layout === 'canvas' && slideSize);
+    const aspectRatio = slideSize ? slideSize.width / slideSize.height : 16 / 9;
+    const fullscreenSlideWidth = `calc(min(100cqw, 100cqh * ${aspectRatio}) * ${zoom})`;
 
     return (
-        <section ref={stageRef} aria-label="Penampil slide" role={fullscreen.expanded ? 'dialog' : undefined} aria-modal={fullscreen.expanded || undefined} className={`min-w-0 overflow-hidden bg-white dark:bg-slate-900 ${fullscreen.fallback ? 'fixed inset-0 z-[120] h-dvh' : 'rounded-lg border border-slate-200 dark:border-slate-800 fullscreen:rounded-none fullscreen:border-0'}`}>
+        <section ref={stageRef} aria-label="Penampil slide" role={fullscreen.expanded ? 'dialog' : undefined} aria-modal={fullscreen.expanded || undefined} className={`min-w-0 overflow-hidden bg-white dark:bg-slate-900 ${fullscreen.fallback ? 'fixed inset-0 z-[120] m-0 h-dvh w-full max-h-none max-w-none border-0 p-0' : 'rounded-lg border border-slate-200 dark:border-slate-800 fullscreen:rounded-none fullscreen:border-0'}`}>
             <div className={fullscreen.expanded ? 'flex h-full flex-col pb-[env(safe-area-inset-bottom)]' : 'mx-auto max-w-6xl'}>
                 <div ref={slideViewportRef} role="region" aria-label="Area slide" tabIndex={fullscreen.expanded || hasVisual ? 0 : undefined} className={fullscreen.expanded ? 'min-h-0 flex-1 overflow-auto overscroll-contain bg-slate-100 [container-type:size] dark:bg-slate-950' : hasVisual ? 'max-h-[65dvh] overflow-auto overscroll-contain' : undefined}>
-                    <div className={fullscreen.expanded ? (
-                        hasVisual ? 'grid min-h-full min-w-full w-max place-items-center max-lg:min-h-[100cqh]' : 'max-lg:grid max-lg:min-h-[100cqh] max-lg:place-items-center'
-                    ) : undefined}>
+                    <div className={fullscreen.expanded ? `grid min-h-[100cqh] min-w-full place-items-center ${hasSizedFrame ? 'w-max' : ''}` : undefined}>
                         <AnimatePresence mode="wait" initial={false}>
                             <motion.div
                                 key={activeSlide.id || `slide-${activeIndex}`}
-                                className={fullscreen.expanded && !hasVisual ? 'mx-auto max-w-5xl max-lg:w-full' : undefined}
-                                style={fullscreen.expanded && hasVisual ? { width: fullscreenSlideWidth } : canZoom ? { width: `${zoom * 100}%` } : undefined}
+                                className={fullscreen.expanded && !hasSizedFrame ? 'w-full max-w-5xl' : undefined}
+                                style={fullscreen.expanded && hasSizedFrame ? { width: fullscreenSlideWidth } : canZoom ? { width: `${zoom * 100}%` } : undefined}
                                 initial={prefersReducedMotion ? false : { opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={prefersReducedMotion ? undefined : { opacity: 0 }}
                                 transition={{ duration: prefersReducedMotion ? 0 : 0.16 }}
                             >
-                                <SlideFrame slide={activeSlide} />
+                                <SlideFrame slide={activeSlide} size={slideSize} />
                             </motion.div>
                         </AnimatePresence>
                     </div>

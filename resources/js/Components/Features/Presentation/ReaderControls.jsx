@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -21,11 +21,15 @@ export function useReaderFullscreen(ref, enabled = true) {
         return () => document.removeEventListener('fullscreenchange', update);
     }, [enabled, ref]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         const reader = ref.current;
         if (!fallback || !reader) return undefined;
 
         const opener = document.activeElement;
+        if (typeof reader.showPopover === 'function') {
+            reader.setAttribute('popover', 'manual');
+            reader.showPopover();
+        }
         reader.querySelector('[aria-label="Keluar dari layar penuh"]')?.focus({ preventScroll: true });
         const handleKey = (event) => {
             if (event.key === 'Escape') {
@@ -45,6 +49,7 @@ export function useReaderFullscreen(ref, enabled = true) {
         document.addEventListener('keydown', handleKey);
         return () => {
             document.removeEventListener('keydown', handleKey);
+            reader.removeAttribute('popover');
             opener?.focus({ preventScroll: true });
         };
     }, [fallback, ref]);

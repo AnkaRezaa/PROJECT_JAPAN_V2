@@ -27,7 +27,7 @@ const decks = [
     { id: 3, module, title: 'Pola Percakapan Sehari-hari', slides: [
         { id:21, title:'Kalimat untuk meminta bantuan', content:'Gunakan bentuk sopan saat meminta bantuan.\\nTanyakan kembali bila jawaban belum jelas.\\nKalimat terakhir harus tetap terlihat.', background:'light' },
         { id:22, title:'Slide gambar', snapshot_url:'/images/promo_jlpt_banner.jpg', canvas_width:1280, canvas_height:720 },
-        { id:23, title:'Penutup materi', content:'Ringkasan pola yang sudah dipelajari.', background:'forest' },
+        { id:23, title:'Penutup materi', content:'Ringkasan pola yang sudah dipelajari.', background:'forest', layout:'canvas', canvas_width:960, canvas_height:720 },
     ] },
     { id: 4, module, title: 'Latihan Membaca PDF', source_file_url: '/__reader-pdf' },
     { id: 5, module, title: 'Dokumen tidak tersedia', source_file_url: '/__reader-pdf-unavailable' },
@@ -80,10 +80,13 @@ const server = await createServer({
             }
             if(req.url!=='/__reader')return next();
             res.setHeader('Content-Type','text/html');
-            res.end(await vite.transformIndexHtml('/__reader','<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><main id="app"></main><script type="module" src="/__reader-fixture.jsx"></script></body></html>'));
+            res.end(await vite.transformIndexHtml('/__reader','<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="app"></div><script type="module" src="/__reader-fixture.jsx"></script></body></html>'));
         });},
         resolveId(id){if(id==='/__reader-fixture.jsx')return entry;if(id==='virtual:reader-layout')return '\0reader-layout';},
-        load(id){if(id===entry)return fixture;if(id==='\0reader-layout')return 'export default ({children})=>children;';}
+        load(id){if(id===entry)return fixture;if(id==='\0reader-layout')return `import React from 'react'; export default ({children}) => React.createElement(React.Fragment, null,
+            React.createElement('aside', {className:'fixed inset-y-0 left-0 z-[80] hidden w-20 bg-white lg:block'}),
+            React.createElement('header', {className:'fixed inset-x-0 top-0 z-20 hidden h-14 bg-white lg:block'}),
+            React.createElement('main', {className:'relative z-0 lg:ml-20 lg:pt-14'}, children));`;}
     }], server:{host:'127.0.0.1',port:0,hmr:false},
 });
 
@@ -127,15 +130,23 @@ const capture = async name => {
 };
 const pixel = 'Array.from(document.querySelector("canvas").getContext("2d").getImageData(4,4,1,1).data)';
 const fullscreenReader = `(document.fullscreenElement || document.querySelector('[aria-modal="true"]'))`;
-const fullscreenFits = (viewportLabel, contentSelector) => `(() => {
+const fullscreenFits = (viewportLabel, contentSelector, aspect) => `(() => {
     const root = ${fullscreenReader};
     const viewport = root?.querySelector('[aria-label="${viewportLabel}"]');
     const content = viewport?.querySelector('${contentSelector}');
     const toolbar = root?.querySelector('[aria-label="Keluar dari layar penuh"]');
-    return root && viewport?.clientHeight > root.clientHeight * 0.65 &&
+    if (!root || !content || !toolbar) return false;
+    const outer = root.getBoundingClientRect();
+    const stage = viewport.getBoundingClientRect();
+    const frame = content.getBoundingClientRect();
+    return outer.width >= innerWidth - 1 && outer.height >= innerHeight - 1 &&
+        root.contains(document.elementFromPoint(5, 5)) &&
+        viewport.clientHeight > root.clientHeight * 0.65 &&
         content?.clientHeight > 0 && content.clientHeight <= viewport.clientHeight + 1 &&
         content.clientWidth <= viewport.clientWidth + 1 &&
-        toolbar?.getBoundingClientRect().bottom <= root.getBoundingClientRect().bottom;
+        Math.abs(frame.top - stage.top - (viewport.clientHeight - frame.height) / 2) <= 2 &&
+        Math.abs(frame.width / frame.height - ${aspect}) < 0.015 &&
+        toolbar.getBoundingClientRect().bottom <= outer.bottom;
 })()`;
 try {
     await server.listen();
@@ -171,10 +182,11 @@ try {
     await click('125%. Pas lebar layar');
     await send('Emulation.setDeviceMetricsOverride',{width:640,height:320,deviceScaleFactor:2,mobile:true});
     await clickFullscreen('Layar penuh');
-    await waitFor(fullscreenFits('Area slide', 'figure'));
+    await waitFor(fullscreenFits('Area slide', 'figure', 16 / 9));
     await capture('slide-fullscreen-landscape');
     await click('Slide berikutnya');
     await waitFor(fullscreenReader+'?.querySelector("article")?.textContent.includes("Ringkasan pola")');
+    await waitFor(fullscreenFits('Area slide', 'article', 4 / 3));
     await clickFullscreen('Keluar dari layar penuh');
     await waitFor('!'+fullscreenReader);
     await send('Emulation.setDeviceMetricsOverride',{width:320,height:640,deviceScaleFactor:2,mobile:true});
@@ -196,11 +208,13 @@ try {
     await waitFor('document.querySelector("canvas").clientWidth>600 && Math.abs(document.querySelector("canvas").clientWidth-document.querySelector(\'[aria-label="Halaman PDF"]\').clientWidth)<=1');
     await evaluate('document.documentElement.classList.add("dark")');
     await capture('pdf-desktop');
+    await evaluate('Object.defineProperty(document, "fullscreenEnabled", { configurable: true, value: false })');
     await clickFullscreen('Layar penuh');
-    await waitFor(fullscreenFits('Halaman PDF', 'canvas'));
+    await waitFor(fullscreenFits('Halaman PDF', 'canvas', 4 / 3));
     await capture('pdf-fullscreen-desktop');
     await click('Halaman sebelumnya');
     await waitFor(fullscreenReader+'?.querySelector("canvas")?.getAttribute("aria-label").endsWith("halaman 1") && '+pixel+'[1]>80 && '+pixel+'[2]<100');
+    await waitFor(fullscreenFits('Halaman PDF', 'canvas', 16 / 9));
     await clickFullscreen('Keluar dari layar penuh');
     await waitFor('!'+fullscreenReader+' && Math.abs(document.querySelector("canvas").clientWidth-document.querySelector(\'[aria-label="Halaman PDF"]\').clientWidth)<=1');
     await choose(1,'5');
