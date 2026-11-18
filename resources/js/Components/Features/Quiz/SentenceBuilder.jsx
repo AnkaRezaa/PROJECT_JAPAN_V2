@@ -81,10 +81,10 @@ export default function SentenceBuilder({
     };
 
     return (
-        <div className="space-y-4 w-full select-none" role="region" aria-label="Latihan Susun Kata">
+        <div className="w-full min-w-0 select-none space-y-2.5 sm:space-y-4" role="region" aria-label="Latihan Susun Kata">
             {/* Assembly Tray */}
             <div
-                className={`min-h-[105px] sm:min-h-[115px] rounded-3xl border-2 border-dashed p-3.5 sm:p-4 transition-colors flex flex-col justify-center ${tStyle.trayBorder} ${tStyle.trayBg}`}
+                className={`flex min-h-20 flex-col justify-center rounded-xl border-2 border-dashed p-2.5 transition-colors sm:min-h-[115px] sm:rounded-3xl sm:p-4 ${tStyle.trayBorder} ${tStyle.trayBg}`}
             >
                 {selectedTokens.length === 0 ? (
                     <p className="text-center text-xs sm:text-sm font-semibold text-slate-400 dark:text-slate-500 py-3 leading-relaxed">
@@ -125,16 +125,17 @@ export default function SentenceBuilder({
                     <button
                         type="button"
                         onClick={handleClearAll}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition"
+                        aria-label="Kosongkan susunan"
+                        className="inline-flex min-h-11 shrink-0 items-center gap-1 px-2 text-xs font-bold text-slate-600 transition hover:text-rose-600 dark:text-slate-300 dark:hover:text-rose-400 sm:min-h-0 sm:px-0"
                     >
                         <BackspaceOutlinedIcon sx={{ fontSize: 16 }} />
-                        <span>Kosongkan susunan</span>
+                        <span>Kosongkan<span className="hidden sm:inline"> susunan</span></span>
                     </button>
                 </div>
             )}
 
             {/* Token Bank Pool */}
-            <div className="flex min-h-[64px] sm:min-h-[70px] flex-wrap items-center justify-center gap-2 sm:gap-2.5 pt-1">
+            <div className="flex min-h-12 flex-wrap items-center justify-center gap-2 pt-1 sm:min-h-[70px] sm:gap-2.5">
                 {availableTokens.map((token) => (
                     <button
                         key={`bank-${token.id}`}

@@ -204,8 +204,9 @@ function ChoiceQuestion({ question, answer, feedback, disabled, onAnswer }) {
                         key={index}
                         state={optionState}
                         disabled={disabled}
+                        aria-pressed={isSelected}
                         onClick={() => onAnswer(choice)}
-                        className="flex items-center gap-3 text-left text-sm"
+                        className="flex items-center gap-3 text-left text-sm max-sm:min-h-12 max-sm:rounded-xl max-sm:px-3 max-sm:py-2"
                     >
                         <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-xs font-black transition ${
                             isWrong
@@ -216,7 +217,7 @@ function ChoiceQuestion({ question, answer, feedback, disabled, onAnswer }) {
                         }`}>
                             {letter}
                         </span>
-                        <span lang="ja" className="min-w-0 leading-6 font-japanese font-bold">{choice}</span>
+                        <span lang="ja" className="min-w-0 [overflow-wrap:anywhere] leading-6 font-japanese font-bold">{choice}</span>
                     </QuizOptionButton>
                 );
             })}
@@ -299,7 +300,7 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
     }
 
     return (
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden sm:overflow-y-auto">
             <JapaneseSpeechButton
                 text={narrationText}
                 audioUrl={narrationAudioUrl}
@@ -316,24 +317,24 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -16 }}
                     transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-4 sm:px-6 sm:py-5"
+                    className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col px-3 py-3 max-sm:overflow-y-auto max-sm:overscroll-contain sm:px-6 sm:py-5"
                 >
-                    <div className={`mb-4 inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-black uppercase ${meta.soft} ${meta.text}`}>
+                    <div className={`mb-2 inline-flex w-fit shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-black uppercase sm:mb-4 ${meta.soft} ${meta.text}`}>
                         <span className="flex h-5 w-5 items-center justify-center rounded-full text-gray-950" style={{ backgroundColor: meta.color }}>{meta.short}</span>
                         {stage?.label}
                     </div>
-                    {stage?.instruction && <h1 className="text-xl font-black leading-7 text-gray-950 dark:text-white sm:text-2xl">{stage.instruction}</h1>}
-                    <p className="mt-1 text-sm font-medium text-gray-600 dark:text-gray-400"><HighlightedLearningText text={question.prompt} term={question.highlight_text} variant="question" /></p>
+                    {stage?.instruction && <h1 className="[overflow-wrap:anywhere] text-lg font-black leading-snug text-gray-950 dark:text-white sm:text-2xl sm:leading-7">{stage.instruction}</h1>}
+                    <p className="mt-1 [overflow-wrap:anywhere] text-sm font-medium text-gray-600 dark:text-gray-400"><HighlightedLearningText text={question.prompt} term={question.highlight_text} variant="question" /></p>
 
                     {(question.japanese || question.context) && (
-                        <QuizSurface className="my-3 p-4 text-center sm:my-4 sm:p-5">
+                        <QuizSurface className="my-2 p-3 text-center max-sm:rounded-xl sm:my-4 sm:p-5">
                             {question.japanese ? (
                                 <div className="flex items-center justify-center gap-2">
                                     <JapaneseReading
                                         japanese={question.japanese}
                                         reading={question.reading}
                                         translation={question.translation}
-                                        className="items-center text-2xl font-black font-japanese text-gray-950 dark:text-white"
+                                        className="min-w-0 items-center [overflow-wrap:anywhere] text-xl font-black font-japanese text-gray-950 dark:text-white sm:text-2xl"
                                     />
                                     <JapaneseSpeechButton text={question.japanese} audioUrl={narrationAudioUrl} playbackKey={narrationKey} size="small" className="shrink-0 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" />
                                 </div>
@@ -356,16 +357,16 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
                 </motion.main>
             </AnimatePresence>
 
-            <footer className={`sticky bottom-0 shrink-0 border-t px-4 py-3 sm:px-6 ${
+            <footer className={`shrink-0 border-t px-3 pt-2 pb-[max(.5rem,env(safe-area-inset-bottom))] sm:sticky sm:bottom-0 sm:px-6 sm:py-3 ${
                 feedback?.correct
                     ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950'
                     : feedback
                         ? 'border-rose-200 bg-rose-50 dark:border-rose-900/60 dark:bg-rose-950'
                         : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950'
             }`}>
-                <div className="mx-auto flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mx-auto flex max-w-2xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     {feedback ? (
-                        <div className="min-w-0 flex-1" aria-live="polite">
+                        <div className="min-w-0 flex-1 [overflow-wrap:anywhere] max-sm:max-h-[24dvh] max-sm:overflow-y-auto max-sm:overscroll-contain" aria-live="polite">
                             <p className={`flex items-center gap-2 text-sm font-black ${feedback.correct ? 'text-emerald-800 dark:text-emerald-300' : 'text-rose-800 dark:text-rose-300'}`}>
                                 {feedback.correct ? <CheckCircleIcon sx={{ fontSize: 20 }} /> : <LightbulbOutlinedIcon sx={{ fontSize: 20 }} />}
                                 {feedback.correct ? 'Benar!' : 'Belum tepat'}
@@ -390,12 +391,12 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
                             )}
                         </div>
                     ) : (
-                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400">Pilih atau susun jawaban, lalu periksa hasilnya.</p>
+                        <p className="hidden text-xs font-bold text-gray-500 dark:text-gray-400 sm:block">Pilih atau susun jawaban, lalu periksa hasilnya.</p>
                     )}
                     <QuizActionButton
                         disabled={processing || (!feedback && !canCheck)}
                         onClick={feedback ? onContinue : onCheck}
-                        className="shrink-0"
+                        className="shrink-0 max-sm:bg-emerald-700 max-sm:text-white max-sm:hover:bg-emerald-800"
                     >
                         {processing ? 'Memproses...' : feedback ? (feedback.correct ? 'Lanjut' : 'Coba Lagi') : 'Periksa'}
                     </QuizActionButton>
@@ -412,7 +413,7 @@ function ResultScreen({ quiz, result, correctQuestionIds, onRestart, onClose, pe
         : (result.total > 0 ? Math.round((result.correct / result.total) * 100) : 0);
 
     return (
-        <div className="flex min-h-0 flex-1 items-center overflow-y-auto px-4 py-6">
+        <div className="flex min-h-0 flex-1 items-start overflow-y-auto px-4 py-6 sm:items-center">
             <div className="mx-auto w-full max-w-xl text-center">
                 <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-amber-100 text-amber-600 shadow-[0_5px_0_#fbbf24] dark:bg-amber-950/50 dark:text-amber-300">
                     <EmojiEventsIcon sx={{ fontSize: 44 }} />

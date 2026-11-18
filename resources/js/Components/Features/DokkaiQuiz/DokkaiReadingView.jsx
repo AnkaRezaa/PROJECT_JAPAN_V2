@@ -214,12 +214,12 @@ export default function DokkaiReadingView({
     };
 
     return (
-        <div className="w-full pb-20 lg:pb-0">
+        <div className="w-full pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
                 {/* LEFT COLUMN: Balanced 7 cols on laptop & desktop */}
                 <div className="lg:col-span-7 xl:col-span-7 flex flex-col gap-4">
                     {/* Wacana Main Card */}
-                    <article className="rounded-2xl sm:rounded-3xl border border-gray-200/90 bg-white p-4 sm:p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 transition-all flex flex-col">
+                    <article className="flex min-w-0 flex-col rounded-xl border border-gray-200/90 bg-white p-3 shadow-sm transition-all dark:border-gray-800 dark:bg-gray-900 sm:rounded-3xl sm:p-6">
                         {/* Compact Header & Audio Bar */}
                         <header className="pb-4 mb-4 border-b border-gray-100 dark:border-gray-800 flex flex-col gap-2.5">
                             <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
@@ -312,7 +312,7 @@ export default function DokkaiReadingView({
                         </div>
 
                         {/* Unified Reader Canvas (Satori Reader Style) */}
-                        <div className={`space-y-5 sm:space-y-6 font-japanese text-gray-950 dark:text-gray-50 max-h-[calc(100vh-14rem)] overflow-y-auto pr-2 ${FONT_CLASSES[fontSize] || FONT_CLASSES.base} ${!showFurigana ? 'furigana-hidden' : ''}`}>
+                        <div className={`space-y-4 [overflow-wrap:anywhere] font-japanese text-gray-950 dark:text-gray-50 sm:space-y-6 lg:max-h-[calc(100vh-14rem)] lg:overflow-y-auto lg:pr-2 ${FONT_CLASSES[fontSize] || FONT_CLASSES.base} ${!showFurigana ? 'furigana-hidden' : ''}`}>
                             {paragraphs.map((p) => (
                                 <section
                                     key={p.id}
@@ -346,7 +346,7 @@ export default function DokkaiReadingView({
                         </div>
 
                         {/* Bottom CTA within article for Desktop */}
-                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-4">
+                        <div className="mt-4 hidden items-center justify-between gap-4 border-t border-gray-100 pt-4 dark:border-gray-800 lg:flex">
                             <span className="text-[11px] text-gray-400">
                                 Klik kata bergaris untuk melihat arti & aksen.
                             </span>
@@ -473,11 +473,11 @@ export default function DokkaiReadingView({
             )}
 
             {/* Mobile Fixed Sticky Bottom Action Tray */}
-            <div className="lg:hidden fixed bottom-0 inset-x-0 z-20 border-t border-gray-200/90 bg-white/95 backdrop-blur-md p-3 sm:p-4 pb-safe dark:border-gray-800 dark:bg-gray-900/95 shadow-lg">
+            <div className="fixed inset-x-0 bottom-0 z-20 border-t border-gray-200/90 bg-white/95 px-3 pt-2 pb-[max(.5rem,env(safe-area-inset-bottom))] shadow-lg backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/95 lg:hidden">
                 <button
                     type="button"
                     onClick={onProceedToQuiz}
-                    className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-3 sm:py-3.5 px-4 font-bold text-sm sm:text-base text-white shadow-md hover:bg-emerald-700 active:scale-[0.99] transition"
+                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700"
                 >
                     <span>Lanjut ke Soal Kuis</span>
                     <ArrowForwardIcon sx={{ fontSize: 18 }} />

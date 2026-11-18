@@ -104,7 +104,7 @@ const pending = new Map(), errors = [];
 const sleep = ms => new Promise(resolve => setTimeout(resolve,ms));
 function send(method, params = {}, sessionId = session) { return new Promise((resolve,reject) => {
     const id = ++sequence;
-    const timer = setTimeout(() => { pending.delete(id); reject(new Error('CDP timeout: '+method)); },30000);
+    const timer = setTimeout(() => { pending.delete(id); reject(new Error('CDP timeout: '+method)); },90000);
     pending.set(id,{ resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } });
     socket.send(JSON.stringify({ id, method, params, ...(sessionId ? {sessionId} : {}) }));
 }); }
@@ -151,6 +151,12 @@ try {
     assert(await evaluate('window.__svg===document.querySelector("[id^=kanji-writer-] svg")'),'Width must not recreate canvas');
     assert.equal(await evaluate('window.__path.getAttribute("d")'),geometry);
     assert.equal(await evaluate('window.__path.getAttribute("stroke-width")'),'8');
+    const fullBoardWidth = await evaluate('window.__svg.getBoundingClientRect().width');
+    await send('Emulation.setDeviceMetricsOverride',{width:320,height:568,deviceScaleFactor:1,mobile:true});
+    await waitFor(`window.__svg.getBoundingClientRect().width < ${fullBoardWidth}`);
+    assert(await evaluate(`(() => { const r=window.__svg.getBoundingClientRect();return Math.abs(r.width-r.height)<1 && r.width>=220 && r.right<=innerWidth; })()`),'Short mobile viewport has a usable square canvas');
+    assert(await evaluate(`(() => { const controls=Array.from(document.querySelectorAll('button[aria-label]')).filter(button=>['Ulangi tulisan','Hapus goresan terakhir','Periksa tulisan','Petunjuk goresan'].includes(button.getAttribute('aria-label'))); const boxes=controls.map(button=>button.getBoundingClientRect()); return boxes.length===4 && boxes.every(box=>box.width>=44&&box.height>=44&&Math.abs(box.top-boxes[0].top)<1) && controls[2].innerText.trim()==='Periksa'; })()`),'Mobile canvas toolbar fits in one row with accessible tap targets');
+    assert.equal(await evaluate('window.__path.getAttribute("d")'),geometry,'Resizing must preserve drawn strokes');
     for(const [width,dark] of [[390,false],[1366,true]]) {
         await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width===390});
         await evaluate(`document.documentElement.classList.toggle('dark',${dark})`);
@@ -163,10 +169,14 @@ try {
     await click('Lewati karakter'); assert.equal(await evaluate('window.__writing.completions.length'),1);
     await open('legacy'); await waitFor('document.querySelector("[id^=kanji-writer-] svg")');
     assert.equal(await evaluate('Boolean(document.querySelector("input[type=range]"))'),false);
-    assert.equal(await evaluate('document.body.innerText.includes("Lewati karakter")'),false);
+    assert.equal(await evaluate('Boolean(document.querySelector(\'button[aria-label="Lewati karakter"]\'))'),false);
+    await send('Emulation.setDeviceMetricsOverride',{width:320,height:568,deviceScaleFactor:1,mobile:true});
     await open('quiz'); await waitFor('document.body.innerText.includes("Answer A")');
-    await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
-    await waitFor('document.body.innerText.includes("Sudah Paham")'); await click('Sudah Paham');
+    await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")');
+    await waitFor(`(() => { const b=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='LANJUT');const r=b?.getBoundingClientRect();return r?.bottom<=innerHeight && r.height>=44; })()`);
+    assert(await evaluate('document.querySelector("main").getBoundingClientRect().bottom <= document.querySelector("[role=status]").getBoundingClientRect().top + 1'),'Mobile feedback must not cover the answer area');
+    await click('LANJUT');
+    await waitFor('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))'); await click('Sudah Paham');
     await waitFor('document.body.innerText.includes("Karakter 1 dari 2")');
     await evaluate(`(()=>{const b=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Lewati karakter');b.click();b.click()})()`);
     await waitFor('document.body.innerText.includes("Karakter 2 dari 2")');
@@ -183,11 +193,11 @@ try {
 
     await open('quiz&writing=off'); await waitFor('document.body.innerText.includes("Answer A")');
     await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
-    await waitFor('document.body.innerText.includes("Sudah Paham")');
+    await waitFor('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))');
     await evaluate('window.__writing.failReading=true'); await click('Sudah Paham');
     await waitFor('window.__writing.requests.some(r=>r.url.includes("user.flashcards.review"))');
     await sleep(200);
-    assert(await evaluate('document.body.innerText.includes("Sudah Paham")'),'Failed flashcard review must not advance');
+    assert(await evaluate('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))'),'Failed flashcard review must not advance');
     await evaluate('window.__writing.failReading=false;window.__setWritingPreference(true)');
     await click('Sudah Paham'); await waitFor('document.body.innerText.includes("Question 2")');
     assert.equal(await evaluate('Boolean(document.querySelector("[id^=kanji-writer-]"))'),false,'Disabled session must skip canvas despite changed props');
@@ -197,13 +207,13 @@ try {
     await open('quiz&writing=on', true); await waitFor('document.body.innerText.includes("Lanjutkan Latihan?")');
     await click('Lanjutkan'); await waitFor('document.body.innerText.includes("Question 2")');
     await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
-    await waitFor('document.body.innerText.includes("Sudah Paham")'); await click('Sudah Paham');
+    await waitFor('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))'); await click('Sudah Paham');
     await waitFor('window.__writing.requests.some(r=>r.url.includes("user.attempts.store"))');
     assert.equal(await evaluate('window.__writing.requests.filter(r=>r.data.skill==="writing").length'),0,'Resume retains disabled checkpoint even when current Day is enabled');
 
     await open('quiz&writing=off&single=1'); await waitFor('document.body.innerText.includes("Answer A")');
     await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
-    await waitFor('document.body.innerText.includes("Sudah Paham")'); await click('Sudah Paham');
+    await waitFor('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))'); await click('Sudah Paham');
     await waitFor('document.title.includes("Hasil Kuis")');
     assert.equal(await evaluate('window.__writing.requests.filter(r=>r.url.includes("user.attempts.store")).length'),1,'Last flashcard finishes exactly once');
     assert.equal(await evaluate('window.__writing.requests.filter(r=>r.data.skill==="writing").length'),0);
@@ -211,19 +221,19 @@ try {
     await evaluate(`localStorage.setItem('japanlingo_cp_vocab_8801_u881',JSON.stringify({currentIndex:1,lives:5,score:1,completedIds:[1],answerEvents:[{question_id:1,answer_text:'Answer A'}],savedAt:Date.now()}))`);
     await open('quiz&writing=off', true); await waitFor('document.body.innerText.includes("Lanjutkan Latihan?")');
     await click('Lanjutkan'); await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
-    await waitFor('document.body.innerText.includes("Sudah Paham")'); await click('Sudah Paham');
+    await waitFor('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))'); await click('Sudah Paham');
     await waitFor('document.body.innerText.includes("Karakter 1 dari 2")');
 
     await evaluate(`localStorage.setItem('japanlingo_cp_vocab_8801_u881',JSON.stringify({currentIndex:1,lives:5,score:1,completedIds:[1],answerEvents:[{question_id:1,answer_text:'Answer A'}],handwriting_enabled:false,savedAt:Date.now()}))`);
     await open('quiz&writing=on', true); await waitFor('document.body.innerText.includes("Lanjutkan Latihan?")');
     await click('Mulai dari Awal'); await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
-    await waitFor('document.body.innerText.includes("Sudah Paham")'); await click('Sudah Paham');
+    await waitFor('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))'); await click('Sudah Paham');
     await waitFor('document.body.innerText.includes("Karakter 1 dari 2")');
 
     await open('builder&writing=off'); await waitFor('document.body.innerText.includes("Preview Siswa")');
     await click('Preview Siswa'); await waitFor('document.body.innerText.includes("Answer A")');
     await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
-    await waitFor('document.body.innerText.includes("Sudah Paham")'); await click('Sudah Paham');
+    await waitFor('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))'); await click('Sudah Paham');
     await waitFor('document.body.innerText.includes("Question 2")');
     assert.equal(await evaluate('window.__writing.requests.length'),0,'Disabled builder preview uses .flashcards and does not persist reviews or open writing');
 

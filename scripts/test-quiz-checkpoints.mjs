@@ -33,7 +33,7 @@ Storage.prototype.setItem = function(...args) {
     if (args[0].startsWith('japanlingo_cp_')) window.__quiz.writes++;
     return originalSetItem.apply(this, args);
 };
-const questions = [11, 12].map((id, index) => ({
+const questions = (scenario === 'dokkai-mobile' ? Array.from({length:18}, (_, index) => index + 11) : [11, 12]).map((id, index) => ({
     id, question_number: index + 1, question_text: 'Question ' + (index + 1),
     options: [{ option_label: 'A', option_text: 'Option A' }, { option_label: 'B', option_text: 'Option B' }],
 }));
@@ -47,7 +47,7 @@ const grammar = {
 axios.post = async (url, data) => {
     window.__quiz.requests.push({ url, data });
     if (url.endsWith('/start')) return { data: { attempt_id: 1, submission_token: 'grammar-session' } };
-    if (url.endsWith('/answers/first')) return { data: { correct: true, recorded: true } };
+    if (url.endsWith('/answers/first')) return { data: { correct: true, recorded: true, explanation: scenario === 'grammar-mobile' ? 'Long feedback for layout. '.repeat(90) : undefined } };
     if (url === '/mixed-submit') {
         if (window.__quiz.mode === 'expired') throw { response: { status: 409, data: { message: 'Sesi kuis kedaluwarsa.' } } };
         return { data: { score: 50, total_questions: 2, correct_count: 1, xp_earned: 0, passed: false, breakdown: {} } };
@@ -59,12 +59,12 @@ function Fixture() {
     const [closed, setClosed] = React.useState(window.__quiz.closed > 0);
     const onClose = () => { window.__quiz.closed++; setClosed(true); };
     if (closed) return <p>Fixture closed</p>;
-    if (scenario === 'grammar') return <Grammar quiz={grammar} persist onClose={onClose} />;
+    if (scenario.startsWith('grammar')) return <div className="h-dvh"><Grammar quiz={grammar} persist onClose={onClose} /></div>;
     if (scenario === 'mixed') return <Mixed
         quiz={{ quiz_id: 9003, day_id: 55, title: 'Mixed fixture', session_token: 'mixed-token', expires_at: new Date(Date.now()+7200000).toISOString(), questions: questions.map(q => ({...q,raw_id:q.id,source_type:'kosakata',category_key:'kosakata',options:[{text:'Mixed A'},{text:'Mixed B'}]})) }}
         submitUrl="/mixed-submit" restartUrl="/mixed-restart" backUrl="/" />;
     return <Dokkai quiz={{ id:9001, title:'Dokkai fixture', time_limit:scenario === 'dokkai-timeout' ? 1 : 90, passing_score:70 }}
-        questions={questions} paragraphs={[{ id:1,paragraph_number:1,content_raw:'A short reading passage.' }]}
+        questions={questions} paragraphs={[{ id:1,paragraph_number:1,content_raw:scenario === 'dokkai-mobile' ? 'A long reading passage. '.repeat(110) : 'A short reading passage.' }]}
         persist={scenario !== 'preview'} onClose={onClose}
         onSubmitAttempt={async data => {
             window.__quiz.requests.push({url:'dokkai-submit',data});
@@ -84,6 +84,12 @@ window.__quizReady = true;
 const server = await createServer({
     configFile: false,
     root,
+    cacheDir: path.join(profile, 'vite-cache'),
+    optimizeDeps: {
+        entries: [],
+        include: ['react', 'react-dom', 'react-dom/client', '@headlessui/react', '@inertiajs/react', 'axios', 'framer-motion', 'tiny-segmenter',
+            ...['AccessTime', 'ArrowBack', 'ArrowForward', 'AutoAwesome', 'AutoStories', 'BackspaceOutlined', 'Bookmark', 'BookmarkAdd', 'BookmarkBorder', 'Cancel', 'CheckCircle', 'ChevronRight', 'Close', 'EmojiEvents', 'ErrorOutlineOutlined', 'ExpandLess', 'ExpandMore', 'FindInPage', 'FlagOutlined', 'FlashOn', 'InfoOutlined', 'LightbulbOutlined', 'MenuBook', 'Pause', 'PlayArrow', 'Quiz', 'RecordVoiceOver', 'Refresh', 'Replay', 'Restore', 'School', 'Search', 'Star', 'StarBorder', 'TimerOutlined', 'Translate', 'VolumeOff', 'VolumeUp', 'WarningAmber'].map(icon => '@mui/icons-material/' + icon)],
+    },
     resolve: { alias: { '@': path.join(root, 'resources/js') } },
     plugins: [react(), {
         name: 'quiz-checkpoint-fixture',
@@ -115,7 +121,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function send(method, params = {}, session = sessionId) {
     const id = ++sequence;
     return new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => { pending.delete(id); reject(new Error('CDP timeout: ' + method)); }, 30000);
+        const timeout = setTimeout(() => { pending.delete(id); reject(new Error('CDP timeout: ' + method)); }, 90000);
         pending.set(id, { resolve: value => { clearTimeout(timeout); resolve(value); }, reject });
         socket.send(JSON.stringify({ id, method, params, ...(session ? {sessionId:session} : {}) }));
     });
@@ -151,9 +157,9 @@ const dokkaiKey = 'japanlingo_cp_dokkai_9001_u4242';
 const grammarKey = 'japanlingo_cp_grammar_9002_u4242';
 const mixedKey = 'japanlingo_cp_mixed_55_u4242';
 async function checkpoint(key) { return evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(key)}))`); }
-async function open(scenario, { clear = false, dark = false, mobile = false } = {}) {
+async function open(scenario, { clear = false, dark = false, mobile = false, width = mobile ? 390 : 1366, height = mobile ? 844 : 900 } = {}) {
     console.log('Checking browser scenario:',scenario, mobile ? 'mobile' : 'desktop',dark ? 'dark' : 'light');
-    await send('Emulation.setDeviceMetricsOverride', { width: mobile ? 390 : 1366, height: mobile ? 844 : 900, deviceScaleFactor:1, mobile });
+    await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor:1, mobile });
     await send('Page.navigate', {url:server.resolvedUrls.local[0]+'__quiz-checkpoints?scenario='+scenario});
     await waitFor('window.__quizReady && document.querySelector("button")');
     if (clear) {
@@ -207,6 +213,7 @@ try {
     await waitFor('document.body?.innerText.includes("Fixture home")');
 
     let saved;
+    if (!process.argv.includes('--mobile-only')) {
     if (!process.argv.includes('--exit-only')) {
     await open('dokkai', {clear:true});
     await click('Lanjut ke Soal Kuis');
@@ -303,7 +310,7 @@ try {
 
     await open('mixed',{clear:true});
     await click('AMixed A');
-    await click('Berikutnya');
+    await click('Selanjutnya →');
     saved = await checkpoint(mixedKey);
     assert.equal(saved.currentIndex,1);
     assert.equal(saved.session_token,'mixed-token');
@@ -318,6 +325,37 @@ try {
     await waitFor('document.body.innerText.includes("Sesi sebelumnya tidak tersedia")');
     assert.equal(await evaluate('document.body.innerText.includes("Question 2")'),false);
     results.push('Mixed: mismatched session never applies old answers to new questions');
+    }
+    }
+
+    if (!process.argv.includes('--exit-only')) {
+    await open('grammar-mobile', {clear:true,mobile:true,width:320,height:568});
+    await click('Mulai Lesson');
+    await click('AChoice A');
+    await click('Periksa');
+    await waitFor('document.querySelector("footer [aria-live=polite]")?.textContent.includes("Long feedback")');
+    assert(await evaluate(`(() => { const footer=document.querySelector('footer');const note=footer.querySelector('[aria-live=polite]');const action=footer.querySelector('button').getBoundingClientRect();return note.scrollHeight>note.clientHeight && action.height>=44 && action.bottom<=innerHeight; })()`), 'Long Grammar feedback is readable without hiding Lanjut');
+    await screenshot('grammar-short-mobile');
+    await click('Lanjut');
+    await waitFor('document.querySelector("[aria-label=\\\"Latihan Susun Kata\\\"]")');
+    await screenshot('grammar-sentence-mobile');
+    results.push('Grammar: long feedback scrolls independently and sentence-builder remains usable at 320px');
+
+    await open('dokkai-mobile', {clear:true,mobile:true,width:320,height:568});
+    await click('Lanjut ke Soal Kuis');
+    const questionStrip = 'button[aria-current=step]';
+    assert(await evaluate(`(() => { const strip=document.querySelector('${questionStrip}').parentElement;return strip.scrollWidth>strip.clientWidth && strip.getBoundingClientRect().right<=innerWidth; })()`), 'Question numbers scroll without widening the Dokkai card');
+    await click('Wacana');
+    await waitFor('document.querySelector("[role=dialog]") && document.body.innerText.includes("A long reading passage")');
+    await screenshot('dokkai-passage-mobile');
+    await click('Kembali ke Soal');
+    await waitFor('!document.querySelector("[role=dialog]")');
+    await click('AOption A');
+    assert(await evaluate(`(() => ['Soal sebelumnya','Soal berikutnya'].every(name=>{const button=document.querySelector('button[aria-label="'+name+'"]');const box=button.getBoundingClientRect();return box.width>=44&&box.height>=44&&button.innerText.trim()==='';}))()`),'Compact Dokkai arrows retain clear accessible names and tap targets');
+    await click('Berikutnya');
+    await waitFor('document.querySelector("button[aria-current=step]")?.getAttribute("aria-label")==="Soal 2"');
+    await screenshot('dokkai-questions-mobile');
+    results.push('Dokkai: passage opens and returns to answers; question strip and navigation fit at 320px');
     }
 
     assert.deepEqual(errors,[],'Uncaught browser errors');

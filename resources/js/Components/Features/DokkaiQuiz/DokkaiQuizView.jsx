@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import BackButton from '@/Components/UI/BackButton';
 import HighlightedLearningText from '@/Components/Features/Learning/HighlightedLearningText';
 import ConfirmActionDialog from '@/Components/UI/ConfirmActionDialog';
@@ -170,52 +171,32 @@ export default function DokkaiQuizView({
 
     return (
         <div className="w-full">
-            {/* Quick Passage Access Trigger on Mobile & Tablet (< lg) */}
-            <div className="lg:hidden mb-3">
-                <button
-                    type="button"
-                    onClick={() => setIsPassageSheetOpen(true)}
-                    className="w-full flex items-center justify-between p-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/70 text-emerald-950 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-200 transition active:scale-[0.99] shadow-xs"
-                >
-                    <span className="flex items-center gap-2 text-xs sm:text-sm font-bold">
-                        <AutoStoriesIcon sx={{ fontSize: 18 }} className="text-emerald-600 dark:text-emerald-400" />
-                        <span>Baca Teks Wacana Acuan</span>
-                    </span>
-                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                        Buka Wacana →
-                    </span>
-                </button>
-            </div>
-
-            {/* Slide-Up Sheet Modal for Reading Passage on Mobile & Tablet */}
-            {isPassageSheetOpen && (
-                <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
-                    <div
-                        className="fixed inset-0"
-                        onClick={() => setIsPassageSheetOpen(false)}
-                    />
-                    <div className="relative z-10 w-full max-h-[85vh] rounded-t-3xl bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-2xl flex flex-col p-4 sm:p-6 animate-in slide-in-from-bottom duration-300">
+            <Dialog open={isPassageSheetOpen} onClose={setIsPassageSheetOpen} className="relative z-[180]">
+                <div aria-hidden="true" className="fixed inset-0 bg-black/40" />
+                <div className="fixed inset-0 flex items-end justify-center">
+                    <DialogPanel className="flex max-h-[85dvh] w-full max-w-3xl flex-col rounded-t-xl border-t border-gray-200 bg-white p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] shadow-2xl dark:border-gray-800 dark:bg-gray-900 sm:p-6">
                         {/* Sheet Header */}
                         <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100 dark:border-gray-800">
                             <div className="flex items-center gap-2 min-w-0">
                                 <AutoStoriesIcon sx={{ fontSize: 18 }} className="text-emerald-500 shrink-0" />
-                                <h3 className="font-bold text-sm text-gray-900 dark:text-white font-japanese truncate">
+                                <DialogTitle className="min-w-0 [overflow-wrap:anywhere] font-japanese text-sm font-bold text-gray-900 dark:text-white">
                                     {quiz?.title}
-                                </h3>
+                                </DialogTitle>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setIsPassageSheetOpen(false)}
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
+                                aria-label="Tutup wacana"
+                                className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
                             >
                                 <CloseIcon sx={{ fontSize: 18 }} />
                             </button>
                         </div>
 
                         {/* Paragraphs Scrollable Content with Ruby Furigana */}
-                        <div className="flex-1 overflow-y-auto space-y-4 font-japanese text-base sm:text-lg leading-[2.4] text-gray-950 dark:text-gray-50 tracking-wide pr-1">
+                        <div className={`min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain [overflow-wrap:anywhere] pr-1 font-japanese leading-[2.2] text-gray-950 dark:text-gray-50 ${fontSize === 'lg' ? 'text-lg' : fontSize === 'sm' ? 'text-sm' : 'text-base'}`}>
                             {paragraphs.map((p) => (
-                                <section key={p.id} className="rounded-2xl bg-gray-50/80 p-4 sm:p-5 dark:bg-gray-800/50 border border-gray-200/80 dark:border-gray-800">
+                                <section key={p.id} className="border-b border-gray-200/80 px-1 pb-3 dark:border-gray-800 sm:px-3">
                                     <div className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1.5">
                                         {p.label || `Paragraf ${p.paragraph_number}`}
                                     </div>
@@ -229,14 +210,14 @@ export default function DokkaiQuizView({
                             <button
                                 type="button"
                                 onClick={() => setIsPassageSheetOpen(false)}
-                                className="w-full py-3.5 rounded-2xl bg-emerald-600 text-white font-bold text-sm shadow-md hover:bg-emerald-700 active:scale-[0.99] transition"
+                                className="min-h-11 w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white transition hover:bg-emerald-700"
                             >
-                                Tutup & Lanjut Menjawab Soal
+                                Kembali ke Soal
                             </button>
                         </div>
-                    </div>
+                    </DialogPanel>
                 </div>
-            )}
+            </Dialog>
 
             {/* Main Stage: Dual-Column on Laptops & Desktops (lg:), Single-Column on Mobile */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
@@ -269,14 +250,14 @@ export default function DokkaiQuizView({
                 </div>
 
                 {/* RIGHT COLUMN: Interactive Question Card (Full width on < lg, 7 cols on lg:) */}
-                <div className="w-full lg:col-span-7 2xl:col-span-7 flex flex-col gap-3.5">
+                <div className="flex w-full min-w-0 flex-col gap-2.5 lg:col-span-7 lg:gap-3.5">
                     {/* Navigation Bar / Question Selector */}
-                    <div className="rounded-2xl border border-gray-200/90 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-gray-900 flex flex-wrap items-center justify-between gap-2.5">
-                        <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200/90 bg-white px-2.5 py-2 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:gap-2.5 lg:rounded-2xl lg:p-3">
+                        <div className="flex min-w-0 max-w-full items-center gap-2 max-lg:basis-full">
                             <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider shrink-0">
                                 Soal:
                             </span>
-                            <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 max-w-full">
+                            <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto overscroll-x-contain py-1">
                                 {questions.map((q, idx) => {
                                     const isAnswered = Boolean(selectedAnswers[q.id]);
                                     const isCurrent = idx === currentQuestionIndex;
@@ -287,7 +268,9 @@ export default function DokkaiQuizView({
                                             key={q.id}
                                             type="button"
                                             onClick={() => setCurrentQuestionIndex(idx)}
-                                            className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-bold transition ${
+                                            aria-label={`Soal ${idx + 1}${isFlagged ? ', ragu-ragu' : ''}`}
+                                            aria-current={isCurrent ? 'step' : undefined}
+                                            className={`relative flex size-11 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition lg:size-8 lg:rounded-xl ${
                                                 isCurrent
                                                     ? 'bg-emerald-600 text-white shadow-xs'
                                                     : isAnswered
@@ -325,7 +308,7 @@ export default function DokkaiQuizView({
                                     type="button"
                                     onClick={handleSubmitClick}
                                     disabled={isSubmitting || answersLocked}
-                                    className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-xs hover:bg-emerald-700 active:scale-95 transition cursor-pointer disabled:opacity-50"
+                                    className="hidden items-center gap-1 rounded-xl bg-emerald-600 px-3 py-1 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700 active:scale-95 disabled:opacity-50 lg:inline-flex"
                                 >
                                     <CheckCircleIcon sx={{ fontSize: 13 }} />
                                     <span>{isSubmitting ? 'Mengirim...' : 'Kumpulkan'}</span>
@@ -336,17 +319,18 @@ export default function DokkaiQuizView({
 
                     {/* Active Question Canvas Card */}
                     {currentQuestion && (
-                        <div className="rounded-2xl sm:rounded-3xl border border-gray-200/90 bg-white p-4 sm:p-5 lg:p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 flex flex-col">
+                        <div className="flex min-w-0 flex-col rounded-xl border border-gray-200/90 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:rounded-3xl sm:p-5 lg:p-6">
                             {/* Question Header */}
-                            <div className="pb-2.5 mb-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
+                            <div className="mb-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-gray-100 pb-2 dark:border-gray-800 sm:mb-3 sm:pb-2.5">
+                                <div className="flex min-w-0 flex-wrap items-center gap-2">
                                     <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
                                         Pertanyaan {currentQuestion.question_number || currentQuestionIndex + 1}
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => toggleFlag(currentQuestion.id)}
-                                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition active:scale-95 ${
+                                        aria-pressed={flaggedQuestions.has(currentQuestion.id)}
+                                        className={`inline-flex min-h-11 items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition active:scale-95 lg:min-h-0 ${
                                             flaggedQuestions.has(currentQuestion.id)
                                                 ? 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/70 dark:text-amber-200 dark:border-amber-700'
                                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300'
@@ -364,16 +348,16 @@ export default function DokkaiQuizView({
                                 <button
                                     type="button"
                                     onClick={() => setIsPassageSheetOpen(true)}
-                                    className="lg:hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 text-[11px] font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900 transition active:scale-95"
-                                    title="Intip teks wacana acuan"
+                                    aria-haspopup="dialog"
+                                    className="inline-flex min-h-11 items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100 active:scale-95 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900 lg:hidden"
                                 >
                                     <AutoStoriesIcon sx={{ fontSize: 14 }} />
-                                    <span>Intip Wacana</span>
+                                    <span>Wacana</span>
                                 </button>
                             </div>
 
                             {/* Question Text */}
-                            <h3 className="text-xl sm:text-2xl font-extrabold font-japanese text-gray-950 dark:text-white leading-relaxed mb-2 tracking-wide">
+                            <h3 className="mb-2 [overflow-wrap:anywhere] font-japanese text-lg font-extrabold leading-relaxed text-gray-950 dark:text-white sm:text-2xl sm:tracking-wide">
                                 <HighlightedLearningText text={currentQuestion.question_text} term={currentQuestion.highlight_text} variant="question" />
                             </h3>
                             {currentQuestion.question_translation && (
@@ -383,7 +367,7 @@ export default function DokkaiQuizView({
                             )}
 
                             {/* Tactile 3D Duolingo-style Options: 2 Columns on sm/laptop */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 mt-2">
+                            <div className="mt-2 grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-4">
                                 {(currentQuestion.options || []).map((opt) => {
                                     const isSelected = selectedAnswers[currentQuestion.id] === opt.option_label;
 
@@ -393,7 +377,8 @@ export default function DokkaiQuizView({
                                             type="button"
                                             onClick={() => onSelectAnswer(currentQuestion.id, opt.option_label)}
                                             disabled={answersDisabled}
-                                            className={`w-full text-left p-4 sm:p-4.5 rounded-2xl border-2 transition-all flex items-start gap-3.5 group cursor-pointer select-none ${
+                                            aria-pressed={isSelected}
+                                            className={`group flex min-h-12 w-full min-w-0 cursor-pointer select-none items-start gap-2.5 rounded-xl border-2 p-2.5 text-left transition-all sm:gap-3.5 sm:rounded-2xl sm:p-4.5 ${
                                                 isSelected
                                                     ? 'border-emerald-500 border-b-[4px] border-b-emerald-600 bg-emerald-50/80 text-emerald-950 dark:border-emerald-500 dark:border-b-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-100 shadow-xs ring-2 ring-emerald-500/20 active:border-b-2 active:translate-y-[2px]'
                                                     : 'border-gray-200 border-b-[4px] border-b-gray-300 bg-white hover:border-gray-300 hover:bg-gray-50/60 dark:border-gray-700 dark:border-b-gray-900 dark:bg-gray-800/90 dark:hover:border-gray-600 dark:hover:bg-gray-800 dark:text-gray-100 active:border-b-2 active:translate-y-[2px]'
@@ -409,7 +394,7 @@ export default function DokkaiQuizView({
                                                 {opt.option_label}
                                             </span>
                                             <div className="flex-1 pt-0.5 min-w-0">
-                                                <p className="font-japanese text-base sm:text-lg font-bold text-gray-950 dark:text-gray-50 leading-relaxed tracking-wide">
+                                                <p className="[overflow-wrap:anywhere] font-japanese text-base font-bold leading-relaxed text-gray-950 dark:text-gray-50 sm:text-lg sm:tracking-wide">
                                                     {opt.option_text}
                                                 </p>
                                                 {opt.option_translation && (
@@ -424,36 +409,45 @@ export default function DokkaiQuizView({
                             </div>
 
                             {/* Navigation Prev / Next & Submit */}
-                            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                            <div className="mt-4 grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-start gap-2 border-t border-gray-100 pt-3 dark:border-gray-800 sm:mt-5 sm:flex sm:items-center sm:justify-between sm:gap-2.5 sm:pt-4">
                                 <button
                                     type="button"
                                     onClick={handlePrev}
                                     disabled={currentQuestionIndex === 0}
-                                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:pointer-events-none dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 transition"
+                                    aria-label="Soal sebelumnya"
+                                    title="Soal sebelumnya"
+                                    className="flex min-h-11 w-full min-w-0 items-center justify-center gap-1 rounded-lg border border-gray-200 px-2 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-40 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 sm:min-h-0 sm:w-auto sm:gap-1.5 sm:rounded-xl sm:px-4"
                                 >
                                     <ArrowBackIcon sx={{ fontSize: 16 }} />
-                                    <span>Sebelumnya</span>
+                                    <span className="hidden sm:inline">Sebelumnya</span>
                                 </button>
 
                                 {currentQuestionIndex < totalQuestions - 1 ? (
+                                    <>
+                                    <span className="self-center text-center text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400 sm:hidden">
+                                        {currentQuestionIndex + 1} / {totalQuestions}
+                                    </span>
                                     <button
                                         type="button"
                                         onClick={handleNext}
-                                        className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-6 py-2 rounded-xl bg-gray-900 border-b-4 border-gray-950 text-white text-xs font-bold shadow-xs hover:bg-gray-800 dark:bg-gray-800 dark:border-gray-950 dark:text-white dark:hover:bg-gray-700 active:border-b-2 active:translate-y-[2px] transition"
+                                        aria-label="Soal berikutnya"
+                                        title="Soal berikutnya"
+                                        className="flex min-h-11 w-full min-w-0 items-center justify-center gap-1 rounded-lg border-b-4 border-gray-950 bg-gray-900 px-2 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-gray-800 active:translate-y-[2px] active:border-b-2 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 sm:min-h-0 sm:w-auto sm:gap-1.5 sm:rounded-xl sm:px-6"
                                     >
-                                        <span>Berikutnya</span>
+                                        <span className="hidden sm:inline">Berikutnya</span>
                                         <ArrowForwardIcon sx={{ fontSize: 16 }} />
                                     </button>
+                                    </>
                                 ) : (
-                                    <div className="flex flex-col items-stretch sm:items-end gap-1.5 w-full sm:w-auto">
+                                    <div className="col-span-2 flex w-full flex-col items-stretch gap-1.5 sm:w-auto sm:items-end">
                                         <button
                                             type="button"
                                             onClick={handleSubmitClick}
                                             disabled={isSubmitting || answersLocked}
-                                            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-xl bg-emerald-600 border-b-4 border-emerald-700 text-white text-xs font-bold shadow-md hover:bg-emerald-700 active:border-b-2 active:translate-y-[2px] transition cursor-pointer disabled:opacity-50"
+                                            className="flex min-h-11 w-full items-center justify-center gap-1 rounded-lg border-b-4 border-emerald-700 bg-emerald-600 px-2 py-2 text-xs font-bold text-white shadow-md transition hover:bg-emerald-700 active:translate-y-[2px] active:border-b-2 disabled:opacity-50 sm:min-h-0 sm:w-auto sm:gap-1.5 sm:rounded-xl sm:px-6 sm:py-2.5"
                                         >
                                             <CheckCircleIcon sx={{ fontSize: 16 }} />
-                                            <span>{isSubmitting ? 'Mengirim Jawaban...' : 'Kumpulkan Jawaban'}</span>
+                                            <span>{isSubmitting ? 'Mengirim...' : <>Kumpulkan<span className="hidden sm:inline"> Jawaban</span></>}</span>
                                         </button>
                                         {firstUnansweredIndex !== -1 && (
                                             <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 text-center sm:text-right">

@@ -626,7 +626,7 @@ export default function DokkaiQuizRunner({
             </header>
 
             {/* Tactile Progress Bar (Ecosystem Standar Kuis Japanlingo) */}
-            <div className="h-1.5 w-full bg-gray-200/60 dark:bg-gray-800 overflow-hidden sticky top-[49px] sm:top-[57px] z-30">
+            <div className="z-30 h-1.5 w-full overflow-hidden bg-gray-200/60 dark:bg-gray-800 sm:sticky sm:top-[57px]">
                 <div
                     className="h-full bg-emerald-500 transition-all duration-500 ease-out shadow-[0_0_8px_rgba(16,185,129,0.5)]"
                     style={{ width: `${currentProgressPercentage}%` }}

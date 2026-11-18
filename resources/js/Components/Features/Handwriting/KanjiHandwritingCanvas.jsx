@@ -466,7 +466,7 @@ export default function KanjiHandwritingCanvas({
     };
 
     return (
-        <fieldset disabled={disabled} className={`mx-auto min-w-0 w-full ${compact ? 'max-w-[260px]' : 'max-w-[460px] [@media(max-height:820px)]:max-w-[300px]'}`}>
+        <fieldset disabled={disabled} className={`mx-auto min-w-0 w-full ${compact ? 'max-w-[260px]' : 'max-w-[460px] [@media(max-height:820px)]:max-w-[300px] max-sm:max-w-none'}`}>
             <div className="mb-2 flex items-center justify-between gap-3 text-xs font-bold text-gray-500 dark:text-gray-400">
                 <span>
                     {strokeData
@@ -484,7 +484,7 @@ export default function KanjiHandwritingCanvas({
             </div>
             <div
                 id={containerId}
-                className="aspect-square w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-inner dark:border-gray-700"
+                className={`mx-auto aspect-square w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-inner dark:border-gray-700 ${compact ? '' : 'max-sm:max-w-[min(22rem,max(12rem,calc(100dvh-18rem)))]'}`}
                 aria-label={`Area latihan menulis ${character}`}
                 style={{ pointerEvents: disabled ? 'none' : undefined }}
             />
@@ -493,17 +493,17 @@ export default function KanjiHandwritingCanvas({
             </p>
             {!(selfEvaluation && evaluation && evaluationPreview) && <QuizErrorMessage className="mt-3">{errorMessage}</QuizErrorMessage>}
             {mode === 'quiz' && (onStrokeWidthChange || onSkip) && !(selfEvaluation && evaluation) && (
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 sm:mt-3 sm:gap-3">
                     {onStrokeWidthChange && (
-                        <label className="flex min-h-11 flex-wrap items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-200">
-                            Ketebalan pena
-                            <input type="range" min="2" max="8" step="1" value={strokeWidth} onChange={(event) => onStrokeWidthChange(Number(event.target.value))} className="w-24 accent-orange-600 dark:accent-orange-400" />
+                        <label className="flex min-h-11 items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 sm:gap-2">
+                            <span>Ketebalan<span className="hidden sm:inline"> pena</span></span>
+                            <input type="range" min="2" max="8" step="1" value={strokeWidth} onChange={(event) => onStrokeWidthChange(Number(event.target.value))} className="h-11 w-14 accent-orange-600 dark:accent-orange-400 sm:w-24" />
                             <output className="w-4 text-center tabular-nums">{strokeWidth}</output>
                         </label>
                     )}
                     {onSkip && !completed && (
-                        <button type="button" onClick={onSkip} className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
-                            <SkipNextRoundedIcon sx={{ fontSize: 18 }} /> Lewati karakter
+                        <button type="button" onClick={onSkip} aria-label="Lewati karakter" className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+                            <SkipNextRoundedIcon sx={{ fontSize: 18 }} /> <span>Lewati<span className="hidden sm:inline"> karakter</span></span>
                         </button>
                     )}
                 </div>
@@ -596,18 +596,18 @@ export default function KanjiHandwritingCanvas({
                 </div>
             )}
             {status === 'ready' && (
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className={`mt-3 grid gap-2 sm:grid-cols-4 ${mode === 'quiz' && !completed && !(selfEvaluation && evaluation) ? 'grid-cols-[2.75rem_2.75rem_minmax(0,1fr)_2.75rem]' : 'grid-cols-2'}`}>
                     {mode === 'preview' && (
                         <button type="button" onClick={() => writerRef.current?.animate()} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white text-xs font-black text-gray-700 transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
                             <PlayArrowRoundedIcon sx={{ fontSize: 18 }} /> Putar
                         </button>
                     )}
-                    <button type="button" onClick={reset} disabled={mode === 'quiz' && (drawnStrokes === 0 || (selfEvaluation && evaluation))} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white text-xs font-black text-gray-700 transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gray-300/50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
-                        <RestartAltRoundedIcon sx={{ fontSize: 18 }} /> Ulangi
+                    <button type="button" onClick={reset} aria-label="Ulangi tulisan" title="Ulangi tulisan" disabled={mode === 'quiz' && (drawnStrokes === 0 || (selfEvaluation && evaluation))} className="inline-flex min-h-11 sm:min-h-10 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white text-xs font-black text-gray-700 transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gray-300/50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+                        <RestartAltRoundedIcon sx={{ fontSize: 18 }} /> <span className={mode === 'quiz' && !completed && !(selfEvaluation && evaluation) ? 'hidden sm:inline' : ''}>Ulangi</span>
                     </button>
                     {mode === 'quiz' && !completed && !(selfEvaluation && evaluation) && (
-                        <button type="button" onClick={undoLastStroke} disabled={drawnStrokes === 0} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 text-xs font-black text-orange-700 transition hover:bg-orange-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300 dark:hover:bg-orange-900/60">
-                            <UndoRoundedIcon sx={{ fontSize: 18 }} /> Hapus
+                        <button type="button" onClick={undoLastStroke} aria-label="Hapus goresan terakhir" title="Hapus goresan terakhir" disabled={drawnStrokes === 0} className="inline-flex min-h-11 sm:min-h-10 items-center justify-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 text-xs font-black text-orange-700 transition hover:bg-orange-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300 dark:hover:bg-orange-900/60">
+                            <UndoRoundedIcon sx={{ fontSize: 18 }} /> <span className="hidden sm:inline">Hapus</span>
                         </button>
                     )}
                     {mode === 'quiz' && !completed && !(selfEvaluation && evaluation) && (
@@ -615,15 +615,16 @@ export default function KanjiHandwritingCanvas({
                             type="button"
                             data-sound="none"
                             onClick={checkWriting}
+                            aria-label="Periksa tulisan"
                             disabled={drawnStrokes === 0}
-                            className="col-span-1 inline-flex h-10 items-center justify-center rounded-xl bg-orange-600 px-3 text-xs font-black text-white shadow-sm transition hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/60 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-orange-500 dark:text-gray-950 dark:hover:bg-orange-400 sm:col-span-2"
+                            className="col-span-1 inline-flex min-h-11 min-w-0 sm:min-h-10 items-center justify-center rounded-xl bg-orange-600 px-2 text-sm sm:px-3 sm:text-xs font-black text-white shadow-sm transition hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/60 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-orange-500 dark:text-gray-950 dark:hover:bg-orange-400 sm:col-span-2"
                         >
-                            Periksa Tulisan
+                            <span>Periksa<span className="hidden sm:inline"> Tulisan</span></span>
                         </button>
                     )}
                     {(mode === 'practice' || mode === 'quiz') && !completed && !(selfEvaluation && evaluation) && (
-                        <button type="button" onClick={hint} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 text-xs font-black text-amber-700 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/50 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-900/60">
-                            <LightbulbOutlinedIcon sx={{ fontSize: 17 }} /> Hint
+                        <button type="button" onClick={hint} aria-label="Petunjuk goresan" title="Petunjuk goresan" className="inline-flex min-h-11 sm:min-h-10 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 text-xs font-black text-amber-700 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/50 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-900/60">
+                            <LightbulbOutlinedIcon sx={{ fontSize: 17 }} /> <span className={mode === 'quiz' ? 'hidden sm:inline' : ''}>Hint</span>
                         </button>
                     )}
                     {mode === 'quiz' && !selfEvaluation && completed && evaluation?.success && (
@@ -641,7 +642,7 @@ export default function KanjiHandwritingCanvas({
                         </button>
                     )}
                     {mode === 'quiz' && !completed && failedChecks > 0 && (
-                        <button type="button" onClick={reveal} className="col-span-2 inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 text-xs font-black text-amber-700 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/50 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-900/60 sm:col-span-4">
+                        <button type="button" onClick={reveal} className="col-span-full inline-flex min-h-11 sm:min-h-10 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 text-xs font-black text-amber-700 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/50 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-900/60">
                             <VisibilityOutlinedIcon sx={{ fontSize: 17 }} /> Lihat Urutan
                         </button>
                     )}
