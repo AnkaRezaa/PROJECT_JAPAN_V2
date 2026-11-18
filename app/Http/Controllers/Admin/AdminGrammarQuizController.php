@@ -209,7 +209,7 @@ class AdminGrammarQuizController extends Controller
         if ($format === 'csv') {
             $headers = ['stage', 'prompt', 'source_text', 'context', 'options_or_tokens', 'correct_answer_or_order', 'feedback', 'points', 'pattern', 'title', 'formula', 'meaning', 'highlight_text'];
             $sampleRows = [
-                ['transformation', 'Ubah ke bentuk ば.', '勉強する', '', '勉強すれば|勉強したら|勉強して', '勉強すれば', 'する berubah menjadi すれば.', 1, '～ば～ほど', 'Semakin..., semakin...', 'Vば + V辞書形 + ほど', 'Semakin A, semakin B'],
+                ['transformation', 'Ubah ke bentuk (ば).', '勉強する', '', '勉強すれば|勉強したら|勉強して', '勉強すれば', 'する berubah menjadi すれば.', 1, '～ば～ほど', 'Semakin..., semakin...', 'Vば + V辞書形 + ほど', 'Semakin A, semakin B'],
                 ['sentence_builder', 'Susun kalimat yang benar.', '', 'Semakin belajar, semakin mahir.', '勉強すれば|する|ほど|上手になります|まで', '勉強すれば|する|ほど|上手になります', 'Susun pola ば～ほど.', 1, '～ば～ほど', 'Semakin..., semakin...', 'Vば + V辞書形 + ほど', 'Semakin A, semakin B'],
                 ['context_choice', 'Pilih kalimat yang sesuai.', '', 'Semakin sering latihan, semakin mahir.', '練習すればするほど、上手になります。|練習したことがあります。', '練習すればするほど、上手になります。', 'Gunakan pola ば～ほど.', 1, '～ば～ほど', 'Semakin..., semakin...', 'Vば + V辞書形 + ほど', 'Semakin A, semakin B'],
             ];
@@ -246,7 +246,7 @@ class AdminGrammarQuizController extends Controller
             'Soal' => [
                 'headers' => ['lesson_key', 'stage', 'order', 'prompt', 'source_text', 'context', 'options_or_tokens', 'correct_answer_or_order', 'feedback', 'points', 'highlight_text'],
                 'rows' => [
-                    ['n3-ba-hodo', 'transformation', 1, 'Ubah kata kerja ke bentuk yang tepat untuk pola 〜ば〜ほど.', '勉強する', '', '勉強すればほど|勉強したらほど|勉強してほど|勉強しないほど', '勉強すればほど', 'Gunakan bentuk pengandaian ば dari kata 勉強する yaitu 勉強すれば.', 1],
+                    ['n3-ba-hodo', 'transformation', 1, 'Ubah kata kerja ke bentuk yang tepat untuk pola (〜ば〜ほど).', '勉強する', '', '勉強すればほど|勉強したらほど|勉強してほど|勉強しないほど', '勉強すればほど', 'Gunakan bentuk pengandaian ば dari kata 勉強する yaitu 勉強すれば.', 1],
                     ['n3-ba-hodo', 'sentence_builder', 1, 'Susun potongan kata berikut menjadi kalimat utuh.', '', 'Semakin banyak belajar, semakin mahir bahasa Jepang.', '勉強すれば|するほど|日本語が|上手になります|まで', '勉強すれば|するほど|日本語が|上手になります', 'Urutan yang benar mengikuti kaidah V-ば + するほど. Kata sampai (まで) adalah pengecoh.', 1],
                     ['n3-ba-hodo', 'context_choice', 1, 'Pilih kalimat yang paling tepat untuk situasi di bawah.', '', 'Situasi: Semakin sering latihan, kemampuan berbicara semakin meningkat.', '練習すればするほど、上手になりますよ。|練習したことがありますよ。|練習しなければなりませんよ。|練習してもいいですよ。', '練習すればするほど、上手になりますよ。', 'Kalimat ini menyatakan hubungan berbanding lurus antara latihan dan peningkatan kemampuan.', 1],
                     ['n5-te-wa-ikenai', 'transformation', 1, 'Ubah kata kerja berikut ke bentuk larangan 〜てはいけません.', '吸う', '', '吸ってはいけません|吸ってはいけます|吸わなくてはいけません|吸ったらいいです', '吸ってはいけません', 'Bentuk て dari 吸う adalah 吸って lalu disambung はいけません.', 1],

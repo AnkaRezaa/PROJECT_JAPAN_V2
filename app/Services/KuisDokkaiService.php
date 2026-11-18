@@ -213,6 +213,7 @@ class KuisDokkaiService
             // Sync Soal & Eviden
             $keptQuestionIds = [];
             if (! empty($payload['questions']) && is_array($payload['questions'])) {
+                $existingPrompts = $passage->questions()->pluck('question_text', 'id');
                 foreach ($payload['questions'] as $qIdx => $qData) {
                     $qNumber = (int) ($qData['question_number'] ?? $qIdx + 1);
 
@@ -225,12 +226,15 @@ class KuisDokkaiService
                         $evidenceParagraphId = reset($paragraphMapByNumber) ?: null;
                     }
 
+                    $prompt = trim((string) ($qData['question_text'] ?? ''));
+                    $parse = $existingPrompts->get($qData['id'] ?? 0) !== $prompt;
+                    $highlight = QuestionHighlight::validated($qData['highlight_text'] ?? null, $prompt, "questions.{$qIdx}.highlight_text", $parse);
                     $question = $passage->questions()->updateOrCreate(
                         ['id' => $qData['id'] ?? null],
                         [
                             'question_number' => $qNumber,
-                            'question_text' => trim($qData['question_text'] ?? ''),
-                            'highlight_text' => QuestionHighlight::validated($qData['highlight_text'] ?? null, (string) ($qData['question_text'] ?? ''), "questions.{$qIdx}.highlight_text"),
+                            'question_text' => $highlight['text'],
+                            'highlight_text' => $highlight['target'],
                             'question_translation' => isset($qData['question_translation']) ? trim($qData['question_translation']) : null,
                             'evidence_paragraph_id' => $evidenceParagraphId,
                             'evidence_quote' => isset($qData['evidence_quote']) ? trim($qData['evidence_quote']) : null,

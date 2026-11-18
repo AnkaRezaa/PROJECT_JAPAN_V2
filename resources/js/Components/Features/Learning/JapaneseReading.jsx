@@ -56,7 +56,9 @@ export default function JapaneseReading({
     return (
         <span className={`inline-flex max-w-full flex-col ${className}`}>
             <span lang="ja" className="break-words">
-                {withHighlight(japanese, highlightTerms.japanese)}
+                {highlightVariant === 'question'
+                    ? <HighlightedLearningText text={japanese} term={highlightTerms.japanese} variant="question" />
+                    : withHighlight(japanese, highlightTerms.japanese)}
             </span>
             {reading && (
                 <span lang="ja" className="mt-1 whitespace-pre-wrap break-words text-sm font-medium text-sky-700 dark:text-sky-300">

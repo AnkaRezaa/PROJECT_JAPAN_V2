@@ -56,6 +56,9 @@ function HighlightFixture(){
         <div id="question-highlight"><HighlightedLearningText text={'  \u304d\u3085\u3046 / \u304d\u3085\u3046\n'} term={'\u304d\u3085\u3046'} variant="question"/></div>
         <div id="special-highlight"><HighlightedLearningText text="a+b? [a+b?]" term="a+b?" variant="question"/></div>
         <div id="html-highlight"><HighlightedLearningText text={'<img src=x onerror=alert(1)>'} term="img" variant="question"/></div>
+        <div id="literal-parentheses"><HighlightedLearningText text={'(Noun) (\u99c5) \\\u0028\u5b66\u6821\\\u0029'} variant="question"/></div>
+        <div id="marked-preview"><QuestionHighlightField text={'Pilih (\u99c5) (Noun).'} value="" onChange={()=>{}} /></div>
+        <div id="ambiguous-preview"><QuestionHighlightField text={'Pilih (\u99c5) (\u5b66\u6821).'} value="" onChange={()=>{}} /></div>
         <div id="legacy-highlight"><HighlightedLearningText text="Word word" term="word"/></div>
     </main>;
 }
@@ -232,9 +235,6 @@ try{
     assert.equal(await evaluate('document.body.innerText.includes("Pratinjau:")'),false);
     await evaluate('window.__generator.mode="slow"');await click('Buat Draf');await click('Batal');await sleep(950);
     assert.equal(await evaluate('document.body.innerText.includes("Pratinjau:")'),false,'Closed modal must ignore stale response');
-    await send('Page.navigate',{url:server.resolvedUrls.local[0]+'__generator?type=highlight'});
-    await waitFor('window.__ready&&document.querySelector("#question-highlight mark")');
-    assert.equal(await evaluate('window.__emptyQuestion().show_question_reading'),false,'New builder questions default to hidden reading');
     await send('Emulation.setDeviceMetricsOverride',{width:1366,height:900,deviceScaleFactor:1,mobile:false});
     await send('Page.navigate',{url:server.resolvedUrls.local[0]+'__generator?type=grammar-builder'});
     await waitFor('document.body.innerText.includes("Lesson pertama")');
@@ -270,6 +270,9 @@ try{
         assert.deepEqual(errors,[],'Uncaught browser errors');
         console.log('Generator, Grammar deletion, and legacy flashcard browser checks passed.');
     }else{
+    await send('Page.navigate',{url:server.resolvedUrls.local[0]+'__generator?type=highlight'});
+    await waitFor('window.__ready&&document.querySelector("#question-highlight mark")');
+    assert.equal(await evaluate('window.__emptyQuestion().show_question_reading'),false,'New builder questions default to hidden reading');
     assert.equal(await evaluate('document.querySelector("#reading-field [role=switch]").checked'),false,'Reading toggle defaults off');
     await evaluate('document.querySelector("#reading-field [role=switch]").click()');
     await waitFor('document.querySelector("#reading-field output").dataset.visible==="true"');
@@ -288,6 +291,11 @@ try{
     assert.equal(await evaluate('document.querySelectorAll("#special-highlight mark").length'),2,'Literal regex characters');
     assert.equal(await evaluate('document.querySelectorAll("#html-highlight img").length'),0,'HTML must remain escaped');
     assert.equal(await evaluate('document.querySelector("#html-highlight").textContent'),'<img src=x onerror=alert(1)>');
+    assert.equal(await evaluate('document.querySelector("#literal-parentheses").textContent'),'(Noun) (\u99c5) (\u5b66\u6821)');
+    assert.equal(await evaluate('document.querySelectorAll("#literal-parentheses mark").length'),0,'Runner never infers a target');
+    assert.equal(await evaluate('document.querySelector("#marked-preview mark").textContent'),'\u99c5');
+    assert.equal(await evaluate('document.querySelector("#marked-preview p[lang=ja]").textContent'),'Pilih \u99c5 (Noun).');
+    assert(await evaluate('document.querySelector("#ambiguous-preview [role=alert]").textContent.includes("beberapa penanda")'));
     assert.equal(await evaluate('document.querySelectorAll("#legacy-highlight mark").length'),2,'Existing case-insensitive highlights unchanged');
     assert(await evaluate('document.querySelector("#legacy-highlight mark").classList.contains("text-inherit")'));
     for(const [width,dark] of [[390,false],[1366,true]]){
@@ -296,9 +304,10 @@ try{
         await capture('highlight-'+width);
     }
     await evaluate(`(()=>{const input=document.querySelector('#reading-field + div input') || Array.from(document.querySelectorAll('input')).find(i=>i.value==='Question');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'missing');input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
-    await waitFor('document.querySelector("[role=alert]")');
+    await waitFor('document.querySelector("#reading-field + div [role=alert]")');
     assert.deepEqual(errors,[],'Uncaught browser errors');
     console.log(JSON.stringify({passed:true,types:3,checks:['preview','local adapters and highlight metadata','replace confirmation/cancel','append preserves draft','repeated append','kanji meaning-to-word filters','pristine placeholder','no save on apply','Escape','422','abort stale response','literal Unicode highlight','escaped HTML and regex characters','inline target validation','legacy highlights unchanged','reading visibility metadata','keyboard reading toggle and draft retention','light/dark responsive overflow'],screenshots:'temporary; removed after test'},null,2));
+    }
 }catch(error){
     console.error('Generator browser test failed:',error,errors);
     throw error;
@@ -307,7 +316,6 @@ try{
     if(chrome&&chrome.exitCode===null){await Promise.race([new Promise(resolve=>chrome.once('exit',resolve)),sleep(3000)]);if(chrome.exitCode===null)chrome.kill();}
     await server.close();
     const resolved=path.resolve(profile);
-    }
     if(resolved.startsWith(path.resolve(tmpdir())+path.sep)&&path.basename(resolved).startsWith('tokuup-generator-browser-')){
         try{rmSync(resolved,{recursive:true,force:true,maxRetries:5,retryDelay:300});}
         catch(error){console.warn('Chrome temporary profile cleanup:',error.code,resolved);}

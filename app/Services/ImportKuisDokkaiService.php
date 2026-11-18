@@ -125,7 +125,8 @@ class ImportKuisDokkaiService
             }
 
             // Susun opsi A, B, C, D
-            if ($error = QuestionHighlight::error($row['highlight_text'] ?? null, $pertanyaan)) {
+            $highlight = QuestionHighlight::resolve($row['highlight_text'] ?? null, $pertanyaan);
+            if ($error = $highlight['error']) {
                 $errors[] = ['row' => $rowNumber, 'column' => 'highlight_text', 'message' => $error];
             }
             $rawOptions = [
@@ -170,8 +171,8 @@ class ImportKuisDokkaiService
             $qNumber = count($passages[$currentPassageKey]['questions']) + 1;
             $passages[$currentPassageKey]['questions'][] = [
                 'question_number' => $qNumber,
-                'question_text' => $pertanyaan,
-                'highlight_text' => $row['highlight_text'] ?? null,
+                'question_text' => $highlight['text'],
+                'highlight_text' => $highlight['target'],
                 'question_translation' => null,
                 'evidence_paragraph_number' => 1,
                 'evidence_quote' => null,

@@ -196,10 +196,11 @@ class ImportKuisGrammarService
     {
         $items = $this->pipeValues($row['options_or_tokens'] ?? '');
         $correct = $this->pipeValues($row['correct_answer_or_order'] ?? '');
+        $highlight = QuestionHighlight::resolve($row['highlight_text'] ?? null, trim((string) ($row['prompt'] ?? '')));
         $payload = [
             'type' => $stage,
-            'prompt' => trim((string) ($row['prompt'] ?? '')),
-            'highlight_text' => $row['highlight_text'] ?? null,
+            'prompt' => $highlight['text'],
+            'highlight_text' => $highlight['target'],
             'japanese' => trim((string) ($row['source_text'] ?? '')) ?: null,
             'context' => trim((string) ($row['context'] ?? '')) ?: null,
             'explanation' => trim((string) ($row['feedback'] ?? '')) ?: null,

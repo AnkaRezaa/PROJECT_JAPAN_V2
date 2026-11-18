@@ -10,6 +10,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import KanjiHandwritingCanvas from '@/Components/Features/Handwriting/KanjiHandwritingCanvas';
 import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
 import JapaneseSpeechButton from '@/Components/UI/JapaneseSpeechButton';
+import { questionDisplayText } from '@/lib/questionMarkup';
 
 const normalizeType = (type) => {
     if (type === 'fill_blank' || type === 'typing') return 'fill_blank';
@@ -160,7 +161,7 @@ export default function QuickKuis({ quickSession, backUrl, answerUrl, resetUrl }
 
                         {(!isNarrationBlocked && (type === 'listening' || question.audio_url)) && (
                             <div className="mt-6 flex justify-center rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-                                <JapaneseSpeechButton audioUrl={question.audio_url} text={question.question} autoPlay={type === 'listening'} autoPlayEnabled playbackKey={`quick-${question.id}-${session.current_token}`} className="flex h-14 w-14 items-center justify-center rounded-full bg-action-secondary text-white shadow-md" />
+                                <JapaneseSpeechButton audioUrl={question.audio_url} text={questionDisplayText(question.question)} autoPlay={type === 'listening'} autoPlayEnabled playbackKey={`quick-${question.id}-${session.current_token}`} className="flex h-14 w-14 items-center justify-center rounded-full bg-action-secondary text-white shadow-md" />
                             </div>
                         )}
 

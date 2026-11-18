@@ -1,4 +1,5 @@
 import React from 'react';
+import { questionDisplayText } from '@/lib/questionMarkup';
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -10,8 +11,8 @@ const normalizeText = (value) => String(value ?? '').normalize('NFC').trim();
  */
 export default function HighlightedLearningText({ text, term, className = '', variant = 'learning' }) {
     const isQuestion = variant === 'question';
-    const source = isQuestion ? String(text ?? '') : normalizeText(text);
-    const target = isQuestion ? String(term ?? '').trim() : normalizeText(term);
+    const source = isQuestion ? questionDisplayText(text) : normalizeText(text);
+    const target = isQuestion ? questionDisplayText(term).trim() : normalizeText(term);
 
     if (!source || !target) {
         return source || null;

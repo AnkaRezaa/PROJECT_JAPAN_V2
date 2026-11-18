@@ -49,10 +49,13 @@ class SoalKuisService
 
             $seenSourceKeys = [];
             $savedIndex = 0;
+            $existingPrompts = $quiz->questions()->pluck('question_text', 'id');
 
             foreach ($validated['questions'] as $index => $data) {
-                QuestionHighlight::validated($data['highlight_text'] ?? null, trim((string) ($data['question_text'] ?? '')), "questions.{$index}.highlight_text");
-                $normalized = $this->normalizePayload($data, $index);
+                $prompt = trim((string) ($data['question_text'] ?? ''));
+                $parse = $existingPrompts->get($data['id'] ?? 0) !== $prompt;
+                $highlight = QuestionHighlight::validated($data['highlight_text'] ?? null, $prompt, "questions.{$index}.highlight_text", $parse);
+                $normalized = $this->normalizePayload($data, $index, $highlight);
 
                 if ($normalized['error']) {
                     throw ValidationException::withMessages([
@@ -490,7 +493,7 @@ class SoalKuisService
         $week = $quiz->module?->week_number;
         $day = $quiz->day?->day_number;
         $rows = [
-            ['multiple_choice', 'Apa arti dari kanji 火?', 'api', 'api|air|tanah|angin', '火 berarti api. Untuk multiple_choice, correct_answer harus sama persis dengan salah satu opsi.', ''],
+            ['multiple_choice', 'Apa arti dari kanji (火)?', 'api', 'api|air|tanah|angin', '火 berarti api. Untuk multiple_choice, correct_answer harus sama persis dengan salah satu opsi.', ''],
             ['fill_blank', '彼は___に行きました。', '学校', 'がっこう', 'Gunakan ___ untuk bagian kosong. Kolom options dipakai sebagai hint opsional.', ''],
             ['listening', 'Ketik kata yang kamu dengar dari audio.', '天気予報', '', 'Untuk listening, audio_url wajib diisi.', 'https://example.com/audio.mp3'],
             ['handwriting', 'Tulis karakter sesuai urutan stroke.', '環', '', 'Practice only: tidak memengaruhi nilai, XP, atau unlock Day.', ''],
@@ -511,7 +514,7 @@ class SoalKuisService
         };
     }
 
-    public function normalizePayload(array $data, int $index): array
+    public function normalizePayload(array $data, int $index, ?array $highlight = null): array
     {
         $type = $this->normalizeType($data['type'] ?? 'multiple_choice');
         $questionText = trim((string) ($data['question_text'] ?? ''));
@@ -543,13 +546,13 @@ class SoalKuisService
             $error = "Soal {$number}: handwriting berasal dari flashcard dan tidak boleh disimpan sebagai soal kuis.";
         }
 
-        $highlightError = QuestionHighlight::error($data['highlight_text'] ?? null, $questionText);
+        $highlight ??= QuestionHighlight::resolve($data['highlight_text'] ?? null, $questionText);
         $showReading = $this->readingVisibility($data['show_question_reading'] ?? null);
         if ($showReading === null) {
             $error = "Soal {$number}: show_question_reading harus 0 atau 1.";
         }
-        if ($highlightError) {
-            $error = "Soal {$number}: {$highlightError}";
+        if ($highlight['error']) {
+            $error = "Soal {$number}: {$highlight['error']}";
         }
 
         return [
@@ -559,8 +562,8 @@ class SoalKuisService
             'source_type' => $this->nullableText($data['source_type'] ?? null),
             'source_id' => isset($data['source_id']) && is_numeric($data['source_id']) ? (int) $data['source_id'] : null,
             'generation_mode' => $this->nullableText($data['generation_mode'] ?? null),
-            'question_text' => $questionText,
-            'highlight_text' => $highlightError ? null : QuestionHighlight::validated($data['highlight_text'] ?? null, $questionText),
+            'question_text' => $highlight['text'],
+            'highlight_text' => $highlight['target'],
             'question_reading' => $this->nullableText($data['question_reading'] ?? null),
             'show_question_reading' => $showReading ?? false,
             'correct_answer' => $correctAnswer,

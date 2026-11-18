@@ -142,11 +142,46 @@ class QuestionHighlightTest extends TestCase
             $text = 'Choose '.($target ?? '').' again '.($target ?? '');
             $this->assertNull(QuestionHighlight::error($target, $text));
         }
-        $this->assertSame('0', QuestionHighlight::validated('0', '0'));
+        $this->assertSame('0', QuestionHighlight::validated('0', '0')['target']);
         $this->assertNotNull(QuestionHighlight::error('Target', 'target'));
         $this->assertNotNull(QuestionHighlight::error(['target'], 'target'));
         $this->assertNotNull(QuestionHighlight::error(str_repeat('a', 501), str_repeat('a', 501)));
-        $this->assertNull(QuestionHighlight::validated('  ', 'plain'));
+        $this->assertNull(QuestionHighlight::validated('  ', 'plain')['target']);
+    }
+
+    public function test_marker_parser_preserves_literal_parentheses_and_requires_one_target(): void
+    {
+        foreach ([
+            [null, 'Pilih (駅) (opsional).', 'Pilih 駅 (opsional).', '駅'],
+            [null, 'Pilih （駅）.', 'Pilih 駅.', '駅'],
+            [null, 'Pilih (Noun).', 'Pilih (Noun).', null],
+            [null, 'Pilih \(駅\).', 'Pilih \(駅\).', null],
+            [null, 'Pilih (keterangan (駅)).', 'Pilih (keterangan (駅)).', null],
+            [null, 'Apa arti dari 駅 (えき)?', 'Apa arti dari 駅 (えき)?', null],
+            ['駅', 'Pilih (駅) (学校).', 'Pilih 駅 (学校).', '駅'],
+            ['target', 'Pilih (target).', 'Pilih target.', 'target'],
+        ] as [$target, $source, $text, $expected]) {
+            $this->assertSame(['text' => $text, 'target' => $expected, 'error' => null], QuestionHighlight::resolve($target, $source));
+        }
+        $this->assertNotNull(QuestionHighlight::error(null, 'Pilih (駅) atau (学校).'));
+    }
+
+    public function test_builder_does_not_infer_highlight_on_unchanged_legacy_prompts(): void
+    {
+        $quiz = $this->quiz();
+        $question = $quiz->questions()->create([
+            'type' => 'multiple_choice', 'question_text' => 'Catatan (学校).', 'options' => ['A', 'B'], 'correct_answer' => 'A',
+        ]);
+        $url = route('admin.quizzes.builder.update', $quiz);
+        $row = $question->only(['id', 'type', 'question_text', 'options', 'correct_answer']);
+        $this->actingAs($this->admin)->post($url, ['questions' => [$row]])->assertSessionHasNoErrors();
+        $this->assertNull($question->refresh()->highlight_text);
+        $this->assertSame('Catatan (学校).', $question->question_text);
+
+        $row['question_text'] = 'Pilih (駅) (opsional).';
+        $this->post($url, ['questions' => [$row]])->assertSessionHasNoErrors();
+        $this->assertSame('駅', $question->refresh()->highlight_text);
+        $this->assertSame('Pilih 駅 (opsional).', $question->question_text);
     }
 
     public function test_vocabulary_authoring_preserves_highlight_and_old_questions_and_rejects_invalid_target(): void
@@ -189,7 +224,7 @@ class QuestionHighlightTest extends TestCase
 
     public function test_dokkai_import_and_student_payload_preserve_highlight_and_reject_invalid_rows(): void
     {
-        $row = ['judul_wacana' => 'Reading', 'level' => 'N3', 'teks_bacaan' => 'A short passage.', 'pertanyaan' => 'Choose target.', 'highlight_text' => 'target',
+        $row = ['judul_wacana' => 'Reading', 'level' => 'N3', 'teks_bacaan' => 'A short passage.', 'pertanyaan' => 'Choose (駅).',
             'opsi_a' => 'A', 'opsi_b' => 'B', 'kunci' => 'A', 'pembahasan' => 'Secret explanation'];
         $import = app(ImportKuisDokkaiService::class);
         $preview = $import->preview($this->day, [$row]);
@@ -197,10 +232,11 @@ class QuestionHighlightTest extends TestCase
         $this->assertSame(1, $import->commit($this->day, $preview));
         $quiz = $this->day->quizzes()->where('type', 'dokkai')->firstOrFail();
         $payload = app(KuisDokkaiService::class)->payload($quiz);
-        $this->assertSame('target', $payload['questions'][0]['highlight_text']);
+        $this->assertSame('駅', $payload['questions'][0]['highlight_text']);
+        $this->assertSame('Choose 駅.', $payload['questions'][0]['question_text']);
         $this->assertNull($payload['questions'][0]['explanation_correct']);
         $this->actingAs($this->admin)->postJson(route('admin.dokkai-quizzes.store', $this->day), $preview['passages'][0])
-            ->assertCreated()->assertJsonPath('lesson.questions.0.highlight_text', 'target');
+            ->assertCreated()->assertJsonPath('lesson.questions.0.highlight_text', '駅');
         $invalidPayload = $preview['passages'][0];
         $invalidPayload['questions'][0]['highlight_text'] = 'missing';
         $this->actingAs($this->admin)->postJson(route('admin.dokkai-quizzes.store', $this->day), $invalidPayload)
@@ -220,7 +256,7 @@ class QuestionHighlightTest extends TestCase
         $quiz = $this->quiz();
         $headers = $service->importHeaders();
         $this->assertContains('highlight_text', $headers);
-        $row = ['module_week' => 1, 'day_number' => 1, 'type' => 'multiple_choice', 'question_text' => 'Choose target.', 'highlight_text' => 'target', 'options' => 'A|B', 'correct_answer' => 'A'];
+        $row = ['module_week' => 1, 'day_number' => 1, 'type' => 'multiple_choice', 'question_text' => 'Choose (駅) (Noun).', 'options' => 'A|B', 'correct_answer' => 'A'];
         foreach (['csv', 'xlsx'] as $format) {
             if ($format === 'csv') {
                 $response = $templates->csvResponse(array_keys($row), [array_values($row)], 'test.csv');
@@ -235,13 +271,14 @@ class QuestionHighlightTest extends TestCase
                 $rows = $spreadsheet->rows($path, $format);
                 $preview = $service->previewRows($quiz, $rows);
                 $this->assertSame(1, $preview['valid_count']);
-                $this->assertSame('target', $preview['valid_rows'][0]['highlight_text']);
+                $this->assertSame('駅', $preview['valid_rows'][0]['highlight_text']);
+                $this->assertSame('Choose 駅 (Noun).', $preview['valid_rows'][0]['question_text']);
                 $this->assertSame(1, $service->importRows($quiz, $rows));
             } finally {
                 unlink($path);
             }
         }
-        $this->assertSame(2, $quiz->questions()->where('highlight_text', 'target')->count());
+        $this->assertSame(2, $quiz->questions()->where('highlight_text', '駅')->count());
         unset($row['highlight_text']);
         $this->assertSame(1, $service->previewRows($quiz, [$row])['valid_count']);
         $this->assertSame(1, $service->previewRows($quiz, [[...$row, 'highlight_text' => 'missing']])['invalid_count']);
@@ -253,7 +290,7 @@ class QuestionHighlightTest extends TestCase
     public function test_grammar_workbook_and_csv_support_highlight_on_prompt_only(): void
     {
         $import = app(ImportKuisGrammarService::class);
-        $rows = array_map(fn ($stage) => ['lesson_key' => 'highlight-lesson', 'stage' => $stage, 'prompt' => 'Choose target.', 'highlight_text' => 'target',
+        $rows = array_map(fn ($stage) => ['lesson_key' => 'highlight-lesson', 'stage' => $stage, 'prompt' => 'Choose (駅).',
             'context' => 'plain', 'options_or_tokens' => 'A|B', 'correct_answer_or_order' => $stage === 'sentence_builder' ? 'A|B' : 'A', 'pattern' => 'Pattern', 'title' => 'Title', 'formula' => 'Formula', 'meaning' => 'Meaning'], KuisGrammarService::STAGES);
         $sheets = ['materi' => [['lesson_key' => 'highlight-lesson', 'module_week' => 1, 'day_number' => 1, 'pattern' => 'Pattern', 'title' => 'Title', 'formula' => 'Formula', 'meaning' => 'Meaning']],
             'contoh' => [['lesson_key' => 'highlight-lesson', 'japanese' => 'Example', 'translation' => 'Example']], 'soal' => $rows];
@@ -267,7 +304,7 @@ class QuestionHighlightTest extends TestCase
         $preview = $import->preview($this->program, $sheets);
         $this->assertTrue($preview['valid'], json_encode($preview['errors']));
         $this->assertSame(1, $import->commit($this->program, $preview));
-        $this->assertSame(3, $this->day->quizzes()->where('type', 'grammar')->firstOrFail()->questions()->where('highlight_text', 'target')->count());
+        $this->assertSame(3, $this->day->quizzes()->where('type', 'grammar')->firstOrFail()->questions()->where('highlight_text', '駅')->where('question_text', 'Choose 駅.')->count());
         $this->assertTrue($import->previewFlatCsv($this->program, $rows, $this->day)['valid']);
         $rows[0]['highlight_text'] = 'missing';
         $this->assertFalse($import->previewFlatCsv($this->program, $rows, $this->day)['valid']);

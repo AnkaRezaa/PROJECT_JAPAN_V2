@@ -38,11 +38,13 @@ class KuisGrammarService
 
             $kept = [];
             $order = 0;
+            $existingPrompts = $quiz->questions()->pluck('question_text', 'id');
 
             foreach ($payload['stages'] as $stageIndex => $stage) {
                 foreach ($stage['questions'] as $questionIndex => $question) {
-                    QuestionHighlight::validated($question['highlight_text'] ?? null, (string) ($question['prompt'] ?? ''), "stages.{$stageIndex}.questions.{$questionIndex}.highlight_text");
-                    $normalized = $this->normalizeQuestion($stage['id'], $question);
+                    $prompt = trim((string) ($question['prompt'] ?? ''));
+                    $parse = $existingPrompts->get($question['id'] ?? 0) !== $prompt;
+                    $normalized = $this->normalizeQuestion($stage['id'], $question, "stages.{$stageIndex}.questions.{$questionIndex}.highlight_text", $parse);
                     $attributes = Arr::except($normalized, ['context']);
                     $model = $quiz->questions()->updateOrCreate(
                         ['id' => $question['id'] ?? null],
@@ -124,7 +126,7 @@ class KuisGrammarService
         ];
     }
 
-    public function normalizeQuestion(string $stage, array $question): array
+    public function normalizeQuestion(string $stage, array $question, string $highlightField = 'highlight_text', bool $parseHighlight = true): array
     {
         if (! in_array($stage, self::STAGES, true) || (($question['type'] ?? $stage) !== $stage && ($question['type'] ?? '') !== 'multiple_choice')) {
             throw ValidationException::withMessages(['stages' => 'Tipe soal harus sesuai dengan stage Grammar.']);
@@ -164,12 +166,13 @@ class KuisGrammarService
             'transformation' => 'transformation',
             default => 'multiple_choice',
         };
+        $highlight = QuestionHighlight::validated($question['highlight_text'] ?? null, trim((string) ($question['prompt'] ?? '')), $highlightField, $parseHighlight);
 
         return [
             'type' => $question['type'] ?? $normalizedType,
             'stage' => $stage,
-            'question_text' => trim((string) ($question['prompt'] ?? '')),
-            'highlight_text' => QuestionHighlight::validated($question['highlight_text'] ?? null, (string) ($question['prompt'] ?? '')),
+            'question_text' => $highlight['text'],
+            'highlight_text' => $highlight['target'],
             'question_reading' => $options['source_reading'],
             'correct_answer' => $correctAnswer,
             'correct_answer_reading' => null,

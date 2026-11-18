@@ -17,6 +17,7 @@ import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
 import ContextualFeedbackPrompt from '@/Components/Features/Feedback/ContextualFeedbackPrompt';
 import { UniversalFeedbackWidget } from '@/Components/Features/UniversalFeedback';
 import { pushAnalyticsEvent } from '@/lib/analytics';
+import { questionDisplayText } from '@/lib/questionMarkup';
 import useQuizCheckpoint from '@/Hooks/useQuizCheckpoint';
 import ResumeQuizModal from '@/Components/Features/Quiz/ResumeQuizModal';
 
@@ -52,7 +53,7 @@ function normalizeQuestionType(type) {
 const getJapaneseSpeechText = (question, { includeCorrectAnswer = true } = {}) => {
     return japaneseSpeechText(
         question?.kanji,
-        question?.question,
+        questionDisplayText(question?.question),
         includeCorrectAnswer ? question?.correct_answer : null,
     );
 };
@@ -1248,7 +1249,7 @@ export default function Quiz({
             {/* Quiz Content Area */}
             <main className="w-full max-w-3xl flex-1 flex flex-col items-center relative z-10">
                 <JapaneseSpeechButton
-                    text={isNarrationBlocked ? null : (currentSpeechText || currentQ?.kanji || currentQ?.question)}
+                    text={isNarrationBlocked ? null : (currentSpeechText || currentQ?.kanji || questionDisplayText(currentQ?.question))}
                     audioUrl={narrationAudioUrl}
                     autoPlay={!isNarrationBlocked && Boolean(narrationAudioUrl || currentSpeechText)}
                     autoPlayEnabled={!isNarrationBlocked && soundEnabled}
@@ -1287,7 +1288,7 @@ export default function Quiz({
                             <QuizSurface media className={`relative mb-4 flex w-full max-w-[500px] items-center justify-center overflow-hidden ${currentQ.audio_url?.includes('youtu') ? 'aspect-video' : 'min-h-36 py-4 sm:min-h-44 sm:py-6 md:min-h-48'}`}>
                                 {isReadingQuestion ? (
                                     <span className="max-w-full break-words px-4 text-[60px] font-medium leading-none text-gray-900 select-none dark:text-white sm:text-[80px] md:text-[96px]">
-                                        {currentQ.kanji || rawSpeechText || currentQ.question}
+                                        {currentQ.kanji || rawSpeechText || questionDisplayText(currentQ.question)}
                                     </span>
                                 ) : currentQ.kanji ? (
                                     <span className="max-w-full break-words px-4 text-[60px] font-medium leading-none text-gray-900 select-none dark:text-white sm:text-[80px] md:text-[96px]">{currentQ.kanji}</span>
@@ -1310,7 +1311,7 @@ export default function Quiz({
                                             {!currentQ.kanji && <span className="text-gray-600 dark:text-gray-300 font-bold tracking-widest uppercase">Pesan Suara</span>}
                                             <JapaneseSpeechButton
                                                 audioUrl={currentQ.audio_url}
-                                                text={currentSpeechText || currentQ.kanji || currentQ.question}
+                                                text={currentSpeechText || currentQ.kanji || questionDisplayText(currentQ.question)}
                                                 autoPlay={false}
                                                 autoPlayEnabled={soundEnabled}
                                                 playbackKey={`question-${currentQ.attemptKey}`}
@@ -1321,7 +1322,7 @@ export default function Quiz({
                                 )}
                                 {!isNarrationBlocked && !currentQ.audio_url && hasQuestionAudio && (
                                     <JapaneseSpeechButton
-                                        text={currentSpeechText || currentQ.kanji || currentQ.question}
+                                        text={currentSpeechText || currentQ.kanji || questionDisplayText(currentQ.question)}
                                         autoPlay={false}
                                         autoPlayEnabled={soundEnabled}
                                         playbackKey={`question-${currentQ.attemptKey}`}
