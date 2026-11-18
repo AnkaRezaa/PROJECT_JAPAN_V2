@@ -70,17 +70,22 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi', studentRead
     const [pageNumber, setPageNumber] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     const [zoom, setZoom] = useState(studentReader ? 1 : 1.25);
-    const [readerWidth, setReaderWidth] = useState(0);
+    const [readerSize, setReaderSize] = useState({ width: 0, height: 0 });
     const [status, setStatus] = useState(pdfUrl ? 'loading' : 'empty');
     const [error, setError] = useState('');
     const [isPlaying, setIsPlaying] = useState(false);
     const [isPageTransitioning, setIsPageTransitioning] = useState(false);
     const readerFullscreen = useReaderFullscreen(readerRef, studentReader);
+    const expanded = readerFullscreen.expanded;
 
     useEffect(() => {
         const viewport = viewportRef.current;
         if (!studentReader || status !== 'ready' || !viewport) return undefined;
-        const measure = () => setReaderWidth(viewport.clientWidth);
+        const measure = () => {
+            const width = viewport.clientWidth;
+            const height = expanded ? viewport.clientHeight : 0;
+            setReaderSize((previous) => previous.width === width && previous.height === height ? previous : { width, height });
+        };
         measure();
         if (typeof ResizeObserver === 'undefined') {
             window.addEventListener('resize', measure);
@@ -89,7 +94,7 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi', studentRead
         const observer = new ResizeObserver(measure);
         observer.observe(viewport);
         return () => observer.disconnect();
-    }, [status, studentReader]);
+    }, [status, studentReader, expanded]);
 
     useEffect(() => {
         let cancelled = false;
@@ -173,7 +178,7 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi', studentRead
         let fadeTimer = null;
 
         const renderPage = async () => {
-            if (!pdfDocument || !canvasRef.current || (studentReader && !readerWidth)) return;
+            if (!pdfDocument || !canvasRef.current || (studentReader && (!readerSize.width || (expanded && !readerSize.height)))) return;
 
             renderTaskRef.current?.cancel?.();
             const isPageChange = lastRenderedPageRef.current !== null && lastRenderedPageRef.current !== pageNumber;
@@ -191,7 +196,8 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi', studentRead
                 const page = await pdfDocument.getPage(pageNumber);
                 if (cancelled) return;
 
-                const scale = studentReader ? readerWidth / page.getViewport({ scale: 1 }).width * zoom : zoom;
+                const base = studentReader ? page.getViewport({ scale: 1 }) : null;
+                const scale = base ? Math.min(readerSize.width / base.width, expanded ? readerSize.height / base.height : Infinity) * zoom : zoom;
                 const viewport = page.getViewport({ scale });
                 const deviceRatio = window.devicePixelRatio || 1;
                 const pixelRatio = studentReader
@@ -247,7 +253,7 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi', studentRead
             }
             renderTaskRef.current?.cancel?.();
         };
-    }, [pdfDocument, pageNumber, watermark, zoom, studentReader, readerWidth]);
+    }, [pdfDocument, pageNumber, watermark, zoom, studentReader, readerSize, expanded]);
 
     useEffect(() => {
         if (!isPlaying) return undefined;
@@ -305,12 +311,11 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi', studentRead
 
     if (studentReader) {
         return (
-            <section ref={readerRef} aria-label={`Penampil PDF: ${title}`} className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 fullscreen:h-dvh fullscreen:overflow-y-auto fullscreen:rounded-none">
-                <div className="mx-auto max-w-6xl">
+            <section ref={readerRef} aria-label={`Penampil PDF: ${title}`} role={expanded ? 'dialog' : undefined} aria-modal={expanded || undefined} className={`min-w-0 overflow-hidden bg-white dark:bg-slate-900 ${readerFullscreen.fallback ? 'fixed inset-0 z-[120] h-dvh' : 'rounded-lg border border-slate-200 dark:border-slate-800 fullscreen:rounded-none fullscreen:border-0'}`}>
+                <div className={expanded ? 'flex h-full flex-col pb-[env(safe-area-inset-bottom)]' : 'mx-auto max-w-6xl'}>
                     {status === 'ready' ? (
-                        <>
-                            <div ref={viewportRef} onContextMenu={(event) => event.preventDefault()} className="max-h-[65dvh] w-full overflow-auto overscroll-contain bg-slate-100 [scrollbar-gutter:stable] dark:bg-slate-950" tabIndex={0} aria-label="Halaman PDF">
-                                <div className="grid w-max min-w-full justify-items-center">
+                            <div ref={viewportRef} onContextMenu={(event) => event.preventDefault()} className={`w-full overflow-auto overscroll-contain bg-slate-100 [scrollbar-gutter:stable] dark:bg-slate-950 ${expanded ? 'min-h-0 flex-1' : 'max-h-[65dvh]'}`} tabIndex={0} aria-label="Halaman PDF">
+                                <div className={`grid w-max min-w-full justify-items-center ${expanded ? 'min-h-full content-center' : ''}`}>
                                     <canvas
                                         ref={canvasRef}
                                         aria-label={`${title}, halaman ${pageNumber}`}
@@ -318,23 +323,24 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi', studentRead
                                     />
                                 </div>
                             </div>
-                            <ReaderControls
-                                kind="Halaman"
-                                current={pageNumber}
-                                total={totalPages}
-                                onPrevious={previous}
-                                onNext={next}
-                                playing={isPlaying}
-                                onTogglePlay={togglePlay}
-                                canPlay
-                                fullscreen={readerFullscreen}
-                                zoom={{ out: zoomOut, in: zoomIn, reset: () => setZoom(1), percent: Math.round(zoom * 100), atMinimum: zoom <= 0.75, atMaximum: zoom >= 2.5 }}
-                            />
-                        </>
                     ) : (
-                        <div role={status === 'error' ? 'alert' : 'status'} className="flex min-h-44 items-center justify-center bg-slate-50 px-5 py-6 text-center text-sm font-medium text-slate-800 dark:bg-slate-950 dark:text-slate-200">
+                        <div role={status === 'error' ? 'alert' : 'status'} className={`flex min-h-44 items-center justify-center bg-slate-50 px-5 py-6 text-center text-sm font-medium text-slate-800 dark:bg-slate-950 dark:text-slate-200 ${expanded ? 'flex-1' : ''}`}>
                             {status === 'loading' ? 'Memuat PDF...' : status === 'error' ? 'PDF tidak dapat ditampilkan. Muat ulang halaman untuk mencoba lagi.' : 'PDF belum tersedia.'}
                         </div>
+                    )}
+                    {(status === 'ready' || expanded) && (
+                        <ReaderControls
+                            kind="Halaman"
+                            current={pageNumber}
+                            total={totalPages}
+                            onPrevious={previous}
+                            onNext={next}
+                            playing={isPlaying}
+                            onTogglePlay={togglePlay}
+                            canPlay={status === 'ready'}
+                            fullscreen={readerFullscreen}
+                            zoom={status === 'ready' ? { out: zoomOut, in: zoomIn, reset: () => setZoom(1), percent: Math.round(zoom * 100), atMinimum: zoom <= 0.75, atMaximum: zoom >= 2.5 } : null}
+                        />
                     )}
                 </div>
             </section>

@@ -167,23 +167,28 @@ function SlideCarousel({ deck }) {
         setZoom(value);
         if (value === 1) slideViewportRef.current?.scrollTo(0, 0);
     };
+    const slideSize = slideDimensions(activeSlide);
+    const fullscreenSlideWidth = `calc(min(100cqw, 100cqh * ${slideSize.width / slideSize.height}) * ${zoom})`;
 
     return (
-        <section ref={stageRef} aria-label="Penampil slide" className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 fullscreen:h-dvh fullscreen:overflow-y-auto fullscreen:rounded-none">
-            <div className="mx-auto max-w-6xl">
-                <div ref={slideViewportRef} className={hasVisual ? 'max-h-[65dvh] overflow-auto overscroll-contain' : undefined}>
-                <AnimatePresence mode="wait" initial={false}>
-                    <motion.div
-                        key={activeSlide.id || `slide-${activeIndex}`}
-                        style={canZoom ? { width: `${zoom * 100}%` } : undefined}
-                        initial={prefersReducedMotion ? false : { opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={prefersReducedMotion ? undefined : { opacity: 0 }}
-                        transition={{ duration: prefersReducedMotion ? 0 : 0.16 }}
-                    >
-                        <SlideFrame slide={activeSlide} />
-                    </motion.div>
-                </AnimatePresence>
+        <section ref={stageRef} aria-label="Penampil slide" role={fullscreen.expanded ? 'dialog' : undefined} aria-modal={fullscreen.expanded || undefined} className={`min-w-0 overflow-hidden bg-white dark:bg-slate-900 ${fullscreen.fallback ? 'fixed inset-0 z-[120] h-dvh' : 'rounded-lg border border-slate-200 dark:border-slate-800 fullscreen:rounded-none fullscreen:border-0'}`}>
+            <div className={fullscreen.expanded ? 'flex h-full flex-col pb-[env(safe-area-inset-bottom)]' : 'mx-auto max-w-6xl'}>
+                <div ref={slideViewportRef} role="region" aria-label="Area slide" tabIndex={fullscreen.expanded || hasVisual ? 0 : undefined} className={fullscreen.expanded ? 'min-h-0 flex-1 overflow-auto overscroll-contain bg-slate-100 [container-type:size] dark:bg-slate-950' : hasVisual ? 'max-h-[65dvh] overflow-auto overscroll-contain' : undefined}>
+                    <div className={fullscreen.expanded && hasVisual ? 'grid min-h-full min-w-full w-max place-items-center' : undefined}>
+                        <AnimatePresence mode="wait" initial={false}>
+                            <motion.div
+                                key={activeSlide.id || `slide-${activeIndex}`}
+                                className={fullscreen.expanded && !hasVisual ? 'mx-auto max-w-5xl' : undefined}
+                                style={fullscreen.expanded && hasVisual ? { width: fullscreenSlideWidth } : canZoom ? { width: `${zoom * 100}%` } : undefined}
+                                initial={prefersReducedMotion ? false : { opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={prefersReducedMotion ? undefined : { opacity: 0 }}
+                                transition={{ duration: prefersReducedMotion ? 0 : 0.16 }}
+                            >
+                                <SlideFrame slide={activeSlide} />
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
                 </div>
                 <ReaderControls
                     current={activeIndex + 1}
@@ -203,13 +208,13 @@ function SlideCarousel({ deck }) {
                         atMaximum: zoom >= 2.5,
                     } : null}
                 />
-                {hasVisual && (
+                {!fullscreen.expanded && hasVisual && (
                     <div className="border-t border-slate-200 px-3 py-3 dark:border-slate-800 sm:px-5">
                         <h3 className="text-base font-bold [overflow-wrap:anywhere]">{activeSlide.title || 'Slide Presentasi'}</h3>
                         {activeSlide.content && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-700 [overflow-wrap:anywhere] dark:text-slate-300">{activeSlide.content}</p>}
                     </div>
                 )}
-                {slides.length > 1 && (
+                {!fullscreen.expanded && slides.length > 1 && (
                     <nav aria-label="Daftar slide" className="flex gap-2 overflow-x-auto overscroll-x-contain border-t border-slate-200 p-2 dark:border-slate-800">
                         {slides.map((slide, index) => {
                             const preview = slide.snapshot_url || slide.jamboard_snapshot || slide.snapshot_data || (isImageUrl(slide.media_url || '') ? slide.media_url : null);

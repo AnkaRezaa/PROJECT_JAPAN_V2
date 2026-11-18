@@ -108,6 +108,17 @@ async function waitFor(expression) {
 }
 const button = label => 'document.querySelector('+JSON.stringify('button[aria-label="'+label+'"]')+')';
 const click = async label => {await waitFor(button(label));await evaluate(button(label)+'.click()');};
+const clickFullscreen = async label => {
+    await waitFor(button(label));
+    const point = await evaluate(`(() => {
+        const target = ${button(label)};
+        target.scrollIntoView({ block: 'nearest' });
+        const rect = target.getBoundingClientRect();
+        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    })()`);
+    await send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...point });
+    await send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...point });
+};
 const choose = (index,value) => evaluate('(()=>{const select=document.querySelectorAll("select")['+index+']; select.value='+JSON.stringify(value)+';select.dispatchEvent(new Event("change",{bubbles:true}));})()');
 const capture = async name => {
     assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+2'),name+' has no page overflow');
@@ -115,6 +126,17 @@ const capture = async name => {
     writeFileSync(path.join(temp,name+'.png'),Buffer.from(shot.data,'base64'));
 };
 const pixel = 'Array.from(document.querySelector("canvas").getContext("2d").getImageData(4,4,1,1).data)';
+const fullscreenReader = `(document.fullscreenElement || document.querySelector('[aria-modal="true"]'))`;
+const fullscreenFits = (viewportLabel, contentSelector) => `(() => {
+    const root = ${fullscreenReader};
+    const viewport = root?.querySelector('[aria-label="${viewportLabel}"]');
+    const content = viewport?.querySelector('${contentSelector}');
+    const toolbar = root?.querySelector('[aria-label="Keluar dari layar penuh"]');
+    return root && viewport?.clientHeight > root.clientHeight * 0.65 &&
+        content?.clientHeight > 0 && content.clientHeight <= viewport.clientHeight + 1 &&
+        content.clientWidth <= viewport.clientWidth + 1 &&
+        toolbar?.getBoundingClientRect().bottom <= root.getBoundingClientRect().bottom;
+})()`;
 try {
     await server.listen();
     chrome = spawn(browser,['--headless=new','--disable-gpu','--no-first-run','--remote-debugging-port=0','--user-data-dir='+path.join(temp,'chrome'),'about:blank'],{windowsHide:true,stdio:['ignore','ignore','pipe']});
@@ -144,9 +166,18 @@ try {
     await click('Slide berikutnya');
     await waitFor('document.querySelector("figure img")?.naturalWidth>0');
     await click('Perbesar');
-    await waitFor('document.querySelector("figure").parentElement.parentElement.scrollWidth>document.querySelector("figure").parentElement.parentElement.clientWidth');
+    await waitFor('document.querySelector(\'[aria-label="Area slide"]\').scrollWidth>document.querySelector(\'[aria-label="Area slide"]\').clientWidth');
     await capture('slide-image-mobile');
     await click('125%. Pas lebar layar');
+    await send('Emulation.setDeviceMetricsOverride',{width:640,height:320,deviceScaleFactor:2,mobile:true});
+    await clickFullscreen('Layar penuh');
+    await waitFor(fullscreenFits('Area slide', 'figure'));
+    await capture('slide-fullscreen-landscape');
+    await click('Slide berikutnya');
+    await waitFor(fullscreenReader+'?.querySelector("article")?.textContent.includes("Ringkasan pola")');
+    await clickFullscreen('Keluar dari layar penuh');
+    await waitFor('!'+fullscreenReader);
+    await send('Emulation.setDeviceMetricsOverride',{width:320,height:640,deviceScaleFactor:2,mobile:true});
     await click('Slide 3: Penutup materi');
     await waitFor('document.body.innerText.includes("Ringkasan pola yang sudah dipelajari.")');
 
@@ -165,10 +196,17 @@ try {
     await waitFor('document.querySelector("canvas").clientWidth>600 && Math.abs(document.querySelector("canvas").clientWidth-document.querySelector(\'[aria-label="Halaman PDF"]\').clientWidth)<=1');
     await evaluate('document.documentElement.classList.add("dark")');
     await capture('pdf-desktop');
+    await clickFullscreen('Layar penuh');
+    await waitFor(fullscreenFits('Halaman PDF', 'canvas'));
+    await capture('pdf-fullscreen-desktop');
+    await click('Halaman sebelumnya');
+    await waitFor(fullscreenReader+'?.querySelector("canvas")?.getAttribute("aria-label").endsWith("halaman 1") && '+pixel+'[1]>80 && '+pixel+'[2]<100');
+    await clickFullscreen('Keluar dari layar penuh');
+    await waitFor('!'+fullscreenReader+' && Math.abs(document.querySelector("canvas").clientWidth-document.querySelector(\'[aria-label="Halaman PDF"]\').clientWidth)<=1');
     await choose(1,'5');
     await waitFor('document.querySelector("[role=alert]")?.textContent.includes("PDF tidak dapat ditampilkan")');
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({passed:true,checks:['text and image at 320px','week and deck selection','image zoom','PDF canvas pixels, fit, zoom, page change and resize','unavailable PDF'],screenshots:process.env.KEEP_PRESENTATION_SCREENSHOTS?temp:'temporary; removed'},null,2));
+    console.log(JSON.stringify({passed:true,checks:['text and image at 320px','week and deck selection','image zoom','PDF canvas pixels, fit, zoom, page change and resize','enter, navigate and exit fullscreen for slide and PDF','unavailable PDF'],screenshots:process.env.KEEP_PRESENTATION_SCREENSHOTS?temp:'temporary; removed'},null,2));
 } finally {
     if(socket?.readyState===WebSocket.OPEN){try{await send('Browser.close',{},null);}catch{}socket.close();}
     if(chrome&&chrome.exitCode===null){await Promise.race([new Promise(resolve=>chrome.once('exit',resolve)),sleep(3000)]);if(chrome.exitCode===null)chrome.kill();}

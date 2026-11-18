@@ -7,34 +7,69 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { useScrollLock } from '@/lib/scrollLock';
 
 export function useReaderFullscreen(ref, enabled = true) {
-    const [available, setAvailable] = useState(false);
-    const [expanded, setExpanded] = useState(false);
+    const [native, setNative] = useState(false);
+    const [fallback, setFallback] = useState(false);
+    useScrollLock(fallback);
 
     useEffect(() => {
         if (!enabled) return undefined;
-        const update = () => setExpanded(document.fullscreenElement === ref.current);
-        setAvailable(Boolean(document.fullscreenEnabled));
+        const update = () => setNative(Boolean(ref.current && document.fullscreenElement === ref.current));
         document.addEventListener('fullscreenchange', update);
         return () => document.removeEventListener('fullscreenchange', update);
     }, [enabled, ref]);
 
+    useEffect(() => {
+        const reader = ref.current;
+        if (!fallback || !reader) return undefined;
+
+        const opener = document.activeElement;
+        reader.querySelector('[aria-label="Keluar dari layar penuh"]')?.focus({ preventScroll: true });
+        const handleKey = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                setFallback(false);
+            } else if (event.key === 'Tab') {
+                const controls = [...reader.querySelectorAll('button:not(:disabled), a[href], iframe, video[controls], [tabindex="0"]')]
+                    .filter((element) => element.getClientRects().length > 0);
+                const first = controls[0];
+                const last = controls.at(-1);
+                if (first && ((!reader.contains(document.activeElement)) || document.activeElement === (event.shiftKey ? first : last))) {
+                    event.preventDefault();
+                    (event.shiftKey ? last : first).focus();
+                }
+            }
+        };
+        document.addEventListener('keydown', handleKey);
+        return () => {
+            document.removeEventListener('keydown', handleKey);
+            opener?.focus({ preventScroll: true });
+        };
+    }, [fallback, ref]);
+
     const toggle = async () => {
         const reader = ref.current;
         if (!reader) return;
-        try {
-            if (document.fullscreenElement === reader) {
-                await document.exitFullscreen();
-            } else {
-                await reader.requestFullscreen?.();
+        if (fallback) {
+            setFallback(false);
+        } else if (document.fullscreenElement === reader) {
+            await document.exitFullscreen().catch(() => {});
+        } else {
+            if (document.fullscreenEnabled && reader.requestFullscreen) {
+                try {
+                    await reader.requestFullscreen();
+                    return;
+                } catch {
+                    // Keep the reader usable when the browser denies native fullscreen.
+                }
             }
-        } catch {
-            // Browser or embedding policy may decline fullscreen.
+            setFallback(true);
         }
     };
 
-    return { available, expanded, toggle };
+    return { available: enabled, expanded: native || fallback, fallback, toggle };
 }
 
 function ToolButton({ label, children, ...props }) {
@@ -49,8 +84,9 @@ export default function ReaderControls({
     kind = 'Slide', current, total, onPrevious, onNext, playing, onTogglePlay, canPlay, fullscreen, zoom,
 }) {
     const unit = kind.toLowerCase();
+    const fitLabel = fullscreen.expanded ? 'Pas layar' : 'Pas lebar layar';
     return (
-        <div role="group" aria-label={`Kontrol ${unit}`} className="flex min-w-0 flex-wrap items-center gap-2 border-t border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900">
+        <div role="group" aria-label={`Kontrol ${unit}`} className="flex min-w-0 shrink-0 flex-wrap items-center gap-2 border-t border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900">
             <div className="grid min-w-[10.5rem] flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:max-w-64">
                 <ToolButton label={`${kind} sebelumnya`} onClick={onPrevious} disabled={current <= 1}><ChevronLeftIcon /></ToolButton>
                 <span aria-live={playing ? 'off' : 'polite'} className="text-center text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
@@ -62,7 +98,7 @@ export default function ReaderControls({
                 {zoom && (
                     <>
                         <ToolButton label="Perkecil" onClick={zoom.out} disabled={zoom.atMinimum}><RemoveIcon fontSize="small" /></ToolButton>
-                        <button type="button" title="Pas lebar layar" aria-label={`${zoom.percent}%. Pas lebar layar`} onClick={zoom.reset} className="min-h-11 min-w-12 rounded-lg px-1 text-center text-xs font-semibold tabular-nums text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus fine-pointer:hover:bg-slate-100 dark:text-slate-200 dark:fine-pointer:hover:bg-slate-800">
+                        <button type="button" title={fitLabel} aria-label={`${zoom.percent}%. ${fitLabel}`} onClick={zoom.reset} className="min-h-11 min-w-12 rounded-lg px-1 text-center text-xs font-semibold tabular-nums text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus fine-pointer:hover:bg-slate-100 dark:text-slate-200 dark:fine-pointer:hover:bg-slate-800">
                             {zoom.percent}%
                         </button>
                         <ToolButton label="Perbesar" onClick={zoom.in} disabled={zoom.atMaximum}><AddIcon fontSize="small" /></ToolButton>
