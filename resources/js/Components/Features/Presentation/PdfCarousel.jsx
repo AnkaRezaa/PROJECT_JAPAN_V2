@@ -4,6 +4,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import ReaderControls, { useReaderFullscreen } from './ReaderControls';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -55,9 +56,11 @@ const decodeTransport = (buffer, transport) => {
     return decoded;
 };
 
-export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
+export default function PdfCarousel({ url, title = 'PDF Presentasi', studentReader = false }) {
     const canvasRef = useRef(null);
     const frameRef = useRef(null);
+    const readerRef = useRef(null);
+    const viewportRef = useRef(null);
     const renderTaskRef = useRef(null);
     const lastRenderedPageRef = useRef(null);
     const { props } = usePage();
@@ -66,14 +69,32 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
     const [pdfDocument, setPdfDocument] = useState(null);
     const [pageNumber, setPageNumber] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
-    const [zoom, setZoom] = useState(1.25);
+    const [zoom, setZoom] = useState(studentReader ? 1 : 1.25);
+    const [readerWidth, setReaderWidth] = useState(0);
     const [status, setStatus] = useState(pdfUrl ? 'loading' : 'empty');
     const [error, setError] = useState('');
     const [isPlaying, setIsPlaying] = useState(false);
     const [isPageTransitioning, setIsPageTransitioning] = useState(false);
+    const readerFullscreen = useReaderFullscreen(readerRef, studentReader);
+
+    useEffect(() => {
+        const viewport = viewportRef.current;
+        if (!studentReader || status !== 'ready' || !viewport) return undefined;
+        const measure = () => setReaderWidth(viewport.clientWidth);
+        measure();
+        if (typeof ResizeObserver === 'undefined') {
+            window.addEventListener('resize', measure);
+            return () => window.removeEventListener('resize', measure);
+        }
+        const observer = new ResizeObserver(measure);
+        observer.observe(viewport);
+        return () => observer.disconnect();
+    }, [status, studentReader]);
 
     useEffect(() => {
         let cancelled = false;
+        let loadingTask;
+        const controller = new AbortController();
 
         const loadPdf = async () => {
             if (!pdfUrl) {
@@ -95,6 +116,7 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
                 const response = await fetch(pdfUrl, {
                     credentials: 'same-origin',
                     headers: { Accept: 'application/octet-stream' },
+                    signal: controller.signal,
                 });
                 const contentType = response.headers.get('content-type') || '';
                 const transport = response.headers.get('x-toku-up-pdf-transport') || '';
@@ -117,11 +139,11 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
 
                 if (cancelled) return;
 
-                const document = await pdfjsLib.getDocument({ data: bytes }).promise;
+                loadingTask = pdfjsLib.getDocument({ data: bytes });
+                const document = await loadingTask.promise;
                 debug('load:ready', { pages: document.numPages });
 
                 if (cancelled) {
-                    document.destroy();
                     return;
                 }
 
@@ -140,7 +162,9 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
 
         return () => {
             cancelled = true;
+            controller.abort();
             renderTaskRef.current?.cancel?.();
+            loadingTask?.destroy().catch(() => {});
         };
     }, [pdfUrl]);
 
@@ -149,7 +173,7 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
         let fadeTimer = null;
 
         const renderPage = async () => {
-            if (!pdfDocument || !canvasRef.current) return;
+            if (!pdfDocument || !canvasRef.current || (studentReader && !readerWidth)) return;
 
             renderTaskRef.current?.cancel?.();
             const isPageChange = lastRenderedPageRef.current !== null && lastRenderedPageRef.current !== pageNumber;
@@ -167,8 +191,12 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
                 const page = await pdfDocument.getPage(pageNumber);
                 if (cancelled) return;
 
-                const pixelRatio = window.devicePixelRatio || 1;
-                const viewport = page.getViewport({ scale: zoom });
+                const scale = studentReader ? readerWidth / page.getViewport({ scale: 1 }).width * zoom : zoom;
+                const viewport = page.getViewport({ scale });
+                const deviceRatio = window.devicePixelRatio || 1;
+                const pixelRatio = studentReader
+                    ? Math.min(deviceRatio, 2, Math.sqrt(8_000_000 / (viewport.width * viewport.height)))
+                    : deviceRatio;
                 const canvas = canvasRef.current;
                 const context = canvas.getContext('2d');
 
@@ -190,10 +218,11 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
                 context.globalAlpha = 0.14;
                 context.translate(viewport.width / 2, viewport.height / 2);
                 context.rotate(-Math.PI / 8);
-                context.font = '700 22px Arial, sans-serif';
+                context.font = `700 ${studentReader ? Math.min(22, Math.max(12, viewport.width / 24)) : 22}px Arial, sans-serif`;
                 context.fillStyle = '#111827';
                 context.textAlign = 'center';
-                context.fillText(watermark, 0, 0);
+                if (studentReader) context.fillText(watermark, 0, 0, viewport.width * 0.9);
+                else context.fillText(watermark, 0, 0);
                 context.restore();
 
                 lastRenderedPageRef.current = pageNumber;
@@ -201,9 +230,8 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
                 debug('render:done', { page: pageNumber });
             } catch (exception) {
                 if (exception?.name === 'RenderingCancelledException') return;
-                if (!cancelled) {
-                    setIsPageTransitioning(false);
-                }
+                if (cancelled) return;
+                setIsPageTransitioning(false);
                 debug('render:error', exception);
                 setError(exception.message || 'Halaman PDF gagal dirender.');
                 setStatus('error');
@@ -219,7 +247,7 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
             }
             renderTaskRef.current?.cancel?.();
         };
-    }, [pdfDocument, pageNumber, watermark, zoom]);
+    }, [pdfDocument, pageNumber, watermark, zoom, studentReader, readerWidth]);
 
     useEffect(() => {
         if (!isPlaying) return undefined;
@@ -274,6 +302,44 @@ export default function PdfCarousel({ url, title = 'PDF Presentasi' }) {
     const zoomOut = () => setZoom((current) => Math.max(0.75, Number((current - 0.15).toFixed(2))));
     const zoomIn = () => setZoom((current) => Math.min(2.5, Number((current + 0.15).toFixed(2))));
     const fullscreen = () => frameRef.current?.requestFullscreen?.();
+
+    if (studentReader) {
+        return (
+            <section ref={readerRef} aria-label={`Penampil PDF: ${title}`} className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 fullscreen:h-dvh fullscreen:overflow-y-auto fullscreen:rounded-none">
+                <div className="mx-auto max-w-6xl">
+                    {status === 'ready' ? (
+                        <>
+                            <div ref={viewportRef} onContextMenu={(event) => event.preventDefault()} className="max-h-[65dvh] w-full overflow-auto overscroll-contain bg-slate-100 [scrollbar-gutter:stable] dark:bg-slate-950" tabIndex={0} aria-label="Halaman PDF">
+                                <div className="grid w-max min-w-full justify-items-center">
+                                    <canvas
+                                        ref={canvasRef}
+                                        aria-label={`${title}, halaman ${pageNumber}`}
+                                        className={`block max-w-none bg-white transition-opacity motion-reduce:transition-none ${isPageTransitioning ? 'opacity-0' : 'opacity-100'}`}
+                                    />
+                                </div>
+                            </div>
+                            <ReaderControls
+                                kind="Halaman"
+                                current={pageNumber}
+                                total={totalPages}
+                                onPrevious={previous}
+                                onNext={next}
+                                playing={isPlaying}
+                                onTogglePlay={togglePlay}
+                                canPlay
+                                fullscreen={readerFullscreen}
+                                zoom={{ out: zoomOut, in: zoomIn, reset: () => setZoom(1), percent: Math.round(zoom * 100), atMinimum: zoom <= 0.75, atMaximum: zoom >= 2.5 }}
+                            />
+                        </>
+                    ) : (
+                        <div role={status === 'error' ? 'alert' : 'status'} className="flex min-h-44 items-center justify-center bg-slate-50 px-5 py-6 text-center text-sm font-medium text-slate-800 dark:bg-slate-950 dark:text-slate-200">
+                            {status === 'loading' ? 'Memuat PDF...' : status === 'error' ? 'PDF tidak dapat ditampilkan. Muat ulang halaman untuk mencoba lagi.' : 'PDF belum tersedia.'}
+                        </div>
+                    )}
+                </div>
+            </section>
+        );
+    }
 
     return (
         <div className="overflow-hidden rounded-[1.35rem] border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">

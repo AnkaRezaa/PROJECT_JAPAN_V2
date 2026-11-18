@@ -1,17 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import theme from '@/Components/theme/themes';
 import PdfCarousel from '@/Components/Features/Presentation/PdfCarousel';
 import EmbedFrame, { isEmbeddableUrl, isImageUrl, isVideoUrl } from '@/Components/Features/Presentation/EmbedFrame';
+import ReaderControls, { useReaderFullscreen } from '@/Components/Features/Presentation/ReaderControls';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import FullscreenIcon from '@mui/icons-material/Fullscreen';
-import PauseIcon from '@mui/icons-material/Pause';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
-import ViewCarouselIcon from '@mui/icons-material/ViewCarousel';
 
 const backgroundClass = {
     light: 'bg-white text-gray-950',
@@ -51,52 +47,42 @@ const slideAspectStyle = (slide) => {
 };
 
 function SlideFrame({ slide }) {
-    const hasBoardSnapshot = slide.jamboard_snapshot || slide.snapshot_data;
-    const visualUrl = slide.snapshot_url || slide.snapshot_data || slide.media_url;
+    const snapshot = slide.snapshot_url || slide.snapshot_data || slide.jamboard_snapshot;
+    const visualUrl = snapshot || slide.media_url;
     const isEditableMedia = slide.layout === 'media' && slide.media_url;
-    const isDarkBackground = ['dark', 'indigo'].includes(slide.background) || !backgroundClass[slide.background];
-    const slideLabel = slide.layout === 'title' ? 'Pembuka' : 'Materi';
+    const backdrop = backgroundClass[slide.background] || backgroundClass.light;
+    const title = slide.title || 'Slide Presentasi';
 
+    if (!visualUrl) {
+        return (
+            <article className={`flex min-h-48 flex-col justify-center px-4 py-5 sm:min-h-64 sm:px-8 sm:py-8 ${backdrop}`}>
+                <h3 className="text-xl font-bold leading-snug [overflow-wrap:anywhere] sm:text-3xl">{title}</h3>
+                <p className="mt-3 max-w-prose whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere] sm:text-lg sm:leading-8">{slide.content || 'Konten slide belum tersedia.'}</p>
+            </article>
+        );
+    }
+
+    const mediaUrl = isEditableMedia ? slide.media_url : visualUrl;
+    const isExternalLink = (isEditableMedia || !snapshot) && !isImageUrl(mediaUrl) && !isVideoUrl(mediaUrl) && !isEmbeddableUrl(mediaUrl);
     return (
-        <article className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <div style={slideAspectStyle(slide)} className={`flex items-center justify-center ${backgroundClass[slide.background] || `bg-gradient-to-br ${theme.ctaBg} text-white`} p-3 text-center sm:p-4`}>
-                {isEditableMedia ? (
-                    <div className="relative h-full w-full overflow-hidden rounded-xl bg-gray-950 shadow-lg">
-                        <EmbedFrame url={slide.media_url} title={slide.title || 'Media'} />
-                        {(slide.snapshot_url || slide.snapshot_data) && (
-                            <img src={slide.snapshot_url || slide.snapshot_data} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-contain" />
-                        )}
-                    </div>
-                ) : hasBoardSnapshot ? (
-                    <img src={slide.jamboard_snapshot || slide.snapshot_data} alt={slide.title || 'Board'} className="max-h-full max-w-full rounded-xl bg-white object-contain shadow-lg" />
-                ) : visualUrl ? (
-                    <div className="h-full w-full overflow-hidden rounded-xl bg-gray-950 shadow-lg">
-                        <EmbedFrame url={visualUrl} title={slide.title || 'Media'} />
-                    </div>
-                ) : (
-                    <div className="flex h-full min-h-0 w-full flex-col items-center justify-center text-center">
-                        <p className={`shrink-0 text-xs font-black uppercase tracking-[0.2em] ${isDarkBackground ? 'text-white/70' : 'text-gray-600'}`}>{slideLabel}</p>
-                        <h2 className="mt-2 shrink-0 break-words text-xl font-black sm:mt-3 sm:text-3xl">{slide.title || 'Slide Presentasi'}</h2>
-                        <div className="mt-3 max-h-[55%] w-full overflow-y-auto overscroll-contain px-2">
-                            <p className={`mx-auto max-w-xl whitespace-pre-line break-words text-sm font-medium leading-5 sm:text-base sm:leading-7 lg:text-lg ${isDarkBackground ? 'text-white/85' : 'text-gray-800'}`}>{slide.content || 'Konten slide belum diisi.'}</p>
-                        </div>
-                    </div>
-                )}
+        <figure style={slideAspectStyle(slide)} className={`relative w-full overflow-hidden ${isExternalLink ? 'min-h-[220px]' : ''} ${backdrop}`}>
+            <div className="absolute inset-0">
+                {snapshot && !isEditableMedia
+                    ? <img src={snapshot} alt={title} className="h-full w-full object-contain" />
+                    : <EmbedFrame url={mediaUrl} title={title} />}
             </div>
-            {(hasBoardSnapshot || visualUrl || slide.content) && (
-                <div className="p-3 sm:p-4">
-                    <h3 className="truncate text-sm font-black text-gray-900 dark:text-white">{slide.title || 'Slide Presentasi'}</h3>
-                    {slide.content && <p className="mt-1 max-h-12 overflow-hidden whitespace-pre-line text-xs font-medium leading-5 text-gray-500 dark:text-gray-400">{slide.content}</p>}
-                </div>
-            )}
-        </article>
+            {isEditableMedia && snapshot && <img src={snapshot} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-contain" />}
+        </figure>
     );
 }
 
 function SlideCarousel({ deck }) {
     const [activeIndex, setActiveIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [zoom, setZoom] = useState(1);
     const stageRef = useRef(null);
+    const slideViewportRef = useRef(null);
+    const fullscreen = useReaderFullscreen(stageRef);
     const prefersReducedMotion = useReducedMotion();
     const slides = deck?.slides || [];
     const activeSlide = slides[activeIndex] || null;
@@ -104,6 +90,16 @@ function SlideCarousel({ deck }) {
         activeSlide?.layout === 'media'
             && (isVideoUrl(activeSlide?.media_url || '') || isEmbeddableUrl(activeSlide?.media_url || '')),
     );
+    const hasVisual = Boolean(activeSlide?.snapshot_url || activeSlide?.jamboard_snapshot || activeSlide?.snapshot_data || activeSlide?.media_url);
+    const canZoom = Boolean(activeSlide && (
+        isImageUrl(activeSlide.media_url || '') ||
+        (activeSlide.layout !== 'media' && (activeSlide.snapshot_url || activeSlide.jamboard_snapshot || activeSlide.snapshot_data))
+    ));
+
+    useEffect(() => {
+        setZoom(1);
+        slideViewportRef.current?.scrollTo(0, 0);
+    }, [activeIndex]);
 
     useEffect(() => {
         if (!isPlaying) return undefined;
@@ -156,6 +152,7 @@ function SlideCarousel({ deck }) {
 
     const togglePlay = () => {
         if (slides.length <= 1) return;
+        setZoom(1);
 
         if (!isPlaying && activeIndex >= slides.length - 1) {
             setActiveIndex(0);
@@ -165,80 +162,86 @@ function SlideCarousel({ deck }) {
 
         setIsPlaying((current) => !current);
     };
-
-    const fullscreen = () => stageRef.current?.requestFullscreen?.();
+    const changeZoom = (value) => {
+        setIsPlaying(false);
+        setZoom(value);
+        if (value === 1) slideViewportRef.current?.scrollTo(0, 0);
+    };
 
     return (
-        <div className="space-y-2.5">
-            <div ref={stageRef} className="overflow-hidden rounded-2xl bg-gray-950/5 dark:bg-gray-950">
+        <section ref={stageRef} aria-label="Penampil slide" className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 fullscreen:h-dvh fullscreen:overflow-y-auto fullscreen:rounded-none">
+            <div className="mx-auto max-w-6xl">
+                <div ref={slideViewportRef} className={hasVisual ? 'max-h-[65dvh] overflow-auto overscroll-contain' : undefined}>
                 <AnimatePresence mode="wait" initial={false}>
                     <motion.div
                         key={activeSlide.id || `slide-${activeIndex}`}
+                        style={canZoom ? { width: `${zoom * 100}%` } : undefined}
                         initial={prefersReducedMotion ? false : { opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={prefersReducedMotion ? undefined : { opacity: 0 }}
-                        transition={{ duration: prefersReducedMotion ? 0 : 0.32, ease: 'easeInOut' }}
+                        transition={{ duration: prefersReducedMotion ? 0 : 0.16 }}
                     >
                         <SlideFrame slide={activeSlide} />
                     </motion.div>
                 </AnimatePresence>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-white p-2 sm:p-2.5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                <div className="flex items-center gap-1.5">
-                    <button type="button" onClick={previous} disabled={activeIndex === 0} className="shrink-0 rounded-xl border border-gray-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Sebelumnya</button>
-                    <button
-                        type="button"
-                        onClick={togglePlay}
-                        disabled={slides.length <= 1}
-                        aria-pressed={isPlaying}
-                        title={isPlaying ? 'Jeda putar otomatis' : 'Putar slide otomatis'}
-                        className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black transition disabled:opacity-40 ${
-                            isPlaying
-                                ? 'bg-orange-600 text-white shadow-sm hover:bg-orange-700'
-                                : 'border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 dark:border-orange-900/50 dark:bg-orange-950/40 dark:text-orange-300'
-                        }`}
-                    >
-                        {isPlaying ? <PauseIcon sx={{ fontSize: 16 }} /> : <PlayArrowIcon sx={{ fontSize: 16 }} />}
-                        <span>{isPlaying ? 'Jeda' : 'Play'}</span>
-                    </button>
                 </div>
-                <div className="min-w-0 flex-1 px-1 text-center">
-                    <p className="text-[11px] sm:text-xs font-black text-gray-500">Slide {activeIndex + 1} dari {slides.length}</p>
-                    <p className="mt-0.5 max-w-full truncate text-xs sm:text-sm font-black text-gray-900 dark:text-white">{activeSlide.title || 'Slide Presentasi'}</p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <button type="button" onClick={fullscreen} title="Layar penuh" aria-label="Layar penuh" className="hidden sm:inline-flex shrink-0 items-center justify-center rounded-xl border border-gray-200 p-2 text-xs font-black text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
-                        <FullscreenIcon sx={{ fontSize: 16 }} />
-                    </button>
-                    <button type="button" onClick={next} disabled={activeIndex >= slides.length - 1} className="shrink-0 rounded-xl border border-gray-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-black text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-200">Berikutnya</button>
-                </div>
+                <ReaderControls
+                    current={activeIndex + 1}
+                    total={slides.length}
+                    onPrevious={previous}
+                    onNext={next}
+                    playing={isPlaying}
+                    onTogglePlay={togglePlay}
+                    canPlay={!isInteractiveMediaSlide}
+                    fullscreen={fullscreen}
+                    zoom={canZoom ? {
+                        out: () => changeZoom(Math.max(1, zoom - 0.25)),
+                        in: () => changeZoom(Math.min(2.5, zoom + 0.25)),
+                        reset: () => changeZoom(1),
+                        percent: Math.round(zoom * 100),
+                        atMinimum: zoom <= 1,
+                        atMaximum: zoom >= 2.5,
+                    } : null}
+                />
+                {hasVisual && (
+                    <div className="border-t border-slate-200 px-3 py-3 dark:border-slate-800 sm:px-5">
+                        <h3 className="text-base font-bold [overflow-wrap:anywhere]">{activeSlide.title || 'Slide Presentasi'}</h3>
+                        {activeSlide.content && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-700 [overflow-wrap:anywhere] dark:text-slate-300">{activeSlide.content}</p>}
+                    </div>
+                )}
+                {slides.length > 1 && (
+                    <nav aria-label="Daftar slide" className="flex gap-2 overflow-x-auto overscroll-x-contain border-t border-slate-200 p-2 dark:border-slate-800">
+                        {slides.map((slide, index) => {
+                            const preview = slide.snapshot_url || slide.jamboard_snapshot || slide.snapshot_data || (isImageUrl(slide.media_url || '') ? slide.media_url : null);
+                            return (
+                                <button
+                                    key={slide.id || index}
+                                    type="button"
+                                    onClick={() => selectSlide(index)}
+                                    aria-label={`Slide ${index + 1}: ${slide.title || 'Tanpa judul'}`}
+                                    aria-current={activeIndex === index ? 'step' : undefined}
+                                    className={`relative grid h-12 w-[76px] shrink-0 place-items-center overflow-hidden rounded-lg border-2 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${activeIndex === index ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:border-emerald-400 dark:bg-emerald-950 dark:text-emerald-200' : 'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}
+                                >
+                                    {preview && <img src={preview} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-contain" />}
+                                    <span className={preview ? 'absolute bottom-0.5 left-0.5 rounded bg-slate-950 px-1 text-xs text-white' : ''}>{index + 1}</span>
+                                </button>
+                            );
+                        })}
+                    </nav>
+                )}
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-2">
-                {slides.map((slide, index) => (
-                    <button
-                        key={slide.id || index}
-                        type="button"
-                        onClick={() => selectSlide(index)}
-                        className={`h-12 w-20 shrink-0 overflow-hidden rounded-xl border text-[10px] font-black ${activeIndex === index ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 bg-white text-gray-500 dark:border-gray-800 dark:bg-gray-900'}`}
-                    >
-                        {slide.snapshot_url || slide.jamboard_snapshot || isImageUrl(slide.media_url || '') ? (
-                            <img src={slide.snapshot_url || slide.jamboard_snapshot || slide.media_url} alt={slide.title || 'Thumbnail'} className="h-full w-full object-cover" />
-                        ) : (
-                            <span>{slide.media_url ? 'Embed' : index + 1}</span>
-                        )}
-                    </button>
-                ))}
-            </div>
-        </div>
+        </section>
     );
 }
+
+const selectClass = 'min-h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:border-emerald-600 focus:ring-emerald-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
 
 export default function PresentasiPage({ program = {}, decks = [], modules = [], selected_module_id = null }) {
     const [selectedDeckId, setSelectedDeckId] = useState(decks[0]?.id || null);
 
     useEffect(() => {
-        if (decks.length > 0 && !decks.some((deck) => deck.id === selectedDeckId)) {
-            setSelectedDeckId(decks[0].id);
+        if (!decks.some((deck) => deck.id === selectedDeckId)) {
+            setSelectedDeckId(decks[0]?.id || null);
         }
     }, [decks, selectedDeckId]);
 
@@ -246,106 +249,73 @@ export default function PresentasiPage({ program = {}, decks = [], modules = [],
         () => decks.find((deck) => deck.id === selectedDeckId) || decks[0] || null,
         [decks, selectedDeckId],
     );
-    const selectedModuleId = selected_module_id ? Number(selected_module_id) : null;
+    const selectedModule = selected_module_id ? String(selected_module_id) : '';
+    const changeWeek = (event) => {
+        const { value } = event.target;
+        router.get(route('user.modul.program.presentasi', { program: program.slug }), value ? { module: value } : {});
+    };
+    const moduleLabel = selectedDeck?.module?.week_number != null ? `Minggu ${selectedDeck.module.week_number}` : null;
+    const showFilters = modules.length > 0 || decks.length > 1;
 
     return (
-        <AuthenticatedLayout header={false}>
-            <Head title={`PPT ${program.title || 'Kelas'} - TOKU-UP`} />
+        <AuthenticatedLayout>
+            <Head title={`Presentasi ${program.title || 'Kelas'} - TOKU-UP`} />
+            <section aria-labelledby="presentation-heading" className="mx-auto w-full max-w-7xl px-3 pb-8 pt-4 text-slate-900 dark:text-slate-100 sm:px-5 lg:px-6">
+                <header className="mb-4 flex items-start gap-3 border-b border-slate-200 pb-4 dark:border-slate-800">
+                    <Link href={program.roadmap_url || route('user.kelas.index')} aria-label="Kembali ke Roadmap" title="Kembali ke Roadmap" className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:bg-slate-200 fine-pointer:hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:active:bg-slate-700 dark:fine-pointer:hover:bg-slate-800">
+                        <ArrowBackIcon fontSize="small" />
+                    </Link>
+                    <div className="min-w-0">
+                        <h1 id="presentation-heading" className="text-xl font-bold sm:text-2xl">Presentasi</h1>
+                        <p className="mt-1 text-sm leading-5 text-slate-600 [overflow-wrap:anywhere] dark:text-slate-300">{[program.title, program.level].filter(Boolean).join(' · ')}</p>
+                    </div>
+                </header>
 
-            <div className={`min-h-screen ${theme.sectionBg} px-3 py-4 text-gray-900 dark:bg-gray-950 dark:text-white sm:px-5 lg:px-6`}>
-                <main className="mx-auto max-w-7xl space-y-4">
-                    <section className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${theme.ctaBg} px-4 py-4 text-white shadow-sm sm:px-5`}>
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_14px_14px,rgba(255,255,255,0.18)_2px,transparent_3px)] bg-[length:24px_24px]" />
-                        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white/70">Materi Presentasi</p>
-                                <h1 className="mt-1 text-xl font-black tracking-tight sm:text-2xl">{program.title || 'Presentasi Kelas'}</h1>
-                                <p className="mt-1 max-w-2xl text-xs font-semibold leading-5 text-white/80">
-                                    {program.level || 'Materi kelas'}
-                                </p>
+                <div className={`grid min-w-0 items-start gap-4 lg:gap-6 ${showFilters ? 'lg:grid-cols-[216px_minmax(0,1fr)]' : ''}`}>
+                    {showFilters && <aside aria-label="Pilih materi presentasi" className={`grid min-w-0 gap-2 lg:sticky lg:top-[76px] lg:grid-cols-1 lg:border-r lg:border-slate-200 lg:pr-4 dark:lg:border-slate-800 ${modules.length > 0 && decks.length > 1 ? 'grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : 'grid-cols-1'}`}>
+                        {modules.length > 0 && (
+                            <label className="min-w-0">
+                                <span className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Minggu</span>
+                                <select className={selectClass} value={selectedModule} onChange={changeWeek}>
+                                    <option value="">Semua</option>
+                                    {modules.map((module) => <option key={module.id} value={String(module.id)}>Minggu {module.week_number}</option>)}
+                                </select>
+                            </label>
+                        )}
+
+                        {decks.length > 1 && (
+                            <label className="min-w-0">
+                                <span className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Materi</span>
+                                <select className={selectClass} value={String(selectedDeck?.id || '')} onChange={(event) => setSelectedDeckId(decks.find((deck) => String(deck.id) === event.target.value)?.id || null)}>
+                                    {decks.map((deck) => <option key={deck.id} value={String(deck.id)}>{deck.title}</option>)}
+                                </select>
+                            </label>
+                        )}
+                    </aside>}
+
+                    <div className="min-w-0">
+                        {selectedDeck ? (
+                            <>
+                                <header className="mb-3">
+                                    {moduleLabel && <p className="mb-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300">{moduleLabel}</p>}
+                                    <h2 className="text-lg font-bold leading-snug [overflow-wrap:anywhere] sm:text-xl">{selectedDeck.title}</h2>
+                                </header>
+                                {selectedDeck.source_file_url
+                                    ? <PdfCarousel key={selectedDeck.id} url={selectedDeck.source_file_url} title={selectedDeck.title} studentReader />
+                                    : <SlideCarousel key={selectedDeck.id} deck={selectedDeck} />}
+                                {selectedDeck.description && (
+                                    <p className="mt-4 max-w-prose whitespace-pre-wrap text-sm leading-6 text-slate-700 [overflow-wrap:anywhere] dark:text-slate-300">{selectedDeck.description}</p>
+                                )}
+                            </>
+                        ) : (
+                            <div className="flex min-h-44 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center dark:border-slate-700">
+                                <SlideshowIcon className="text-slate-500 dark:text-slate-400" />
+                                <p className="text-sm font-semibold">Belum ada presentasi untuk pilihan ini.</p>
                             </div>
-                            <Link href={program.roadmap_url || route('user.kelas.index')} className="inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-white/85 backdrop-blur transition hover:bg-white/20">
-                                <ArrowBackIcon sx={{ fontSize: 16 }} />
-                                Kembali ke Roadmap
-                            </Link>
-                        </div>
-                    </section>
-
-                    <section className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-                        <aside className="space-y-3 lg:sticky lg:top-4 lg:self-start">
-                            {modules.length > 0 && (
-                                <div className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                                    <h2 className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-gray-500">Minggu</h2>
-                                    <div className="space-y-1.5">
-                                        <Link
-                                            href={route('user.modul.program.presentasi', program.slug)}
-                                            className={`block rounded-xl px-3 py-2 text-xs font-black transition ${!selectedModuleId ? `bg-gradient-to-r ${theme.ctaBg} text-white` : 'bg-gray-50 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'}`}
-                                        >
-                                            Semua Minggu
-                                        </Link>
-                                        {modules.map((module) => (
-                                            <Link
-                                                key={module.id}
-                                                href={route('user.modul.program.presentasi', { program: program.slug, module: module.id })}
-                                                className={`block rounded-xl px-3 py-2 text-xs font-black transition ${selectedModuleId === Number(module.id) ? `bg-gradient-to-r ${theme.ctaBg} text-white` : 'bg-gray-50 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'}`}
-                                            >
-                                                Minggu {module.week_number ?? '-'} - {module.title}
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                                <div className="mb-3 flex items-center gap-2">
-                                    <SlideshowIcon className={theme.heroAccent} />
-                                    <h2 className="text-xs font-black uppercase tracking-[0.18em] text-gray-500">Daftar Presentasi</h2>
-                                </div>
-                                <div className="space-y-1.5">
-                                    {decks.map((deck) => (
-                                        <button
-                                            key={deck.id}
-                                            type="button"
-                                            onClick={() => setSelectedDeckId(deck.id)}
-                                            className={`w-full rounded-xl px-3 py-2.5 text-left transition ${selectedDeck?.id === deck.id ? 'bg-gray-950 text-white dark:bg-white dark:text-gray-950' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'}`}
-                                        >
-                                            <p className="truncate text-sm font-black">{deck.title}</p>
-                                            <p className="mt-1 text-xs opacity-70">Minggu {deck.module?.week_number ?? '-'} - {deck.module?.title || 'Kelas'} · {deck.slides_count ?? deck.slides?.length ?? 0} slide</p>
-                                        </button>
-                                    ))}
-                                    {decks.length === 0 && (
-                                        <p className="rounded-xl bg-gray-50 px-3 py-6 text-center text-xs font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                                            Belum ada PPT published untuk kelas ini.
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        </aside>
-
-                        <div className="space-y-3">
-                            {selectedDeck && (
-                                <div className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${theme.ctaBg} text-white`}>
-                                            <ViewCarouselIcon />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <h2 className="truncate text-base font-black text-gray-900 dark:text-white">{selectedDeck.title}</h2>
-                                            <p className="mt-0.5 truncate text-xs font-medium text-gray-500 dark:text-gray-400">{selectedDeck.description || 'Materi presentasi penunjang kelas.'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {selectedDeck?.source_file_url ? (
-                                <PdfCarousel url={selectedDeck.source_file_url} title={selectedDeck.title} />
-                            ) : (
-                                <SlideCarousel key={selectedDeck?.id || 'empty'} deck={selectedDeck} />
-                            )}
-                        </div>
-                    </section>
-                </main>
-            </div>
+                        )}
+                    </div>
+                </div>
+            </section>
         </AuthenticatedLayout>
     );
 }
