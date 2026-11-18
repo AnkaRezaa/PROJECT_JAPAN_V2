@@ -70,6 +70,12 @@ final class AdminQuizGeneratorController extends Controller
             'existing_questions.*.answer' => ['required', 'array'],
             'existing_questions.*.answer.correct_order' => ['nullable', 'array', 'max:100'],
             'existing_questions.*.answer.correct_order.*' => ['required', 'string', 'max:100'],
+        ], [
+            'input.pattern.required' => 'Isi pola Grammar terlebih dahulu.',
+            'settings.array' => 'Pengaturan generator tidak valid. Muat ulang halaman lalu coba lagi.',
+            'settings.counts.array' => 'Periksa jumlah soal untuk setiap tahap.',
+            'settings.counts.*.min' => 'Setiap tahap harus berisi minimal 1 soal.',
+            'settings.counts.*.max' => 'Setiap tahap maksimal 13 soal.',
         ]);
         $quiz = isset($validated['quiz_id']) ? Kuis::with('module')->findOrFail($validated['quiz_id']) : null;
         $day = isset($validated['module_day_id']) ? HariModul::with('module')->findOrFail($validated['module_day_id']) : null;

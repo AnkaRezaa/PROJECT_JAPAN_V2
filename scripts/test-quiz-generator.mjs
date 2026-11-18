@@ -76,17 +76,49 @@ function Fixture(){
             }else window.__generator.applied.push(type==='vocab'?vocabularyQuestionsFromDraft(draft):type==='grammar'?grammarStagesFromDraft(draft):dokkaiMaterialFromDraft(draft));
         }}/></>;
 }
-createRoot(document.getElementById('app')).render(type==='highlight'?<HighlightFixture/>:<Fixture/>);
+const GrammarBuilder = type==='grammar-builder'
+    ? (await import('@/Components/Features/GrammarQuiz/BuilderKuisGrammar')).default
+    : null;
+const FlashcardBuilder = type==='flashcard-builder'
+    ? (await import('@/Pages/Admin/Flashcard/BuilderFlashcard')).default
+    : null;
+if(type==='flashcard-builder'){
+    const {router}=await import('@inertiajs/react');
+    router.post=(url,body,options)=>{
+        window.__generator.calls.push({url,body});
+        options.onError({'cards.0.vocabulary_id':'Kosakata tidak tersedia untuk minggu ini.'});
+        options.onFinish();
+    };
+}
+function GrammarBuilderFixture(){
+    const stages = ['transformation','sentence_builder','context_choice'].map(id=>({id,questions:[]}));
+    window.axios.get=async()=>({data:{lessons:[
+        {id:41,title:'Lesson pertama',pattern:'Pattern A',status:'draft',intro:{examples:[]},stages},
+        {id:42,title:'Lesson kedua',pattern:'Pattern B',status:'draft',intro:{examples:[]},stages},
+    ]}});
+    window.axios.delete=async(url)=>{
+        window.__generator.calls.push({url});
+        if(window.__generator.mode==='fail')throw {response:{status:422,data:{errors:{lesson:['Lesson memiliki riwayat pengerjaan. Ubah menjadi draf untuk menyembunyikannya.']}}}};
+    };
+    return <GrammarBuilder open day={{id:1,day_number:1}} module={{title:'Week 1'}} onClose={()=>{}}/>;
+}
+const flashcardSet={id:1,module_id:1,title:'Set lama',status:'draft',flashcards:[{
+    id:4,vocabulary_id:7,front_text:'Station',reading:'eki',back_text:'Arti kartu tersimpan',
+    vocabulary:{id:7,module_id:2,word:'Station',reading:'eki',meaning_id:'Arti bank',content_type:'kanji'},
+}]};
+createRoot(document.getElementById('app')).render(type==='highlight'?<HighlightFixture/>:type==='grammar-builder'?<GrammarBuilderFixture/>:type==='flashcard-builder'?<FlashcardBuilder embedded set={flashcardSet} vocabulary={{data:[]}}/>:<Fixture/>);
 window.__ready=true;
 `;
-const server = await createServer({configFile:false,root,cacheDir:path.join(screenshots,'vite-cache'),optimizeDeps:{entries:[],include:['react','react-dom','react-dom/client','@headlessui/react','framer-motion','@mui/material/Tooltip',...['Close','Add','DeleteOutlineOutlined','Refresh','AutoAwesome','CheckCircle','ErrorOutlineOutlined','InfoOutlined','WarningAmber'].map(name=>'@mui/icons-material/'+name)]},resolve:{alias:{'@':path.join(root,'resources/js')}},plugins:[react(),{
+const icons=['Close','Add','DeleteOutlineOutlined','Refresh','AutoAwesome','CheckCircle','ErrorOutlineOutlined','InfoOutlined','WarningAmber','ArrowBack','ArrowDownward','ArrowForward','ArrowUpward','AutoStories','BackspaceOutlined','Bolt','CheckCircleOutlined','ChevronRight','ContentCopy','DescriptionOutlined','EditOutlined','EmojiEvents','ErrorOutlineRounded','FormatListBulleted','GraphicEq','LibraryBooks','LightbulbOutlined','MenuBook','MicNoneOutlined','PlayArrow','RadioButtonUnchecked','Restore','SaveOutlined','Search','SettingsOutlined','UploadFile','Visibility','VolumeOff','VolumeUp'];
+const server = await createServer({configFile:false,root,cacheDir:path.join(screenshots,'vite-cache'),optimizeDeps:{entries:[],include:['react','react-dom','react-dom/client','@headlessui/react','framer-motion','@mui/material/Tooltip','@inertiajs/react','tiny-segmenter',...icons.map(name=>'@mui/icons-material/'+name)]},resolve:{alias:[{find:'@/Layouts/AuthenticatedLayout',replacement:'virtual:fixture-layout'},{find:'@',replacement:path.join(root,'resources/js')}]},plugins:[react(),{
     name:'generator-fixture',
     configureServer(vite){vite.middlewares.use(async(req,res,next)=>{
         if(req.url.split('?')[0]!=='/__generator')return next();
         res.setHeader('Content-Type','text/html');
         res.end(await vite.transformIndexHtml('/__generator','<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="app"></div><script type="module" src="/__generator-fixture.jsx"></script></body></html>'));
     });},
-    resolveId(id){if(id==='/__generator-fixture.jsx'||id===entry)return entry;},load(id){if(id===entry)return fixture;}
+    resolveId(id){if(id==='/__generator-fixture.jsx'||id===entry)return entry;if(id==='virtual:fixture-layout')return '\0fixture-layout';},
+    load(id){if(id===entry)return fixture;if(id==='\0fixture-layout')return 'export default ({children})=>children;';}
 }],server:{host:'127.0.0.1',port:5199,strictPort:false,hmr:false}});
 let chrome, socket, session, sequence=0;
 const pending=new Map(), errors=[];
@@ -149,7 +181,12 @@ try{
         await waitFor('window.__generator.applied.length===1');
         assert.equal(await evaluate('window.__generator.calls.length'),2,'Apply must not save');
         if(type==='grammar')assert.equal(await evaluate('window.__generator.applied[0][1].questions[0].correctOrder.length'),2);
-        if(type==='grammar')assert.deepEqual(await evaluate('window.__generator.settings'),await evaluate('window.__generator.calls[0].body.settings'));
+        if(type==='grammar'){
+            const calls=await evaluate('window.__generator.calls.map(call=>call.body)');
+            const keys=['autoMeaning','count','counts','difficulty','target_form','useDistractors'];
+            assert.deepEqual(Object.keys(calls[0].settings).sort(),keys);
+            assert.deepEqual(Object.keys(calls.find(call=>call.operation==='regenerate').settings).sort(),keys);
+        }
         if(type==='vocab')assert.equal(await evaluate('window.__generator.applied[0][0].id'),null);
         assert.equal(await evaluate(type==='vocab'?'window.__generator.applied[0][0].highlight_text':type==='grammar'?'window.__generator.applied[0][0].questions[0].highlight_text':'window.__generator.applied[0].questions[0].highlight_text'),'Question','Adapters must preserve highlight');
         if(type==='dokkai')assert.equal(await evaluate('window.__generator.applied[0].questions[0].evidence_paragraph_number'),1);
@@ -198,6 +235,41 @@ try{
     await send('Page.navigate',{url:server.resolvedUrls.local[0]+'__generator?type=highlight'});
     await waitFor('window.__ready&&document.querySelector("#question-highlight mark")');
     assert.equal(await evaluate('window.__emptyQuestion().show_question_reading'),false,'New builder questions default to hidden reading');
+    await send('Emulation.setDeviceMetricsOverride',{width:1366,height:900,deviceScaleFactor:1,mobile:false});
+    await send('Page.navigate',{url:server.resolvedUrls.local[0]+'__generator?type=grammar-builder'});
+    await waitFor('document.body.innerText.includes("Lesson pertama")');
+    await click('Hapus Lesson');
+    await waitFor('document.body.innerText.includes("Hapus Lesson?")');
+    await click('Batal');
+    assert.equal(await evaluate('window.__generator.calls.length'),0);
+    const confirmDelete=async()=>{
+        await click('Hapus Lesson');
+        await waitFor('document.body.innerText.includes("Hapus Lesson?")');
+        await evaluate('Array.from(document.querySelectorAll("button")).filter(b=>b.textContent.trim()==="Hapus Lesson").at(-1).click()');
+        await waitFor('!document.body.innerText.includes("Hapus Lesson?")');
+    };
+    await evaluate('window.__generator.mode="fail"');
+    await confirmDelete();
+    await waitFor('document.body.innerText.includes("Lesson memiliki riwayat pengerjaan.")');
+    assert(await evaluate('document.body.innerText.includes("Lesson pertama")'));
+    await evaluate('window.__generator.mode="success"');
+    await confirmDelete();
+    await waitFor('document.body.innerText.includes("Lesson berhasil dihapus.")');
+    assert.equal(await evaluate('window.__generator.calls[1].url'),'/fixture/admin.grammar-quizzes.destroy/41');
+    assert.equal(await evaluate('document.body.innerText.includes("Lesson pertama")'),false);
+    assert(await evaluate('document.body.innerText.includes("Lesson kedua")'));
+    await capture('grammar-after-delete');
+    await send('Page.navigate',{url:server.resolvedUrls.local[0]+'__generator?type=flashcard-builder'});
+    await waitFor('document.body.innerText.includes("Bank minggu lain")');
+    assert(await evaluate('Array.from(document.querySelectorAll("input")).some(input=>input.value==="Arti kartu tersimpan"&&!input.readOnly)'));
+    assert(await evaluate('Array.from(document.querySelectorAll("select")).some(select=>select.value==="kanji"&&select.disabled)'));
+    await click('Simpan Flashcard');
+    await waitFor('Array.from(document.querySelectorAll("[role=alert]")).some(el=>el.textContent.includes("Kartu ke-1: Kosakata tidak tersedia"))');
+    assert.equal(await evaluate('window.__generator.calls[0].body.cards[0].vocabulary_id'),7);
+    if(process.argv.includes('--skip-highlight')){
+        assert.deepEqual(errors,[],'Uncaught browser errors');
+        console.log('Generator, Grammar deletion, and legacy flashcard browser checks passed.');
+    }else{
     assert.equal(await evaluate('document.querySelector("#reading-field [role=switch]").checked'),false,'Reading toggle defaults off');
     await evaluate('document.querySelector("#reading-field [role=switch]").click()');
     await waitFor('document.querySelector("#reading-field output").dataset.visible==="true"');
@@ -228,13 +300,14 @@ try{
     assert.deepEqual(errors,[],'Uncaught browser errors');
     console.log(JSON.stringify({passed:true,types:3,checks:['preview','local adapters and highlight metadata','replace confirmation/cancel','append preserves draft','repeated append','kanji meaning-to-word filters','pristine placeholder','no save on apply','Escape','422','abort stale response','literal Unicode highlight','escaped HTML and regex characters','inline target validation','legacy highlights unchanged','reading visibility metadata','keyboard reading toggle and draft retention','light/dark responsive overflow'],screenshots:'temporary; removed after test'},null,2));
 }catch(error){
-    console.error('Generator browser test failed:',error);
+    console.error('Generator browser test failed:',error,errors);
     throw error;
 }finally{
     if(socket?.readyState===WebSocket.OPEN){try{await send('Browser.close',{},null)}catch{}socket.close();}
     if(chrome&&chrome.exitCode===null){await Promise.race([new Promise(resolve=>chrome.once('exit',resolve)),sleep(3000)]);if(chrome.exitCode===null)chrome.kill();}
     await server.close();
     const resolved=path.resolve(profile);
+    }
     if(resolved.startsWith(path.resolve(tmpdir())+path.sep)&&path.basename(resolved).startsWith('tokuup-generator-browser-')){
         try{rmSync(resolved,{recursive:true,force:true,maxRetries:5,retryDelay:300});}
         catch(error){console.warn('Chrome temporary profile cleanup:',error.code,resolved);}

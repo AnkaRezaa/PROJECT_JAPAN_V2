@@ -91,7 +91,7 @@ class UnifiedQuizGeneratorTest extends TestCase
         ])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame(5, $quiz->questions()->count());
         $this->actingAs($this->admin)->post(route('admin.quizzes.questions.generate-vocabulary', $quiz), [
-            'count' => '5', 'jlpt_level' => 'N3', 'mode' => 'word_to_meaning', 'status' => 'published',
+            'count' => '6', 'jlpt_level' => 'N3', 'mode' => 'word_to_meaning', 'status' => 'published',
         ])->assertRedirect()->assertSessionHasNoErrors();
         // Because only 6 words exist in total and 5 were already saved with mode 'word_to_meaning',
         // deduplication skips the 5 existing words and only appends the 1 remaining word (total = 6).
@@ -413,6 +413,56 @@ class UnifiedQuizGeneratorTest extends TestCase
             'lesson' => [...$payload['input'], 'level' => 'JLPT N3', 'title' => 'Grammar test'], 'stages' => $stages,
         ])->assertCreated();
         $this->assertSame(5, Soal::count());
+    }
+
+    public function test_grammar_reports_invalid_settings_and_missing_pattern_in_indonesian(): void
+    {
+        $payload = $this->payload('grammar', ['pattern' => '']);
+        $payload['settings']['syncFlashcards'] = true;
+
+        $response = $this->generate('grammar', $payload)->assertUnprocessable()
+            ->assertJsonValidationErrors('input.pattern')
+            ->assertJsonPath('errors.settings.0', 'Pengaturan generator tidak valid. Muat ulang halaman lalu coba lagi.');
+        $this->assertSame('Isi pola Grammar terlebih dahulu.', $response->json('errors')['input.pattern'][0]);
+    }
+
+    public function test_flashcard_builder_preserves_existing_foreign_sources_without_mutating_the_bank(): void
+    {
+        $module = $this->day->module;
+        $other = $module->replicate()->fill(['week_number' => 2, 'title' => 'Week 2']);
+        $other->save();
+        $source = Kosakata::create([
+            'module_id' => $other->id, 'word' => 'Station', 'reading' => 'eki',
+            'meaning_id' => 'Asli', 'jlpt_level' => 'N3', 'content_type' => 'kosakata', 'status' => 'published',
+        ]);
+        $set = \App\Models\SetFlashcard::create([
+            'level_id' => $module->level_id, 'module_id' => $module->id, 'module_day_id' => $this->day->id,
+            'title' => 'Set lama', 'source_type' => 'day', 'status' => 'draft',
+        ]);
+        $card = $set->flashcards()->create([
+            'vocabulary_id' => $source->id, 'front_text' => 'Station', 'reading' => 'eki', 'back_text' => 'Asli', 'order' => 0,
+        ]);
+        $url = route('admin.flashcards.builder.update', $set);
+        $row = ['id' => $card->id, 'vocabulary_id' => $source->id, 'front_text' => 'Station',
+            'reading' => 'eki', 'back_text' => 'Stasiun', 'content_type' => 'kanji'];
+        $save = fn (array $cards) => $this->actingAs($this->admin)->postJson($url, ['status' => 'draft', 'cards' => $cards]);
+
+        $save([$row])->assertRedirect();
+        $this->assertSame('Stasiun', $card->refresh()->back_text);
+        $this->assertSame($source->id, (int) $card->vocabulary_id);
+        $this->assertSame('Asli', $source->refresh()->meaning_id);
+        $this->assertSame('kosakata', $source->content_type);
+        $save([[...$row, 'id' => null]])->assertUnprocessable()->assertJsonValidationErrors('cards.0.vocabulary_id');
+        $save([[...$row, 'id' => null, 'vocabulary_id' => null]])->assertUnprocessable()->assertJsonValidationErrors('cards.0.vocabulary_id');
+        $otherSet = $set->replicate()->fill(['title' => 'Set lain']);
+        $otherSet->save();
+        $foreignCard = $otherSet->flashcards()->create(['front_text' => 'Other', 'order' => 0]);
+        $save([[...$row, 'id' => $foreignCard->id]])->assertUnprocessable()->assertJsonValidationErrors('cards.0.id');
+
+        $save([])->assertRedirect();
+        $this->assertModelMissing($card);
+        $this->assertModelExists($source);
+        $this->assertModelExists($foreignCard);
     }
 
     public function test_grammar_requires_examples_and_consistent_stage_counts(): void

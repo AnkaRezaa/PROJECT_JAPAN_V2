@@ -48,8 +48,13 @@ const emptyCard = {
     notes: '',
 };
 
-const normalizeCard = (item, keepCardId = true) => {
+const normalizeCard = (item, keepCardId = true, moduleId = null) => {
     const source = item.vocabulary || item;
+    const sourceLocked = Boolean(keepCardId && item.vocabulary?.module_id != null
+        && Number(item.vocabulary.module_id) !== Number(moduleId));
+    const displayValue = (cardKey, bankKey = cardKey) => sourceLocked
+        ? (item[cardKey] ?? '')
+        : (source[bankKey] || item[cardKey] || '');
     const metadata = source.metadata || {};
     const radicals = Array.isArray(metadata.radicals)
         ? metadata.radicals
@@ -58,18 +63,19 @@ const normalizeCard = (item, keepCardId = true) => {
     return {
         ...emptyCard,
         id: keepCardId ? (item.id || null) : null,
-        vocabulary_id: source.id || item.vocabulary_id || null,
-        front_text: source.word || item.front_text || '',
-        reading: source.reading || item.reading || '',
-        back_text: source.meaning_id || item.back_text || '',
+        vocabulary_id: keepCardId ? item.vocabulary_id ?? null : item.id ?? null,
+        sourceLocked,
+        front_text: displayValue('front_text', 'word'),
+        reading: displayValue('reading'),
+        back_text: displayValue('back_text', 'meaning_id'),
         meaning_en: source.meaning_en || '',
-        hint: source.category || item.hint || '',
+        hint: displayValue('hint', 'category'),
         content_type: source.content_type || metadata.content_type || 'kosakata',
         jlpt_level: source.jlpt_level || '',
-        example_sentence: source.example_sentence || item.example_sentence || '',
+        example_sentence: displayValue('example_sentence'),
         example_reading: source.example_reading || '',
-        example_meaning: source.example_meaning || item.example_meaning || '',
-        audio_url: source.audio_url || item.audio_url || '',
+        example_meaning: displayValue('example_meaning'),
+        audio_url: displayValue('audio_url'),
         onyomi: metadata.onyomi || '',
         kunyomi: metadata.kunyomi || '',
         radicals,
@@ -98,7 +104,7 @@ export function FlashcardEditorWorkspace({
         : route('admin.programs.index');
     const rows = vocabulary.data || [];
     const importInputRef = useRef(null);
-    const [cards, setCards] = useState(() => (set.flashcards || []).map((card) => normalizeCard(card)));
+    const [cards, setCards] = useState(() => (set.flashcards || []).map((card) => normalizeCard(card, true, set.module_id)));
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || 'all');
     const [contentType, setContentType] = useState(filters.content_type || 'all');
@@ -109,6 +115,7 @@ export function FlashcardEditorWorkspace({
     const [showSetSettings, setShowSetSettings] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState('');
+    const [saveErrorCardIndex, setSaveErrorCardIndex] = useState(null);
     const [saveSuccess, setSaveSuccess] = useState('');
     const cardErrors = useMemo(() => cards.map(getCardError), [cards]);
     const totalInvalid = useMemo(() => cardErrors.filter(Boolean).length, [cardErrors]);
@@ -124,14 +131,14 @@ export function FlashcardEditorWorkspace({
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
     const activeCard = cards[activeIndex] || null;
     const setIdRef = useRef(set.id);
-    const cleanSnapshotRef = useRef(JSON.stringify((set.flashcards || []).map((card) => normalizeCard(card))));
+    const cleanSnapshotRef = useRef(JSON.stringify((set.flashcards || []).map((card) => normalizeCard(card, true, set.module_id))));
 
     useEffect(() => {
         const currentCardsJson = JSON.stringify(cards);
         const isDirty = currentCardsJson !== cleanSnapshotRef.current;
         if (setIdRef.current !== set.id || !isDirty) {
             setIdRef.current = set.id;
-            const normalized = (set.flashcards || []).map((card) => normalizeCard(card));
+            const normalized = (set.flashcards || []).map((card) => normalizeCard(card, true, set.module_id));
             setCards(normalized);
             cleanSnapshotRef.current = JSON.stringify(normalized);
         }
@@ -198,6 +205,7 @@ export function FlashcardEditorWorkspace({
 
     const saveCards = () => {
         setSaveError('');
+        setSaveErrorCardIndex(null);
         setSaveSuccess('');
 
         if (cards.length === 0) {
@@ -245,8 +253,13 @@ export function FlashcardEditorWorkspace({
             },
             onError: (errs) => {
                 setIsSaving(false);
-                const firstVal = Object.values(errs)[0];
-                setSaveError(firstVal || 'Gagal menyimpan flashcard. Silakan periksa kembali kelengkapan data.');
+                const [field, message] = Object.entries(errs)[0] || [];
+                const match = /^cards\.(\d+)\./.exec(field || '');
+                const cardIndex = match ? Number(match[1]) : null;
+                setSaveErrorCardIndex(cardIndex);
+                if (cardIndex !== null) setActiveIndex(cardIndex);
+                setSaveError(cardIndex !== null ? `Kartu ke-${cardIndex + 1}: ${message}`
+                    : message || 'Flashcard gagal disimpan. Periksa isian lalu coba lagi.');
             },
             onFinish: () => setIsSaving(false),
         });
@@ -406,7 +419,7 @@ export function FlashcardEditorWorkspace({
                     </div>
                 </div>
 
-                {saveError && (
+                {saveError && saveErrorCardIndex !== activeIndex && (
                     <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-bold text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
                         <div className="flex items-center gap-2">
                             <ErrorOutlineIcon sx={{ fontSize: 20 }} className="text-rose-600 shrink-0" />
@@ -486,6 +499,9 @@ export function FlashcardEditorWorkspace({
 
                             return (
                             <Card key={`${card.id || 'new'}-${card.vocabulary_id || 'manual'}-${index}`} className="overflow-hidden border-l-4 border-l-brand-600">
+                                {saveError && saveErrorCardIndex === index && (
+                                    <p role="alert" className="mb-4 text-sm font-semibold text-rose-700 dark:text-rose-300">{saveError}</p>
+                                )}
                                 <div className="mb-4 flex flex-col gap-3 border-b border-gray-100 pb-4 dark:border-gray-800 sm:flex-row sm:items-start sm:justify-between">
                                     <div>
                                     <div className="flex items-center gap-2">
@@ -505,18 +521,22 @@ export function FlashcardEditorWorkspace({
                                     <div className="flex flex-wrap gap-2">
                                         <button type="button" title="Pindahkan ke atas" disabled={index === 0} onClick={() => moveCard(index, -1)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 text-gray-600 disabled:opacity-30 dark:border-gray-700 dark:text-gray-300"><ArrowUpwardIcon sx={{ fontSize: 17 }} /></button>
                                         <button type="button" title="Pindahkan ke bawah" disabled={index === cards.length - 1} onClick={() => moveCard(index, 1)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 text-gray-600 disabled:opacity-30 dark:border-gray-700 dark:text-gray-300"><ArrowDownwardIcon sx={{ fontSize: 17 }} /></button>
-                                        <button type="button" title="Duplikat kartu" onClick={() => duplicateCard(index)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-300"><ContentCopyIcon sx={{ fontSize: 17 }} /></button>
+                                        <button type="button" disabled={card.sourceLocked} title={card.sourceLocked ? 'Kartu memakai kosakata dari minggu lain' : 'Duplikat kartu'} onClick={() => duplicateCard(index)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 text-gray-600 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300"><ContentCopyIcon sx={{ fontSize: 17 }} /></button>
                                         <button type="button" title="Hapus kartu" onClick={() => removeCard(index)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-red-100 text-red-600 dark:border-red-900/40"><DeleteOutlineIcon sx={{ fontSize: 17 }} /></button>
                                     </div>
                                 </div>
 
+                                {card.sourceLocked && <p className="mb-3 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                                    Bank minggu lain
+                                    <TooltipHelp text="Isi kartu bisa diedit. Data sumber seperti level dan onyomi tetap mengikuti Bank Konten." />
+                                </p>}
                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                     <label className="space-y-1">
                                         <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
                                             <span>Jenis Materi</span>
                                             <TooltipHelp text="Klasifikasi jenis materi kartu: Kosakata (kata & arti), Kanji (karakter & onyomi/kunyomi), atau Bunpo (tata bahasa)." />
                                         </span>
-                                        <select value={card.content_type || 'kosakata'} onChange={(event) => updateCard(index, 'content_type', event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white">
+                                        <select disabled={card.sourceLocked} value={card.content_type || 'kosakata'} onChange={(event) => updateCard(index, 'content_type', event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm disabled:opacity-60 dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                                             <option value="kosakata">Kosakata</option>
                                             <option value="kanji">Kanji</option>
                                             <option value="bunpo">Bunpo</option>
@@ -527,7 +547,7 @@ export function FlashcardEditorWorkspace({
                                             <span>Level</span>
                                             <TooltipHelp text="Level kemahiran JLPT kartu (N5, N4, N3, N2, N1)." />
                                         </span>
-                                    <input value={card.jlpt_level || ''} onChange={(event) => updateCard(index, 'jlpt_level', event.target.value)} placeholder="Opsional" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                    <input readOnly={card.sourceLocked} value={card.jlpt_level || ''} onChange={(event) => updateCard(index, 'jlpt_level', event.target.value)} placeholder="Opsional" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                     </label>
                                     <label className="space-y-1">
                                         <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-300">
@@ -579,7 +599,7 @@ export function FlashcardEditorWorkspace({
                                             <span>Arti Inggris</span>
                                             <TooltipHelp text="Terjemahan bahasa Inggris sebagai referensi pelengkap makna (opsional)." />
                                         </span>
-                                        <input value={card.meaning_en || ''} onChange={(event) => updateCard(index, 'meaning_en', event.target.value)} placeholder="English meaning (opsional)" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                        <input readOnly={card.sourceLocked} value={card.meaning_en || ''} onChange={(event) => updateCard(index, 'meaning_en', event.target.value)} placeholder="English meaning (opsional)" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                     </label>
                                     <label className="space-y-1">
                                         <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
@@ -607,7 +627,7 @@ export function FlashcardEditorWorkspace({
                                             <span>Reading Contoh</span>
                                             <TooltipHelp text="Cara baca kana lengkap untuk kalimat contoh di atas." />
                                         </span>
-                                        <input value={card.example_reading || ''} onChange={(event) => updateCard(index, 'example_reading', event.target.value)} placeholder="Cara baca contoh kalimat" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                        <input readOnly={card.sourceLocked} value={card.example_reading || ''} onChange={(event) => updateCard(index, 'example_reading', event.target.value)} placeholder="Cara baca contoh kalimat" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                     </label>
                                     <label className="space-y-1 md:col-span-2">
                                         <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
@@ -621,9 +641,9 @@ export function FlashcardEditorWorkspace({
                                 <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
                                         <div className="mb-3">
                                             <p className="text-xs font-black uppercase tracking-[0.2em] text-brand-600">Detail Kanji (Opsional)</p>
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Isi untuk kartu yang memuat kanji. Data yang sama akan tersimpan di bank konten.</p>
+                            {!card.sourceLocked && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Data ini juga tersimpan di Bank Konten.</p>}
                                         </div>
-                                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                        <fieldset disabled={card.sourceLocked} className="grid grid-cols-1 gap-3 disabled:opacity-60 md:grid-cols-2">
                                             <label className="space-y-1">
                                                 <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">
                                                     <span>Onyomi</span>
@@ -664,7 +684,7 @@ export function FlashcardEditorWorkspace({
                                                 </span>
                                                 <textarea value={card.notes || ''} onChange={(event) => updateCard(index, 'notes', event.target.value)} placeholder="Catatan atau contoh kata turunan" className="min-h-20 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                             </label>
-                                        </div>
+                                        </fieldset>
                                 </div>
                             </Card>
                             );

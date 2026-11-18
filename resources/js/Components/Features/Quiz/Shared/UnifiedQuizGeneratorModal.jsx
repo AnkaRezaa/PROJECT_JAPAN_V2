@@ -173,7 +173,14 @@ export default function UnifiedQuizGeneratorModal({
       const input = {
         ...form.input
       };
-      if (type === 'grammar') input.examples = (input.examples || []).filter(example => example.japanese?.trim());
+      if (type === 'grammar') {
+        if (!input.pattern?.trim()) {
+          setError('Isi pola Grammar terlebih dahulu.');
+          document.getElementById('generator-grammar-pattern')?.focus();
+          return;
+        }
+        input.examples = (input.examples || []).filter(example => example.japanese?.trim());
+      }
       const {
         data
       } = await window.axios.post(route('admin.quiz-generator', type), {
@@ -182,7 +189,10 @@ export default function UnifiedQuizGeneratorModal({
         module_day_id: initialRef.current.moduleDayId || null,
         level: form.level,
         input,
-        settings: type === 'grammar' ? form.settings : {
+        settings: type === 'grammar' ? Object.fromEntries(
+          ['count', 'counts', 'difficulty', 'target_form', 'useDistractors', 'autoMeaning']
+            .map(key => [key, form.settings[key]])
+        ) : {
           count: form.settings.count
         },
         ...(questionId ? {
@@ -200,7 +210,18 @@ export default function UnifiedQuizGeneratorModal({
       }));else setDraft(data.draft);
     } catch (err) {
       if (version !== epoch.current || abort.signal.aborted) return;
-      setError(Object.values(err.response?.data?.errors || {}).flat().join(' ') || err.response?.data?.message || 'Draf gagal dibuat. Coba lagi.');
+      const status = err.response?.status;
+      if (!err.response) {
+        setError('Generator tidak merespons. Periksa koneksi lalu coba lagi.');
+      } else if (status === 429) {
+        setError('Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.');
+      } else if (status === 403) {
+        setError('Anda tidak memiliki akses ke materi ini.');
+      } else {
+        setError(Object.values(err.response.data?.errors || {}).flat()[0]
+          || (status === 422 ? err.response.data?.message : null)
+          || 'Soal gagal dibuat. Coba lagi atau hubungi admin.');
+      }
     } finally {
       if (version === epoch.current) {
         setBusy(false);
@@ -284,7 +305,7 @@ export default function UnifiedQuizGeneratorModal({
                                 </label>}
                             </div>}
                             {type === 'grammar' && <>
-                                <div className="grid gap-4 sm:grid-cols-2">{[['pattern', 'Pola'], ['formula', 'Rumus'], ['meaning', 'Arti']].map(([key, label]) => <label key={key} className="text-sm font-semibold">{label}<input className={fieldClass} value={form.input[key] || ''} onChange={e => change('input', key, e.target.value)} /></label>)}
+                                <div className="grid gap-4 sm:grid-cols-2">{[['pattern', 'Pola'], ['formula', 'Rumus'], ['meaning', 'Arti']].map(([key, label]) => <label key={key} className="text-sm font-semibold">{label}<input id={`generator-grammar-${key}`} className={fieldClass} value={form.input[key] || ''} onChange={e => change('input', key, e.target.value)} /></label>)}
                                     <label className="text-sm font-semibold">Kesulitan<select className={fieldClass} value={form.settings.difficulty} onChange={e => change('settings', 'difficulty', e.target.value)}>{[['easy', 'Mudah'], ['medium', 'Sedang'], ['hard', 'Sulit'], ['mixed', 'Campuran']].map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
                                     <label className="text-sm font-semibold">Bentuk transformasi<select className={fieldClass} value={form.settings.target_form} onChange={e => change('settings', 'target_form', e.target.value)}>{['auto', 'te', 'ba', 'nai', 'ta', 'dict', 'stem', 'potential', 'passive', 'causative'].map(value => <option key={value}>{value}</option>)}</select></label>
                                 </div>

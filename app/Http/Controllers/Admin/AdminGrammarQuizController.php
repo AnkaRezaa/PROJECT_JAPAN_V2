@@ -103,7 +103,15 @@ class AdminGrammarQuizController extends Controller
     public function destroy(Request $request, Kuis $quiz)
     {
         $this->authorizeQuiz($request, $quiz);
-        $quiz->delete();
+        DB::transaction(function () use ($quiz) {
+            $locked = Kuis::whereKey($quiz->id)->lockForUpdate()->firstOrFail();
+            if ($locked->attempts()->exists()) {
+                throw ValidationException::withMessages([
+                    'lesson' => 'Lesson memiliki riwayat pengerjaan. Ubah menjadi draf untuk menyembunyikannya.',
+                ]);
+            }
+            $locked->delete();
+        });
 
         return response()->json(['message' => 'Lesson Grammar berhasil dihapus.']);
     }

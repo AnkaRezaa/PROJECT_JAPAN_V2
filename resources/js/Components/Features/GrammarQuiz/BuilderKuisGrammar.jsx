@@ -491,7 +491,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
     const [error, setError] = useState('');
     const [fieldErrors, setFieldErrors] = useState({});
     const cleanSnapshotRef = useRef('');
-    const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
+    const { confirmState, openConfirm, closeConfirm, setConfirmProcessing } = useConfirmAction();
 
     const currentSnapshot = useMemo(() => JSON.stringify(draft), [draft]);
     const hasUnsavedChanges = Boolean(cleanSnapshotRef.current && currentSnapshot !== cleanSnapshotRef.current);
@@ -749,6 +749,41 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
         }
     };
 
+    const confirmDeleteLesson = () => {
+        if (!draft.id || saving) return;
+
+        openConfirm({
+            title: 'Hapus Lesson?',
+            message: 'Lesson dan soalnya akan dihapus. Perubahan yang belum disimpan akan hilang.',
+            confirmLabel: 'Hapus Lesson',
+            variant: 'danger',
+            onConfirm: async () => {
+                setConfirmProcessing(true);
+                setSaving(true);
+                setError('');
+                setGeneratorSuccess('');
+                try {
+                    await window.axios.delete(route('admin.grammar-quizzes.destroy', draft.id));
+                    const remaining = lessons.filter(item => item.id !== draft.id);
+                    const next = remaining[0] || makeDraft(day, defaultLevel);
+                    setLessons(remaining);
+                    setDraft(next);
+                    cleanSnapshotRef.current = JSON.stringify(next);
+                    setSavedAt('');
+                    setFieldErrors({});
+                    setGeneratorSuccess('Lesson berhasil dihapus.');
+                } catch (failure) {
+                    setError(failure.response?.data?.errors?.lesson?.[0]
+                        || (failure.response?.status === 403 ? 'Anda tidak memiliki akses untuk menghapus lesson ini.'
+                            : 'Lesson belum dapat dihapus. Coba lagi atau hubungi admin.'));
+                } finally {
+                    setSaving(false);
+                    closeConfirm();
+                }
+            },
+        });
+    };
+
     const generateDraft = () => setShowGenerator(true);
 
     const handleRegenerateSingle = async (stageId, index) => {
@@ -837,8 +872,14 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
             onImport={() => setShowBulkImport(true)}
             centerContent={
                 <>
+                    {draft.id && (
+                        <button type="button" disabled={saving} onClick={confirmDeleteLesson} className="inline-flex min-h-9 items-center gap-1 px-2 text-sm font-semibold text-red-600 disabled:opacity-50 dark:text-red-400">
+                            <DeleteOutlineIcon fontSize="small" /> Hapus Lesson
+                        </button>
+                    )}
                     {lessons.length > 0 && (
                         <select
+                            disabled={saving}
                             value={Number.isInteger(Number(draft.id)) ? draft.id : ''}
                             onChange={(event) => {
                                 const selected = lessons.find((lesson) => String(lesson.id) === event.target.value);
@@ -856,6 +897,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                     )}
                     <button
                         type="button"
+                        disabled={saving}
                         onClick={() => handleSwitchLesson(null)}
                         className="h-9 rounded-xl border border-gray-200 bg-white px-3 text-xs font-black dark:border-gray-700 dark:bg-gray-900 hover:bg-gray-50"
                     >

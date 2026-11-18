@@ -183,6 +183,34 @@ it('authors grammar and completes a day only after grammar and vocabulary checkp
     expect(ProgresHariModul::where('user_id', $fixture['user']->id)->where('module_day_id', $fixture['day']->id)->whereNotNull('completed_at')->exists())->toBeTrue();
 });
 
+it('only deletes grammar lessons without attempts and within the admin scope', function () {
+    $fixture = grammarFixture();
+    $admin = $fixture['admin'];
+    $create = fn () => $this->actingAs($admin)
+        ->postJson(route('admin.grammar-quizzes.store', $fixture['day']), grammarPayload())
+        ->assertSuccessful()->json('lesson.id');
+    $quiz = Kuis::findOrFail($create());
+    $url = route('admin.grammar-quizzes.destroy', $quiz);
+    $mentor = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'kloter']);
+
+    $this->actingAs($mentor)->deleteJson($url)->assertForbidden();
+
+    $attempt = $quiz->attempts()->create(['user_id' => $fixture['user']->id]);
+    $this->actingAs($admin)->deleteJson($url)->assertUnprocessable()
+        ->assertJsonPath('errors.lesson.0', 'Lesson memiliki riwayat pengerjaan. Ubah menjadi draf untuk menyembunyikannya.');
+    $this->assertModelExists($attempt);
+    expect($quiz->questions()->exists())->toBeTrue();
+
+    $draft = Kuis::create([
+        'module_id' => $quiz->module_id,
+        'module_day_id' => $quiz->module_day_id,
+        'type' => 'grammar',
+        'status' => 'draft',
+    ]);
+    $this->deleteJson(route('admin.grammar-quizzes.destroy', $draft))->assertOk();
+    $this->assertModelMissing($draft);
+});
+
 it('seeds grammar lessons for demo programs via GrammarLessonDemoSeeder', function () {
     $this->seed(Database\Seeders\KelasDemoSeeder::class);
     $this->seed(Database\Seeders\GrammarLessonDemoSeeder::class);

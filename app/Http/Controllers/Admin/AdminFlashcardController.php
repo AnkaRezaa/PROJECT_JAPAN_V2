@@ -122,7 +122,7 @@ class AdminFlashcardController extends Controller
         $validated = $request->validate([
             'status' => ['required', 'in:draft,published'],
             'cards' => ['present', 'array'],
-            'cards.*.id' => ['nullable', 'integer'],
+            'cards.*.id' => ['nullable', 'integer', 'distinct', Rule::exists('flashcards', 'id')->where('flashcard_set_id', $flashcardSet->id)],
             'cards.*.vocabulary_id' => [
                 'nullable',
                 'integer',
@@ -130,6 +130,7 @@ class AdminFlashcardController extends Controller
                     fn ($query) => $query
                         ->whereNull('module_id')
                         ->orWhere('module_id', $flashcardSet->module_id)
+                        ->orWhereIn('id', $flashcardSet->flashcards()->select('vocabulary_id'))
                 ),
             ],
             'cards.*.front_text' => ['required', 'string', 'max:255'],
@@ -149,6 +150,10 @@ class AdminFlashcardController extends Controller
             'cards.*.radicals.*' => ['nullable', 'string', 'max:50'],
             'cards.*.stroke_count' => ['nullable', 'integer', 'min:1', 'max:64'],
             'cards.*.notes' => ['nullable', 'string'],
+        ], [
+            'cards.*.id.exists' => 'Kartu ini bukan bagian dari set. Muat ulang halaman.',
+            'cards.*.id.distinct' => 'Kartu yang sama dikirim dua kali. Muat ulang halaman.',
+            'cards.*.vocabulary_id.exists' => 'Kosakata tidak tersedia untuk minggu ini. Pilih ulang dari Bank Konten.',
         ]);
 
         $ids = [];
@@ -159,7 +164,32 @@ class AdminFlashcardController extends Controller
             $flashcardSet->update(['status' => $validated['status']]);
 
             foreach ($validated['cards'] as $index => $card) {
-                $vocabulary = $this->syncVocabulary($card, $flashcardSet);
+                $persisted = isset($card['id']) ? $flashcardSet->flashcards()->find($card['id']) : null;
+                if (isset($card['id']) && ! $persisted) {
+                    throw ValidationException::withMessages([
+                        "cards.$index.id" => 'Kartu sudah tidak tersedia. Muat ulang halaman.',
+                    ]);
+                }
+                $source = ! empty($card['vocabulary_id']) ? Kosakata::find($card['vocabulary_id']) : null;
+                if (! empty($card['vocabulary_id']) && ! $source) {
+                    throw ValidationException::withMessages([
+                        "cards.$index.vocabulary_id" => 'Kosakata sudah tidak tersedia. Pilih ulang dari Bank Konten.',
+                    ]);
+                }
+                if ($source && $source->module_id !== null && (int) $source->module_id !== (int) $flashcardSet->module_id) {
+                    if (! $persisted || (int) $persisted->vocabulary_id !== (int) $source->id) {
+                        throw ValidationException::withMessages([
+                            "cards.$index.vocabulary_id" => 'Kosakata tidak tersedia untuk minggu ini. Pilih ulang dari Bank Konten.',
+                        ]);
+                    }
+                    $persisted->update([
+                        ...\Illuminate\Support\Arr::only($card, ['front_text', 'reading', 'back_text', 'hint', 'example_sentence', 'example_meaning', 'audio_url']),
+                        'order' => $index,
+                    ]);
+                    $ids[] = $persisted->id;
+                    continue;
+                }
+                $vocabulary = $this->syncVocabulary($card, $flashcardSet, $index);
                 $existing = isset($card['id'])
                     ? null
                     : $flashcardSet->flashcards()->where('vocabulary_id', $vocabulary->id)->first();
@@ -485,7 +515,7 @@ class AdminFlashcardController extends Controller
         return count($options) >= 2 ? $options : [$correct];
     }
 
-    private function syncVocabulary(array $data, SetFlashcard $flashcardSet): Kosakata
+    private function syncVocabulary(array $data, SetFlashcard $flashcardSet, ?int $cardIndex = null): Kosakata
     {
         $frontText = trim((string) ($data['front_text'] ?? ''));
         $reading = trim((string) ($data['reading'] ?? ''));
@@ -531,6 +561,16 @@ class AdminFlashcardController extends Controller
             )
             ->first();
 
+        if ($vocabulary && $vocabulary->module_id !== null && (int) $vocabulary->module_id !== (int) $flashcardSet->module_id) {
+            if ($cardIndex !== null) {
+                throw ValidationException::withMessages([
+                    "cards.$cardIndex.vocabulary_id" => 'Kata dan cara baca sudah dipakai di minggu lain. Gunakan kosakata lain.',
+                ]);
+            }
+
+            return $vocabulary;
+        }
+
         $metadata = array_replace($vocabulary?->metadata ?? [], array_filter([
             'content_type' => $data['content_type'] ?? $vocabulary?->content_type,
             'notes' => $data['notes'] ?? null,
@@ -546,7 +586,7 @@ class AdminFlashcardController extends Controller
             : ($vocabulary?->content_type ?? Kosakata::TYPE_KOSAKATA);
         $payload = [
             'content_type' => $contentType,
-            'module_id' => $vocabulary?->module_id ?? $flashcardSet->module_id,
+            'module_id' => $vocabulary ? $vocabulary->module_id : $flashcardSet->module_id,
             'word' => $frontText,
             'reading' => $reading !== '' ? $reading : null,
             'meaning_id' => $data['back_text'] ?? $vocabulary?->meaning_id,
