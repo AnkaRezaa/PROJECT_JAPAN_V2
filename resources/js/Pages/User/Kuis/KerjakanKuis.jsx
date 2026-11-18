@@ -107,7 +107,7 @@ function StrokeGuideGallery({ text }) {
                         <div className="min-w-0 flex-1">
                             <p className="text-xl font-black text-gray-900 dark:text-white">{item.character}</p>
                             <p className="text-[11px] font-bold text-gray-700 dark:text-gray-300">{item.stroke_count} stroke</p>
-                            <button type="button" onClick={() => setPreviewCharacter(item.character)} className="mt-1.5 rounded-lg px-2 py-1 text-xs font-black text-orange-600 transition hover:bg-orange-100 hover:text-orange-700 dark:text-orange-300 dark:hover:bg-orange-950/70">
+                            <button type="button" onClick={() => setPreviewCharacter(item.character)} className="mt-1.5 rounded-lg px-2 py-1 text-xs font-black text-orange-600 transition fine-pointer:hover:bg-orange-100 fine-pointer:hover:text-orange-700 dark:text-orange-300 dark:fine-pointer:hover:bg-orange-950/70">
                                 Lihat Urutan
                             </button>
                         </div>
@@ -848,7 +848,7 @@ export default function Quiz({
                 <div className="relative z-10 max-w-md text-center">
                     <p className="mb-4 text-2xl font-black text-gray-700 dark:text-white">Belum Ada Soal</p>
                     <p className="mb-6 text-gray-700 dark:text-gray-300">Admin belum menambahkan soal untuk kuis ini.</p>
-                    <Link href={back_url || route('user.dashboard')} className="inline-flex min-h-11 items-center rounded-lg bg-action-primary px-6 py-3 font-black text-ink-900 no-underline shadow-sm transition hover:bg-action-primary-hover">
+                    <Link href={back_url || route('user.dashboard')} className="inline-flex min-h-11 items-center rounded-lg bg-action-primary px-6 py-3 font-black text-ink-900 no-underline shadow-sm transition fine-pointer:hover:bg-action-primary-hover">
                         Kembali
                     </Link>
                 </div>
@@ -972,7 +972,7 @@ export default function Quiz({
                             continueAfterResult(true);
                         }}
                         disabled={isSubmittingAttempt || feedbackSubmitting}
-                        className="mt-4 w-full rounded-2xl py-4 text-lg font-black uppercase tracking-wide text-gray-950 shadow-lg transition-all hover:brightness-110 active:translate-y-1 active:shadow-none"
+                        className="mt-4 w-full rounded-2xl py-4 text-lg font-black uppercase tracking-wide text-gray-950 shadow-lg transition-all fine-pointer:hover:brightness-110 active:translate-y-1 active:shadow-none"
                         style={{ backgroundColor: theme.doneColor, boxShadow: `0 4px 0 0 ${theme.doneShadow}` }}
                     >
                         {preview
@@ -984,7 +984,7 @@ export default function Quiz({
                             type="button"
                             onClick={() => continueAfterResult(false)}
                             disabled={feedbackSubmitting}
-                            className="mt-3 w-full py-3 text-sm font-black text-gray-700 transition hover:text-gray-950 dark:text-gray-300 dark:hover:text-white"
+                            className="mt-3 w-full py-3 text-sm font-black text-gray-700 transition fine-pointer:hover:text-gray-950 dark:text-gray-300 dark:fine-pointer:hover:text-white"
                         >
                             Simpan untuk nanti
                         </button>
@@ -1003,7 +1003,7 @@ export default function Quiz({
             <div className="flex min-h-[100dvh] flex-col items-center bg-orange-50 px-4 py-4 font-sans dark:bg-gray-950 sm:py-6">
                 <Head title="Latihan Menulis" />
                 <header className="mb-3 flex w-full max-w-4xl items-start gap-3 sm:mb-4">
-                    <button type="button" onClick={confirmExit} aria-label="Keluar dari kuis" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-white hover:text-gray-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
+                    <button type="button" onClick={confirmExit} aria-label="Keluar dari kuis" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-600 transition fine-pointer:hover:bg-white fine-pointer:hover:text-gray-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50 dark:text-gray-300 dark:fine-pointer:hover:bg-gray-800 dark:fine-pointer:hover:text-white">
                         <CloseIcon />
                     </button>
                     <div className="min-w-0 flex-1">
@@ -1045,7 +1045,7 @@ export default function Quiz({
                             autoPlay
                             autoPlayEnabled={soundEnabled}
                             playbackKey={`handwriting-${handwritingPractice.flashcard_id}`}
-                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-orange-200 bg-orange-50 text-orange-600 transition hover:bg-orange-100 dark:border-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:hover:bg-orange-900/70 sm:mx-auto sm:mt-3 sm:h-10 sm:w-10 md:mx-0"
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-orange-200 bg-orange-50 text-orange-600 transition fine-pointer:hover:bg-orange-100 dark:border-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:fine-pointer:hover:bg-orange-900/70 sm:mx-auto sm:mt-3 sm:h-10 sm:w-10 md:mx-0"
                         />
                         </div>
                         <p className="mt-3 hidden text-xs font-semibold leading-5 text-gray-600 dark:text-gray-300 sm:block">Tulis seluruh karakter mengikuti panduan transparan, lalu periksa hasilnya.</p>
@@ -1074,7 +1074,7 @@ export default function Quiz({
             <div className="flex min-h-[100dvh] flex-col items-center overflow-x-hidden bg-gradient-to-br from-orange-50 via-white to-lime-50 px-4 pb-6 pt-4 font-sans dark:from-gray-950 dark:via-gray-950 dark:to-gray-900 sm:pb-8 sm:pt-5">
                 <Head title="Kosakata Baru" />
                 <header className="relative z-10 mb-3 flex w-full max-w-4xl items-center gap-3 px-2 sm:mb-4 md:gap-4 md:px-4">
-                    <button type="button" onClick={confirmExit} aria-label="Keluar dari kuis" className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50 dark:hover:bg-gray-800 dark:hover:text-white">
+                    <button type="button" onClick={confirmExit} aria-label="Keluar dari kuis" className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors fine-pointer:hover:bg-gray-100 fine-pointer:hover:text-gray-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50 dark:fine-pointer:hover:bg-gray-800 dark:fine-pointer:hover:text-white">
                         <CloseIcon />
                     </button>
                     <div className="h-3 min-w-0 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
@@ -1134,7 +1134,7 @@ export default function Quiz({
                                     autoPlay
                                     autoPlayEnabled={soundEnabled}
                                     playbackKey={`flashcard-${activeFlashcard.id}`}
-                                    className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-orange-700 dark:hover:bg-orange-950/60 dark:hover:text-orange-300"
+                                    className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition fine-pointer:hover:border-orange-300 fine-pointer:hover:bg-orange-50 fine-pointer:hover:text-orange-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:fine-pointer:hover:border-orange-700 dark:fine-pointer:hover:bg-orange-950/60 dark:fine-pointer:hover:text-orange-300"
                                 />
                                 {activeFlashcard.hint && (
                                     <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-black text-gray-500 dark:bg-gray-800 dark:text-gray-300">{activeFlashcard.hint}</span>
@@ -1181,7 +1181,7 @@ export default function Quiz({
                             onClick={() => handleFlashcardReview('learning')}
                             aria-label="Belum paham"
                             disabled={flashcardReviewing}
-                            className="flex min-h-[56px] items-center justify-center gap-2 rounded-xl bg-orange-500 px-2 py-3 text-center text-sm font-black text-gray-950 shadow-[0_5px_0_#C2410C] transition hover:bg-orange-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/60 active:translate-y-1 active:shadow-[0_3px_0_#C2410C] disabled:cursor-wait disabled:opacity-60 dark:bg-orange-500 dark:shadow-[0_5px_0_#9A3412] dark:hover:bg-orange-400 sm:min-h-[60px] sm:rounded-2xl sm:px-5 sm:text-base"
+                            className="flex min-h-[56px] items-center justify-center gap-2 rounded-xl bg-orange-500 px-2 py-3 text-center text-sm font-black text-gray-950 shadow-[0_5px_0_#C2410C] transition fine-pointer:hover:bg-orange-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/60 active:translate-y-1 active:shadow-[0_3px_0_#C2410C] disabled:cursor-wait disabled:opacity-60 dark:bg-orange-500 dark:shadow-[0_5px_0_#9A3412] dark:fine-pointer:hover:bg-orange-400 sm:min-h-[60px] sm:rounded-2xl sm:px-5 sm:text-base"
                         >
                             <span aria-hidden="true" className="hidden text-xl leading-none sm:inline">?</span>
                             <span>Belum Paham</span>
@@ -1190,7 +1190,7 @@ export default function Quiz({
                             onClick={() => handleFlashcardReview('known')}
                             aria-label="Sudah paham"
                             disabled={flashcardReviewing}
-                            className="flex min-h-[56px] items-center justify-center gap-2 rounded-xl bg-lime-400 px-2 py-3 text-center text-sm font-black text-gray-950 shadow-[0_5px_0_#65A30D] transition hover:bg-lime-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-lime-300/60 active:translate-y-1 active:shadow-[0_3px_0_#65A30D] disabled:cursor-wait disabled:opacity-60 dark:bg-lime-500 dark:shadow-[0_5px_0_#3F6212] dark:hover:bg-lime-400 sm:min-h-[60px] sm:rounded-2xl sm:px-5 sm:text-base"
+                            className="flex min-h-[56px] items-center justify-center gap-2 rounded-xl bg-lime-400 px-2 py-3 text-center text-sm font-black text-gray-950 shadow-[0_5px_0_#65A30D] transition fine-pointer:hover:bg-lime-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-lime-300/60 active:translate-y-1 active:shadow-[0_3px_0_#65A30D] disabled:cursor-wait disabled:opacity-60 dark:bg-lime-500 dark:shadow-[0_5px_0_#3F6212] dark:fine-pointer:hover:bg-lime-400 sm:min-h-[60px] sm:rounded-2xl sm:px-5 sm:text-base"
                         >
                             <CheckCircleIcon aria-hidden="true" className="sm:!hidden" sx={{ fontSize: 17 }} />
                             <span aria-hidden="true" className="hidden text-base leading-none sm:inline">OK</span>
@@ -1227,7 +1227,7 @@ export default function Quiz({
 
             {/* Top Progress & Lives */}
             <header className="relative z-10 mb-2 flex w-full max-w-4xl shrink-0 items-center gap-2 px-3 sm:mb-4 sm:gap-3 sm:px-2 md:mb-6 md:gap-4 md:px-4">
-                <button type="button" onClick={confirmExit} aria-label="Keluar dari kuis" className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50 dark:hover:bg-gray-800 dark:hover:text-white">
+                <button type="button" onClick={confirmExit} aria-label="Keluar dari kuis" className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors fine-pointer:hover:bg-gray-100 fine-pointer:hover:text-gray-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50 dark:fine-pointer:hover:bg-gray-800 dark:fine-pointer:hover:text-white">
                     <CloseIcon />
                 </button>
                 <div className="h-3 min-w-0 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
@@ -1326,7 +1326,7 @@ export default function Quiz({
                                                 autoPlay={false}
                                                 autoPlayEnabled={soundEnabled}
                                                 playbackKey={`question-${currentQ.attemptKey}`}
-                                                className="flex size-11 shrink-0 items-center justify-center rounded-xl border-b-4 border-[#B77900] bg-[#F2B705] text-[#2D3742] shadow-md transition-all hover:bg-[#FFC928] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/60 active:translate-y-1 active:border-b-0 sm:absolute sm:bottom-4 sm:right-4 sm:size-12 sm:rounded-2xl md:bottom-6 md:right-6"
+                                                className="flex size-11 shrink-0 items-center justify-center rounded-xl border-b-4 border-[#B77900] bg-[#F2B705] text-[#2D3742] shadow-md transition-all fine-pointer:hover:bg-[#FFC928] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/60 active:translate-y-1 active:border-b-0 sm:absolute sm:bottom-4 sm:right-4 sm:size-12 sm:rounded-2xl md:bottom-6 md:right-6"
                                             />
                                         </>
                                     )
@@ -1337,7 +1337,7 @@ export default function Quiz({
                                         autoPlay={false}
                                         autoPlayEnabled={soundEnabled}
                                         playbackKey={`question-${currentQ.attemptKey}`}
-                                        className="flex size-11 shrink-0 items-center justify-center rounded-xl border-b-4 border-[#B77900] bg-[#F2B705] text-[#2D3742] shadow-md transition-all hover:bg-[#FFC928] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/60 active:translate-y-1 active:border-b-0 sm:absolute sm:bottom-4 sm:right-4 sm:size-12 sm:rounded-2xl md:bottom-6 md:right-6"
+                                        className="flex size-11 shrink-0 items-center justify-center rounded-xl border-b-4 border-[#B77900] bg-[#F2B705] text-[#2D3742] shadow-md transition-all fine-pointer:hover:bg-[#FFC928] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/60 active:translate-y-1 active:border-b-0 sm:absolute sm:bottom-4 sm:right-4 sm:size-12 sm:rounded-2xl md:bottom-6 md:right-6"
                                     />
                                 )}
                             </QuizSurface>
@@ -1451,7 +1451,7 @@ export default function Quiz({
                             {/* Action Button */}
                             <button 
                                 onClick={handleNext}
-                                className="min-h-11 w-full rounded-xl px-6 py-2 text-base font-black uppercase text-gray-950 shadow-lg transition-all active:translate-y-1 active:shadow-none hover:brightness-110 disabled:cursor-wait disabled:opacity-70 sm:w-auto sm:px-10 sm:py-3 sm:tracking-wide"
+                                className="min-h-11 w-full rounded-xl px-6 py-2 text-base font-black uppercase text-gray-950 shadow-lg transition-all active:translate-y-1 active:shadow-none fine-pointer:hover:brightness-110 disabled:cursor-wait disabled:opacity-70 sm:w-auto sm:px-10 sm:py-3 sm:tracking-wide"
                                 style={{ 
                                     backgroundColor: theme.doneColor, 
                                     boxShadow: `0 4px 0 0 ${theme.doneShadow}` 

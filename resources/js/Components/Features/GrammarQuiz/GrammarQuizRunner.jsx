@@ -42,7 +42,7 @@ function ProgressHeader({ quiz, stageIndex, questionIndex, totalAnswered, totalQ
                     type="button"
                     onClick={onClose}
                     aria-label={persist ? 'Keluar dari kuis Grammar' : 'Tutup pratinjau Grammar'}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition fine-pointer:hover:bg-gray-100 fine-pointer:hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:fine-pointer:hover:bg-gray-700 dark:fine-pointer:hover:text-white"
                 >
                     <CloseIcon sx={{ fontSize: 20 }} />
                 </button>
@@ -140,7 +140,7 @@ function IntroScreen({ quiz, onStart, onClose }) {
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
             <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-4 py-5 sm:px-7 sm:py-8">
                 <div className="flex items-center justify-between gap-3">
-                    <button type="button" onClick={onClose} className="inline-flex h-10 items-center gap-2 rounded-xl px-2 text-sm font-extrabold text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white">
+                    <button type="button" onClick={onClose} className="inline-flex h-10 items-center gap-2 rounded-xl px-2 text-sm font-extrabold text-gray-600 fine-pointer:hover:bg-gray-100 fine-pointer:hover:text-gray-900 dark:text-gray-400 dark:fine-pointer:hover:bg-gray-800 dark:fine-pointer:hover:text-white">
                         <ArrowBackIcon sx={{ fontSize: 19 }} /> Kembali
                     </button>
                     {quiz?.level && <span className="rounded-full bg-violet-100 px-3 py-1.5 text-[11px] font-black uppercase text-violet-800 dark:bg-violet-950/60 dark:text-violet-300">{quiz.level}</span>}
@@ -167,7 +167,7 @@ function IntroScreen({ quiz, onStart, onClose }) {
                                     <div key={idx} className="flex items-start justify-between gap-2 rounded-xl border border-gray-100 bg-gray-50/80 p-3 dark:border-gray-800 dark:bg-gray-800/60">
                                         <JapaneseReading {...example} className="text-sm font-extrabold leading-6 text-gray-900 dark:text-white" />
                                         {example.japanese && (
-                                            <JapaneseSpeechButton text={example.japanese} size="small" className="mt-0.5 shrink-0 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" />
+                                            <JapaneseSpeechButton text={example.japanese} size="small" className="mt-0.5 shrink-0 text-gray-400 fine-pointer:hover:text-emerald-600 dark:fine-pointer:hover:text-emerald-400" />
                                         )}
                                     </div>
                                 ))
@@ -336,7 +336,7 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
                                         translation={question.translation}
                                         className="min-w-0 items-center [overflow-wrap:anywhere] text-xl font-black font-japanese text-gray-950 dark:text-white sm:text-2xl"
                                     />
-                                    <JapaneseSpeechButton text={question.japanese} audioUrl={narrationAudioUrl} playbackKey={narrationKey} size="small" className="shrink-0 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" />
+                                    <JapaneseSpeechButton text={question.japanese} audioUrl={narrationAudioUrl} playbackKey={narrationKey} size="small" className="shrink-0 text-gray-400 fine-pointer:hover:text-emerald-600 dark:fine-pointer:hover:text-emerald-400" />
                                 </div>
                             ) : (
                                 <>
@@ -383,7 +383,7 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
                                             </p>
                                         )}
                                     </div>
-                                    <JapaneseSpeechButton text={targetSentence} size="small" className="shrink-0 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" />
+                                    <JapaneseSpeechButton text={targetSentence} size="small" className="shrink-0 text-gray-400 fine-pointer:hover:text-emerald-600 dark:fine-pointer:hover:text-emerald-400" />
                                 </div>
                             )}
                             {(feedback?.explanation || question.explanation) && (
@@ -396,7 +396,7 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
                     <QuizActionButton
                         disabled={processing || (!feedback && !canCheck)}
                         onClick={feedback ? onContinue : onCheck}
-                        className="shrink-0 max-sm:bg-emerald-700 max-sm:text-white max-sm:hover:bg-emerald-800"
+                        className="shrink-0 max-sm:bg-emerald-700 max-sm:text-white max-sm:fine-pointer:hover:bg-emerald-800"
                     >
                         {processing ? 'Memproses...' : feedback ? (feedback.correct ? 'Lanjut' : 'Coba Lagi') : 'Periksa'}
                     </QuizActionButton>
@@ -441,7 +441,7 @@ function ResultScreen({ quiz, result, correctQuestionIds, onRestart, onClose, pe
                     <button
                         type="button"
                         onClick={() => setShowReview((prev) => !prev)}
-                        className="flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white p-3.5 font-black text-gray-800 shadow-sm transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+                        className="flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white p-3.5 font-black text-gray-800 shadow-sm transition fine-pointer:hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 dark:fine-pointer:hover:bg-gray-800"
                     >
                         <span className="flex items-center gap-2 text-xs font-black uppercase sm:text-sm">
                             <AutoStoriesIcon sx={{ fontSize: 18 }} className="text-emerald-600 dark:text-emerald-400" />
@@ -489,7 +489,7 @@ function ResultScreen({ quiz, result, correctQuestionIds, onRestart, onClose, pe
                 </div>
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                    <button type="button" onClick={onRestart} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-5 text-sm font-black text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                    <button type="button" onClick={onRestart} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-5 text-sm font-black text-gray-700 transition fine-pointer:hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:fine-pointer:hover:bg-gray-800">
                         <RefreshIcon sx={{ fontSize: 19 }} /> Ulangi Lesson
                     </button>
                     <QuizActionButton onClick={onClose} className="min-h-12">

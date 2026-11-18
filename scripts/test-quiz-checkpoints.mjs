@@ -330,7 +330,22 @@ try {
 
     if (!process.argv.includes('--exit-only')) {
     await open('grammar-mobile', {clear:true,mobile:true,width:320,height:568});
+    await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
     await click('Mulai Lesson');
+    const option = 'main button[aria-pressed="false"]';
+    await waitFor(`document.querySelector(${JSON.stringify(option)})`);
+    await send('DOM.enable');
+    await send('CSS.enable');
+    const {root: documentNode} = await send('DOM.getDocument');
+    const {nodeId: optionNode} = await send('DOM.querySelector', {nodeId:documentNode.nodeId,selector:option});
+    const background = `getComputedStyle(document.querySelector(${JSON.stringify(option)})).backgroundColor`;
+    const mobileBackground = await evaluate(background);
+    await send('CSS.forcePseudoState',{nodeId:optionNode,forcedPseudoClasses:['hover']});
+    await delay(220);
+    assert.equal(await evaluate(background),mobileBackground,'Touch must not leave an option in the hover palette');
+    await send('Emulation.setTouchEmulationEnabled',{enabled:false});
+    await waitFor(`matchMedia('(hover: hover) and (pointer: fine)').matches && ${background} !== ${JSON.stringify(mobileBackground)}`);
+    await send('CSS.forcePseudoState',{nodeId:optionNode,forcedPseudoClasses:[]});
     await click('AChoice A');
     await click('Periksa');
     await waitFor('document.querySelector("footer [aria-live=polite]")?.textContent.includes("Long feedback")');
@@ -339,7 +354,26 @@ try {
     await click('Lanjut');
     await waitFor('document.querySelector("[aria-label=\\\"Latihan Susun Kata\\\"]")');
     await screenshot('grammar-sentence-mobile');
+    await clickSelector('button[aria-label="Pilih kata Token One"]');
+    await open('grammar-mobile', {dark:true,mobile:true,width:320,height:568});
+    await waitFor('document.body.innerText.includes("Lanjutkan Latihan?")');
+    for (const dark of [true,false]) {
+        await evaluate(`document.documentElement.classList.toggle('dark',${dark})`);
+        assert(await evaluate(`(() => {
+            const card=document.querySelector('dl');
+            const rgb=value=>value.match(/[\\d.]+/g).slice(0,3).map(Number);
+            const luminance=([r,g,b])=>[r,g,b].map(component=>{const x=component/255;return x<=.04045?x/12.92:((x+.055)/1.055)**2.4}).reduce((total,component,index)=>total+component*[.2126,.7152,.0722][index],0);
+            const contrast=(el, background)=>{const fg=luminance(rgb(getComputedStyle(el).color));const bg=luminance(rgb(getComputedStyle(background).backgroundColor));return (Math.max(bg,fg)+.05)/(Math.min(bg,fg)+.05);};
+            const panel=card.parentElement.parentElement;
+            return Array.from(card.querySelectorAll('dt,dd')).every(el=>contrast(el,card)>=4.5)
+                && Array.from(panel.querySelectorAll('button')).every(button=>contrast(button,button)>=4.5);
+        })()`),'Resume details and actions retain readable contrast in light and dark');
+        await screenshot('resume-mobile-'+(dark?'dark':'light'));
+    }
+    await click('Lanjutkan');
+    await waitFor('document.querySelector(\'button[aria-label="Hapus Token One dari susunan"]\')');
     results.push('Grammar: long feedback scrolls independently and sentence-builder remains usable at 320px');
+    results.push('Quiz UI: hover requires a mouse; resume contrast verified in light/dark mobile');
 
     await open('dokkai-mobile', {clear:true,mobile:true,width:320,height:568});
     await click('Lanjut ke Soal Kuis');

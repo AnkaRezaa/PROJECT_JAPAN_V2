@@ -9,7 +9,7 @@ const THEME_STYLES = {
         chipSelectedBorder: 'border-sky-300 dark:border-sky-700',
         chipSelectedShadow: 'shadow-[0_2px_0_#bae6fd] dark:shadow-[0_2px_0_#0369a1]',
         badgeBg: 'bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300',
-        poolHoverBorder: 'hover:border-sky-400 hover:bg-sky-50/40 dark:hover:border-sky-600',
+        poolHoverBorder: 'fine-pointer:hover:border-sky-400 fine-pointer:hover:bg-sky-50/40 dark:fine-pointer:hover:border-sky-600',
     },
     amber: {
         trayBorder: 'border-amber-300 dark:border-amber-800',
@@ -17,7 +17,7 @@ const THEME_STYLES = {
         chipSelectedBorder: 'border-amber-300 dark:border-amber-700',
         chipSelectedShadow: 'shadow-[0_2px_0_#fde68a] dark:shadow-[0_2px_0_#b45309]',
         badgeBg: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
-        poolHoverBorder: 'hover:border-amber-400 hover:bg-amber-50/40 dark:hover:border-amber-600',
+        poolHoverBorder: 'fine-pointer:hover:border-amber-400 fine-pointer:hover:bg-amber-50/40 dark:fine-pointer:hover:border-amber-600',
     },
     violet: {
         trayBorder: 'border-violet-300 dark:border-violet-800',
@@ -25,7 +25,7 @@ const THEME_STYLES = {
         chipSelectedBorder: 'border-violet-300 dark:border-violet-700',
         chipSelectedShadow: 'shadow-[0_2px_0_#ddd6fe] dark:shadow-[0_2px_0_#6d28d9]',
         badgeBg: 'bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300',
-        poolHoverBorder: 'hover:border-violet-400 hover:bg-violet-50/40 dark:hover:border-violet-600',
+        poolHoverBorder: 'fine-pointer:hover:border-violet-400 fine-pointer:hover:bg-violet-50/40 dark:fine-pointer:hover:border-violet-600',
     },
     emerald: {
         trayBorder: 'border-emerald-300 dark:border-emerald-800',
@@ -33,7 +33,7 @@ const THEME_STYLES = {
         chipSelectedBorder: 'border-emerald-300 dark:border-emerald-700',
         chipSelectedShadow: 'shadow-[0_2px_0_#a7f3d0] dark:shadow-[0_2px_0_#047857]',
         badgeBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
-        poolHoverBorder: 'hover:border-emerald-400 hover:bg-emerald-50/40 dark:hover:border-emerald-600',
+        poolHoverBorder: 'fine-pointer:hover:border-emerald-400 fine-pointer:hover:bg-emerald-50/40 dark:fine-pointer:hover:border-emerald-600',
     },
 };
 
@@ -99,9 +99,9 @@ export default function SentenceBuilder({
                                 disabled={disabled}
                                 onClick={() => handleRemoveToken(token.id)}
                                 aria-label={`Hapus ${token.text} dari susunan`}
-                                className={`group min-h-[44px] sm:min-h-[46px] inline-flex items-center gap-2 rounded-2xl border bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 text-sm sm:text-base font-black text-slate-900 transition-all active:scale-95 hover:border-rose-300 hover:bg-rose-50/70 dark:bg-slate-900 dark:text-white dark:hover:border-rose-700 dark:hover:bg-rose-950/40 ${tStyle.chipSelectedBorder} ${tStyle.chipSelectedShadow}`}
+                                className={`group min-h-[44px] sm:min-h-[46px] inline-flex items-center gap-2 rounded-2xl border bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 text-sm sm:text-base font-black text-slate-900 transition-all active:scale-95 fine-pointer:hover:border-rose-300 fine-pointer:hover:bg-rose-50/70 dark:bg-slate-900 dark:text-white dark:fine-pointer:hover:border-rose-700 dark:fine-pointer:hover:bg-rose-950/40 ${tStyle.chipSelectedBorder} ${tStyle.chipSelectedShadow}`}
                             >
-                                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black group-hover:bg-rose-200 group-hover:text-rose-800 transition ${tStyle.badgeBg}`}>
+                                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black fine-pointer:group-hover:bg-rose-200 fine-pointer:group-hover:text-rose-800 transition ${tStyle.badgeBg}`}>
                                     {index + 1}
                                 </span>
                                 <JapaneseReading
@@ -126,7 +126,7 @@ export default function SentenceBuilder({
                         type="button"
                         onClick={handleClearAll}
                         aria-label="Kosongkan susunan"
-                        className="inline-flex min-h-11 shrink-0 items-center gap-1 px-2 text-xs font-bold text-slate-600 transition hover:text-rose-600 dark:text-slate-300 dark:hover:text-rose-400 sm:min-h-0 sm:px-0"
+                        className="inline-flex min-h-11 shrink-0 items-center gap-1 px-2 text-xs font-bold text-slate-600 transition fine-pointer:hover:text-rose-600 dark:text-slate-300 dark:fine-pointer:hover:text-rose-400 sm:min-h-0 sm:px-0"
                     >
                         <BackspaceOutlinedIcon sx={{ fontSize: 16 }} />
                         <span>Kosongkan<span className="hidden sm:inline"> susunan</span></span>
@@ -143,7 +143,7 @@ export default function SentenceBuilder({
                         disabled={disabled}
                         onClick={() => handleSelectToken(token.id)}
                         aria-label={`Pilih kata ${token.text}`}
-                        className={`min-h-[44px] sm:min-h-[46px] rounded-2xl border border-slate-200 bg-white px-3.5 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base font-black text-slate-900 shadow-[0_3px_0_#e2e8f0] transition-all hover:-translate-y-0.5 active:translate-y-1 active:shadow-none dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:shadow-[0_3px_0_#1e293b] ${tStyle.poolHoverBorder}`}
+                        className={`min-h-[44px] sm:min-h-[46px] rounded-2xl border border-slate-200 bg-white px-3.5 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base font-black text-slate-900 shadow-[0_3px_0_#e2e8f0] transition-all fine-pointer:hover:-translate-y-0.5 active:translate-y-1 active:shadow-none dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:shadow-[0_3px_0_#1e293b] ${tStyle.poolHoverBorder}`}
                     >
                         <JapaneseReading
                             japanese={token.text}

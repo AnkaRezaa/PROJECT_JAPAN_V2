@@ -34,8 +34,8 @@ export default function QuizSoundToggle({ enabled, onToggle }) {
             aria-pressed={enabled}
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition ${
                 enabled
-                    ? 'border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100 dark:border-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:hover:bg-orange-900/70'
-                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
+                    ? 'border-orange-200 bg-orange-50 text-orange-600 fine-pointer:hover:bg-orange-100 dark:border-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:fine-pointer:hover:bg-orange-900/70'
+                    : 'border-gray-200 bg-white text-gray-700 fine-pointer:hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:fine-pointer:hover:bg-gray-800'
             }`}
         >
             {enabled ? <VolumeUpIcon fontSize="small" /> : <VolumeOffIcon fontSize="small" />}

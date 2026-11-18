@@ -89,5 +89,8 @@ export default {
         },
     },
 
-    plugins: [forms],
+    plugins: [
+        forms,
+        ({ addVariant }) => addVariant('fine-pointer', '@media (hover: hover) and (pointer: fine)'),
+    ],
 };
