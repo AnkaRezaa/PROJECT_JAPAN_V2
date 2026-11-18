@@ -11,6 +11,7 @@ use App\Models\ProgramPembelajaran;
 use App\Services\ImportKuisDokkaiService;
 use App\Services\ImportKuisGrammarService;
 use App\Services\ImportSpreadsheetService;
+use App\Services\KuisCampuranService;
 use App\Services\KuisDokkaiService;
 use App\Services\KuisGrammarService;
 use App\Services\PembelajaranPenggunaService;
@@ -19,6 +20,9 @@ use App\Services\SoalKuisService;
 use App\Services\TemplateExcelService;
 use App\Support\QuestionHighlight;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class QuestionHighlightTest extends TestCase
@@ -26,7 +30,9 @@ class QuestionHighlightTest extends TestCase
     use RefreshDatabase;
 
     private Pengguna $admin;
+
     private HariModul $day;
+
     private ProgramPembelajaran $program;
 
     protected function setUp(): void
@@ -56,13 +62,13 @@ class QuestionHighlightTest extends TestCase
         $this->assertFalse($saved->show_question_reading);
         $this->assertSame('しょくひん', $saved->question_reading);
         $this->actingAs($this->admin)->get(route('admin.quizzes.builder', $quiz))->assertOk()
-            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page->where('questions.0.show_question_reading', false)->where('questions.0.question_reading', 'しょくひん'));
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('questions.0.show_question_reading', false)->where('questions.0.question_reading', 'しょくひん'));
         $student = Pengguna::factory()->create();
         $payload = app(PembelajaranPenggunaService::class)->quizPayload($student, $quiz->fresh()->load('questions'));
         $this->assertNull($payload['questions'][0]['question_reading']);
         $this->assertSame(['A', 'B'], $payload['questions'][0]['option_readings']);
-        $mixed = new \ReflectionMethod(\App\Services\KuisCampuranService::class, 'normalizeSoal');
-        $this->assertNull($mixed->invoke(app(\App\Services\KuisCampuranService::class), $saved, 'kosakata', 'Kosakata')['question_reading']);
+        $mixed = new \ReflectionMethod(KuisCampuranService::class, 'normalizeSoal');
+        $this->assertNull($mixed->invoke(app(KuisCampuranService::class), $saved, 'kosakata', 'Kosakata')['question_reading']);
         $this->assertTrue(app(PenilaianJawabanKuisService::class)->benar($saved, 'Bahan makanan'));
         $this->assertFalse(app(PenilaianJawabanKuisService::class)->benar($saved, 'Pabrik'));
         $this->actingAs($this->admin)->post($url, ['questions' => [[...$question, 'id' => $saved->id, 'show_question_reading' => true]]])->assertSessionHasNoErrors();
@@ -111,7 +117,7 @@ class QuestionHighlightTest extends TestCase
         try {
             $service->importRows($quiz, [$base, $invalid]);
             $this->fail('Invalid visibility must reject the import.');
-        } catch (\Illuminate\Validation\ValidationException $exception) {
+        } catch (ValidationException $exception) {
             $this->assertStringContainsString('Baris 3', $exception->getMessage());
         }
         $this->assertSame($count, $quiz->questions()->count());
@@ -267,5 +273,23 @@ class QuestionHighlightTest extends TestCase
         $this->assertFalse($import->previewFlatCsv($this->program, $rows, $this->day)['valid']);
         $sheets['soal'] = $rows;
         $this->assertFalse($import->preview($this->program, $sheets)['valid']);
+    }
+
+    public function test_backfill_is_dry_by_default_idempotent_and_conditionally_reversible(): void
+    {
+        Storage::fake('local');
+        $quiz = $this->quiz();
+        $question = $quiz->questions()->create(['type' => 'multiple_choice', 'question_text' => 'Apa arti station?', 'options' => ['A', 'B'], 'correct_answer' => 'A', 'order' => 1, 'points' => 1]);
+        $this->artisan('quiz:backfill-highlights')->assertSuccessful();
+        $this->assertNull($question->fresh()->highlight_text);
+        $this->artisan('quiz:backfill-highlights', ['--apply' => true])->assertSuccessful();
+        $this->assertSame('station', $question->fresh()->highlight_text);
+        $files = Storage::disk('local')->files('highlight-backfills');
+        $this->assertCount(1, $files);
+        $this->artisan('quiz:backfill-highlights', ['--apply' => true])->assertSuccessful();
+        $this->assertCount(1, Storage::disk('local')->files('highlight-backfills'));
+        $this->artisan('quiz:backfill-highlights', ['--rollback' => basename($files[0])])->assertSuccessful();
+        $this->assertNull($question->fresh()->highlight_text);
+        $this->assertSame('Apa arti station?', $question->fresh()->question_text);
     }
 }
