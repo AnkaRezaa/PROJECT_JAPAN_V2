@@ -56,12 +56,12 @@ function HeroCarousel({ children }) {
     }, [paused, focused, reducedMotion, visible, ready]);
 
     return (
-        <div className="relative mx-auto flex min-h-[420px] w-[97%] items-center justify-center overflow-hidden py-20 sm:min-h-[480px] lg:min-h-[520px]"
+        <div className="relative mx-auto hidden min-h-[520px] w-[97%] items-center justify-center overflow-hidden py-20 lg:flex"
             onFocusCapture={() => setFocused(true)}
             onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
             <div aria-hidden="true" className="pointer-events-none absolute inset-0">
                 {heroSlides.map((slide, index) => (
-                    <img key={slide.src} src={slide.src} alt="" loading={index === 0 ? 'eager' : 'lazy'}
+                    <img key={slide.src} src={slide.src} alt="" loading="lazy"
                         fetchpriority={index === 0 ? 'high' : 'low'} decoding="async"
                         onLoad={() => setReady(current => current.includes(index) ? current : [...current, index].sort())}
                         onError={() => { setReady(current => current.filter(item => item !== index)); setActive(current => current === index ? 0 : current); }}
@@ -97,14 +97,14 @@ function HeroCarousel({ children }) {
 
 function SectionHeader({ eyebrow, title, actionHref, actionLabel }) {
     return (
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 lg:mb-5 lg:items-end lg:gap-3">
+            <div className="min-w-0">
                 {eyebrow && (
                     <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-300">
                         {eyebrow}
                     </p>
                 )}
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white md:text-2xl">{title}</h2>
+                <h2 className="text-base font-semibold text-gray-900 [overflow-wrap:anywhere] dark:text-white lg:text-2xl">{title}</h2>
             </div>
             {actionHref && (
                 <Link href={actionHref} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-green-700 transition lg:hover:text-green-800 dark:text-green-300">
@@ -123,7 +123,7 @@ function DailyGoalCard({ goal = {} }) {
     const sessionsCompleted = Number(goal.sessions_completed || 0);
 
     return (
-        <aside className="rounded-3xl border border-amber-200/70 bg-gradient-to-br from-amber-50/80 to-orange-50/40 p-6 shadow-sm dark:border-amber-900/40 dark:bg-gradient-to-br dark:from-gray-900 dark:to-amber-950/20">
+        <aside className="min-w-0 rounded-lg border border-amber-200/70 bg-amber-50/80 p-3.5 dark:border-amber-900/40 dark:bg-gray-900 lg:rounded-3xl lg:bg-gradient-to-br lg:from-amber-50/80 lg:to-orange-50/40 lg:p-6 lg:shadow-sm dark:lg:from-gray-900 dark:lg:to-amber-950/20">
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
@@ -131,12 +131,12 @@ function DailyGoalCard({ goal = {} }) {
                     </span>
                     <div>
                         <p className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">Target Hari Ini</p>
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-white">Capai 30 XP</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white lg:text-base">Capai {xpTarget} XP</h3>
                     </div>
                 </div>
                 <CheckCircleIcon className={goal.completed ? 'text-emerald-500' : 'text-amber-400/80'} />
             </div>
-            <div className="mt-5 space-y-3">
+            <div className="mt-3 space-y-2 lg:mt-5 lg:space-y-3">
                 <div>
                     <div className="mb-1.5 flex items-center justify-between text-xs font-bold text-gray-600 dark:text-gray-300">
                         <span>XP Terkumpul</span>
@@ -146,7 +146,7 @@ function DailyGoalCard({ goal = {} }) {
                         <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-500" style={{ width: `${xpProgress}%` }} />
                     </div>
                 </div>
-                <div className="flex items-center justify-between rounded-2xl border border-amber-200/50 bg-white/90 px-4 py-3 text-xs font-bold text-gray-700 shadow-sm dark:border-gray-800 dark:bg-gray-900/90 dark:text-gray-200">
+                <div className="flex items-center justify-between gap-2 text-xs font-bold text-gray-700 dark:text-gray-200 lg:rounded-2xl lg:border lg:border-amber-200/50 lg:bg-white/90 lg:px-4 lg:py-3 lg:shadow-sm dark:lg:border-gray-800 dark:lg:bg-gray-900/90">
                     <span className="flex items-center gap-2">
                         <QuizIcon sx={{ fontSize: 17 }} className="text-amber-500" />
                         Sesi Latihan
@@ -156,16 +156,17 @@ function DailyGoalCard({ goal = {} }) {
                     </span>
                 </div>
             </div>
-            <p className="mt-4 text-sm font-normal leading-relaxed text-gray-600 dark:text-gray-400">
+            <p className="mt-4 hidden text-sm font-normal leading-relaxed text-gray-600 dark:text-gray-400 lg:block">
                 {goal.completed ? 'Target hari ini sudah tercapai! Pertahankan ritme belajarmu besok.' : 'Selesaikan satu sesi latihan kuis untuk menutup target harian.'}
             </p>
 
             <Link
                 href={goal.quiz_url || route('user.kelas.index')}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-amber-500 to-orange-500 py-2.5 px-4 text-xs font-black text-white shadow-md hover:from-amber-600 hover:to-orange-600 active:scale-[0.98] transition"
+                className="mt-2 inline-flex min-h-11 max-w-full items-center justify-center gap-1.5 rounded-lg bg-amber-700 px-3 text-sm font-semibold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:bg-amber-800 lg:mt-4 lg:flex lg:w-full lg:gap-2 lg:rounded-2xl lg:bg-linear-to-r lg:from-amber-500 lg:to-orange-500 lg:px-4 lg:py-2.5 lg:text-xs lg:font-black lg:shadow-md fine-pointer:lg:hover:from-amber-600 fine-pointer:lg:hover:to-orange-600"
             >
                 <PlayArrowIcon sx={{ fontSize: 18 }} />
-                <span>{goal.completed ? 'Latihan Tambahan (+5 XP)' : 'Mulai Kuis Campuran Harian (10 Soal · +30 XP)'}</span>
+                <span className="lg:hidden">{goal.completed ? 'Latihan tambahan' : 'Mulai kuis'}</span>
+                <span className="hidden lg:inline">{goal.completed ? 'Latihan Tambahan (+5 XP)' : 'Mulai Kuis Campuran Harian (10 Soal · +30 XP)'}</span>
             </Link>
         </aside>
     );
@@ -296,9 +297,30 @@ export default function BerandaUser({
             </Head>
 
             <div className="relative min-h-screen w-full overflow-hidden bg-[#F7FAF8] pb-16 transition-colors duration-300 dark:bg-gray-950">
-                <div className="pointer-events-none absolute inset-x-0 top-[360px] h-[620px] bg-[radial-gradient(circle_at_18%_20%,rgba(48,192,96,0.08),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(37,99,235,0.07),transparent_32%),linear-gradient(180deg,rgba(247,250,248,0)_0%,rgba(247,250,248,0.78)_22%,rgba(255,255,255,0.88)_52%,rgba(247,250,248,0.9)_100%)] dark:bg-[radial-gradient(circle_at_18%_20%,rgba(48,192,96,0.09),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(37,99,235,0.08),transparent_32%),linear-gradient(180deg,rgba(3,7,18,0)_0%,rgba(3,7,18,0.58)_24%,rgba(17,24,39,0.88)_58%,rgba(3,7,18,1)_100%)]" />
+                <div className="pointer-events-none absolute inset-x-0 top-[360px] hidden h-[620px] bg-[radial-gradient(circle_at_18%_20%,rgba(48,192,96,0.08),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(37,99,235,0.07),transparent_32%),linear-gradient(180deg,rgba(247,250,248,0)_0%,rgba(247,250,248,0.78)_22%,rgba(255,255,255,0.88)_52%,rgba(247,250,248,0.9)_100%)] lg:block dark:bg-[radial-gradient(circle_at_18%_20%,rgba(48,192,96,0.09),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(37,99,235,0.08),transparent_32%),linear-gradient(180deg,rgba(3,7,18,0)_0%,rgba(3,7,18,0.58)_24%,rgba(17,24,39,0.88)_58%,rgba(3,7,18,1)_100%)]" />
                 <div className="pointer-events-none absolute left-8 top-[560px] hidden text-[11rem] font-black leading-none text-brand-900/[0.04] dark:text-white/[0.035] lg:block">学</div>
                 <div className="pointer-events-none absolute right-10 top-[860px] hidden text-[10rem] font-black leading-none text-amber-900/[0.05] dark:text-white/[0.03] lg:block">語</div>
+
+                <header className="mx-auto max-w-7xl px-3 pb-3 pt-4 min-[380px]:px-4 sm:px-6 lg:hidden">
+                    <h1 className="text-xl font-semibold text-gray-950 dark:text-white">Beranda</h1>
+                    <dl className="mt-3 grid grid-cols-3 divide-x divide-slate-200 border-y border-slate-200 py-2.5 dark:divide-gray-800 dark:border-gray-800">
+                        <div className="min-w-0 pr-2">
+                            <dt className="text-xs text-gray-600 dark:text-gray-400">Lv.{user.level || 1}</dt>
+                            <dd className="text-sm font-semibold tabular-nums text-gray-900 [overflow-wrap:anywhere] dark:text-white">{user.xp || 0} XP</dd>
+                        </div>
+                        <div className="min-w-0 px-2.5">
+                            <dt className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400"><HitodamaIcon className="size-3 shrink-0 text-orange-600" aria-hidden="true" /> Streak</dt>
+                            <dd className="text-sm font-semibold tabular-nums text-gray-900 [overflow-wrap:anywhere] dark:text-white">{user.streak_count || 0} hari</dd>
+                        </div>
+                        <div className="min-w-0 pl-2.5">
+                            <dt className="text-xs text-gray-600 dark:text-gray-400">Akses</dt>
+                            <dd className={`text-sm font-semibold ${isPremium ? 'text-amber-800 dark:text-amber-300' : 'text-gray-900 dark:text-white'}`}>{isPremium ? 'Premium' : 'Gratis'}</dd>
+                        </div>
+                    </dl>
+                    {isPremium && activeSubscription && (
+                        <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">Premium aktif sampai {new Date(activeSubscription.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    )}
+                </header>
 
                 <HeroCarousel>
                     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(3,7,18,0.45)_0%,rgba(3,7,18,0.28)_58%,rgba(247,250,248,0.20)_76%,#F7FAF8_100%)] transition-colors duration-300 dark:bg-[linear-gradient(180deg,rgba(3,7,18,0.45)_0%,rgba(3,7,18,0.28)_58%,rgba(3,7,18,0.45)_80%,#030712_100%)]" />
@@ -364,21 +386,21 @@ export default function BerandaUser({
                     </div>
                 </HeroCarousel>
 
-                <div className="relative z-10 mx-auto -mt-10 max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+                <div className="relative z-10 mx-auto max-w-7xl space-y-3 px-3 min-[380px]:px-4 sm:px-6 lg:-mt-10 lg:space-y-6 lg:px-8">
                     {liveAlert && (
-                        <aside aria-label="Pengingat Sesi Live" className={`overflow-hidden rounded-3xl border p-5 shadow-lg backdrop-blur-md transition sm:p-6 ${
+                        <aside aria-label="Pengingat Sesi Live" className={`overflow-hidden rounded-lg border p-3.5 transition lg:rounded-3xl lg:p-6 lg:shadow-lg lg:backdrop-blur-md ${
                             liveAlert.is_live
                                 ? 'border-emerald-500/50 bg-gradient-to-r from-emerald-900/90 to-emerald-950/95 text-white shadow-emerald-950/30'
                                 : 'border-amber-400/40 bg-gradient-to-r from-slate-900/95 to-slate-950/95 text-white shadow-black/40'
                         }`}>
-                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="flex items-start gap-4">
-                                    <div className={`mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-md ${
+                            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between lg:gap-4">
+                                <div className="flex min-w-0 items-start gap-2.5 lg:gap-4">
+                                    <div className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg lg:size-12 lg:rounded-2xl lg:shadow-md ${
                                         liveAlert.is_live ? 'bg-emerald-500 text-slate-950' : 'bg-amber-500 text-slate-950'
                                     }`}>
                                         <VideoCameraFrontIcon sx={{ fontSize: 26 }} />
                                     </div>
-                                    <div>
+                                    <div className="min-w-0 [overflow-wrap:anywhere]">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider ${
                                                 liveAlert.is_live ? 'bg-emerald-400 text-slate-950' : 'bg-amber-400 text-slate-950'
@@ -413,7 +435,7 @@ export default function BerandaUser({
                                 <div className="flex items-center gap-2.5 sm:self-center">
                                     <Link
                                         href={liveAlert.join_url}
-                                        className={`inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 text-xs font-black shadow-md transition sm:w-auto ${
+                                        className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-bold transition lg:min-h-12 lg:gap-2 lg:rounded-xl lg:px-5 lg:font-black lg:shadow-md ${
                                             liveAlert.is_live
                                                 ? 'bg-emerald-400 text-slate-950 hover:bg-emerald-300'
                                                 : 'bg-white text-slate-950 hover:bg-slate-100'
@@ -426,18 +448,42 @@ export default function BerandaUser({
                             </div>
                         </aside>
                     )}
-                    <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+                    <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-8">
                         {/* Kolom Kiri: Jalur Belajar (lg:col-span-8) */}
-                        <div className="space-y-8 lg:col-span-8">
+                        <div className="min-w-0 space-y-3 lg:col-span-8 lg:space-y-8">
+                            <section className="min-w-0 rounded-lg border border-emerald-200 bg-white px-3.5 py-3 dark:border-emerald-900 dark:bg-gray-900 lg:hidden">
+                                <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">Lanjutkan Belajar</p>
+                                <h2 className="mt-1 text-base font-semibold leading-snug text-gray-950 [overflow-wrap:anywhere] dark:text-white">
+                                    {activeLearning?.title || 'Belum Ada Kelas Aktif'}
+                                </h2>
+                                <p className="mt-1 text-xs leading-relaxed text-gray-600 [overflow-wrap:anywhere] dark:text-gray-300">
+                                    {activeLearning
+                                        ? `${activeLearning.program_title} · Minggu ${activeLearning.week_number}${activeLearning.current_day ? ` · Hari ${activeLearning.current_day.number}` : ''}`
+                                        : 'Pilih kelas untuk mulai belajar.'}
+                                </p>
+                                <Link href={nextAction?.href || activeLearning?.roadmap_url || route('user.kelas.index')}
+                                    className="mt-2.5 inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-lg bg-green-700 px-3.5 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:bg-green-800">
+                                    {activeLearning ? 'Lanjutkan' : 'Jelajahi Kelas'} <ArrowRightAltIcon aria-hidden="true" sx={{ fontSize: 18 }} />
+                                </Link>
+                            </section>
+
+                            <nav aria-label="Akses cepat" className="flex flex-wrap gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 dark:border-gray-800 dark:bg-gray-800 lg:hidden">
+                                {quickLinks.map(({ label, href, icon: Icon }) => (
+                                    <Link key={label} href={href} className="flex min-h-11 min-w-0 grow basis-[calc(33.333%_-_1px)] items-center gap-1.5 bg-white px-2 text-xs font-semibold text-gray-800 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus active:bg-emerald-50 dark:bg-gray-900 dark:text-gray-200 dark:active:bg-emerald-950">
+                                        <Icon aria-hidden="true" className="shrink-0 text-green-700 dark:text-emerald-300" sx={{ fontSize: 17 }} />
+                                        <span className="[overflow-wrap:anywhere]">{label}</span>
+                                    </Link>
+                                ))}
+                            </nav>
                             {/* 1. Hub Latihan Harian - Grid 2 Kolom: Kuis Campuran & Pemulihan Titik Lemah */}
-                            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:gap-5">
                                 {/* Kartu 1: Kuis Campuran Harian (10 Soal Komprehensif) */}
-                                <section className="relative flex flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-800 to-emerald-950 p-6 text-white shadow-sm sm:p-7 border border-emerald-700/40">
-                                    <span aria-hidden="true" className="pointer-events-none absolute -bottom-6 right-2 select-none text-9xl font-black text-white/[0.07]">
+                                <section className="relative flex min-w-0 flex-col justify-between overflow-hidden rounded-lg border border-emerald-700/40 bg-emerald-900 p-3.5 text-white lg:rounded-3xl lg:bg-gradient-to-br lg:from-emerald-800 lg:to-emerald-950 lg:p-7 lg:shadow-sm">
+                                    <span aria-hidden="true" className="pointer-events-none absolute -bottom-6 right-2 hidden select-none text-9xl font-black text-white/[0.07] lg:block">
                                         混
                                     </span>
                                     <div className="relative z-10">
-                                        <div className="mb-3 flex items-center justify-between gap-2">
+                                        <div className="mb-3 hidden items-center justify-between gap-2 lg:flex">
                                             <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-emerald-100">
                                                 Latihan Terpadu
                                             </span>
@@ -445,13 +491,14 @@ export default function BerandaUser({
                                                 +30 XP
                                             </span>
                                         </div>
-                                        <h2 className="text-xl font-semibold text-white sm:text-2xl">
+                                        <h2 className="text-base font-semibold text-white lg:text-2xl">
                                             Kuis Campuran Harian
                                         </h2>
-                                        <p className="mt-1.5 text-sm leading-relaxed text-emerald-50/90">
+                                        <p className="mt-1 text-xs text-emerald-100 lg:hidden">10 soal · +30 XP</p>
+                                        <p className="mt-1.5 hidden text-sm leading-relaxed text-emerald-50/90 lg:block">
                                             10 soal pilihan dari seluruh materi yang sudah terbuka. Uji penguasaan Kosakata, Tata Bahasa, dan Wacana.
                                         </p>
-                                        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold text-white/90">
+                                        <div className="mt-4 hidden flex-wrap items-center gap-2 text-xs font-bold text-white/90 lg:flex">
                                             <span className="rounded-xl bg-white/15 px-2.5 py-1 backdrop-blur-sm">
                                                 4 Kosakata
                                             </span>
@@ -463,14 +510,14 @@ export default function BerandaUser({
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="relative z-10 mt-6 space-y-2.5 pt-2">
+                                    <div className="relative z-10 mt-2.5 space-y-2 lg:mt-6 lg:space-y-2.5 lg:pt-2">
                                         {dashboardMixedQuiz?.programs?.length > 1 && (
-                                            <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-bold text-white backdrop-blur-sm">
+                                            <label className="flex min-h-11 items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-2.5 text-xs font-bold text-white lg:min-h-0 lg:rounded-xl lg:px-3 lg:py-2 lg:backdrop-blur-sm">
                                                 <span className="shrink-0 text-emerald-200">Kelas:</span>
                                                 <select
                                                     value={selectedMixedProgramId}
                                                     onChange={(event) => setSelectedMixedProgramId(event.target.value)}
-                                                    className="w-full cursor-pointer truncate border-0 bg-transparent py-0 pr-6 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white"
+                                                    className="min-h-11 min-w-0 w-full cursor-pointer truncate border-0 bg-transparent py-0 pr-6 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white lg:min-h-0"
                                                 >
                                                     <option value="" className="text-gray-900">Semua Kelas Aktif</option>
                                                     {dashboardMixedQuiz.programs.map((program) => (
@@ -479,24 +526,24 @@ export default function BerandaUser({
                                                         </option>
                                                     ))}
                                                 </select>
-                                            </div>
+                                            </label>
                                         )}
 
                                         {dashboardMixedQuiz?.available ? (
                                             <button
                                                 type="button"
                                                 onClick={handleStartMixedQuiz}
-                                                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-900 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-emerald-950 shadow-sm transition hover:bg-emerald-50 active:scale-[0.99]"
+                                                className="inline-flex min-h-11 max-w-full items-center justify-center gap-1.5 rounded-lg bg-white px-3 text-sm font-semibold text-emerald-950 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:bg-emerald-100 fine-pointer:hover:bg-emerald-50 lg:min-h-12 lg:w-full lg:gap-2 lg:rounded-xl lg:px-6 lg:py-3 lg:shadow-sm"
                                             >
-                                                <span>Mulai Kuis Campuran</span>
+                                                <span className="lg:hidden">Mulai kuis</span><span className="hidden lg:inline">Mulai Kuis Campuran</span>
                                                 <ArrowRightAltIcon sx={{ fontSize: 20 }} />
                                             </button>
                                         ) : (
                                             <Link
                                                 href={activeLearning?.roadmap_url || route('user.kelas.index')}
-                                                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-900 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-emerald-950 shadow-sm transition hover:bg-emerald-50"
+                                                className="inline-flex min-h-11 max-w-full items-center justify-center gap-1.5 rounded-lg bg-white px-3 text-sm font-semibold text-emerald-950 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:bg-emerald-100 fine-pointer:hover:bg-emerald-50 lg:min-h-12 lg:w-full lg:gap-2 lg:rounded-xl lg:px-6 lg:py-3 lg:shadow-sm"
                                             >
-                                                <span>Buka Roadmap Belajar</span>
+                                                <span className="lg:hidden">Buka roadmap</span><span className="hidden lg:inline">Buka Roadmap Belajar</span>
                                                 <ArrowRightAltIcon sx={{ fontSize: 20 }} />
                                             </Link>
                                         )}
@@ -504,18 +551,18 @@ export default function BerandaUser({
                                 </section>
 
                                 {/* Kartu 2: Pemulihan Titik Lemah (Weakspot Recovery) */}
-                                <section className={`relative flex flex-col justify-between overflow-hidden rounded-3xl p-6 shadow-sm sm:p-7 border transition-all ${
+                                <section className={`relative flex min-w-0 flex-col justify-between overflow-hidden rounded-lg border p-3.5 transition lg:rounded-3xl lg:p-7 lg:shadow-sm ${
                                     weakspotSummary?.has_weakspot
-                                        ? 'bg-gradient-to-br from-amber-900 via-amber-950 to-orange-950 text-white border-amber-700/50'
+                                        ? 'bg-amber-950 text-white border-amber-700/50 lg:bg-gradient-to-br lg:from-amber-900 lg:via-amber-950 lg:to-orange-950'
                                         : 'bg-white dark:bg-gray-900 border-slate-200/80 dark:border-gray-800 text-gray-900 dark:text-white'
                                 }`}>
-                                    <span aria-hidden="true" className={`pointer-events-none absolute -bottom-6 right-2 select-none text-9xl font-black ${
+                                    <span aria-hidden="true" className={`pointer-events-none absolute -bottom-6 right-2 hidden select-none text-9xl font-black lg:block ${
                                         weakspotSummary?.has_weakspot ? 'text-white/[0.06]' : 'text-gray-900/[0.03] dark:text-white/[0.03]'
                                     }`}>
                                         練
                                     </span>
                                     <div className="relative z-10">
-                                        <div className="mb-3 flex items-center justify-between gap-2">
+                                        <div className="mb-3 hidden items-center justify-between gap-2 lg:flex">
                                             <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider ${
                                                 weakspotSummary?.has_weakspot
                                                     ? 'bg-amber-500/25 text-amber-200'
@@ -531,10 +578,13 @@ export default function BerandaUser({
                                                 {weakspotSummary?.has_weakspot ? '+20 XP' : 'Materi Bersih'}
                                             </span>
                                         </div>
-                                        <h2 className="text-xl font-semibold sm:text-2xl">
+                                        <h2 className="text-base font-semibold lg:text-2xl">
                                             Pemulihan Titik Lemah
                                         </h2>
-                                        <p className={`mt-1.5 text-sm leading-relaxed ${
+                                        <p className={`mt-1 text-xs lg:hidden ${weakspotSummary?.has_weakspot ? 'text-amber-100' : 'text-gray-600 dark:text-gray-300'}`}>
+                                            {weakspotSummary?.has_weakspot ? `${weakspotSummary.count} soal untuk diulang · +20 XP` : 'Tidak ada soal yang perlu diulang.'}
+                                        </p>
+                                        <p className={`mt-1.5 hidden text-sm leading-relaxed lg:block ${
                                             weakspotSummary?.has_weakspot
                                                 ? 'text-amber-100/90'
                                                 : 'text-gray-600 dark:text-gray-300'
@@ -543,7 +593,7 @@ export default function BerandaUser({
                                                 ? `Ditemukan ${weakspotSummary.count} butir soal yang pernah kamu jawab keliru. Latih kembali untuk menutup celah pemahaman.`
                                                 : 'Hebat! Seluruh titik lemah sudah dibersihkan. Kerjakan kuis campuran atau lanjutkan materi untuk mendeteksi area baru.'}
                                         </p>
-                                        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold">
+                                        <div className="mt-4 hidden flex-wrap items-center gap-2 text-xs font-bold lg:flex">
                                             {weakspotSummary?.has_weakspot ? (
                                                 <span className="flex items-center gap-1.5 rounded-xl bg-amber-400/20 px-2.5 py-1 text-amber-200 backdrop-blur-sm">
                                                     <span className="h-2 w-2 rounded-full bg-amber-400" />
@@ -557,23 +607,23 @@ export default function BerandaUser({
                                             )}
                                         </div>
                                     </div>
-                                    <div className="relative z-10 mt-6 pt-2">
+                                    <div className="relative z-10 mt-2.5 lg:mt-6 lg:pt-2">
                                         <Link
                                             href={weakspotSummary?.url || route('user.weakspot.show', { from: 'beranda' })}
-                                            className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold shadow-sm transition active:scale-[0.99] ${
+                                            className={`inline-flex min-h-11 max-w-full items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:opacity-80 lg:min-h-12 lg:w-full lg:gap-2 lg:rounded-xl lg:px-6 lg:py-3 lg:shadow-sm ${
                                                 weakspotSummary?.has_weakspot
-                                                    ? 'bg-amber-400 text-amber-950 hover:bg-amber-300 focus-visible:ring-amber-400 focus-visible:ring-offset-amber-950'
-                                                    : 'border border-slate-300 bg-white text-gray-800 hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 focus-visible:ring-blue-600 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900'
+                                                    ? 'bg-amber-400 text-amber-950 fine-pointer:hover:bg-amber-300 focus-visible:ring-amber-400 focus-visible:ring-offset-amber-950'
+                                                    : 'border border-slate-300 bg-white text-gray-800 fine-pointer:hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:fine-pointer:hover:bg-gray-700 focus-visible:ring-blue-600 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900'
                                             }`}
                                         >
                                             {weakspotSummary?.has_weakspot ? (
                                                 <>
-                                                    <span>Latih Titik Lemah ({weakspotSummary.count})</span>
+                                                    <span className="lg:hidden">Ulangi soal</span><span className="hidden lg:inline">Latih Titik Lemah ({weakspotSummary.count})</span>
                                                     <ArrowRightAltIcon sx={{ fontSize: 20 }} />
                                                 </>
                                             ) : (
                                                 <>
-                                                    <span>Tinjau Riwayat Soal</span>
+                                                    <span className="lg:hidden">Riwayat soal</span><span className="hidden lg:inline">Tinjau Riwayat Soal</span>
                                                     <ArrowRightAltIcon sx={{ fontSize: 20 }} />
                                                 </>
                                             )}
@@ -583,7 +633,7 @@ export default function BerandaUser({
                             </div>
 
                             {/* 2. Belajar Hari Ini - Clean Educational Card with Study Desk Visual */}
-                            <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-7 dark:border-gray-800 dark:bg-gray-900">
+                            <section className="hidden rounded-3xl border border-slate-200/80 bg-white p-7 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:block">
                                 <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                                     <div className="flex items-start gap-4 sm:gap-5">
                                         <div className="hidden sm:flex h-24 w-24 sm:h-28 sm:w-28 shrink-0 overflow-hidden rounded-[28px] border border-slate-200/80 shadow-sm dark:border-gray-800">
@@ -648,7 +698,7 @@ export default function BerandaUser({
                             </section>
 
                             {/* 3. Kelas Saya - Modern Roadmap Cards */}
-                            <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-7 dark:border-gray-800 dark:bg-gray-900">
+                            <section className="min-w-0 border-t border-slate-200 pt-2 dark:border-gray-800 lg:rounded-3xl lg:border lg:border-slate-200/80 lg:bg-white lg:p-7 lg:shadow-sm dark:lg:bg-gray-900">
                                 <SectionHeader
                                     eyebrow="Kelas Saya"
                                     title="Roadmap yang dapat kamu ikuti"
@@ -656,15 +706,15 @@ export default function BerandaUser({
                                     actionLabel="Lihat semua kelas"
                                 />
 
-                                <div className="space-y-3">
+                                <div className="space-y-2 lg:space-y-3">
                                     {ownedPrograms.slice(0, 3).map((program) => {
-                                        const cardClass = 'relative grid grid-cols-[72px_minmax(0,1fr)] gap-3 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm transition-all sm:grid-cols-[96px_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:p-4 dark:border-gray-800 dark:bg-gray-950';
+                                        const cardClass = `relative grid ${program.waiting_for_kloter ? 'grid-cols-[48px_minmax(0,1fr)]' : 'grid-cols-[48px_minmax(0,1fr)_20px]'} items-center gap-2.5 overflow-hidden rounded-lg border border-slate-200/80 bg-white p-2.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus dark:border-gray-800 dark:bg-gray-900 lg:grid-cols-[96px_minmax(0,1fr)_auto] lg:gap-4 lg:rounded-2xl lg:p-4 lg:shadow-sm dark:lg:bg-gray-950`;
                                         const content = (
                                             <>
                                                 <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(48,192,96,0.06),transparent_48%)]" />
                                                 <span aria-hidden="true" className="pointer-events-none absolute -bottom-5 right-2 text-5xl font-black leading-none text-brand-900/[0.08] sm:-bottom-7 sm:right-3 sm:text-7xl dark:text-white/[0.06]">学</span>
                                                 <span aria-hidden="true" className="pointer-events-none absolute -top-3 right-16 text-3xl font-black leading-none text-amber-700/[0.07] sm:right-28 sm:text-4xl dark:text-amber-200/[0.05]">語</span>
-                                                <div className="relative z-10 h-16 w-[72px] overflow-hidden rounded-xl bg-slate-100 sm:h-[72px] sm:w-24 dark:bg-gray-800">
+                                                <div className="relative z-10 size-12 overflow-hidden rounded-lg bg-slate-100 dark:bg-gray-800 lg:h-[72px] lg:w-24 lg:rounded-xl">
                                                     <div className="flex h-full items-center justify-center bg-gradient-to-br from-brand-500 to-brand-700 text-white">
                                                         <SchoolIcon sx={{ fontSize: 26 }} />
                                                     </div>
@@ -679,7 +729,7 @@ export default function BerandaUser({
                                                     )}
                                                 </div>
                                                 <div className="relative z-10 min-w-0">
-                                                    <div className="mb-1.5 flex items-center gap-2">
+                                                    <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 lg:mb-1.5">
                                                         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${program.waiting_for_kloter
                                                             ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
                                                             : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'}`}>
@@ -687,7 +737,7 @@ export default function BerandaUser({
                                                         </span>
                                                         {!program.waiting_for_kloter && <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{program.total_modules || 0} modul</span>}
                                                     </div>
-                                                    <h3 className="line-clamp-2 break-words text-base font-semibold leading-snug text-slate-900 sm:text-lg dark:text-white">{program.title}</h3>
+                                                    <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900 [overflow-wrap:anywhere] dark:text-white lg:text-lg">{program.title}</h3>
                                                     <p className="mt-0.5 line-clamp-2 break-words text-sm font-normal leading-relaxed text-gray-600 dark:text-gray-400">
                                                         {program.waiting_for_kloter
                                                             ? 'Roadmap tersedia setelah jadwal kloter dimulai.'
@@ -702,7 +752,8 @@ export default function BerandaUser({
                                                         </div>
                                                     )}
                                                 </div>
-                                                <span className={`relative z-10 col-span-2 inline-flex min-h-11 items-center justify-center gap-1 rounded-xl px-4 text-sm font-semibold sm:col-auto sm:min-h-11 ${program.waiting_for_kloter
+                                                {!program.waiting_for_kloter && <ArrowRightAltIcon aria-hidden="true" className="text-green-700 dark:text-emerald-300 lg:hidden" sx={{ fontSize: 20 }} />}
+                                                <span className={`relative z-10 hidden min-h-11 items-center justify-center gap-1 rounded-xl px-4 text-sm font-semibold lg:inline-flex ${program.waiting_for_kloter
                                                     ? 'bg-slate-100 text-slate-700 dark:bg-gray-800 dark:text-gray-300'
                                                     : 'bg-green-700 text-white lg:group-hover:bg-green-800 shadow-sm'}`}>
                                                     {program.waiting_for_kloter ? 'Menunggu jadwal' : 'Lanjutkan'}
@@ -714,13 +765,13 @@ export default function BerandaUser({
                                         return program.waiting_for_kloter ? (
                                             <article key={program.id} className={cardClass}>{content}</article>
                                         ) : (
-                                            <Link key={program.id} href={program.roadmap_url} className={`group ${cardClass} hover:border-brand-300 hover:shadow-sm lg:dark:hover:border-brand-900/60`}>
+                                            <Link key={program.id} href={program.roadmap_url} className={`group ${cardClass} active:bg-emerald-50 dark:active:bg-emerald-950 fine-pointer:hover:border-brand-300 fine-pointer:lg:hover:shadow-sm dark:fine-pointer:lg:hover:border-brand-900/60`}>
                                                 {content}
                                             </Link>
                                         );
                                     })}
                                     {ownedPrograms.length === 0 && (
-                                        <div className="rounded-2xl border border-dashed border-gray-300 bg-white/70 px-5 py-8 text-center dark:border-gray-700 dark:bg-gray-950/70">
+                                        <div className="rounded-lg border border-dashed border-gray-300 bg-white/70 px-3.5 py-3 text-center dark:border-gray-700 dark:bg-gray-950/70 lg:rounded-2xl lg:px-5 lg:py-8">
                                             <SchoolIcon sx={{ fontSize: 30 }} className="mb-2 text-brand-500" />
                                             <p className="font-semibold text-gray-900 dark:text-white">Belum ada kelas aktif</p>
                                             <p className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">Pilih kelas untuk memulai roadmap belajar.</p>
@@ -734,12 +785,12 @@ export default function BerandaUser({
                         </div>
 
                         {/* Kolom Kanan: Tracker Habit & Progress (lg:col-span-4) */}
-                        <div className="space-y-6 lg:col-span-4">
+                        <div className="min-w-0 space-y-3 lg:col-span-4 lg:space-y-6">
                             {/* Target Hari Ini */}
                             <DailyGoalCard goal={dailyGoal} />
 
                             {/* Progress & Aktivitas Kelas */}
-                            <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                            <section className="min-w-0 border-t border-slate-200 pt-2 dark:border-gray-800 lg:rounded-3xl lg:border lg:border-slate-200/80 lg:bg-white lg:p-6 lg:shadow-sm dark:lg:bg-gray-900">
                                 <SectionHeader
                                     eyebrow="Progress"
                                     title="Aktivitas Belajar"
@@ -747,9 +798,9 @@ export default function BerandaUser({
                                     actionLabel="Detail"
                                 />
 
-                                <div className="space-y-4">
-                                    <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-gray-800 dark:bg-gray-950/80">
-                                        <div className="grid grid-cols-3 gap-2 text-center">
+                                <div className="space-y-2 lg:space-y-4">
+                                    <div className="lg:rounded-2xl lg:border lg:border-slate-100 lg:bg-slate-50/70 lg:p-4 dark:lg:border-gray-800 dark:lg:bg-gray-950/80">
+                                        <div className="hidden grid-cols-3 gap-2 text-center lg:grid">
                                             <div className="rounded-xl bg-achievement-50 px-2 py-2.5 dark:bg-achievement-900/30">
                                                 <p className="text-xl font-semibold text-gray-900 dark:text-white">{user.xp || 0}</p>
                                                 <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400">XP</p>
@@ -763,7 +814,7 @@ export default function BerandaUser({
                                                 <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400">Log</p>
                                             </div>
                                         </div>
-                                        <Link href={route('user.leaderboard')} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 mt-3 inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-brand-500 hover:text-green-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                        <Link href={route('user.leaderboard')} className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-gray-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:bg-slate-100 fine-pointer:hover:border-brand-500 fine-pointer:hover:text-green-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 lg:mt-3 lg:min-h-10 lg:w-full lg:rounded-xl lg:py-2">
                                             Lihat peringkat liga <ArrowRightAltIcon sx={{ fontSize: 17 }} />
                                         </Link>
                                     </div>
@@ -806,7 +857,7 @@ export default function BerandaUser({
                     </div>
 
                     {/* Berita Terkini Jepang (Bawah Penuh & Simetris) */}
-                    <section className="mt-8 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8 dark:border-gray-800 dark:bg-gray-900">
+                    <section className="min-w-0 border-t border-slate-200 pt-2 dark:border-gray-800 lg:mt-8 lg:rounded-3xl lg:border lg:border-slate-200/80 lg:bg-white lg:p-8 lg:shadow-sm dark:lg:bg-gray-900">
                         <SectionHeader
                             eyebrow="Update"
                             title="Berita Terkini Jepang"
@@ -814,14 +865,14 @@ export default function BerandaUser({
                             actionLabel="Lihat semua berita"
                         />
 
-                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
                             {news && news.length > 0 ? news.slice(0, 4).map((item, index) => (
                                 <Link
                                     href={route('user.news.show', item.slug || item.id)}
                                     key={item.id || index}
-                                    className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300  hover:shadow-sm dark:border-gray-800 dark:bg-gray-950"
+                                    className="group grid h-full min-w-0 grid-cols-[64px_minmax(0,1fr)] items-center gap-2.5 overflow-hidden rounded-lg border border-slate-200/80 bg-white p-2.5 outline-none transition focus-visible:ring-2 focus-visible:ring-focus active:bg-emerald-50 dark:border-gray-800 dark:bg-gray-900 dark:active:bg-emerald-950 lg:flex lg:flex-col lg:items-stretch lg:gap-0 lg:rounded-2xl lg:p-0 lg:shadow-sm dark:lg:bg-gray-950"
                                 >
-                                    <div className="aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-gray-800">
+                                    <div className="size-16 overflow-hidden rounded-md bg-gray-100 dark:bg-gray-800 lg:aspect-[16/9] lg:h-auto lg:w-full lg:rounded-none">
                                         {item.thumbnail_url || item.cover_url ? (
                                             <img src={item.thumbnail_url || item.cover_url} alt={item.cover_image_alt || item.title} className="h-full w-full object-cover transition-transform duration-500 lg:group-hover:scale-105" />
                                         ) : (
@@ -830,28 +881,28 @@ export default function BerandaUser({
                                             </div>
                                         )}
                                     </div>
-                                    <div className="flex flex-grow flex-col p-4 sm:p-5">
+                                    <div className="flex min-w-0 flex-grow flex-col lg:p-5">
                                         {item.is_pinned && (
-                                            <div className="mb-2.5">
+                                            <div className="mb-1 lg:mb-2.5">
                                                 <span className="rounded-md bg-brand-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-green-700 dark:bg-[#12351f] dark:text-green-200">
-                                                    PIN Disematkan
+                                                    <span className="lg:hidden">Disematkan</span><span className="hidden lg:inline">PIN Disematkan</span>
                                                 </span>
                                             </div>
                                         )}
-                                        <div className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                                        <div className="mb-1 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 lg:mb-2.5">
                                             <span className="rounded-full bg-brand-50 px-2 py-0.5 font-bold text-brand-700 dark:bg-[#12351f] dark:text-green-200">{item.category?.replaceAll('-', ' ') || 'platform'}</span>
                                             <AccessTimeIcon sx={{ fontSize: 14 }} />
                                             {item.published_at
                                                 ? new Date(item.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
                                                 : 'TOKU-UP'}
                                         </div>
-                                        <h3 className="mb-2 text-base font-bold leading-snug text-gray-900 transition-colors sm:mb-2.5 lg:group-hover:text-green-700 dark:text-white lg:dark:group-hover:text-brand-400 line-clamp-2">
+                                        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-gray-900 transition-colors [overflow-wrap:anywhere] dark:text-white lg:mb-2.5 lg:text-base lg:font-bold lg:group-hover:text-green-700 lg:dark:group-hover:text-brand-400">
                                             {item.title}
                                         </h3>
-                                        <p className="mb-4 line-clamp-2 flex-grow text-sm font-normal leading-relaxed text-gray-600 dark:text-gray-300">
+                                        <p className="mb-4 hidden flex-grow text-sm font-normal leading-relaxed text-gray-600 dark:text-gray-300 lg:line-clamp-2">
                                             {item.excerpt || (item.body ? `${item.body.replace(/<[^>]*>/g, '').substring(0, 100)}...` : 'Baca update terbaru dari TOKU-UP.')}
                                         </p>
-                                        <div className="mt-auto flex items-center gap-1.5 text-xs font-semibold text-green-700 dark:text-green-300">
+                                        <div className="mt-auto hidden items-center gap-1.5 text-xs font-semibold text-green-700 dark:text-green-300 lg:flex">
                                             Baca selengkapnya
                                             <ArrowRightAltIcon sx={{ fontSize: 18 }} />
                                         </div>
