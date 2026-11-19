@@ -20,7 +20,7 @@ import Quiz from '@/Pages/User/Kuis/KerjakanKuis';
 import BuilderKuisKosakata from '@/Pages/Admin/Kuis/BuilderKuisKosakata';
 import ModuleDayDialog from '@/Components/Features/Admin/ModuleDayDialog';
 import ManajemenKelas from '@/Pages/Admin/ModulMateri/ManajemenKelas';
-import { DayDetailContent } from '@/Pages/User/Modul/DaftarModul';
+import { DayDetailContent, DuolingoPath } from '@/Pages/User/Modul/DaftarModul';
 import '/resources/css/app.css';
 const params = new URLSearchParams(location.search);
 const scenario = params.get('scenario') || 'canvas';
@@ -63,6 +63,7 @@ function Fixture() {
     const [width, setWidth] = React.useState(5);
     const [writingEnabled, setWritingEnabled] = React.useState(params.get('writing') !== 'off');
     const [dayOpen, setDayOpen] = React.useState(true);
+    const [daySelection, setDaySelection] = React.useState(null);
     const [day, setDay] = React.useState({ id: 881, day_number: 1, title: 'Day fixture', status: 'draft', handwriting_enabled: true });
     window.__setWritingPreference = setWritingEnabled;
     window.__openDay = () => setDayOpen(true);
@@ -85,6 +86,28 @@ function Fixture() {
                 day={{ id: 881, day_number: 1, title: 'Day fixture', status: 'active', grammar_lessons: lessons }} />
         </main>;
     }
+    if (scenario === 'student-day-progress') {
+        const days = [
+            {
+                id: 881, day_number: 1, title: 'Day fixture', status: 'active',
+                quiz_url: '/fixture/vocab/881', checkpoint_summary: { progress_status: 'passed', best_score: 86 },
+                grammar_lessons: Array.from({ length: 6 }, (_, index) => ({
+                    id: 300 + index, pattern: 'Pola ' + (index + 1),
+                    progress_status: index < 2 ? 'passed' : (index === 2 ? 'needs_retry' : 'not_started'),
+                    best_score: index < 2 ? 92 : (index === 2 ? 61 : null),
+                })),
+                dokkai_lessons: [{ id: 350, title: 'Bacaan fixture', progress_status: 'passed', done: true, best_score: 93 }],
+                mixed_quiz_summary: { progress_status: 'needs_retry', best_score: 55, locked: false },
+            },
+            { id: 882, day_number: 2, status: 'done' },
+            { id: 883, day_number: 3, status: 'locked' },
+            { id: 884, day_number: 4, status: 'active', flashcard_summary: { reviewed: 2, total: 5 } },
+        ];
+        return <main className="sm:pt-[55vh]">
+            <DuolingoPath week={{ week_number: 1, days }} selectedDayId={daySelection?.id} dayAnchorEl={daySelection?.anchor}
+                onDayToggle={(id, anchor) => setDaySelection(current => current?.id === id ? null : { id, anchor })} />
+        </main>;
+    }
     if (scenario === 'builder') return <BuilderKuisKosakata
         quiz={{ id: 8801, title: 'Writing fixture', passing_score: 70, time_limit: 0, handwriting_enabled: writingEnabled, day: { id: 881, day_number: 1, title: 'Day fixture', handwriting_enabled: writingEnabled } }}
         questions={[1, 2].map(id => ({ id, type: 'multiple_choice', question_text: 'Question '+id, options: ['Answer A','Answer B','Answer C','Answer D'], correct_answer: 'Answer A', points: 10 }))}
@@ -105,7 +128,7 @@ await createInertiaApp({
 });
 window.__ready = true;
 `;
-const roadmapDependencies = ['axios', '@mui/material/Dialog', '@mui/material/Popper', ...['AccountTree', 'EditOutlined', 'Search', 'AccessTime', 'AccessTimeRounded', 'ArrowForward', 'ArrowForwardRounded', 'BackspaceOutlined', 'CalendarMonth', 'ChevronLeft', 'ChevronRight', 'DescriptionOutlined', 'EditCalendar', 'ExpandMore', 'FindInPage', 'Groups', 'HighlightOff', 'Inventory2Outlined', 'LayersOutlined', 'Lock', 'LockOutlined', 'Quiz', 'QuizOutlined', 'Slideshow'].map(name => '@mui/icons-material/'+name)];
+const roadmapDependencies = ['axios', '@mui/material/Dialog', '@mui/material/Popper', '@mui/material/useMediaQuery', ...['AccountTree', 'EditOutlined', 'Search', 'AccessTime', 'AccessTimeRounded', 'ArrowForward', 'ArrowForwardRounded', 'BackspaceOutlined', 'CalendarMonth', 'ChevronLeft', 'ChevronRight', 'DescriptionOutlined', 'EditCalendar', 'ExpandMore', 'FindInPage', 'Groups', 'HighlightOff', 'Inventory2Outlined', 'LayersOutlined', 'Lock', 'LockOutlined', 'Quiz', 'QuizOutlined', 'Slideshow'].map(name => '@mui/icons-material/'+name)];
 const server = await createServer({ configFile: false, root, cacheDir: path.join(temp, 'vite'),
     optimizeDeps: { entries: [], include: ['react', 'react-dom', 'react-dom/client', '@inertiajs/react', 'kanji-recognizer', 'framer-motion', 'react-confetti', '@headlessui/react', '@mui/material/Tooltip', 'tiny-segmenter', ...['Add','ArrowBack','ArrowDownward','ArrowUpward','Assessment','AutoAwesome','AutoStories','BarChart','ChatBubbleOutlined','Check','CheckCircle','CheckCircleOutlineRounded','CheckCircleOutlined','Close','CloseRounded','ContentCopy','DarkMode','Dashboard','DeleteOutlineOutlined','DrawOutlined','EmojiEvents','ErrorOutlineOutlined','ErrorOutlineRounded','Explore','FactCheckOutlined','Favorite','FeedbackOutlined','FlagOutlined','FormatListBulleted','GraphicEq','HelpOutlineOutlined','ImageOutlined','InfoOutlined','KeyboardArrowDown','KeyboardArrowRight','LibraryBooks','LightMode','LightbulbOutlined','LogoutOutlined','Menu','MenuBook','MicNoneOutlined','MonitorHeart','NotificationsOutlined','OpenInNew','People','PlayArrow','PlayArrowRounded','RadioButtonUnchecked','ReceiptLongOutlined','Refresh','Replay','RestartAltRounded','Restore','SaveOutlined','School','SearchRounded','Settings','SettingsOutlined','Shield','Shuffle','SkipNextRounded','Star','StarBorder','StyleOutlined','TimerOutlined','TrendingUp','UndoRounded','UploadFile','VideoCameraFront','Visibility','VisibilityOutlined','VolumeOff','VolumeUp','WarningAmber','WorkspacePremium'].map(name => '@mui/icons-material/'+name)] },
     resolve: { alias: { '@': path.join(root, 'resources/js') } }, plugins: [react(), {
@@ -338,6 +361,30 @@ try {
         await waitFor('window.__writing.completions[0]===292 && !document.querySelector("#day-materials-881")');
         await evaluate('window.__openDay()');
         await waitFor(toggle+'?.getAttribute("aria-expanded")==="false"');
+    }
+    for (const [width,height] of [[320,568],[1024,520]]) {
+        await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<640});
+        await open('student-day-progress');
+        const node = 'document.querySelector(\'button[aria-label^="Hari 1:"]\')';
+        const popup = 'document.getElementById("day-materials-881")';
+        const activities = popup+'.querySelector("[role=region]")';
+        await waitFor(node+'?.querySelector(\'circle[stroke-dasharray="43 100"]\')');
+        assert(await evaluate('document.querySelector(\'button[aria-label^="Hari 2:"] circle[stroke-dasharray="100 100"]\') !== null'),'Completed Day ring is full');
+        assert(await evaluate('document.querySelector(\'button[aria-label^="Hari 3:"]\').disabled && !document.querySelector(\'button[aria-label^="Hari 3:"] circle[stroke-dasharray]\')'),'Locked Day stays locked with an empty ring');
+        assert(await evaluate('document.querySelector(\'button[aria-label^="Hari 4:"] circle[stroke-dasharray="40 100"]\') !== null'),'Review-only Day uses flashcard progress');
+        await evaluate(node+'.click()');
+        await waitFor(popup+'?.querySelector("button[aria-controls]")');
+        await evaluate(popup+'.querySelector("button[aria-controls]").click()');
+        await waitFor(activities+'.scrollHeight > '+activities+'.clientHeight');
+        assert.deepEqual(await evaluate('Array.from('+activities+'.querySelectorAll(\'span[aria-hidden="true"] > span[style^="width:"]\')).map(bar => bar.style.width)'), ['86%','33%','92%','92%','61%','0%','0%','0%','93%','55%']);
+        await waitFor(popup+'.getBoundingClientRect().top >= 0 && '+popup+'.getBoundingClientRect().bottom <= innerHeight + 1');
+        assert.equal(await evaluate('document.querySelectorAll("#day-materials-881").length'),1,'Only the viewport-appropriate popup mounts');
+        const close = popup+'.querySelector(\'button[aria-label="Tutup detail Hari"]\')';
+        const headerTop = await evaluate(close+'.getBoundingClientRect().top');
+        await evaluate(activities+'.scrollTop = '+activities+'.scrollHeight');
+        await waitFor(activities+'.scrollTop > 0');
+        assert.equal(await evaluate(close+'.getBoundingClientRect().top'),headerTop,'Scrolling activities does not move the header');
+        assert(await evaluate(`(() => { const scroller = ${activities}; const last = scroller.lastElementChild.getBoundingClientRect(); const box = scroller.getBoundingClientRect(); return last.top >= box.top && last.bottom <= Math.min(innerHeight, box.bottom) + 1; })()`),'Mixed Quiz remains reachable below expanded Grammar');
     }
     await open('day-create');
     await waitFor('document.querySelector("input[aria-label^=Lanjut]")');

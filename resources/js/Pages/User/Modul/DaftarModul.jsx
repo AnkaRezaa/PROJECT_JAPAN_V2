@@ -9,6 +9,7 @@ import { playSoundEffect } from '@/Components/UI/SoundEffects';
 import { useScrollLock } from '@/lib/scrollLock';
 import GrammarQuizPreviewDialog from '@/Components/Features/GrammarQuiz/GrammarQuizPreviewDialog';
 import Popper from '@mui/material/Popper';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import LiveSessionDialog from '@/Components/Features/LiveClass/LiveSessionDialog';
 import { examCategoryLabel } from '@/Components/Features/ExamPortal/ExamPortalUI';
 
@@ -543,9 +544,50 @@ function quizItem(day, available) {
                 ? 'done'
                 : 'active',
         progressStatus: checkpoint.progress_status,
+        bestScore: checkpoint.best_score,
+        hasQuiz: true,
         lockReason: checkpoint.lock_reason || day.quiz_locked_reason || day.lock_reason,
         href: day.quiz_url,
     };
+}
+
+function progressPercent(value) {
+    return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+}
+
+function dayCompletionPercent(day) {
+    if (day.status === 'done') return 100;
+    if (day.status !== 'active') return 0;
+
+    if (day.checkpoint_summary) {
+        const required = [day.checkpoint_summary, ...(day.grammar_lessons || [])];
+        return progressPercent(100 * required.filter((quiz) => quiz.progress_status === 'passed').length / required.length);
+    }
+
+    const { total, reviewed } = day.flashcard_summary || {};
+    return total > 0 ? progressPercent(100 * reviewed / total) : 0;
+}
+
+const activityProgressColors = {
+    vocabulary: 'bg-violet-600 dark:bg-violet-400',
+    grammar: 'bg-sky-600 dark:bg-sky-400',
+    dokkai: 'bg-emerald-600 dark:bg-emerald-400',
+    mixed: 'bg-amber-600 dark:bg-amber-400',
+};
+
+function ActivityProgress({ value, activity, label }) {
+    const percent = progressPercent(value);
+
+    return (
+        <span className="mt-1.5 block">
+            <span className="block text-xs font-medium text-gray-700 dark:text-gray-200">
+                {label ?? (value == null ? 'Belum ada nilai' : `Nilai terbaik: ${percent}%`)}
+            </span>
+            <span aria-hidden="true" className="mt-1 block h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                <span className={`block h-full rounded-full ${activityProgressColors[activity]}`} style={{ width: `${percent}%` }} />
+            </span>
+        </span>
+    );
 }
 
 function weeklyMainItems(week) {
@@ -614,6 +656,7 @@ function weeklyMainItems(week) {
             title: day.title || `Materi Hari ${day.day_number}`,
             detail: null,
             status: day.status,
+            progress: dayCompletionPercent(day),
             lockReason: day.lock_reason,
             day,
             mainPosition: items.length % 2 === 0 ? 'left' : 'right',
@@ -668,7 +711,7 @@ function PathNodeCircle({ item, selected = false, size = 68 }) {
                         : 'none',
             }}
         >
-            {active && (
+            {active && item.kind !== 'day' && (
                 <motion.span
                     className="absolute -inset-2 rounded-full border-2"
                     style={{ borderColor: `${colors.color}55` }}
@@ -676,6 +719,15 @@ function PathNodeCircle({ item, selected = false, size = 68 }) {
                     transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
                     aria-hidden="true"
                 />
+            )}
+            {item.kind === 'day' && (
+                <svg aria-hidden="true" viewBox="0 0 64 64" className="pointer-events-none absolute inset-0 h-full w-full -rotate-90 fill-none">
+                    <circle cx="32" cy="32" r="29.5" strokeWidth="3" className={locked ? 'stroke-gray-400/60 dark:stroke-gray-500' : 'stroke-black/25'} />
+                    {item.progress > 0 && (
+                        <circle cx="32" cy="32" r="29.5" pathLength="100" strokeWidth="3" strokeLinecap="round"
+                            strokeDasharray={`${item.progress} 100`} className="stroke-white" />
+                    )}
+                </svg>
             )}
             {iconFor(item, size <= 48 ? 23 : 32)}
         </span>
@@ -716,6 +768,7 @@ function PathNode({ item, selected, onDayToggle, onLiveOpen }) {
                 type="button"
                 onClick={(event) => !locked && onDayToggle(item.dayId, event.currentTarget)}
                 disabled={locked}
+                aria-label={`Hari ${item.dayNumber}: ${itemStatusLabel(item)}, progres ${item.progress}%`}
                 aria-expanded={selected}
                 aria-controls={`day-materials-${item.dayId}`}
                 aria-current={item.status === 'active' ? 'step' : undefined}
@@ -928,7 +981,7 @@ function SoumatomeNodeBadge({ type = 'kanji', levelOverride = null, locked = fal
     );
 }
 
-function grammarProgressLabel(lesson) {
+function quizProgressLabel(lesson) {
     if (lesson.progress_status === 'passed') return 'Selesai';
     if (lesson.progress_status === 'needs_retry') return 'Coba lagi';
     return 'Belum dimulai';
@@ -990,11 +1043,12 @@ function DayGrammarLessons({ lessons, recommendedId, onClose, onOpenGrammarQuiz,
                     {singleLesson ? (
                         <>
                             <span className="block break-words text-sm font-semibold text-sky-900 dark:text-sky-100">{singleLesson.pattern}</span>
-                            <span className="block text-xs text-gray-600 dark:text-gray-300">{grammarProgressLabel(singleLesson)}</span>
+                            <span className="block text-xs text-gray-600 dark:text-gray-300">{quizProgressLabel(singleLesson)}</span>
                             {renderFeedback(singleLesson)}
+                            <ActivityProgress activity="grammar" value={singleLesson.best_score} />
                         </>
                     ) : (
-                        <span className="block text-xs font-semibold text-gray-600 dark:text-gray-300">{completedCount}/{lessons.length} selesai</span>
+                        <ActivityProgress activity="grammar" value={100 * completedCount / lessons.length} label={`${completedCount}/${lessons.length} selesai`} />
                     )}
                 </span>
                 {singleLesson ? (
@@ -1017,8 +1071,9 @@ function DayGrammarLessons({ lessons, recommendedId, onClose, onOpenGrammarQuiz,
                                     <span className="block break-words text-sm font-semibold text-gray-900 dark:text-white">{lesson.pattern}</span>
                                     {lesson.title && lesson.title !== lesson.pattern && <span className="block break-words text-xs text-gray-600 dark:text-gray-300">{lesson.title}</span>}
                                     {renderFeedback(lesson)}
+                                    <ActivityProgress activity="grammar" value={lesson.best_score} />
                                 </span>
-                                <span className="shrink-0 text-xs font-semibold text-gray-600 dark:text-gray-300">{grammarProgressLabel(lesson)}</span>
+                                <span className="shrink-0 text-xs font-semibold text-gray-600 dark:text-gray-300">{quizProgressLabel(lesson)}</span>
                                 <ChevronRightIcon className="shrink-0 text-sky-800 dark:text-sky-200" sx={{ fontSize: 18 }} />
                             </button>
                         </li>
@@ -1043,16 +1098,16 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
     return (
         <div
             id={`day-materials-${day.id}`}
-            className={`overflow-hidden bg-white shadow-2xl dark:bg-gray-900 ${
+            className={`flex min-h-0 flex-col overflow-hidden bg-white shadow-2xl dark:bg-gray-900 ${
                 mobile
-                    ? 'rounded-t-3xl border-t border-x border-[#dce8df] pb-[max(20px,env(safe-area-inset-bottom))] dark:border-gray-700'
-                    : 'rounded-2xl border border-[#dce8df] shadow-[0_18px_50px_-24px_rgba(45,55,66,0.32)] dark:border-gray-700'
+                    ? 'max-h-[85dvh] rounded-t-3xl border-t border-x border-[#dce8df] pb-[max(12px,env(safe-area-inset-bottom))] dark:border-gray-700'
+                    : 'max-h-[min(36rem,calc(100dvh-24px))] rounded-2xl border border-[#dce8df] shadow-[0_18px_50px_-24px_rgba(45,55,66,0.32)] dark:border-gray-700'
             }`}
         >
             {mobile && (
                 <div
                     onPointerDown={(e) => dragControls?.start(e)}
-                    className={`flex cursor-grab touch-none justify-center pt-3 pb-1.5 active:cursor-grabbing ${
+                    className={`flex shrink-0 cursor-grab touch-none justify-center pt-3 pb-1.5 active:cursor-grabbing ${
                         completed
                             ? 'bg-emerald-50 dark:bg-emerald-950/30'
                             : 'bg-[#f1fbe9] dark:bg-green-950/25'
@@ -1066,7 +1121,7 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
                     if (e.target.closest('button')) return;
                     dragControls?.start(e);
                 }}
-                className={`flex items-start justify-between gap-3 border-b px-4 py-2.5 sm:px-6 sm:py-4 ${mobile ? 'touch-none cursor-grab active:cursor-grabbing' : ''} ${
+                className={`flex shrink-0 items-start justify-between gap-3 border-b px-4 py-2.5 sm:px-6 sm:py-4 ${mobile ? 'touch-none cursor-grab active:cursor-grabbing' : ''} ${
                 completed
                     ? 'border-emerald-200 bg-emerald-50 text-[#2d3742] dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-white'
                     : 'border-[#d7edc8] bg-[#f1fbe9] text-[#2d3742] dark:border-green-900 dark:bg-green-950/25 dark:text-white'
@@ -1103,7 +1158,8 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
                 </button>
             </div>
 
-            <div className={`space-y-2 sm:space-y-2.5 bg-[#f8faf8] p-2.5 min-[380px]:p-3 sm:p-4 dark:bg-gray-900 overscroll-contain ${mobile ? 'max-h-[58dvh] overflow-y-auto' : ''}`}>
+            <div role="region" aria-label="Aktivitas Hari" tabIndex={0}
+                className="min-h-0 flex-1 touch-pan-y space-y-2 overflow-y-auto overscroll-contain bg-[#f8faf8] p-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400 dark:bg-gray-900 min-[380px]:p-3 sm:space-y-2.5 sm:p-4">
                 {day.exam_summary && (() => {
                     const exam = day.exam_summary;
                     const unlocked = !exam.locked && Boolean(exam.url);
@@ -1152,6 +1208,7 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
                                         {item.lockReason || 'Materi belum tersedia.'}
                                     </span>
                                 )}
+                                {item.hasQuiz && <ActivityProgress activity="vocabulary" value={item.bestScore} />}
                             </span>
                             <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
                                 locked
@@ -1222,7 +1279,7 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
                                 <span className="flex flex-wrap items-center gap-1.5">
                                     <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-950 dark:bg-emerald-800 dark:text-emerald-50">Dokkai</span>
                                     {dokkai.jlpt_level && <span className="rounded-full border border-gray-300 px-2 py-0.5 text-[10px] font-bold text-gray-700 dark:border-gray-600 dark:text-gray-200">{dokkai.jlpt_level}</span>}
-                                    {isDone && <span className="rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-[10px] font-black dark:bg-emerald-950 dark:text-emerald-300">Selesai ({dokkai.best_score}%)</span>}
+                                    <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">{quizProgressLabel(dokkai)}</span>
                                 </span>
                                 <span className="mt-1 block line-clamp-2 break-words text-xs font-extrabold leading-tight text-[#2d3742] dark:text-white min-[380px]:text-[13px] sm:text-sm" title={dokkai.title}>
                                     {dokkai.title}
@@ -1236,6 +1293,7 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
                                     {Number(dokkai.estimated_reading_time) > 0 && <span className="inline-flex items-center gap-1"><AccessTimeIcon sx={{ fontSize: 14 }} />{dokkai.estimated_reading_time} menit baca</span>}
                                     <span className="font-bold text-amber-600 dark:text-amber-400">+{dokkai.xp_reward || 80} XP</span>
                                 </span>
+                                <ActivityProgress activity="dokkai" value={dokkai.best_score} />
                             </span>
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-900 transition group-hover:bg-emerald-200 dark:bg-emerald-900 dark:text-emerald-100">
                                 <ChevronRightIcon sx={{ fontSize: 24 }} />
@@ -1271,11 +1329,6 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
                                     <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-950 dark:bg-amber-800 dark:text-amber-50">Kuis Campuran</span>
                                     <span className="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.2 text-[9px] font-black text-amber-800 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-200">10 Soal</span>
                                     <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">{mixedStatusText}</span>
-                                    {isMixedDone && mixedSummary?.best_score != null && (
-                                        <span className="rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-[10px] font-black dark:bg-amber-950 dark:text-amber-300">
-                                            ({mixedSummary.best_score}%)
-                                        </span>
-                                    )}
                                 </span>
                                 <span className="mt-1 block line-clamp-2 break-words text-xs font-extrabold leading-tight text-[#2d3742] dark:text-white min-[380px]:text-[13px] sm:text-sm" title={isMixedDone ? 'Ulangi Kuis Campuran' : `Evaluasi Campuran Hari ${day.day_number}`}>
                                     {isMixedDone ? 'Ulangi Kuis Campuran' : `Evaluasi Campuran Hari ${day.day_number}`}
@@ -1290,6 +1343,7 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
                                         {mixedLockReason}
                                     </span>
                                 )}
+                                {mixedSummary && <ActivityProgress activity="mixed" value={mixedSummary.best_score} />}
                             </span>
                             <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
                                 isMixedLocked
@@ -1337,19 +1391,31 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
 }
 
 function DesktopDayPopover({ day, anchorEl, onClose, onOpenGrammarQuiz, onOpenDokkai }) {
+    const popperRef = useRef(null);
+    const [panel, setPanel] = useState(null);
+
+    useEffect(() => {
+        if (!panel || typeof ResizeObserver === 'undefined') return;
+        const observer = new ResizeObserver(() => popperRef.current?.update());
+        observer.observe(panel);
+        return () => observer.disconnect();
+    }, [panel]);
+
     return (
         <Popper
             open={Boolean(anchorEl)}
             anchorEl={anchorEl}
             placement="right-start"
+            popperRef={popperRef}
+            popperOptions={{ strategy: 'fixed' }}
             modifiers={[
                 { name: 'offset', options: { offset: [0, 14] } },
-                { name: 'flip', options: { fallbackPlacements: ['left-start', 'bottom'] } },
-                { name: 'preventOverflow', options: { padding: 12 } },
+                { name: 'flip', options: { fallbackPlacements: ['left-start', 'bottom', 'top'], padding: 12 } },
+                { name: 'preventOverflow', options: { padding: 12, altAxis: true, tether: false } },
             ]}
             sx={{ zIndex: 1400 }}
         >
-            <div className="hidden w-[min(420px,calc(100vw-24px))] max-h-[80dvh] overflow-y-auto sm:block">
+            <div ref={setPanel} className="w-[min(420px,calc(100vw-24px))]">
                 <DayDetailContent day={day} onClose={onClose} onOpenGrammarQuiz={onOpenGrammarQuiz} onOpenDokkai={onOpenDokkai} />
             </div>
         </Popper>
@@ -1480,8 +1546,9 @@ function PathConnector({ items }) {
     );
 }
 
-function DuolingoPath({ week, selectedDayId, dayAnchorEl, onDayToggle, onOpenGrammarQuiz, onOpenDokkai }) {
+export function DuolingoPath({ week, selectedDayId, dayAnchorEl, onDayToggle, onOpenGrammarQuiz, onOpenDokkai }) {
     const items = weeklyMainItems(week);
+    const desktop = useMediaQuery('(min-width: 640px)', { noSsr: true });
     const [liveItemKey, setLiveItemKey] = useState(null);
     const selectedLive = items.find((item) => item.kind === 'live' && item.key === liveItemKey);
     const selectedDay = items.find((item) => item.dayId === selectedDayId) || null;
@@ -1537,7 +1604,7 @@ function DuolingoPath({ week, selectedDayId, dayAnchorEl, onDayToggle, onOpenGra
             })}
             {selectedLive && <LiveSessionDialog open onClose={() => setLiveItemKey(null)} item={selectedLive} />}
 
-            {selectedDay && dayAnchorEl && (
+            {desktop && selectedDay && dayAnchorEl && (
                 <DesktopDayPopover
                     day={selectedDay.day}
                     anchorEl={dayAnchorEl}
@@ -1548,7 +1615,7 @@ function DuolingoPath({ week, selectedDayId, dayAnchorEl, onDayToggle, onOpenGra
             )}
 
             <AnimatePresence initial={false}>
-                {selectedDay && (
+                {!desktop && selectedDay && (
                     <MobileDaySheet
                         key={`sheet-${selectedDay.dayId}`}
                         day={selectedDay.day}
@@ -2367,7 +2434,10 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                     open={Boolean(activeGrammarQuiz)}
                     quiz={activeGrammarQuiz}
                     persist
-                    onClose={() => setActiveGrammarQuiz(null)}
+                    onClose={() => {
+                        setActiveGrammarQuiz(null);
+                        router.reload({ only: ['weeks', 'auth', 'progress'] });
+                    }}
                 />
             </div>
         </AuthenticatedLayout>
