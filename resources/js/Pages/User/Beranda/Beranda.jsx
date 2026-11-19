@@ -11,6 +11,8 @@ import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import PauseIcon from '@mui/icons-material/Pause';
 import QuizIcon from '@mui/icons-material/Quiz';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SchoolIcon from '@mui/icons-material/School';
@@ -26,13 +28,14 @@ const heroSlides = [
     { src: '/images/dashboard/arashiyama.jpg', label: 'Hutan bambu Arashiyama' },
 ];
 
-function HeroCarousel({ children }) {
-    const [active, setActive] = useState(0);
+function HeroCarousel({ children, compact = false }) {
+    const firstSlide = compact ? 2 : 0;
+    const [active, setActive] = useState(firstSlide);
     const [paused, setPaused] = useState(false);
     const [focused, setFocused] = useState(false);
     const [reducedMotion, setReducedMotion] = useState(true);
     const [visible, setVisible] = useState(true);
-    const [ready, setReady] = useState([0]);
+    const [ready, setReady] = useState([firstSlide]);
 
     useEffect(() => {
         const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -57,27 +60,35 @@ function HeroCarousel({ children }) {
     }, [paused, focused, reducedMotion, visible, ready]);
 
     return (
-        <div className="relative mx-auto flex min-h-[520px] w-[97%] items-center justify-center overflow-hidden py-20"
+        <div className={compact ? 'relative isolate z-20 mb-3 bg-slate-900' : 'relative mx-auto flex min-h-[520px] w-[97%] items-center justify-center overflow-hidden py-20'}
             onFocusCapture={() => setFocused(true)}
             onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
             <div aria-hidden="true" className="pointer-events-none absolute inset-0">
                 {heroSlides.map((slide, index) => (
-                    <img key={slide.src} src={slide.src} alt="" loading={index === 0 ? 'eager' : 'lazy'}
-                        fetchpriority={index === 0 ? 'high' : 'low'} decoding="async"
+                    <img key={slide.src} src={slide.src} alt="" loading={index === firstSlide ? 'eager' : 'lazy'}
+                        fetchpriority={index === firstSlide ? 'high' : 'low'} decoding="async"
                         onLoad={() => setReady(current => current.includes(index) ? current : [...current, index].sort())}
                         onError={() => { setReady(current => current.filter(item => item !== index)); setActive(current => current === index ? 0 : current); }}
                         className={`absolute inset-0 h-full w-full object-cover object-[center_35%] transition-opacity duration-1000 motion-reduce:transition-none ${active === index ? 'opacity-100' : 'opacity-0'}`} />
                 ))}
+                {compact && <div className="absolute inset-0 bg-slate-950/60" />}
             </div>
             {children}
-            <details className="absolute bottom-11 left-4 z-20 text-xs text-gray-700 sm:left-6 dark:text-gray-200">
-                <summary className="cursor-pointer rounded-full bg-white/95 px-3 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:bg-gray-900/95">Kredit foto</summary>
-                <div className="absolute bottom-full mb-2 w-64 rounded-xl border border-gray-200 bg-white p-3 leading-relaxed shadow-sm dark:border-gray-700 dark:bg-gray-900">
+            <details className={`absolute z-20 text-xs text-gray-700 dark:text-gray-200 ${compact ? 'right-3 top-2 min-[380px]:right-4 sm:right-6' : 'bottom-11 left-4 sm:left-6'}`}>
+                <summary className={`cursor-pointer focus-visible:outline-none focus-visible:ring-2 ${compact ? 'flex size-11 list-none items-center justify-center rounded-lg text-white focus-visible:ring-white [&::-webkit-details-marker]:hidden' : 'rounded-full bg-white/95 px-3 py-3 focus-visible:ring-blue-600 dark:bg-gray-900/95'}`}>
+                    {compact ? <><InfoOutlinedIcon fontSize="small" aria-hidden="true" /><span className="sr-only">Kredit foto</span></> : 'Kredit foto'}
+                </summary>
+                <div className={`absolute w-64 rounded-lg border border-gray-200 bg-white p-3 leading-relaxed shadow-sm dark:border-gray-700 dark:bg-gray-900 ${compact ? 'right-0 top-full' : 'bottom-full mb-2'}`}>
                     Kiyomizu-dera: <a className="underline" href="https://commons.wikimedia.org/wiki/File:JAP_Kyoto_Kiyomizu-dera.jpg" target="_blank" rel="noopener noreferrer">Grueslayer @Wikipedia</a>, <a className="underline" href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>. Foto diperkecil dan ditampilkan dengan crop serta overlay.
                     <br />Arashiyama: Erol Ahmed, CC0.
                 </div>
             </details>
-            <div role="group" aria-label="Pilihan latar Jepang" className="absolute bottom-11 right-4 z-20 flex items-center gap-1 rounded-full border border-gray-200 bg-white/95 px-2 shadow-sm sm:right-6 dark:border-gray-700 dark:bg-gray-900/95">
+            {compact && !reducedMotion && <button type="button" aria-label={paused ? 'Putar pergantian latar' : 'Jeda pergantian latar'}
+                onClick={() => setPaused(current => !current)}
+                className="absolute right-14 top-2 z-20 inline-flex size-11 items-center justify-center rounded-lg text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white active:bg-black/30 min-[380px]:right-[60px] sm:right-[68px]">
+                {paused ? <PlayArrowIcon fontSize="small" aria-hidden="true" /> : <PauseIcon fontSize="small" aria-hidden="true" />}
+            </button>}
+            {!compact && <div role="group" aria-label="Pilihan latar Jepang" className="absolute bottom-11 right-4 z-20 flex items-center gap-1 rounded-full border border-gray-200 bg-white/95 px-2 shadow-sm sm:right-6 dark:border-gray-700 dark:bg-gray-900/95">
                 {heroSlides.map((slide, index) => (
                     <button key={slide.src} type="button" disabled={!ready.includes(index)}
                         aria-label={`Tampilkan ${slide.label}`} aria-pressed={active === index}
@@ -91,7 +102,7 @@ function HeroCarousel({ children }) {
                     className="min-h-11 rounded-full px-3 text-xs font-semibold text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-gray-200">
                     {paused ? 'Putar' : 'Jeda'}
                 </button>}
-            </div>
+            </div>}
         </div>
     );
 }
@@ -303,26 +314,26 @@ export default function BerandaUser({
                 <div className="pointer-events-none absolute left-8 top-[560px] hidden text-[11rem] font-black leading-none text-brand-900/[0.04] dark:text-white/[0.035] lg:block">学</div>
                 <div className="pointer-events-none absolute right-10 top-[860px] hidden text-[10rem] font-black leading-none text-amber-900/[0.05] dark:text-white/[0.03] lg:block">語</div>
 
-                {!showPhotoCarousel && <header className="mx-auto max-w-7xl px-3 pb-3 pt-4 min-[380px]:px-4 sm:px-6">
-                    <h1 className="text-xl font-semibold text-gray-950 dark:text-white">Beranda</h1>
-                    <dl className="mt-3 grid grid-cols-3 divide-x divide-slate-200 border-y border-slate-200 py-2.5 dark:divide-gray-800 dark:border-gray-800">
+                {!showPhotoCarousel && <HeroCarousel compact><header className="relative mx-auto max-w-7xl px-3 pb-3 pt-4 text-white min-[380px]:px-4 sm:px-6">
+                    <h1 className="pr-24 text-xl font-semibold">Beranda</h1>
+                    <dl className="mt-3 grid grid-cols-3 divide-x divide-white/30 border-y border-white/30 py-2.5">
                         <div className="min-w-0 pr-2">
-                            <dt className="text-xs text-gray-600 dark:text-gray-400">Lv.{user.level || 1}</dt>
-                            <dd className="text-sm font-semibold tabular-nums text-gray-900 [overflow-wrap:anywhere] dark:text-white">{user.xp || 0} XP</dd>
+                            <dt className="text-xs text-white/90">Lv.{user.level || 1}</dt>
+                            <dd className="text-sm font-semibold tabular-nums [overflow-wrap:anywhere]">{user.xp || 0} XP</dd>
                         </div>
                         <div className="min-w-0 px-2.5">
-                            <dt className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400"><HitodamaIcon className="size-3 shrink-0 text-orange-600" aria-hidden="true" /> Streak</dt>
-                            <dd className="text-sm font-semibold tabular-nums text-gray-900 [overflow-wrap:anywhere] dark:text-white">{user.streak_count || 0} hari</dd>
+                            <dt className="flex items-center gap-1 text-xs text-white/90"><HitodamaIcon className="size-3 shrink-0 text-orange-300" aria-hidden="true" /> Streak</dt>
+                            <dd className="text-sm font-semibold tabular-nums [overflow-wrap:anywhere]">{user.streak_count || 0} hari</dd>
                         </div>
                         <div className="min-w-0 pl-2.5">
-                            <dt className="text-xs text-gray-600 dark:text-gray-400">Akses</dt>
-                            <dd className={`text-sm font-semibold ${isPremium ? 'text-amber-800 dark:text-amber-300' : 'text-gray-900 dark:text-white'}`}>{isPremium ? 'Premium' : 'Gratis'}</dd>
+                            <dt className="text-xs text-white/90">Akses</dt>
+                            <dd className={`text-sm font-semibold ${isPremium ? 'text-amber-200' : ''}`}>{isPremium ? 'Premium' : 'Gratis'}</dd>
                         </div>
                     </dl>
                     {isPremium && activeSubscription && (
-                        <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">Premium aktif sampai {new Date(activeSubscription.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                        <p className="mt-2 text-xs text-white/90">Premium aktif sampai {new Date(activeSubscription.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                     )}
-                </header>}
+                </header></HeroCarousel>}
 
                 {showPhotoCarousel && <HeroCarousel>
                     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(3,7,18,0.45)_0%,rgba(3,7,18,0.28)_58%,rgba(247,250,248,0.20)_76%,#F7FAF8_100%)] transition-colors duration-300 dark:bg-[linear-gradient(180deg,rgba(3,7,18,0.45)_0%,rgba(3,7,18,0.28)_58%,rgba(3,7,18,0.45)_80%,#030712_100%)]" />
