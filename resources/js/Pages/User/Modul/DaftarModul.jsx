@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { AnimatePresence, MotionConfig, motion, useDragControls } from 'framer-motion';
@@ -928,31 +928,117 @@ function SoumatomeNodeBadge({ type = 'kanji', levelOverride = null, locked = fal
     );
 }
 
-export function DayDetailContent({ day, onClose, mobile = false, dragControls = null, onOpenGrammarQuiz = null, dokkaiPreview = null, onRetryDokkai = null, onOpenDokkai = null }) {
-    const items = dayChildItems(day);
-    const dokkaiQuiz = dokkaiPreview?.payload?.quiz;
-    const completed = day.status === 'done';
+function grammarProgressLabel(lesson) {
+    if (lesson.progress_status === 'passed') return 'Selesai';
+    if (lesson.progress_status === 'needs_retry') return 'Coba lagi';
+    return 'Belum dimulai';
+}
+
+function DayGrammarLessons({ lessons, recommendedId, onClose, onOpenGrammarQuiz, index }) {
+    const [expanded, setExpanded] = useState(false);
     const [loadingGrammarId, setLoadingGrammarId] = useState(null);
     const [grammarErrorId, setGrammarErrorId] = useState(null);
-    const recommendedId = ['active', 'done'].includes(day.status)
-        ? items.find((item) => item.status === 'active' && item.progressStatus !== 'passed')?.key
-            || (day.grammar_lessons || []).find((lesson) => lesson.progress_status !== 'passed')?.id
-        : null;
+    const pendingRequest = useRef(null);
+    const listId = useId();
+    const singleLesson = lessons.length === 1 ? lessons[0] : null;
+    const completedCount = lessons.filter((lesson) => lesson.progress_status === 'passed').length;
+    const loading = loadingGrammarId !== null;
+
+    useEffect(() => () => pendingRequest.current?.abort(), []);
+
     const openGrammar = async (quizId) => {
+        if (pendingRequest.current) return;
+        const request = new AbortController();
+        pendingRequest.current = request;
         setLoadingGrammarId(quizId);
         setGrammarErrorId(null);
         try {
-            const { data } = await window.axios.get(`/user/grammar-quizzes/${quizId}`);
-            if (onOpenGrammarQuiz) {
+            const { data } = await window.axios.get(`/user/grammar-quizzes/${quizId}`, { signal: request.signal });
+            if (!request.signal.aborted && onOpenGrammarQuiz) {
                 onClose();
                 onOpenGrammarQuiz(data.lesson);
             }
         } catch {
-            setGrammarErrorId(quizId);
+            if (!request.signal.aborted) setGrammarErrorId(quizId);
         } finally {
-            setLoadingGrammarId(null);
+            pendingRequest.current = null;
+            if (!request.signal.aborted) setLoadingGrammarId(null);
         }
     };
+
+    const renderFeedback = (lesson) => (
+        <>
+            {lesson.id === recommendedId && <span className="block text-xs font-semibold text-sky-800 dark:text-sky-200">Lanjutkan berikutnya</span>}
+            {lesson.id === loadingGrammarId && <span role="status" className="block text-xs text-gray-600 dark:text-gray-300">Memuat kuis...</span>}
+            {lesson.id === grammarErrorId && <span role="alert" className="block text-xs font-semibold text-red-700 dark:text-red-300">Gagal memuat kuis. Coba lagi.</span>}
+        </>
+    );
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }}>
+            <button
+                type="button"
+                aria-expanded={singleLesson ? undefined : expanded}
+                aria-controls={singleLesson ? undefined : listId}
+                disabled={loading}
+                onClick={() => singleLesson ? openGrammar(singleLesson.id) : setExpanded((current) => !current)}
+                className="flex min-h-[68px] w-full items-center gap-3 rounded-lg border border-sky-200 bg-white p-2.5 text-left transition-colors hover:border-sky-300 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:opacity-75 dark:border-sky-900/70 dark:bg-gray-800 dark:hover:bg-sky-950/30 sm:px-4"
+            >
+                <span aria-hidden="true" className="shrink-0"><SoumatomeNodeBadge type="bunpo" /></span>
+                <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold text-gray-900 dark:text-white">Grammar</span>
+                    {singleLesson ? (
+                        <>
+                            <span className="block break-words text-sm font-semibold text-sky-900 dark:text-sky-100">{singleLesson.pattern}</span>
+                            <span className="block text-xs text-gray-600 dark:text-gray-300">{grammarProgressLabel(singleLesson)}</span>
+                            {renderFeedback(singleLesson)}
+                        </>
+                    ) : (
+                        <span className="block text-xs font-semibold text-gray-600 dark:text-gray-300">{completedCount}/{lessons.length} selesai</span>
+                    )}
+                </span>
+                {singleLesson ? (
+                    <ChevronRightIcon className="shrink-0 text-sky-800 dark:text-sky-200" />
+                ) : (
+                    <ExpandMoreIcon className={`shrink-0 text-sky-800 transition-transform dark:text-sky-200 ${expanded ? 'rotate-180' : ''}`} />
+                )}
+            </button>
+            {!singleLesson && (
+                <ul id={listId} hidden={!expanded} className="mt-1 divide-y divide-sky-100 border-l border-sky-200 pl-2 dark:divide-sky-900/60 dark:border-sky-900">
+                    {lessons.map((lesson) => (
+                        <li key={lesson.id}>
+                            <button
+                                type="button"
+                                disabled={loading}
+                                onClick={() => openGrammar(lesson.id)}
+                                className="flex min-h-11 w-full items-center gap-2 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 disabled:opacity-75 dark:hover:bg-sky-950/30"
+                            >
+                                <span className="min-w-0 flex-1">
+                                    <span className="block break-words text-sm font-semibold text-gray-900 dark:text-white">{lesson.pattern}</span>
+                                    {lesson.title && lesson.title !== lesson.pattern && <span className="block break-words text-xs text-gray-600 dark:text-gray-300">{lesson.title}</span>}
+                                    {renderFeedback(lesson)}
+                                </span>
+                                <span className="shrink-0 text-xs font-semibold text-gray-600 dark:text-gray-300">{grammarProgressLabel(lesson)}</span>
+                                <ChevronRightIcon className="shrink-0 text-sky-800 dark:text-sky-200" sx={{ fontSize: 18 }} />
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </motion.div>
+    );
+}
+
+export function DayDetailContent({ day, onClose, mobile = false, dragControls = null, onOpenGrammarQuiz = null, dokkaiPreview = null, onRetryDokkai = null, onOpenDokkai = null }) {
+    const items = dayChildItems(day);
+    const dokkaiQuiz = dokkaiPreview?.payload?.quiz;
+    const completed = day.status === 'done';
+    const grammarLessons = day.grammar_lessons || [];
+    const hasGrammar = grammarLessons.length > 0;
+    const recommendedId = ['active', 'done'].includes(day.status)
+        ? items.find((item) => item.status === 'active' && item.progressStatus !== 'passed')?.key
+            || grammarLessons.find((lesson) => lesson.progress_status !== 'passed')?.id
+        : null;
 
     return (
         <div
@@ -1100,51 +1186,14 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
                     );
                 })}
 
-                {(day.grammar_lessons || []).map((lesson, index) => {
-                    const isLoading = loadingGrammarId === lesson.id;
-                    const isLessonDone = lesson.progress_status === 'passed';
-                    const recommended = recommendedId === lesson.id;
-
-                    return (
-                        <motion.button
-                            key={lesson.id}
-                            type="button"
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: (items.length + index) * 0.06 }}
-                            disabled={isLoading}
-                            onClick={() => openGrammar(lesson.id)}
-                            className="group flex min-h-[68px] sm:min-h-[82px] w-full items-center gap-2.5 min-[380px]:gap-3 sm:gap-3.5 rounded-xl border border-sky-200 bg-white p-2.5 min-[380px]:p-3 sm:px-4 sm:py-3 text-left shadow-[0_3px_0_#bae6fd] transition hover:-translate-y-0.5 hover:border-sky-300 hover:bg-sky-50/40 hover:shadow-[0_4px_0_#7dd3fc] active:translate-y-0.5 active:scale-[0.98] active:shadow-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/70 disabled:opacity-75 dark:border-sky-900/70 dark:bg-gray-800 dark:hover:bg-sky-950/20"
-                        >
-                            <span className="relative shrink-0 flex items-center justify-center">
-                                {isLoading ? (
-                                    <span className="flex h-[62px] w-[50px] min-[380px]:h-[70px] min-[380px]:w-[56px] sm:h-[76px] sm:w-[60px] items-center justify-center rounded-xl bg-sky-100 dark:bg-sky-950/50">
-                                        <span className="h-6 w-6 animate-spin rounded-full border-2 border-sky-600 border-t-transparent dark:border-sky-300" />
-                                    </span>
-                                ) : (
-                                    <SoumatomeNodeBadge type="bunpo" />
-                                )}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                                <span className="flex flex-wrap items-center gap-1.5">
-                                    <span className="rounded-full bg-sky-200 px-2 py-0.5 text-[10px] font-bold text-sky-950 dark:bg-sky-800 dark:text-sky-50">Grammar</span>
-                                    <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">{isLessonDone ? 'Selesai' : lesson.progress_status === 'needs_retry' ? 'Coba lagi' : 'Belum dimulai'}</span>
-                                </span>
-                                <span className="mt-1 block line-clamp-2 break-words text-xs font-extrabold leading-tight text-[#2d3742] dark:text-white min-[380px]:text-[13px] sm:text-sm" title={`Kuis Grammar · ${lesson.pattern}`}>
-                                    Kuis Grammar · {lesson.pattern}
-                                </span>
-                                {recommended && <span className="mt-0.5 block text-[10px] font-bold text-sky-800 dark:text-sky-200">Lanjutkan berikutnya</span>}
-                                <span className="mt-0.5 block line-clamp-2 text-[10px] min-[380px]:text-xs font-medium leading-4 text-gray-600 dark:text-gray-300" title={lesson.title || undefined}>
-                                    {isLoading ? 'Memuat kuis grammar...' : (lesson.title || 'Latihan pola kalimat & pemahaman konteks.')}
-                                </span>
-                                {grammarErrorId === lesson.id && <span className="mt-1 block text-[10px] font-bold text-red-700 dark:text-red-300">Gagal memuat kuis. Ketuk lagi untuk mencoba.</span>}
-                            </span>
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-900 transition group-hover:bg-sky-200 dark:bg-sky-900 dark:text-sky-100">
-                                <ChevronRightIcon sx={{ fontSize: 24 }} />
-                            </span>
-                        </motion.button>
-                    );
-                })}
+                {hasGrammar && <DayGrammarLessons
+                    key={day.id}
+                    lessons={grammarLessons}
+                    recommendedId={recommendedId}
+                    onClose={onClose}
+                    onOpenGrammarQuiz={onOpenGrammarQuiz}
+                    index={items.length}
+                />}
 
                 {day.dokkai_lessons && day.dokkai_lessons.map((dokkai, dokkaiIdx) => {
                     const isDone = dokkai.done;
@@ -1154,7 +1203,7 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
                             type="button"
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: (items.length + (day.grammar_lessons?.length || 0) + dokkaiIdx) * 0.06 }}
+                            transition={{ delay: (items.length + Number(hasGrammar) + dokkaiIdx) * 0.06 }}
                             onClick={() => {
                                 onClose?.();
                                 onOpenDokkai?.(dokkai.id);
@@ -1264,7 +1313,7 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
                         <motion.div
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: (items.length + (day.grammar_lessons?.length || 0) + (day.dokkai_lessons?.length || 0)) * 0.06 }}
+                            transition={{ delay: (items.length + Number(hasGrammar) + (day.dokkai_lessons?.length || 0)) * 0.06 }}
                         >
                             {!isMixedLocked ? (
                                 <Link

@@ -26,10 +26,19 @@ const params = new URLSearchParams(location.search);
 const scenario = params.get('scenario') || 'canvas';
 window.route = (name, id = '') => '/fixture/' + name + '/' + id;
 window.__writing = { requests: [], fail: false, delay: 60, completions: [], created: [] };
-window.axios = { post: async (url, data) => {
-    window.__writing.requests.push({ url, data });
-    return { data: { is_correct: true, explanation: 'Correct', score: 100, xp_earned: 0 } };
-}};
+window.axios = {
+    get: async (url) => {
+        const state = window.__writing;
+        state.requests.push({ url });
+        await new Promise(resolve => setTimeout(resolve, state.delay));
+        if (state.fail) throw new Error('Failed fixture');
+        return { data: { lesson: { id: Number(url.split('/').at(-1)) } } };
+    },
+    post: async (url, data) => {
+        window.__writing.requests.push({ url, data });
+        return { data: { is_correct: true, explanation: 'Correct', score: 100, xp_earned: 0 } };
+    },
+};
 router.post = (url, data, options) => {
     window.__writing.requests.push({ url, data });
     setTimeout(() => {
@@ -65,6 +74,17 @@ function Fixture() {
     if (scenario === 'student-exam') return <DayDetailContent onClose={() => {}} mobile={true} day={{ id: 881, day_number: 1, title: 'Day fixture', status: 'active', exam_summary: {
         id: 901, title: 'JFT reading', category: 'jft_basic', type: 'practice', locked: params.has('locked'), lock_reason: 'Ujian ini memerlukan akses premium.', url: params.has('locked') ? null : '/user/exams/jft-reading',
     } }} />;
+    if (scenario === 'student-grammar') {
+        const lessons = [
+            { id: 291, pattern: '\u301c\u3089\u308c\u308b', title: 'Bentuk potensial', progress_status: 'passed' },
+            { id: 292, pattern: '\u301c\u3055\u305b\u308b', title: 'Bentuk kausatif', progress_status: 'needs_retry' },
+        ].slice(0, Number(params.get('lessons') ?? 2));
+        return dayOpen && <main className="max-w-[420px]">
+            <DayDetailContent mobile={!params.has('desktop')} onClose={() => setDayOpen(false)}
+                onOpenGrammarQuiz={lesson => window.__writing.completions.push(lesson.id)}
+                day={{ id: 881, day_number: 1, title: 'Day fixture', status: 'active', grammar_lessons: lessons }} />
+        </main>;
+    }
     if (scenario === 'builder') return <BuilderKuisKosakata
         quiz={{ id: 8801, title: 'Writing fixture', passing_score: 70, time_limit: 0, handwriting_enabled: writingEnabled, day: { id: 881, day_number: 1, title: 'Day fixture', handwriting_enabled: writingEnabled } }}
         questions={[1, 2].map(id => ({ id, type: 'multiple_choice', question_text: 'Question '+id, options: ['Answer A','Answer B','Answer C','Answer D'], correct_answer: 'Answer A', points: 10 }))}
@@ -281,6 +301,43 @@ try {
             writeFileSync(path.join(temp,'exam-'+locked+'-'+width+'.png'),Buffer.from(data,'base64'));
         }
         assert.equal(await evaluate('window.__writing.requests.length'),0,'Opening exam card creates no attempt');
+    }
+    await open('student-grammar&lessons=0');
+    await waitFor('document.querySelector("#day-materials-881")');
+    assert.equal(await evaluate('document.body.innerText.includes("Grammar")'),false,'No empty Grammar menu');
+    const singleGrammar = 'Array.from(document.querySelectorAll("button")).find(b => b.textContent.includes("Grammar") && !b.hasAttribute("aria-expanded"))';
+    await open('student-grammar&lessons=1');
+    await waitFor(singleGrammar);
+    assert(await evaluate(singleGrammar+'.innerText.includes("\\u301c\\u3089\\u308c\\u308b")'),'Single lesson shows its pattern');
+    await evaluate(singleGrammar+'.click()');
+    await waitFor('window.__writing.completions[0] === 291');
+    assert.deepEqual(await evaluate('window.__writing.requests'),[{url:'/user/grammar-quizzes/291'}]);
+    for (const width of [320,1366]) {
+        const desktop = width > 600;
+        await send('Emulation.setDeviceMetricsOverride',{width,height:desktop ? 900 : 568,deviceScaleFactor:1,mobile:!desktop});
+        await open('student-grammar'+(desktop ? '&desktop=1' : ''));
+        const toggle = 'document.querySelector("button[aria-controls][aria-expanded]")';
+        const list = 'document.getElementById('+toggle+'.getAttribute("aria-controls"))';
+        await waitFor(toggle);
+        assert(await evaluate(toggle+'.innerText.includes("1/2 selesai") && '+list+'.hidden'),'Grammar starts collapsed with aggregated progress');
+        await evaluate(toggle+'.focus()');
+        for (const expanded of [true,false,true]) {
+            await send('Input.dispatchKeyEvent',{type:'keyDown',key:' ',code:'Space',windowsVirtualKeyCode:32});
+            await send('Input.dispatchKeyEvent',{type:'keyUp',key:' ',code:'Space',windowsVirtualKeyCode:32});
+            await waitFor(toggle+'.getAttribute("aria-expanded")==="'+expanded+'" && '+list+'.hidden==='+!expanded);
+        }
+        const buttons = list+'.querySelectorAll("li button")';
+        assert(await evaluate(buttons+'[0].innerText.includes("Selesai") && '+buttons+'[1].innerText.includes("Coba lagi") && '+buttons+'[1].innerText.includes("Lanjutkan berikutnya")'),'Grammar rows retain order, status and recommendation');
+        assert(await evaluate('Array.from('+buttons+').every(b => { const r=b.getBoundingClientRect();return r.height>=44 && r.right<=innerWidth; })'),'Grammar rows fit and remain tappable');
+        assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+2'),'Grammar does not overflow horizontally');
+        await evaluate('window.__writing.fail=true;window.__writing.delay=450;'+buttons+'[1].click();'+buttons+'[0].click();'+buttons+'[1].click()');
+        await waitFor(buttons+'[1].querySelector("[role=alert]")');
+        assert.equal(await evaluate(buttons+'[0].querySelector("[role=alert]") !== null'),false,'Only the selected lesson displays a failure');
+        assert.deepEqual(await evaluate('window.__writing.requests'),[{url:'/user/grammar-quizzes/292'}],'Duplicate clicks do not open multiple lessons');
+        await evaluate('window.__writing.fail=false;'+buttons+'[1].click()');
+        await waitFor('window.__writing.completions[0]===292 && !document.querySelector("#day-materials-881")');
+        await evaluate('window.__openDay()');
+        await waitFor(toggle+'?.getAttribute("aria-expanded")==="false"');
     }
     await open('day-create');
     await waitFor('document.querySelector("input[aria-label^=Lanjut]")');
