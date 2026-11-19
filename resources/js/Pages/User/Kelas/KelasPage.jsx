@@ -104,11 +104,12 @@ function ProgressBar({ value }) {
 function OwnedCourseCard({ item }) {
     const meta = accessMeta(item);
     const MetaIcon = meta.icon;
+    const isTrial = !item.has_class_access;
     const liveActionLabel = item.live_session?.is_live ? 'Masuk Kelas Live'
         : item.live_session?.is_today && item.live_session.time_formatted ? `Jadwal Kelas Live: ${item.live_session.time_formatted}` : 'Kelas Live';
 
     return (
-        <article className="relative grid min-w-0 grid-cols-[48px_minmax(0,1fr)] items-start gap-x-2.5 gap-y-1 overflow-hidden rounded-lg border border-slate-200 bg-white px-2.5 py-2 dark:border-gray-800 dark:bg-gray-900 min-[380px]:grid-cols-[56px_minmax(0,1fr)] sm:grid-cols-[140px_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:rounded-xl sm:p-4 sm:shadow-sm">
+        <article className="relative grid min-w-0 grid-cols-[56px_minmax(0,1fr)] items-start gap-x-2.5 gap-y-1 overflow-hidden rounded-lg border border-slate-200 bg-white px-2.5 py-2 dark:border-gray-800 dark:bg-gray-900 min-[380px]:grid-cols-[64px_minmax(0,1fr)] sm:grid-cols-[140px_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:rounded-xl sm:p-4 sm:shadow-sm">
             <span aria-hidden="true" className="pointer-events-none absolute -bottom-8 right-4 hidden text-7xl font-black leading-none text-rose-900/[0.04] dark:text-white/[0.03] sm:block">学</span>
             <div className="relative z-10"><CourseThumbnail item={item} compact /></div>
             <div className="relative z-10 min-w-0">
@@ -168,11 +169,13 @@ function OwnedCourseCard({ item }) {
                 <div className="relative z-10 col-span-2 flex min-w-0 flex-wrap items-center gap-1.5 border-t border-slate-100 pt-1.5 dark:border-gray-800 sm:col-auto sm:flex-col sm:items-stretch sm:justify-center sm:gap-2 sm:border-0 sm:pt-0">
                     <Link
                         href={item.href}
-                        className={`mr-auto inline-flex min-h-11 max-w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r ${theme.ctaBg} px-3 text-sm font-semibold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:brightness-90 fine-pointer:hover:brightness-95 sm:mr-0 sm:gap-2 sm:px-4 sm:font-black sm:shadow-sm`}
+                        className="mr-auto inline-flex min-h-11 max-w-full items-center rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:brightness-90 fine-pointer:hover:brightness-95 sm:mr-0"
                     >
-                        <span className="sm:hidden">{item.has_class_access || item.progress > 0 ? 'Lanjutkan' : 'Mulai uji coba'}</span>
-                        <span className="hidden sm:inline">{item.has_class_access ? 'Lanjutkan' : (item.progress > 0 ? 'Lanjutkan Trial' : 'Mulai Trial Minggu 1')}</span>
-                        <PlayArrowIcon sx={{ fontSize: 18 }} aria-hidden="true" />
+                        <span className={`inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r ${theme.ctaBg} font-semibold text-white sm:min-h-11 sm:gap-2 sm:px-4 sm:text-sm sm:font-black sm:shadow-sm ${isTrial ? 'min-h-9 px-2.5 text-xs' : 'min-h-11 px-3 text-sm'}`}>
+                            <span className="sm:hidden">{isTrial ? (item.progress > 0 ? 'Lanjut uji coba' : 'Mulai uji coba') : 'Lanjutkan'}</span>
+                            <span className="hidden sm:inline">{isTrial ? (item.progress > 0 ? 'Lanjutkan Trial' : 'Mulai Trial Minggu 1') : 'Lanjutkan'}</span>
+                            <PlayArrowIcon sx={{ fontSize: isTrial ? 16 : 18 }} aria-hidden="true" />
+                        </span>
                     </Link>
 
                     {item.live_session && (
@@ -252,14 +255,14 @@ export default function KelasPage({ programs = [], activeLiveToday = null }) {
 
                             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                 {primaryCourse && (
-                                    <div className="hidden items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-gray-800 dark:bg-gray-800/60 sm:flex">
-                                        <div className="min-w-0 max-w-[200px]">
-                                            <p className="truncate text-xs font-black text-slate-900 dark:text-white">{primaryCourse.title}</p>
-                                            <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">{clampProgress(primaryCourse.progress)}% selesai</p>
+                                    <div className="flex min-w-0 basis-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1.5 dark:border-gray-800 dark:bg-gray-800/60 sm:basis-auto sm:gap-3 sm:rounded-xl sm:p-3">
+                                        <div className="min-w-0 sm:max-w-[200px]">
+                                            <p className="line-clamp-2 text-xs font-semibold leading-snug text-slate-900 [overflow-wrap:anywhere] dark:text-white sm:truncate sm:font-black">{primaryCourse.title}</p>
+                                            <p className="mt-0.5 text-[11px] font-semibold tabular-nums text-emerald-700 dark:text-emerald-300 sm:mt-0 sm:text-rose-600 dark:sm:text-rose-400">{clampProgress(primaryCourse.progress)}% selesai</p>
                                         </div>
                                         <Link
                                             href={primaryCourse.href}
-                                            className={`inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-lg bg-gradient-to-r ${theme.ctaBg} px-3 text-xs font-black text-white shadow-sm transition hover:brightness-95`}
+                                            className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-1 rounded-lg bg-gradient-to-r ${theme.ctaBg} px-2.5 text-xs font-semibold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:brightness-90 fine-pointer:hover:brightness-95 sm:min-h-9 sm:px-3 sm:font-black sm:shadow-sm`}
                                         >
                                             Lanjut
                                             <PlayArrowIcon sx={{ fontSize: 16 }} />
