@@ -393,6 +393,49 @@ it('imports kanji details into a vocabulary record scoped to the flashcard Week'
         ->and($vocabulary->metadata['stroke_count'])->toBe(13);
 });
 
+it('limits flashcard imports independently and rejects excess uploads before any write', function () {
+    $this->freezeTime();
+    $fixture = createDayRoadmapFixture();
+    $admin = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'global']);
+    $first = SetFlashcard::where('module_day_id', $fixture['dayOne']->id)->firstOrFail();
+    $second = SetFlashcard::where('module_day_id', $fixture['dayTwo']->id)->firstOrFail();
+    $builder = route('admin.flashcards.builder', $first);
+    $upload = fn ($set, string $word, array $headers = []) => $this->post(route('admin.flashcards.import', $set), [
+        'import_file' => UploadedFile::fake()->createWithContent('cards.csv', "front_text,reading,back_text\n{$word},test,arti"),
+    ], $headers);
+
+    $this->actingAs($admin)->from($builder);
+    for ($attempt = 0; $attempt < 3; $attempt++) {
+        $this->post(route('admin.vocabulary.import'))->assertRedirect();
+    }
+    $this->post(route('admin.vocabulary.import'))->assertStatus(429);
+
+    $upload($first, 'flashcard-limit-first')->assertRedirect()->assertSessionDoesntHaveErrors();
+    $this->post(route('admin.flashcards.import', $first))->assertSessionHasErrors('import_file');
+    $upload($second, 'flashcard-limit-second')->assertRedirect()->assertSessionDoesntHaveErrors();
+    $upload($second, 'flashcard-blocked-short', ['Accept' => 'application/json'])
+        ->assertStatus(429)->assertHeader('Retry-After', '60')
+        ->assertJsonPath('errors.import_file.0', 'Batas impor tercapai. Coba lagi dalam 1 menit.');
+    $upload($first, 'flashcard-blocked-web', ['X-Inertia' => 'true'])
+        ->assertStatus(303)->assertRedirect($builder)
+        ->assertSessionHasErrors(['import_file' => 'Batas impor tercapai. Coba lagi dalam 1 menit.']);
+
+    $this->travel(61)->seconds();
+    for ($attempt = 0; $attempt < 3; $attempt++) {
+        $upload($first, "flashcard-limit-later-{$attempt}")->assertRedirect()->assertSessionDoesntHaveErrors();
+    }
+    $this->travel(61)->seconds();
+    $upload($second, 'flashcard-blocked-long', ['Accept' => 'application/json'])
+        ->assertStatus(429)->assertHeader('Retry-After', '478')
+        ->assertJsonPath('errors.import_file.0', 'Batas impor tercapai. Coba lagi dalam 8 menit.');
+
+    $this->actingAs(Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'kloter']));
+    $upload($first, 'flashcard-blocked-scope')->assertForbidden();
+    expect(Kosakata::where('word', 'like', 'flashcard-blocked-%')->exists())->toBeFalse()
+        ->and($first->flashcards()->where('front_text', 'like', 'flashcard-blocked-%')->exists())->toBeFalse()
+        ->and($second->flashcards()->where('front_text', 'like', 'flashcard-blocked-%')->exists())->toBeFalse();
+});
+
 it('keeps flashcard imports idempotent and rejects a different Week or Day', function () {
     $fixture = createDayRoadmapFixture();
     $admin = Pengguna::factory()->create(['role' => 'admin']);

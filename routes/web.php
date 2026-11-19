@@ -293,7 +293,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/flashcards/{flashcardSet}/builder', [AdminFlashcardController::class, 'builder'])->name('flashcards.builder');
         Route::post('/flashcards/{flashcardSet}/builder', [AdminFlashcardController::class, 'updateCards'])->middleware('throttle:admin-builder')->name('flashcards.builder.update');
         Route::get('/flashcards/{flashcardSet}/template/{format?}', [AdminFlashcardController::class, 'downloadImportTemplate'])->name('flashcards.template');
-        Route::post('/flashcards/{flashcardSet}/import', [AdminFlashcardController::class, 'importCards'])->middleware('throttle:admin-imports')->name('flashcards.import');
+        Route::post('/flashcards/{flashcardSet}/import', [AdminFlashcardController::class, 'importCards'])->middleware('throttle:admin-flashcard-imports')->name('flashcards.import');
         Route::post('/flashcards/{flashcardSet}/generate-quiz', [AdminFlashcardController::class, 'generateQuiz'])->middleware('throttle:admin-generator')->name('flashcards.generate-quiz');
         Route::get('/presentations', static fn () => redirect()->route('admin.programs.index'))->name('presentations.index');
         Route::post('/presentations', [AdminPresentasiController::class, 'store'])->name('presentations.store');

@@ -88,6 +88,18 @@ const FlashcardBuilder = type==='flashcard-builder'
 if(type==='flashcard-builder'){
     const {router}=await import('@inertiajs/react');
     router.post=(url,body,options)=>{
+        if(body instanceof FormData){
+            window.__generator.calls.push({url,file:body.get('import_file').name,preserveState:options.preserveState});
+            window.__finishImport=(message)=>{
+                if(message) options.onError({import_file:message});
+                else {
+                    window.__refreshFlashcards();
+                    options.onSuccess();
+                }
+                options.onFinish();
+            };
+            return;
+        }
         window.__generator.calls.push({url,body});
         options.onError({'cards.0.vocabulary_id':'Kosakata tidak tersedia untuk minggu ini.'});
         options.onFinish();
@@ -109,7 +121,12 @@ const flashcardSet={id:1,module_id:1,title:'Set lama',status:'draft',flashcards:
     id:4,vocabulary_id:7,front_text:'Station',reading:'eki',back_text:'Arti kartu tersimpan',
     vocabulary:{id:7,module_id:2,word:'Station',reading:'eki',meaning_id:'Arti bank',content_type:'kanji'},
 }]};
-createRoot(document.getElementById('app')).render(type==='highlight'?<HighlightFixture/>:type==='grammar-builder'?<GrammarBuilderFixture/>:type==='flashcard-builder'?<FlashcardBuilder embedded set={flashcardSet} vocabulary={{data:[]}}/>:<Fixture/>);
+function FlashcardFixture(){
+    const [set,setSet]=React.useState(flashcardSet);
+    window.__refreshFlashcards=()=>setSet(current=>({...current,flashcards:[{...current.flashcards[0],back_text:'Arti setelah impor'}]}));
+    return <FlashcardBuilder embedded set={set} vocabulary={{data:[]}}/>;
+}
+createRoot(document.getElementById('app')).render(type==='highlight'?<HighlightFixture/>:type==='grammar-builder'?<GrammarBuilderFixture/>:type==='flashcard-builder'?<FlashcardFixture/>:<Fixture/>);
 window.__ready=true;
 `;
 const icons=['Close','Add','DeleteOutlineOutlined','Refresh','AutoAwesome','CheckCircle','ErrorOutlineOutlined','InfoOutlined','WarningAmber','ArrowBack','ArrowDownward','ArrowForward','ArrowUpward','AutoStories','BackspaceOutlined','Bolt','CheckCircleOutlined','ChevronRight','ContentCopy','DescriptionOutlined','EditOutlined','EmojiEvents','ErrorOutlineRounded','FormatListBulleted','GraphicEq','LibraryBooks','LightbulbOutlined','MenuBook','MicNoneOutlined','PlayArrow','RadioButtonUnchecked','Restore','SaveOutlined','Search','SettingsOutlined','UploadFile','Visibility','VolumeOff','VolumeUp'];
@@ -274,9 +291,48 @@ try{
     await click('Simpan Flashcard');
     await waitFor('Array.from(document.querySelectorAll("[role=alert]")).some(el=>el.textContent.includes("Kartu ke-1: Kosakata tidak tersedia"))');
     assert.equal(await evaluate('window.__generator.calls[0].body.cards[0].vocabulary_id'),7);
+
+    const chooseFlashcardFile=(name,size=16,repeated=false)=>evaluate(`(() => {
+        const input=document.querySelector('input[type=file]');
+        const select=()=>{
+            const transfer=new DataTransfer();
+            transfer.items.add(new File([new Uint8Array(${size})],${JSON.stringify(name)}));
+            input.files=transfer.files;
+            input.dispatchEvent(new Event('change',{bubbles:true}));
+        };
+        select();
+        if(${repeated}) select();
+    })()`);
+    const editFlashcardMeaning=(value)=>evaluate(`(() => {
+        const input=Array.from(document.querySelectorAll('input')).find(i=>i.value==='Arti kartu tersimpan'||i.value==='Draf lokal');
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(value)});
+        input.dispatchEvent(new Event('input',{bubbles:true}));
+    })()`);
+    await editFlashcardMeaning('Draf lokal');
+    await chooseFlashcardFile('cards.csv');
+    await waitFor('document.body.innerText.includes("Simpan perubahan kartu sebelum mengimpor.")');
+    assert(await evaluate('Array.from(document.querySelectorAll("input")).some(input=>input.value==="Draf lokal")'));
+    await editFlashcardMeaning('Arti kartu tersimpan');
+    await chooseFlashcardFile('invalid.pdf');
+    await waitFor('document.body.innerText.includes("Gunakan file CSV, TXT, atau XLSX.")');
+    await chooseFlashcardFile('too-large.csv',4*1024*1024+1);
+    await waitFor('document.body.innerText.includes("Ukuran file maksimal 4 MB.")');
+    assert.equal(await evaluate('window.__generator.calls.length'),1,'Invalid files and dirty cards never submit');
+    await chooseFlashcardFile('cards.csv',16,true);
+    await waitFor('document.body.innerText.includes("Mengimpor...")');
+    assert.equal(await evaluate('window.__generator.calls.length'),2,'Ignore repeated upload events');
+    assert.equal(await evaluate('window.__generator.calls[1].preserveState'),true);
+    assert(await evaluate('Array.from(document.querySelectorAll("input")).find(input=>input.value==="Arti kartu tersimpan").matches(":disabled")'));
+    await evaluate('window.__finishImport("Batas impor tercapai. Coba lagi dalam 2 menit.")');
+    await waitFor('document.querySelector("[role=alert]")?.textContent.includes("Coba lagi dalam 2 menit")');
+    assert(await evaluate('Array.from(document.querySelectorAll("input")).find(input=>input.value==="Arti kartu tersimpan").matches(":enabled")'));
+    assert.equal(await evaluate('window.__generator.calls.length'),2,'Do not retry automatically');
+    await chooseFlashcardFile('cards.csv');
+    await evaluate('window.__finishImport()');
+    await waitFor('Array.from(document.querySelectorAll("input")).some(input=>input.value==="Arti setelah impor")');
     if(process.argv.includes('--skip-highlight')){
         assert.deepEqual(errors,[],'Uncaught browser errors');
-        console.log('Generator, Grammar deletion, and legacy flashcard browser checks passed.');
+        console.log('Generator, Grammar deletion, and flashcard import/save browser checks passed.');
     }else{
     await send('Page.navigate',{url:server.resolvedUrls.local[0]+'__generator?type=highlight'});
     await waitFor('window.__ready&&document.querySelector("#question-highlight mark")');

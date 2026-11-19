@@ -104,6 +104,7 @@ export function FlashcardEditorWorkspace({
         : route('admin.programs.index');
     const rows = vocabulary.data || [];
     const importInputRef = useRef(null);
+    const importInFlightRef = useRef(false);
     const [cards, setCards] = useState(() => (set.flashcards || []).map((card) => normalizeCard(card, true, set.module_id)));
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || 'all');
@@ -111,6 +112,8 @@ export function FlashcardEditorWorkspace({
     const [setRecordStatus, setSetRecordStatus] = useState(set.status || 'draft');
     const [activeIndex, setActiveIndex] = useState(0);
     const [showImportMenu, setShowImportMenu] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
+    const [importError, setImportError] = useState('');
     const [showLibrary, setShowLibrary] = useState(false);
     const [showSetSettings, setShowSetSettings] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -204,6 +207,7 @@ export function FlashcardEditorWorkspace({
     };
 
     const saveCards = () => {
+        if (importInFlightRef.current) return;
         setSaveError('');
         setSaveErrorCardIndex(null);
         setSaveSuccess('');
@@ -276,19 +280,50 @@ export function FlashcardEditorWorkspace({
         });
     };
 
-    const importCards = (event) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
+    const canStartImport = () => {
+        if (importInFlightRef.current || isSaving || settingsForm.processing || generateForm.processing) return false;
+        if (JSON.stringify(cards) !== cleanSnapshotRef.current || setRecordStatus !== (set.status || 'draft')) {
+            setImportError('Simpan perubahan kartu sebelum mengimpor.');
+            return false;
+        }
+        return true;
+    };
 
+    const importCards = (event) => {
+        const input = event.currentTarget;
+        const file = input.files?.[0];
+        input.value = '';
+        if (!file || !canStartImport()) return;
+        if (!/\.(csv|txt|xlsx)$/i.test(file.name)) {
+            setImportError('Gunakan file CSV, TXT, atau XLSX.');
+            return;
+        }
+        if (file.size > 4 * 1024 * 1024) {
+            setImportError('Ukuran file maksimal 4 MB.');
+            return;
+        }
+
+        setImportError('');
+        importInFlightRef.current = true;
+        setIsImporting(true);
         const payload = new FormData();
         payload.append('import_file', file);
-
+        let confirmed = false;
         router.post(route('admin.flashcards.import', set.id), payload, {
             forceFormData: true,
             preserveScroll: true,
-            preserveState: false,
+            preserveState: true,
+            onSuccess: () => { confirmed = true; },
+            onError: (errors) => {
+                confirmed = true;
+                setImportError(errors.import_file || 'Impor gagal. Periksa file lalu coba lagi.');
+            },
             onFinish: () => {
-                event.target.value = '';
+                importInFlightRef.current = false;
+                setIsImporting(false);
+                if (!confirmed) {
+                    setImportError('Hasil impor belum terkonfirmasi. Muat ulang untuk memeriksa kartu sebelum mencoba lagi.');
+                }
             },
         });
     };
@@ -321,7 +356,7 @@ export function FlashcardEditorWorkspace({
     };
 
     const workspace = (
-            <div className={`space-y-6 ${embedded ? 'py-5' : 'px-4 py-6 sm:px-6 lg:px-8'}`}>
+            <fieldset disabled={isImporting} aria-busy={isImporting} className={`min-w-0 space-y-6 ${embedded ? 'py-5' : 'px-4 py-6 sm:px-6 lg:px-8'}`}>
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                     <div>
                         {!embedded && (
@@ -368,11 +403,12 @@ export function FlashcardEditorWorkspace({
                         <div className="relative">
                             <button
                                 type="button"
+                                disabled={isSaving || settingsForm.processing || generateForm.processing}
                                 onClick={() => setShowImportMenu(value => !value)}
                                 className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:border-teal-300 hover:text-teal-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
                             >
                                 <UploadFileIcon sx={{ fontSize: 18 }} />
-                                Import
+                                {isImporting ? 'Mengimpor...' : 'Import'}
                             </button>
                             {showImportMenu && (
                                 <div className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900">
@@ -380,7 +416,10 @@ export function FlashcardEditorWorkspace({
                                         type="button"
                                         onClick={() => {
                                             setShowImportMenu(false);
-                                            importInputRef.current?.click();
+                                            if (canStartImport()) {
+                                                setImportError('');
+                                                importInputRef.current?.click();
+                                            }
                                         }}
                                         className="block w-full px-4 py-3 text-left text-sm font-bold text-gray-700 hover:bg-teal-50 hover:text-teal-700 dark:text-gray-200 dark:hover:bg-teal-900/20 dark:hover:text-teal-300"
                                     >
@@ -418,6 +457,12 @@ export function FlashcardEditorWorkspace({
                         </button>
                     </div>
                 </div>
+
+                {importError && (
+                    <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
+                        {importError}
+                    </p>
+                )}
 
                 {saveError && saveErrorCardIndex !== activeIndex && (
                     <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-bold text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
@@ -820,7 +865,7 @@ export function FlashcardEditorWorkspace({
                     </div>
                 )}
                 <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
-            </div>
+            </fieldset>
     );
 
     if (embedded) {

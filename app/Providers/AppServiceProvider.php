@@ -92,6 +92,25 @@ class AppServiceProvider extends ServiceProvider
             ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
         RateLimiter::for('admin-imports', fn (Request $request) => Limit::perMinutes(10, 3)
             ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
+        RateLimiter::for('admin-flashcard-imports', function (Request $request): array {
+            $key = $request->user()?->id ?? 'guest:'.$request->ip();
+            $response = static function (Request $request, array $headers) {
+                $seconds = max(1, (int) ($headers['Retry-After'] ?? 60));
+                $wait = $seconds >= 60 ? (int) ceil($seconds / 60).' menit' : $seconds.' detik';
+                $message = "Batas impor tercapai. Coba lagi dalam {$wait}.";
+
+                if ($request->expectsJson() && ! $request->headers->has('X-Inertia')) {
+                    return response()->json(['message' => $message, 'errors' => ['import_file' => [$message]]], 429, $headers);
+                }
+
+                return redirect()->back(303)->withErrors(['import_file' => $message]);
+            };
+
+            return [
+                Limit::perMinute(3)->by('minute:'.$key)->response($response),
+                Limit::perMinutes(10, 6)->by('ten-minutes:'.$key)->response($response),
+            ];
+        });
         RateLimiter::for('admin-uploads', fn (Request $request) => Limit::perMinutes(10, 20)
             ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
         RateLimiter::for('admin-builder', fn (Request $request) => Limit::perMinute(60)
