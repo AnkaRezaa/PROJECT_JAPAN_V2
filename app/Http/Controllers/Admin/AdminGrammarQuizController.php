@@ -33,8 +33,9 @@ class AdminGrammarQuizController extends Controller
             'lessons' => $moduleDay->quizzes()
                 ->where('type', 'grammar')
                 ->with(['grammarLesson', 'questions'])
+                ->withExists('attempts')
                 ->get()
-                ->map(fn (Kuis $quiz) => $this->grammar->payload($quiz, true)),
+                ->map(fn (Kuis $quiz) => $this->adminPayload($quiz)),
         ]);
     }
 
@@ -42,7 +43,7 @@ class AdminGrammarQuizController extends Controller
     {
         $this->authorizeQuiz($request, $quiz);
 
-        return response()->json(['lesson' => $this->grammar->payload($quiz, true)]);
+        return response()->json(['lesson' => $this->adminPayload($quiz)]);
     }
 
     public function store(Request $request, HariModul $moduleDay)
@@ -65,7 +66,7 @@ class AdminGrammarQuizController extends Controller
 
         return response()->json([
             'message' => 'Draf Grammar berhasil disimpan.',
-            'lesson' => $this->grammar->payload($quiz, true),
+            'lesson' => $this->adminPayload($quiz),
         ], 201);
     }
 
@@ -77,7 +78,7 @@ class AdminGrammarQuizController extends Controller
 
         return response()->json([
             'message' => 'Draf Grammar berhasil diperbarui.',
-            'lesson' => $this->grammar->payload($quiz, true),
+            'lesson' => $this->adminPayload($quiz),
         ]);
     }
 
@@ -97,6 +98,7 @@ class AdminGrammarQuizController extends Controller
                 ? 'Lesson Grammar berhasil diterbitkan.'
                 : 'Lesson Grammar dikembalikan menjadi draf.',
             'status' => $quiz->status,
+            ...$this->deleteMetadata($quiz),
         ]);
     }
 
@@ -107,13 +109,32 @@ class AdminGrammarQuizController extends Controller
             $locked = Kuis::whereKey($quiz->id)->lockForUpdate()->firstOrFail();
             if ($locked->attempts()->exists()) {
                 throw ValidationException::withMessages([
-                    'lesson' => 'Lesson memiliki riwayat pengerjaan. Ubah menjadi draf untuk menyembunyikannya.',
+                    'lesson' => $this->deleteBlockReason($locked),
                 ]);
             }
             $locked->delete();
         });
 
         return response()->json(['message' => 'Lesson Grammar berhasil dihapus.']);
+    }
+
+    private function adminPayload(Kuis $quiz): array
+    {
+        return [...$this->grammar->payload($quiz, true), ...$this->deleteMetadata($quiz)];
+    }
+
+    private function deleteMetadata(Kuis $quiz): array
+    {
+        $hasAttempts = $quiz->attempts_exists ?? $quiz->attempts()->exists();
+
+        return ['can_delete' => ! $hasAttempts, 'delete_block_reason' => $hasAttempts ? $this->deleteBlockReason($quiz) : null];
+    }
+
+    private function deleteBlockReason(Kuis $quiz): string
+    {
+        return $quiz->status === 'draft'
+            ? 'Lesson draf sudah tersembunyi. Riwayat siswa tetap disimpan.'
+            : 'Lesson memiliki riwayat pengerjaan. Ubah menjadi draf untuk menyembunyikannya.';
     }
 
     public function generateDraft(Request $request, QuizGeneratorManager $generator)
@@ -161,6 +182,7 @@ class AdminGrammarQuizController extends Controller
         return response()->json([
             'message' => 'Draf kuis berhasil di-generate secara otomatis.',
             'stages' => $formattedStages,
+            'warnings' => $draft['warnings'],
         ]);
     }
 
@@ -381,6 +403,8 @@ class AdminGrammarQuizController extends Controller
             'stages.*.questions.*.context' => ['nullable', 'string', 'max:5000'],
             'stages.*.questions.*.choices' => ['nullable', 'array', 'min:2', 'max:10'],
             'stages.*.questions.*.choices.*' => ['required', 'string', 'max:2000'],
+            'stages.*.questions.*.choices_reading' => ['nullable', 'array', 'list', 'max:10'],
+            'stages.*.questions.*.choices_reading.*' => ['nullable', 'string', 'max:1000'],
             'stages.*.questions.*.correctAnswer' => ['nullable', 'string', 'max:2000'],
             'stages.*.questions.*.tokens' => ['nullable', 'array', 'min:2', 'max:20'],
             'stages.*.questions.*.tokens.*.id' => ['required_with:stages.*.questions.*.tokens', 'string', 'max:80'],
@@ -392,6 +416,16 @@ class AdminGrammarQuizController extends Controller
             'stages.*.questions.*.explanation' => ['nullable', 'string', 'max:5000'],
             'stages.*.questions.*.points' => ['nullable', 'integer', 'min:1', 'max:1000'],
         ], $messages, $customAttributes);
+
+        foreach ($validated['stages'] as $stageIndex => $stage) {
+            foreach ($stage['questions'] as $questionIndex => $question) {
+                if (count($question['choices_reading'] ?? []) > count($question['choices'] ?? [])) {
+                    throw ValidationException::withMessages([
+                        "stages.{$stageIndex}.questions.{$questionIndex}.choices_reading" => 'Jumlah bacaan kana tidak boleh melebihi jumlah pilihan jawaban.',
+                    ]);
+                }
+            }
+        }
 
         $questionIds = collect($validated['stages'])
             ->flatMap(fn (array $stage) => $stage['questions'])

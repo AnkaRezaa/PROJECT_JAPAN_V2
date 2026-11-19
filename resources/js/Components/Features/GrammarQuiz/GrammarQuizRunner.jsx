@@ -217,7 +217,7 @@ function ChoiceQuestion({ question, answer, feedback, disabled, onAnswer }) {
                         }`}>
                             {letter}
                         </span>
-                        <span lang="ja" className="min-w-0 [overflow-wrap:anywhere] leading-6 font-japanese font-bold">{choice}</span>
+                        <JapaneseReading japanese={choice} reading={question.choices_reading?.[index]} className="min-w-0 [overflow-wrap:anywhere] leading-6 font-japanese font-bold" />
                     </QuizOptionButton>
                 );
             })}

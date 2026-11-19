@@ -426,6 +426,47 @@ class UnifiedQuizGeneratorTest extends TestCase
         $this->assertSame('Isi pola Grammar terlebih dahulu.', $response->json('errors')['input.pattern'][0]);
     }
 
+    public function test_grammar_generates_valid_reported_patterns_and_previews_partial_quota(): void
+    {
+        Kosakata::create(['word' => '駅', 'reading' => 'えき', 'jlpt_level' => 'N3',
+            'category' => 'noun', 'content_type' => 'kosakata', 'status' => 'published']);
+        $ba = [
+            ['japanese' => '本を読めば読むほど、知識が増えます。', 'translation' => 'Semakin membaca, semakin tahu.'],
+            ['japanese' => '話せば話すほど、上手になります。', 'translation' => 'Semakin berbicara, semakin mahir.'],
+            ['japanese' => '歩けば歩くほど、健康になります。', 'translation' => 'Semakin berjalan, semakin sehat.'],
+        ];
+        $tai = [
+            ['japanese' => 'すしを食べたいです。', 'translation' => 'Saya ingin makan sushi.'],
+            ['japanese' => '日本へ行きたいです。', 'translation' => 'Saya ingin pergi ke Jepang.'],
+            ['japanese' => '本を読みたいです。', 'translation' => 'Saya ingin membaca buku.'],
+        ];
+        foreach ([
+            ['〜ば〜ほど', 'auto', $ba, [5, 5, 5], 11, '読めば読むほど'],
+            ['〜ば〜ほど', 'auto', $ba, [2, 2, 1], 5, '読めば読むほど'],
+            ['〜たい', 'auto', $tai, [2, 2, 1], 5, '読みたい'],
+            ['〜たい', 'stem', $tai, [2, 1, 1], 4, '読みたい'],
+        ] as [$pattern, $form, $examples, $counts, $expected, $answer]) {
+            $payload = $this->payload('grammar', ['pattern' => $pattern, 'examples' => $examples], array_sum($counts));
+            $payload['settings']['counts'] = array_combine(['transformation', 'sentence_builder', 'context_choice'], $counts);
+            $payload['settings']['target_form'] = $form;
+            $draft = $this->generate('grammar', $payload)->assertOk()->json('draft');
+            $this->assertCount($expected, $draft['questions']);
+            $this->assertSame($expected === 11 ? ['Susun Kata: 3 dari 5 soal.', 'Konteks: 3 dari 5 soal.'] : [], $draft['warnings']);
+            $transformations = collect($draft['questions'])->where('stage', 'transformation');
+            $this->assertFalse($transformations->contains('japanese', '駅'));
+            $q = $transformations->firstWhere('japanese', '読む');
+            $this->assertSame($answer, collect($q['choices'])->firstWhere('id', $q['answer']['choice_id'])['text']);
+            foreach ($transformations as $transformation) {
+                $this->assertCount(4, array_unique(array_column($transformation['choices'], 'text')));
+            }
+        }
+
+        $payload['input']['examples'] = [['japanese' => '本', 'translation' => 'Buku']];
+        $this->assertStringContainsString('Susun Kata belum menghasilkan soal valid',
+            $this->generate('grammar', $payload)->assertUnprocessable()->json('errors.input.0'));
+        $this->assertSame(0, Kuis::count());
+    }
+
     public function test_flashcard_builder_preserves_existing_foreign_sources_without_mutating_the_bank(): void
     {
         $module = $this->day->module;

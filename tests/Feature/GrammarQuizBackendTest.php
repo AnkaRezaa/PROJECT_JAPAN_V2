@@ -196,8 +196,13 @@ it('only deletes grammar lessons without attempts and within the admin scope', f
     $this->actingAs($mentor)->deleteJson($url)->assertForbidden();
 
     $attempt = $quiz->attempts()->create(['user_id' => $fixture['user']->id]);
+    $reason = 'Lesson draf sudah tersembunyi. Riwayat siswa tetap disimpan.';
+    $this->actingAs($admin)->getJson(route('admin.grammar-quizzes.index', $fixture['day']))
+        ->assertOk()->assertJsonPath('lessons.0.can_delete', false)->assertJsonPath('lessons.0.delete_block_reason', $reason);
+    $this->getJson(route('admin.grammar-quizzes.show', $quiz))
+        ->assertOk()->assertJsonPath('lesson.can_delete', false);
     $this->actingAs($admin)->deleteJson($url)->assertUnprocessable()
-        ->assertJsonPath('errors.lesson.0', 'Lesson memiliki riwayat pengerjaan. Ubah menjadi draf untuk menyembunyikannya.');
+        ->assertJsonPath('errors.lesson.0', $reason);
     $this->assertModelExists($attempt);
     expect($quiz->questions()->exists())->toBeTrue();
 
@@ -209,6 +214,44 @@ it('only deletes grammar lessons without attempts and within the admin scope', f
     ]);
     $this->deleteJson(route('admin.grammar-quizzes.destroy', $draft))->assertOk();
     $this->assertModelMissing($draft);
+});
+
+it('round trips kana choice readings without misaligning options or exposing answers', function () {
+    $fixture = grammarFixture();
+    $payload = grammarPayload();
+    $choice = &$payload['stages'][0]['questions'][0];
+    $choice['choices'] = [' 読みたい ', '読みます', '読んだ'];
+    $choice['choices_reading'] = ['よみたい', null, 'よんだ'];
+    $choice['correctAnswer'] = '読みたい';
+    $path = 'lesson.stages.0.questions.0.choices_reading';
+    $saved = $this->actingAs($fixture['admin'])->postJson(route('admin.grammar-quizzes.store', $fixture['day']), $payload)
+        ->assertCreated()->assertJsonPath('lesson.can_delete', true)
+        ->assertJsonPath($path, ['よみたい', null, 'よんだ'])->json('lesson');
+    $quiz = Kuis::findOrFail($saved['id']);
+    $show = route('admin.grammar-quizzes.show', $quiz);
+    $update = route('admin.grammar-quizzes.update', $quiz);
+    foreach ($payload['stages'] as $i => &$stage) {
+        $stage['questions'][0]['id'] = $saved['stages'][$i]['questions'][0]['id'];
+    }
+    unset($stage);
+
+    $this->getJson($show)->assertOk()->assertJsonPath($path, ['よみたい', null, 'よんだ']);
+    $studentQuestion = app(\App\Services\KuisGrammarService::class)->payload($quiz)['stages'][0]['questions'][0];
+    expect($studentQuestion['choices_reading'])->toBe(['よみたい', null, 'よんだ'])
+        ->and(array_key_exists('correctAnswer', $studentQuestion))->toBeFalse();
+
+    unset($choice['choices_reading']);
+    $this->putJson($update, $payload)->assertOk()->assertJsonPath($path, ['よみたい', null, 'よんだ']);
+    $choice['choices'] = ['読んだ', '読みたい'];
+    $this->putJson($update, $payload)->assertOk()->assertJsonPath($path, []);
+    $choice['choices_reading'] = ['よんだ', 'よみたい'];
+    $this->putJson($update, $payload)->assertOk()->assertJsonPath($path, ['よんだ', 'よみたい']);
+    $choice['choices_reading'][] = '余分';
+    $this->putJson($update, $payload)->assertUnprocessable()
+        ->assertJsonValidationErrors('stages.0.questions.0.choices_reading');
+    $choice['choices_reading'] = [];
+    $this->putJson($update, $payload)->assertOk()->assertJsonPath($path, []);
+    $this->getJson($show)->assertOk()->assertJsonPath($path, []);
 });
 
 it('seeds grammar lessons for demo programs via GrammarLessonDemoSeeder', function () {

@@ -38,13 +38,18 @@ class KuisGrammarService
 
             $kept = [];
             $order = 0;
-            $existingPrompts = $quiz->questions()->pluck('question_text', 'id');
+            $existingQuestions = $quiz->questions()->get(['id', 'question_text', 'options', 'option_readings'])->keyBy('id');
 
             foreach ($payload['stages'] as $stageIndex => $stage) {
                 foreach ($stage['questions'] as $questionIndex => $question) {
                     $prompt = trim((string) ($question['prompt'] ?? ''));
-                    $parse = $existingPrompts->get($question['id'] ?? 0) !== $prompt;
+                    $existing = $existingQuestions->get($question['id'] ?? 0);
+                    $parse = $existing?->question_text !== $prompt;
                     $normalized = $this->normalizeQuestion($stage['id'], $question, "stages.{$stageIndex}.questions.{$questionIndex}.highlight_text", $parse);
+                    if ($stage['id'] !== 'sentence_builder' && ! array_key_exists('choices_reading', $question)
+                        && ($existing?->options['choices'] ?? null) === $normalized['options']['choices']) {
+                        $normalized['option_readings'] = $existing->option_readings;
+                    }
                     $attributes = Arr::except($normalized, ['context']);
                     $model = $quiz->questions()->updateOrCreate(
                         ['id' => $question['id'] ?? null],
@@ -138,6 +143,7 @@ class KuisGrammarService
             'translation' => $this->nullableText($question['translation'] ?? null),
             'context' => $this->nullableText($question['context'] ?? null),
         ];
+        $optionReadings = null;
 
         if ($stage === 'sentence_builder') {
             $tokens = array_values($question['tokens'] ?? []);
@@ -151,7 +157,14 @@ class KuisGrammarService
             $options['tokens'] = $tokens;
             $correctAnswer = json_encode($correctOrder, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         } else {
-            $choices = array_values(array_filter($question['choices'] ?? $question['options'] ?? [], fn ($value) => filled($value)));
+            $choices = [];
+            $readings = [];
+            foreach ($question['choices'] ?? $question['options'] ?? [] as $index => $value) {
+                $choice = $this->nullableText($value);
+                if ($choice === null) continue;
+                $choices[] = $choice;
+                $readings[] = $this->nullableText($question['choices_reading'][$index] ?? null);
+            }
             $correctAnswer = trim((string) ($question['correctAnswer'] ?? $question['correct_answer'] ?? ''));
 
             if (count($choices) < 2 || $correctAnswer === '' || ! in_array($correctAnswer, $choices, true)) {
@@ -159,6 +172,7 @@ class KuisGrammarService
             }
 
             $options['choices'] = $choices;
+            $optionReadings = array_filter($readings, fn ($reading) => $reading !== null) !== [] ? $readings : null;
         }
 
         $normalizedType = match ($stage) {
@@ -178,7 +192,7 @@ class KuisGrammarService
             'correct_answer_reading' => null,
             'options' => array_filter($options, fn ($value) => $value !== null),
             'context' => $options['context'] ?? null,
-            'option_readings' => null,
+            'option_readings' => $optionReadings,
             'explanation' => $this->nullableText($question['explanation'] ?? $question['feedback'] ?? null),
             'explanation_reading' => null,
             'audio_url' => null,
@@ -210,6 +224,7 @@ class KuisGrammarService
             }
         } else {
             $payload['choices'] = Arr::get($options, 'choices', []);
+            $payload['choices_reading'] = $question->option_readings ?? [];
             if ($includeAnswers) {
                 $payload['correctAnswer'] = $question->correct_answer;
             }

@@ -67,6 +67,7 @@ export function grammarStagesFromDraft(draft) {
         correctOrder: q.answer.correct_order
       } : {
         choices: q.choices.map(c => c.text),
+        choices_reading: q.choices.map(c => c.reading ?? null),
         correctAnswer: q.choices.find(c => c.id === q.answer.choice_id)?.text || ''
       }),
       explanation: q.explanation,

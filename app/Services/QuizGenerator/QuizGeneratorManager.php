@@ -25,14 +25,67 @@ final class QuizGeneratorManager
     public function generate(string $type, array $payload, array $settings): array
     {
         $draft = $this->strategy($type)->generateDraft($payload, $settings);
+        if ($type === 'grammar') {
+            return $this->finishGrammarDraft($draft, $settings['counts'] ?? []);
+        }
+
         $this->validateQuestions($draft['questions']);
-        $expected = (int) ($type === 'grammar' ? array_sum($settings['counts'] ?? ['transformation' => 5, 'sentence_builder' => 5, 'context_choice' => 5]) : ($settings['count'] ?? 10));
+        $expected = (int) ($settings['count'] ?? 10);
         if ($type !== 'dokkai' && count($draft['questions']) !== $expected) {
             throw ValidationException::withMessages(['settings.count' => 'Bahan tidak cukup untuk jumlah soal yang diminta. Kurangi jumlah atau tambah materi.']);
         }
         if ($type === 'dokkai' && count($draft['questions']) < $expected) {
             $draft['warnings'][] = 'Jumlah soal disesuaikan dengan soal bereviden valid pada wacana ini.';
         }
+
+        return $draft;
+    }
+
+    private function finishGrammarDraft(array $draft, array $counts): array
+    {
+        $labels = ['transformation' => 'Transformation', 'sentence_builder' => 'Susun Kata', 'context_choice' => 'Konteks'];
+        $hints = [
+            'transformation' => 'Tambahkan kata kerja yang sesuai di bank kosakata atau periksa pola dan bentuk kata.',
+            'sentence_builder' => 'Tambahkan contoh dengan minimal dua potongan kata. Pisahkan potongan dengan tanda | bila perlu.',
+            'context_choice' => 'Tambahkan contoh kalimat dan arti yang jelas serta bahan pembanding.',
+        ];
+        $accepted = [];
+        $seen = [];
+        $actual = array_fill_keys(array_keys($labels), 0);
+        foreach ($draft['questions'] as $question) {
+            $stage = $question['stage'];
+            if (! isset($labels[$stage]) || $actual[$stage] >= ($counts[$stage] ?? 5)) {
+                continue;
+            }
+            try {
+                $this->validateQuestions([$question]);
+            } catch (ValidationException) {
+                continue;
+            }
+            $signature = $this->signature($question);
+            if (isset($seen[$signature])) {
+                continue;
+            }
+            $seen[$signature] = true;
+            $accepted[] = $question;
+            $actual[$stage]++;
+        }
+
+        $missing = [];
+        foreach ($labels as $stage => $label) {
+            $requested = (int) ($counts[$stage] ?? 5);
+            if ($actual[$stage] === 0) {
+                $missing[] = "{$label} belum menghasilkan soal valid. {$hints[$stage]}";
+            } elseif ($actual[$stage] < $requested) {
+                $draft['warnings'][] = "{$label}: {$actual[$stage]} dari {$requested} soal.";
+            }
+        }
+        if ($missing !== []) {
+            throw ValidationException::withMessages(['input' => implode(' ', $missing)]);
+        }
+
+        $draft['questions'] = $accepted;
+        $this->validateQuestions($accepted);
 
         return $draft;
     }

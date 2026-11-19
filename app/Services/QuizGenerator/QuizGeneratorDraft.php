@@ -68,7 +68,8 @@ final class QuizGeneratorDraft
                 'translation' => $q['translation'], 'context' => $q['context'],
                 ...($q['kind'] === 'sentence_builder'
                     ? ['tokens' => $q['tokens'], 'correctOrder' => $q['answer']['correct_order']]
-                    : ['choices' => array_column($q['choices'], 'text'), 'correctAnswer' => collect($q['choices'])->firstWhere('id', $q['answer']['choice_id'])['text']]),
+                    : ['choices' => array_column($q['choices'], 'text'), 'choices_reading' => array_column($q['choices'], 'reading'),
+                        'correctAnswer' => collect($q['choices'])->firstWhere('id', $q['answer']['choice_id'])['text']]),
                 'explanation' => $q['explanation'], 'points' => $q['points'],
             ])->values()->all();
             $stages[] = ['id' => $id, 'title' => $title, 'questions' => $questions];

@@ -96,12 +96,12 @@ if(type==='flashcard-builder'){
 function GrammarBuilderFixture(){
     const stages = ['transformation','sentence_builder','context_choice'].map(id=>({id,questions:[]}));
     window.axios.get=async()=>({data:{lessons:[
-        {id:41,title:'Lesson pertama',pattern:'Pattern A',status:'draft',intro:{examples:[]},stages},
-        {id:42,title:'Lesson kedua',pattern:'Pattern B',status:'draft',intro:{examples:[]},stages},
+        {id:41,title:'Lesson pertama',pattern:'Pattern A',status:'draft',can_delete:true,intro:{examples:[]},stages},
+        {id:42,title:'Lesson kedua',pattern:'Pattern B',status:'draft',can_delete:true,intro:{examples:[]},stages},
     ]}});
     window.axios.delete=async(url)=>{
         window.__generator.calls.push({url});
-        if(window.__generator.mode==='fail')throw {response:{status:422,data:{errors:{lesson:['Lesson memiliki riwayat pengerjaan. Ubah menjadi draf untuk menyembunyikannya.']}}}};
+        if(window.__generator.mode==='fail')throw {response:{status:422,data:{errors:{lesson:['Lesson draf sudah tersembunyi. Riwayat siswa tetap disimpan.']}}}};
     };
     return <GrammarBuilder open day={{id:1,day_number:1}} module={{title:'Week 1'}} onClose={()=>{}}/>;
 }
@@ -250,14 +250,22 @@ try{
     };
     await evaluate('window.__generator.mode="fail"');
     await confirmDelete();
-    await waitFor('document.body.innerText.includes("Lesson memiliki riwayat pengerjaan.")');
+    await waitFor('document.querySelector("#grammar-delete-reason")?.textContent.includes("Riwayat siswa tetap disimpan.")');
+    assert(await evaluate('Array.from(document.querySelectorAll("button")).find(b=>b.textContent.trim()==="Hapus Lesson").disabled'));
     assert(await evaluate('document.body.innerText.includes("Lesson pertama")'));
+    await evaluate(`(() => {
+        const list = Array.from(document.querySelectorAll('select')).find(s => Array.from(s.options).some(o => o.value === '42'));
+        list.value = '42';
+        list.dispatchEvent(new Event('change', { bubbles: true }));
+    })()`);
+    await waitFor('!document.querySelector("#grammar-delete-reason")');
     await evaluate('window.__generator.mode="success"');
     await confirmDelete();
     await waitFor('document.body.innerText.includes("Lesson berhasil dihapus.")');
-    assert.equal(await evaluate('window.__generator.calls[1].url'),'/fixture/admin.grammar-quizzes.destroy/41');
-    assert.equal(await evaluate('document.body.innerText.includes("Lesson pertama")'),false);
-    assert(await evaluate('document.body.innerText.includes("Lesson kedua")'));
+    assert.equal(await evaluate('window.__generator.calls[1].url'),'/fixture/admin.grammar-quizzes.destroy/42');
+    assert.equal(await evaluate('document.body.innerText.includes("Lesson kedua")'),false);
+    assert(await evaluate('document.body.innerText.includes("Lesson pertama")'));
+    assert(await evaluate('Array.from(document.querySelectorAll("button")).find(b=>b.textContent.trim()==="Hapus Lesson").disabled'));
     await capture('grammar-after-delete');
     await send('Page.navigate',{url:server.resolvedUrls.local[0]+'__generator?type=flashcard-builder'});
     await waitFor('document.body.innerText.includes("Bank minggu lain")');

@@ -114,7 +114,7 @@ final class GrammarGeneratorStrategy implements QuizGeneratorStrategyInterface
     {
         $answer = $stage === 'sentence_builder'
             ? ['tokens' => $q['tokens'] ?? [], 'answer' => ['correct_order' => $q['correctOrder'] ?? []]]
-            : QuizGeneratorDraft::choices($q['choices'] ?? [], $q['correctAnswer'] ?? '');
+            : QuizGeneratorDraft::choices($q['choices'] ?? [], $q['correctAnswer'] ?? '', $q['choices_reading'] ?? []);
 
         return QuizGeneratorDraft::question([
             'kind' => $stage === 'sentence_builder' ? 'sentence_builder' : 'choice', 'stage' => $stage,

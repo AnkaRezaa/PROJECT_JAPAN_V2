@@ -28,6 +28,16 @@ class KuisGrammarGeneratorService
         'まで', 'のに', 'から', 'より', 'だけ', 'しか', 'には', 'でも', 'ほど', 'ばかり', 'こそ', 'へ', 'で'
     ];
 
+    private const PATTERN_VERBS = [
+        ['base' => '読む', 'reading' => 'よむ', 'meaning' => 'membaca'],
+        ['base' => '書く', 'reading' => 'かく', 'meaning' => 'menulis'],
+        ['base' => '話す', 'reading' => 'はなす', 'meaning' => 'berbicara'],
+        ['base' => '飲む', 'reading' => 'のむ', 'meaning' => 'minum'],
+        ['base' => '食べる', 'reading' => 'たべる', 'meaning' => 'makan'],
+        ['base' => '見る', 'reading' => 'みる', 'meaning' => 'melihat'],
+        ['base' => '勉強する', 'reading' => 'べんきょうする', 'meaning' => 'belajar'],
+    ];
+
     /**
      * Generate complete 3-stage quiz draft from lesson inputs.
      */
@@ -36,7 +46,6 @@ class KuisGrammarGeneratorService
         $level = $this->normalizeLevel($lessonData['level'] ?? 'N3');
         $pattern = trim($lessonData['pattern'] ?? '');
         $formula = trim($lessonData['formula'] ?? '');
-        $meaning = trim($lessonData['meaning'] ?? '');
         $examples = $lessonData['examples'] ?? [];
 
         $counts = $settings['counts'] ?? [
@@ -71,49 +80,28 @@ class KuisGrammarGeneratorService
         array $excludeVerbs = []
     ): array {
         $questions = [];
-        $cleanExamples = array_values(array_filter($examples, fn ($ex) => !empty(trim($ex['japanese'] ?? ''))));
+        $patternKey = str_replace(['〜', '～', '~'], '', $pattern);
+        $repeatVerb = $patternKey === 'ばほど';
+        $desire = $patternKey === 'たい';
+        ['form' => $targetForm, 'suffix' => $suffix] = match (true) {
+            $repeatVerb => ['form' => 'ba', 'suffix' => 'ほど'],
+            $desire => ['form' => 'stem', 'suffix' => 'たい'],
+            default => $this->detectRequiredConjugation($pattern, $formula, $targetFormOverride),
+        };
 
-        $detection = $this->detectRequiredConjugation($pattern, $formula, $targetFormOverride);
-        $targetForm = $detection['form'];
-        $suffix = $detection['suffix'];
+        $verbsPool = [...$this->resolveVerbsPool($level), ...($repeatVerb || $desire ? self::PATTERN_VERBS : [])];
+        $seen = array_fill_keys($excludeVerbs, true);
 
-        $verbsPool = $this->resolveVerbsPool($level, $cleanExamples);
-        if (empty($verbsPool)) {
-            foreach ($cleanExamples as $ex) {
-                if (!empty($ex['japanese'])) {
-                    $firstWord = explode(' ', trim(str_replace('|', ' ', $ex['japanese'])))[0] ?? '';
-                    if ($firstWord !== '') {
-                        $verbsPool[] = [
-                            'base' => $firstWord,
-                            'reading' => $ex['reading'] ?? '',
-                            'meaning' => $ex['translation'] ?? '',
-                        ];
-                    }
-                }
-            }
-        }
-
-        if (! empty($excludeVerbs)) {
-            $verbsPool = array_values(array_filter(
-                $verbsPool,
-                fn ($v) => ! in_array($v['base'], $excludeVerbs, true)
-            ));
-        }
-
-        if (empty($verbsPool)) {
-            throw ValidationException::withMessages([
-                'lesson.examples' => 'Tambahkan contoh kalimat pada materi atau pastikan bank kosakata memiliki data untuk menghasilkan soal transformasi.',
-            ]);
-        }
-        shuffle($verbsPool);
-
-        for ($i = 0; $i < $targetCount; $i++) {
-            $verb = $verbsPool[$i % count($verbsPool)];
+        foreach ($verbsPool as $verb) {
             $base = $verb['base'];
+            if (isset($seen[$base])) continue;
+            $seen[$base] = true;
             $reading = $verb['reading'];
             $meaning = $verb['meaning'];
-
-            $correctAnswer = $this->conjugateVerb($base, $targetForm) . $suffix;
+            $inflected = $this->conjugateVerb($base, $targetForm);
+            if ($targetForm !== 'dict' && $inflected === $base) continue;
+            $ending = ($repeatVerb ? $base : '') . $suffix;
+            $correctAnswer = $inflected . $ending;
 
             // Generate realistic grammatical distractors using alternate forms
             $distractorForms = array_diff(['te', 'ta', 'nai', 'ba', 'stem', 'dict'], [$targetForm]);
@@ -121,7 +109,7 @@ class KuisGrammarGeneratorService
 
             $distractors = [];
             foreach ($distractorForms as $altForm) {
-                $altCand = $this->conjugateVerb($base, $altForm) . $suffix;
+                $altCand = $this->conjugateVerb($base, $altForm) . $ending;
                 if ($altCand !== $correctAnswer && !in_array($altCand, $distractors, true)) {
                     $distractors[] = $altCand;
                 }
@@ -130,17 +118,14 @@ class KuisGrammarGeneratorService
                 }
             }
 
-            // Fill if still less than 3
-            while (count($distractors) < 3) {
-                $distractors[] = $base . 'です';
-            }
+            if (count($distractors) < 3) continue;
 
             $choices = array_merge([$correctAnswer], array_slice($distractors, 0, 3));
             shuffle($choices);
 
             $cleanPatternDisplay = $pattern ?: 'pola materi';
             $questions[] = [
-                'id' => 'gen-trans-' . ($i + 1),
+                'id' => 'gen-trans-' . (count($questions) + 1),
                 'type' => 'transformation',
                 'prompt' => "Ubah kata berikut ke bentuk yang tepat sesuai kaidah {$cleanPatternDisplay}.",
                 'japanese' => $base,
@@ -151,6 +136,7 @@ class KuisGrammarGeneratorService
                 'explanation' => "Berdasarkan rumus {$formula}, bentuk perubahan yang benar dari kata \"{$base}\" adalah \"{$correctAnswer}\".",
                 'points' => 1,
             ];
+            if (count($questions) >= $targetCount) break;
         }
 
         return $questions;
@@ -169,24 +155,12 @@ class KuisGrammarGeneratorService
         string $level = 'N3'
     ): array {
         $questions = [];
-        $cleanExamples = array_values(array_filter($examples, fn ($ex) => !empty(trim($ex['japanese'] ?? ''))));
-
-        // If user examples empty, pull real examples dynamically from database
-        $sentencesPool = $cleanExamples;
-        if (empty($sentencesPool)) {
-            $sentencesPool = $this->fetchDatabaseExamples($pattern, $level);
-        }
-
-        for ($i = 0; $i < $targetCount; $i++) {
-            $item = $sentencesPool[$i % max(1, count($sentencesPool))] ?? [
-                'japanese' => $pattern ? "{$pattern}の文法を正しく使います" : '日本語を毎日勉強します',
-                'translation' => 'Menggunakan tata bahasa dengan tepat.',
-            ];
-
+        foreach ($this->uniqueExamples($examples ?: $this->fetchDatabaseExamples($pattern, $level)) as $i => $item) {
             $rawJapanese = $item['japanese'] ?? '';
             $translation = $item['translation'] ?? '';
 
             $rawTokens = $this->smartSegmentJapaneseSentence($rawJapanese);
+            if (count($rawTokens) < 2) continue;
 
             $tokens = [];
             $correctOrder = [];
@@ -226,6 +200,7 @@ class KuisGrammarGeneratorService
                 'explanation' => "Kalimat lengkap yang benar: {$cleanSentence}" . ($translation ? " ({$translation})." : '.'),
                 'points' => 1,
             ];
+            if (count($questions) >= $targetCount) break;
         }
 
         return $questions;
@@ -244,33 +219,22 @@ class KuisGrammarGeneratorService
         bool $autoMeaning = true
     ): array {
         $questions = [];
-        $cleanExamples = array_values(array_filter($examples, fn ($ex) => !empty(trim($ex['japanese'] ?? ''))));
-
-        $sentencesPool = $cleanExamples;
-        if (empty($sentencesPool)) {
-            $sentencesPool = $this->fetchDatabaseExamples($pattern, $jlptLevel);
-        }
+        $sentencesPool = $this->uniqueExamples($examples ?: $this->fetchDatabaseExamples($pattern, $jlptLevel));
 
         $bankDistractors = $this->fetchDistractorsFromDatabase($jlptLevel, $pattern);
         $extraExamplesPool = null;
 
-        for ($i = 0; $i < $targetCount; $i++) {
-            $item = $sentencesPool[$i % max(1, count($sentencesPool))] ?? null;
-
-            if ($item && !empty($item['japanese'])) {
-                $translation = $item['translation'] ?? '';
-                $situation = $translation ? "Situasi: {$translation}" : "Situasi penggunaan pola {$pattern}";
-                $correctAnswer = str_replace('|', '', $item['japanese']);
-            } else {
-                $situation = "Situasi penggunaan pola {$pattern}";
-                $correctAnswer = $pattern;
-            }
+        foreach ($sentencesPool as $i => $item) {
+            $translation = trim($item['translation'] ?? '');
+            $situation = $translation ? "Situasi: {$translation}" : "Situasi penggunaan pola {$pattern}";
+            $correctAnswer = trim(str_replace('|', '', $item['japanese']));
 
             // Distractor selection: Bank DB -> Synthesized -> Fallbacks
             shuffle($bankDistractors);
             $distractors = [];
             foreach ($bankDistractors as $cand) {
-                if ($cand !== $correctAnswer && !in_array($cand, $distractors, true)) {
+                $cand = trim(str_replace('|', '', $cand));
+                if ($cand !== '' && $cand !== $correctAnswer && !in_array($cand, $distractors, true)) {
                     $distractors[] = $cand;
                 }
                 if (count($distractors) >= 3) {
@@ -318,6 +282,7 @@ class KuisGrammarGeneratorService
                 }
             }
 
+            if ($distractors === []) continue;
             $choices = array_merge([$correctAnswer], array_slice($distractors, 0, 3));
             shuffle($choices);
 
@@ -331,6 +296,7 @@ class KuisGrammarGeneratorService
                 'explanation' => "Jawaban yang tepat adalah \"{$correctAnswer}\" yang menerapkan kaidah pola {$pattern}.",
                 'points' => 1,
             ];
+            if (count($questions) >= $targetCount) break;
         }
 
         return $questions;
@@ -351,24 +317,16 @@ class KuisGrammarGeneratorService
 
         $targetForm = $settings['target_form'] ?? 'auto';
 
-        if ($stage === 'transformation') {
-            $excludeVerbs = $settings['exclude_verbs'] ?? [];
-            $list = $this->generateStage1Transformation($pattern, $formula, $examples, 1, $difficulty, $level, $targetForm, $excludeVerbs);
-            $q = $list[0] ?? [];
-            $q['id'] = 'gen-trans-' . ($index + 1) . '-' . time();
-            return $q;
+        $list = match ($stage) {
+            'transformation' => $this->generateStage1Transformation($pattern, $formula, $examples, 1, $difficulty, $level, $targetForm, $settings['exclude_verbs'] ?? []),
+            'sentence_builder' => $this->generateStage2SentenceBuilder($examples, $pattern, 1, $useDistractors, $difficulty, $level),
+            default => $this->generateStage3ContextChoice($examples, $pattern, $level, 1, $difficulty, $autoMeaning),
+        };
+        if ($list === []) {
+            throw ValidationException::withMessages(['question_id' => 'Belum tersedia variasi soal baru. Tambahkan bahan atau ubah pengaturan.']);
         }
-
-        if ($stage === 'sentence_builder') {
-            $list = $this->generateStage2SentenceBuilder($examples, $pattern, 1, $useDistractors, $difficulty, $level);
-            $q = $list[0] ?? [];
-            $q['id'] = 'gen-sb-' . ($index + 1) . '-' . time();
-            return $q;
-        }
-
-        $list = $this->generateStage3ContextChoice($examples, $pattern, $level, 1, $difficulty, $autoMeaning);
-        $q = $list[0] ?? [];
-        $q['id'] = 'gen-cc-' . ($index + 1) . '-' . time();
+        $q = $list[0];
+        $q['id'] = "gen-{$stage}-" . ($index + 1) . '-' . time();
         return $q;
     }
 
@@ -593,7 +551,7 @@ class KuisGrammarGeneratorService
     /**
      * Resolves pool of verbs dynamically from database Kosakata and user examples.
      */
-    private function resolveVerbsPool(string $level, array $cleanExamples): array
+    private function resolveVerbsPool(string $level): array
     {
         $pool = [];
 
@@ -603,26 +561,18 @@ class KuisGrammarGeneratorService
                 ->where(function ($q) {
                     $q->where('category', 'like', '%verb%')
                       ->orWhere('category', 'like', '%kata kerja%')
-                      ->orWhere('content_type', 'kosakata');
+                      ->orWhere('metadata->part_of_speech', 'like', '%verba%');
                 })
                 ->whereNotNull('word')
+                ->where('word', '!=', '')
                 ->whereNotNull('reading')
                 ->inRandomOrder()
-                ->take(15)
+                ->take(30)
                 ->get();
-
-            if ($dbVerbs->isEmpty()) {
-                $dbVerbs = $this->vocabularyQuery($level)
-                    ->whereNotNull('word')
-                    ->whereNotNull('reading')
-                    ->inRandomOrder()
-                    ->take(15)
-                    ->get();
-            }
 
             foreach ($dbVerbs as $item) {
                 $pool[] = [
-                    'base' => $item->word,
+                    'base' => trim($item->word),
                     'reading' => $item->reading,
                     'meaning' => $item->meaning_id ?: ($item->meaning_en ?: 'kata kerja'),
                 ];
@@ -632,6 +582,19 @@ class KuisGrammarGeneratorService
         }
 
         return $pool;
+    }
+
+    private function uniqueExamples(array $examples): array
+    {
+        $unique = [];
+        foreach ($examples as $example) {
+            $key = preg_replace('/[|\s]+/u', '', $example['japanese'] ?? '');
+            if ($key !== '') {
+                $unique[$key] ??= $example;
+            }
+        }
+
+        return array_values($unique);
     }
 
     /**

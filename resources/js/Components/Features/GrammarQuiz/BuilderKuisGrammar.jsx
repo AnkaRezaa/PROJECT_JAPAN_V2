@@ -605,13 +605,20 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
         },
         stages: draft.stages.map((stage) => ({
             ...stage,
-            questions: stage.questions.map((question) => ({
-                ...question,
-                choices: Array.isArray(question.choices)
-                    ? question.choices.map((c) => String(c).trim()).filter(Boolean)
-                    : question.choices,
-                id: Number.isInteger(Number(question.id)) ? Number(question.id) : undefined,
-            })),
+            questions: stage.questions.map((question) => {
+                const payload = { ...question, id: Number.isInteger(Number(question.id)) ? Number(question.id) : undefined };
+                if (!Array.isArray(question.choices)) return payload;
+
+                const choices = question.choices.map((choice, index) => ({
+                    text: String(choice).trim(),
+                    reading: question.choices_reading?.[index]?.trim() || null,
+                })).filter(choice => choice.text);
+                return {
+                    ...payload,
+                    choices: choices.map(choice => choice.text),
+                    ...(Array.isArray(question.choices_reading) ? { choices_reading: choices.map(choice => choice.reading) } : {}),
+                };
+            }),
         })),
     });
 
@@ -736,7 +743,12 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
         setGeneratorSuccess('');
         try {
             const response = await window.axios.patch(`/admin/grammar-quizzes/${draft.id}/status`, { status });
-            const updated = { ...draft, status };
+            const updated = {
+                ...draft,
+                status,
+                can_delete: response.data.can_delete ?? draft.can_delete,
+                delete_block_reason: response.data.delete_block_reason ?? null,
+            };
             setDraft(updated);
             setLessons((current) => current.map((lesson) => lesson.id === updated.id ? updated : lesson));
             setGeneratorSuccess(response.data?.message || (status === 'published' ? 'Lesson Grammar berhasil diterbitkan.' : 'Lesson Grammar dikembalikan menjadi draf.'));
@@ -750,7 +762,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
     };
 
     const confirmDeleteLesson = () => {
-        if (!draft.id || saving) return;
+        if (!draft.id || saving || draft.can_delete === false) return;
 
         openConfirm({
             title: 'Hapus Lesson?',
@@ -773,7 +785,14 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                     setFieldErrors({});
                     setGeneratorSuccess('Lesson berhasil dihapus.');
                 } catch (failure) {
-                    setError(failure.response?.data?.errors?.lesson?.[0]
+                    const reason = failure.response?.data?.errors?.lesson?.[0];
+                    if (failure.response?.status === 422 && reason) {
+                        const blocked = { can_delete: false, delete_block_reason: reason };
+                        if (!hasUnsavedChanges) cleanSnapshotRef.current = JSON.stringify({ ...draft, ...blocked });
+                        setDraft(current => ({ ...current, ...blocked }));
+                        setLessons(current => current.map(item => item.id === draft.id ? { ...item, ...blocked } : item));
+                    }
+                    setError(reason
                         || (failure.response?.status === 403 ? 'Anda tidak memiliki akses untuk menghapus lesson ini.'
                             : 'Lesson belum dapat dihapus. Coba lagi atau hubungi admin.'));
                 } finally {
@@ -873,9 +892,14 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
             centerContent={
                 <>
                     {draft.id && (
-                        <button type="button" disabled={saving} onClick={confirmDeleteLesson} className="inline-flex min-h-9 items-center gap-1 px-2 text-sm font-semibold text-red-600 disabled:opacity-50 dark:text-red-400">
-                            <DeleteOutlineIcon fontSize="small" /> Hapus Lesson
-                        </button>
+                        <div className="flex min-w-0 flex-col items-start">
+                            <button type="button" disabled={saving || draft.can_delete === false} aria-describedby={draft.delete_block_reason ? 'grammar-delete-reason' : undefined} onClick={confirmDeleteLesson} className="inline-flex min-h-9 items-center gap-1 px-2 text-sm font-semibold text-red-600 disabled:opacity-50 dark:text-red-400">
+                                <DeleteOutlineIcon fontSize="small" /> Hapus Lesson
+                            </button>
+                            {draft.delete_block_reason && (
+                                <p id="grammar-delete-reason" className="max-w-56 px-2 text-xs leading-snug text-gray-600 dark:text-gray-300">{draft.delete_block_reason}</p>
+                            )}
+                        </div>
                     )}
                     {lessons.length > 0 && (
                         <select
