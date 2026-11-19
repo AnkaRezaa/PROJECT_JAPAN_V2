@@ -18,6 +18,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 import TranslateIcon from '@mui/icons-material/Translate';
 import VideoCameraFrontIcon from '@mui/icons-material/VideoCameraFront';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 const heroSlides = [
     { src: MountFujiBg, label: 'Gunung Fuji' },
@@ -56,12 +57,12 @@ function HeroCarousel({ children }) {
     }, [paused, focused, reducedMotion, visible, ready]);
 
     return (
-        <div className="relative mx-auto hidden min-h-[520px] w-[97%] items-center justify-center overflow-hidden py-20 lg:flex"
+        <div className="relative mx-auto flex min-h-[520px] w-[97%] items-center justify-center overflow-hidden py-20"
             onFocusCapture={() => setFocused(true)}
             onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
             <div aria-hidden="true" className="pointer-events-none absolute inset-0">
                 {heroSlides.map((slide, index) => (
-                    <img key={slide.src} src={slide.src} alt="" loading="lazy"
+                    <img key={slide.src} src={slide.src} alt="" loading={index === 0 ? 'eager' : 'lazy'}
                         fetchpriority={index === 0 ? 'high' : 'low'} decoding="async"
                         onLoad={() => setReady(current => current.includes(index) ? current : [...current, index].sort())}
                         onError={() => { setReady(current => current.filter(item => item !== index)); setActive(current => current === index ? 0 : current); }}
@@ -190,6 +191,7 @@ export default function BerandaUser({
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
     const [selectedMixedProgramId, setSelectedMixedProgramId] = useState('');
+    const showPhotoCarousel = useMediaQuery('(min-width: 1024px) and (hover: hover) and (pointer: fine)');
 
     const authUser = usePage().props.auth?.user || {};
     const accessStatus = authUser.access_status || user.access_status || {};
@@ -301,7 +303,7 @@ export default function BerandaUser({
                 <div className="pointer-events-none absolute left-8 top-[560px] hidden text-[11rem] font-black leading-none text-brand-900/[0.04] dark:text-white/[0.035] lg:block">学</div>
                 <div className="pointer-events-none absolute right-10 top-[860px] hidden text-[10rem] font-black leading-none text-amber-900/[0.05] dark:text-white/[0.03] lg:block">語</div>
 
-                <header className="mx-auto max-w-7xl px-3 pb-3 pt-4 min-[380px]:px-4 sm:px-6 lg:hidden">
+                {!showPhotoCarousel && <header className="mx-auto max-w-7xl px-3 pb-3 pt-4 min-[380px]:px-4 sm:px-6">
                     <h1 className="text-xl font-semibold text-gray-950 dark:text-white">Beranda</h1>
                     <dl className="mt-3 grid grid-cols-3 divide-x divide-slate-200 border-y border-slate-200 py-2.5 dark:divide-gray-800 dark:border-gray-800">
                         <div className="min-w-0 pr-2">
@@ -320,9 +322,9 @@ export default function BerandaUser({
                     {isPremium && activeSubscription && (
                         <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">Premium aktif sampai {new Date(activeSubscription.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                     )}
-                </header>
+                </header>}
 
-                <HeroCarousel>
+                {showPhotoCarousel && <HeroCarousel>
                     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(3,7,18,0.45)_0%,rgba(3,7,18,0.28)_58%,rgba(247,250,248,0.20)_76%,#F7FAF8_100%)] transition-colors duration-300 dark:bg-[linear-gradient(180deg,rgba(3,7,18,0.45)_0%,rgba(3,7,18,0.28)_58%,rgba(3,7,18,0.45)_80%,#030712_100%)]" />
                     <div className="pointer-events-none absolute inset-x-0 -bottom-px h-20 bg-gradient-to-b from-transparent via-[#F7FAF8]/90 to-[#F7FAF8] dark:via-gray-950/90 dark:to-gray-950" />
 
@@ -384,9 +386,9 @@ export default function BerandaUser({
                             </div>
                         )}
                     </div>
-                </HeroCarousel>
+                </HeroCarousel>}
 
-                <div className="relative z-10 mx-auto max-w-7xl space-y-3 px-3 min-[380px]:px-4 sm:px-6 lg:-mt-10 lg:space-y-6 lg:px-8">
+                <div className={`relative z-10 mx-auto max-w-7xl space-y-3 px-3 min-[380px]:px-4 sm:px-6 lg:space-y-6 lg:px-8 ${showPhotoCarousel ? 'lg:-mt-10' : ''}`}>
                     {liveAlert && (
                         <aside aria-label="Pengingat Sesi Live" className={`overflow-hidden rounded-lg border p-3.5 transition lg:rounded-3xl lg:p-6 lg:shadow-lg lg:backdrop-blur-md ${
                             liveAlert.is_live
@@ -451,7 +453,7 @@ export default function BerandaUser({
                     <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-8">
                         {/* Kolom Kiri: Jalur Belajar (lg:col-span-8) */}
                         <div className="min-w-0 space-y-3 lg:col-span-8 lg:space-y-8">
-                            <section className="min-w-0 rounded-lg border border-emerald-200 bg-white px-3.5 py-3 dark:border-emerald-900 dark:bg-gray-900 lg:hidden">
+                            {!showPhotoCarousel && <section className="min-w-0 rounded-lg border border-emerald-200 bg-white px-3.5 py-3 dark:border-emerald-900 dark:bg-gray-900">
                                 <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">Lanjutkan Belajar</p>
                                 <h2 className="mt-1 text-base font-semibold leading-snug text-gray-950 [overflow-wrap:anywhere] dark:text-white">
                                     {activeLearning?.title || 'Belum Ada Kelas Aktif'}
@@ -465,16 +467,16 @@ export default function BerandaUser({
                                     className="mt-2.5 inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-lg bg-green-700 px-3.5 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:bg-green-800">
                                     {activeLearning ? 'Lanjutkan' : 'Jelajahi Kelas'} <ArrowRightAltIcon aria-hidden="true" sx={{ fontSize: 18 }} />
                                 </Link>
-                            </section>
+                            </section>}
 
-                            <nav aria-label="Akses cepat" className="flex flex-wrap gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 dark:border-gray-800 dark:bg-gray-800 lg:hidden">
+                            {!showPhotoCarousel && <nav aria-label="Akses cepat" className="flex flex-wrap gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 dark:border-gray-800 dark:bg-gray-800">
                                 {quickLinks.map(({ label, href, icon: Icon }) => (
                                     <Link key={label} href={href} className="flex min-h-11 min-w-0 grow basis-[calc(33.333%_-_1px)] items-center gap-1.5 bg-white px-2 text-xs font-semibold text-gray-800 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus active:bg-emerald-50 dark:bg-gray-900 dark:text-gray-200 dark:active:bg-emerald-950">
                                         <Icon aria-hidden="true" className="shrink-0 text-green-700 dark:text-emerald-300" sx={{ fontSize: 17 }} />
                                         <span className="[overflow-wrap:anywhere]">{label}</span>
                                     </Link>
                                 ))}
-                            </nav>
+                            </nav>}
                             {/* 1. Hub Latihan Harian - Grid 2 Kolom: Kuis Campuran & Pemulihan Titik Lemah */}
                             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:gap-5">
                                 {/* Kartu 1: Kuis Campuran Harian (10 Soal Komprehensif) */}
@@ -633,7 +635,7 @@ export default function BerandaUser({
                             </div>
 
                             {/* 2. Belajar Hari Ini - Clean Educational Card with Study Desk Visual */}
-                            <section className="hidden rounded-3xl border border-slate-200/80 bg-white p-7 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:block">
+                            {showPhotoCarousel && <section className="rounded-3xl border border-slate-200/80 bg-white p-7 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                                 <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                                     <div className="flex items-start gap-4 sm:gap-5">
                                         <div className="hidden sm:flex h-24 w-24 sm:h-28 sm:w-28 shrink-0 overflow-hidden rounded-[28px] border border-slate-200/80 shadow-sm dark:border-gray-800">
@@ -695,7 +697,7 @@ export default function BerandaUser({
                                         </div>
                                     </div>
                                 </div>
-                            </section>
+                            </section>}
 
                             {/* 3. Kelas Saya - Modern Roadmap Cards */}
                             <section className="min-w-0 border-t border-slate-200 pt-2 dark:border-gray-800 lg:rounded-3xl lg:border lg:border-slate-200/80 lg:bg-white lg:p-7 lg:shadow-sm dark:lg:bg-gray-900">
