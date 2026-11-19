@@ -7,10 +7,9 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ExploreIcon from '@mui/icons-material/Explore';
-import GroupsIcon from '@mui/icons-material/Groups';
 import HourglassTopIcon from '@mui/icons-material/HourglassTop';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
 import SchoolIcon from '@mui/icons-material/School';
 import VideoCameraFrontIcon from '@mui/icons-material/VideoCameraFront';
 
@@ -21,6 +20,7 @@ const accessMeta = (item) => {
         return {
             key: 'waiting',
             label: 'Refund sedang diproses',
+            shortLabel: 'Refund diproses',
             icon: HourglassTopIcon,
             className: 'bg-rose-50 text-rose-700 dark:bg-rose-900/25 dark:text-rose-300',
         };
@@ -30,6 +30,7 @@ const accessMeta = (item) => {
         return {
             key: 'waiting',
             label: 'Menunggu persetujuan mentor',
+            shortLabel: 'Menunggu mentor',
             icon: HourglassTopIcon,
             className: 'bg-amber-50 text-amber-700 dark:bg-amber-900/25 dark:text-amber-300',
         };
@@ -66,11 +67,11 @@ function CourseThumbnail({ item, eager = false, compact = false }) {
     const thumbnailUrl = item.thumbnail_url && !imageFailed ? item.thumbnail_url : null;
 
     return (
-        <div className={`relative overflow-hidden bg-slate-100 dark:bg-gray-800 ${compact ? 'aspect-[4/3] rounded-xl' : 'aspect-[16/9]'}`}>
+        <div className={`relative overflow-hidden bg-slate-100 dark:bg-gray-800 ${compact ? 'aspect-square rounded-lg sm:aspect-[4/3] sm:rounded-xl' : 'aspect-[16/9]'}`}>
             {thumbnailUrl ? (
                 <img
                     src={thumbnailUrl}
-                    alt={item.title}
+                    alt=""
                     className="h-full w-full object-cover"
                     loading={eager ? 'eager' : 'lazy'}
                     onError={() => setImageFailed(true)}
@@ -88,12 +89,12 @@ function ProgressBar({ value }) {
     const progress = clampProgress(value);
 
     return (
-        <div>
-            <div className="mb-2 flex items-center justify-between text-xs font-bold text-slate-500 dark:text-gray-400">
-                <span>Progres kelas</span>
+        <div className="flex items-center gap-2 sm:block" role="progressbar" aria-label="Progres kelas" aria-valuenow={progress}>
+            <div className="order-last flex items-center justify-between text-xs font-semibold tabular-nums text-slate-600 dark:text-gray-400 sm:order-none sm:mb-2 sm:font-bold">
+                <span className="hidden sm:inline">Progres kelas</span>
                 <span>{progress}%</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-gray-800">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-gray-800 sm:h-2">
                 <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: theme.doneColor }} />
             </div>
         </div>
@@ -103,43 +104,52 @@ function ProgressBar({ value }) {
 function OwnedCourseCard({ item }) {
     const meta = accessMeta(item);
     const MetaIcon = meta.icon;
+    const liveActionLabel = item.live_session?.is_live ? 'Masuk Kelas Live'
+        : item.live_session?.is_today && item.live_session.time_formatted ? `Jadwal Kelas Live: ${item.live_session.time_formatted}` : 'Kelas Live';
 
     return (
-        <article className="relative grid gap-4 overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:grid-cols-[140px_minmax(0,1fr)_auto] sm:items-center">
+        <article className="relative grid min-w-0 grid-cols-[48px_minmax(0,1fr)] items-start gap-x-2.5 gap-y-1 overflow-hidden rounded-lg border border-slate-200 bg-white px-2.5 py-2 dark:border-gray-800 dark:bg-gray-900 min-[380px]:grid-cols-[56px_minmax(0,1fr)] sm:grid-cols-[140px_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:rounded-xl sm:p-4 sm:shadow-sm">
             <span aria-hidden="true" className="pointer-events-none absolute -bottom-8 right-4 hidden text-7xl font-black leading-none text-rose-900/[0.04] dark:text-white/[0.03] sm:block">学</span>
             <div className="relative z-10"><CourseThumbnail item={item} compact /></div>
             <div className="relative z-10 min-w-0">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${meta.className}`}>
-                        <MetaIcon sx={{ fontSize: 14 }} />
-                        {meta.label}
-                    </span>
-                    <span className="text-xs font-bold text-slate-400">{item.type || item.level || 'Kelas'}</span>
-                    {item.access_mode_label && (
-                        <span className="text-xs text-slate-400 dark:text-gray-500">• {item.access_mode_label}</span>
-                    )}
+                <div className="flex flex-col">
+                    <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-slate-950 [overflow-wrap:anywhere] dark:text-white sm:order-2 sm:truncate sm:text-lg sm:font-black">{item.title}</h3>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 sm:order-1 sm:mb-2 sm:mt-0">
+                        <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold sm:rounded-full sm:px-2.5 sm:py-1 sm:font-bold ${meta.className}`}>
+                            <MetaIcon sx={{ fontSize: 14 }} className="hidden sm:inline-block" aria-hidden="true" />
+                            <span className="sm:hidden">{meta.shortLabel || meta.label}</span>
+                            <span className="hidden sm:inline">{meta.label}</span>
+                        </span>
+                        <span className="hidden text-xs font-bold text-slate-400 sm:inline">{item.type || item.level || 'Kelas'}</span>
+                        {item.access_mode_label && (
+                            <span className="text-xs text-slate-600 dark:text-gray-400 sm:text-slate-400 dark:sm:text-gray-500">
+                                <span className="sm:hidden">{item.access_mode_label.replace(/^Kelas /, '')}</span>
+                                <span className="hidden sm:inline">• {item.access_mode_label}</span>
+                            </span>
+                        )}
+                    </div>
                 </div>
-                <h3 className="truncate text-lg font-black text-slate-950 dark:text-white">{item.title}</h3>
                 {item.refund_required ? (
-                    <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-gray-400">
-                        Pendaftaran mentor ditolak. Tim TOKU-UP sedang menindaklanjuti refund pembayaran.
+                    <p className="mt-1 text-xs text-slate-600 dark:text-gray-400 sm:mt-2 sm:text-sm sm:leading-6">
+                        <span className="sm:hidden">Pendaftaran ditolak.</span>
+                        <span className="hidden sm:inline">Pendaftaran mentor ditolak. Tim TOKU-UP sedang menindaklanjuti refund pembayaran.</span>
                     </p>
                 ) : item.waiting_for_approval ? (
-                    <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-gray-400">
+                    <p className="mt-2 hidden text-sm leading-6 text-slate-500 dark:text-gray-400 sm:block">
                         Pembayaran berhasil. Kamu dapat membuka roadmap setelah mentor menyetujui pendaftaran.
                     </p>
                 ) : (
-                    <div className="mt-3 max-w-md">
+                    <div className="mt-1.5 max-w-md sm:mt-3">
                         <ProgressBar value={item.progress} />
                     </div>
                 )}
                 {item.kloter && (
-                    <p className="mt-3 text-xs font-bold text-slate-500 dark:text-gray-400">
+                    <p className="mt-1.5 text-xs font-medium text-slate-600 [overflow-wrap:anywhere] dark:text-gray-400 sm:mt-3 sm:font-bold">
                         {item.kloter.nama} - Minggu {item.kloter.minggu_aktif || 0}
                     </p>
                 )}
-                {item.live_session && (
-                    <div className="mt-2.5 flex items-center gap-2">
+                {(item.live_session?.is_live || item.live_session?.is_today) && (
+                    <div className="mt-2.5 hidden items-center gap-2 sm:flex">
                         {item.live_session.is_live ? (
                             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[11px] font-black text-white shadow-sm">
                                 <span className="h-1.5 w-1.5 rounded-full bg-white" />
@@ -155,25 +165,32 @@ function OwnedCourseCard({ item }) {
                 )}
             </div>
             {!item.waiting_for_approval && !item.refund_required && (
-                <div className="relative z-10 flex flex-wrap items-center gap-2 sm:flex-col sm:items-stretch sm:justify-center">
+                <div className="relative z-10 col-span-2 flex min-w-0 flex-wrap items-center gap-1.5 border-t border-slate-100 pt-1.5 dark:border-gray-800 sm:col-auto sm:flex-col sm:items-stretch sm:justify-center sm:gap-2 sm:border-0 sm:pt-0">
                     <Link
                         href={item.href}
-                        className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r ${theme.ctaBg} px-4 text-sm font-black text-white shadow-sm transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600`}
+                        className={`mr-auto inline-flex min-h-11 max-w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r ${theme.ctaBg} px-3 text-sm font-semibold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:brightness-90 fine-pointer:hover:brightness-95 sm:mr-0 sm:gap-2 sm:px-4 sm:font-black sm:shadow-sm`}
                     >
-                        {item.has_class_access ? 'Lanjutkan' : (item.progress > 0 ? 'Lanjutkan Trial' : 'Mulai Trial Minggu 1')}
-                        <PlayArrowIcon sx={{ fontSize: 18 }} />
+                        <span className="sm:hidden">{item.has_class_access || item.progress > 0 ? 'Lanjutkan' : 'Mulai uji coba'}</span>
+                        <span className="hidden sm:inline">{item.has_class_access ? 'Lanjutkan' : (item.progress > 0 ? 'Lanjutkan Trial' : 'Mulai Trial Minggu 1')}</span>
+                        <PlayArrowIcon sx={{ fontSize: 18 }} aria-hidden="true" />
                     </Link>
 
                     {item.live_session && (
                         <Link
                             href={item.live_session.is_live && item.live_session.join_url ? item.live_session.join_url : route('user.live-classes.index')}
-                            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-slate-200"
+                            aria-label={liveActionLabel}
+                            title={liveActionLabel}
+                            className="inline-flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:bg-slate-100 fine-pointer:hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-slate-200 dark:active:bg-gray-700 sm:flex-row sm:gap-1.5 sm:border-slate-300 sm:px-3 sm:shadow-sm"
                         >
-                            <VideoCameraFrontIcon sx={{ fontSize: 16 }} className={item.live_session.is_live ? 'text-emerald-500' : 'text-slate-400'} />
-                            <span>Kelas Live</span>
+                            <VideoCameraFrontIcon aria-hidden="true" sx={{ fontSize: 18 }} className={item.live_session.is_live ? 'text-emerald-600 dark:text-emerald-300' : 'text-slate-600 dark:text-slate-300'} />
+                            {item.live_session.is_live && <span className="text-[10px] leading-none text-emerald-700 dark:text-emerald-300 sm:hidden">Live</span>}
+                            <span className="hidden sm:inline">Kelas Live</span>
                         </Link>
                     )}
-                    <Link href={route('user.kelas.reviews.index', item.slug)} className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-slate-700 hover:text-emerald-700 dark:text-gray-200">Ulasan<ArrowForwardIcon sx={{ fontSize: 16 }} /></Link>
+                    <Link href={route('user.kelas.reviews.index', item.slug)} aria-label={`Ulasan ${item.title}`} title="Ulasan kelas" className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:bg-slate-100 fine-pointer:hover:text-emerald-700 dark:border-gray-700 dark:text-gray-200 dark:active:bg-gray-800 sm:border-0 sm:px-3">
+                        <span className="sm:hidden"><RateReviewOutlinedIcon aria-hidden="true" sx={{ fontSize: 18 }} /></span>
+                        <span className="hidden sm:inline">Ulasan <ArrowForwardIcon aria-hidden="true" sx={{ fontSize: 16 }} /></span>
+                    </Link>
                 </div>
             )}
         </article>
@@ -208,36 +225,34 @@ export default function KelasPage({ programs = [], activeLiveToday = null }) {
         return [...trialCourses].sort((left, right) => clampProgress(right.progress) - clampProgress(left.progress))[0] ?? null;
     }, [activeEnrolled, trialCourses]);
 
-    const totalActiveCount = enrolledCourses.length > 0 ? enrolledCourses.length : trialCourses.length;
-
     return (
         <AuthenticatedLayout header={false}>
             <Head title="Kelas Saya - TOKU-UP" />
 
-            <main className="relative min-h-screen overflow-hidden bg-slate-50 pb-14 text-slate-900 dark:bg-gray-950 dark:text-white">
+            <div className="relative min-h-screen overflow-hidden bg-slate-50 pb-14 text-slate-900 dark:bg-gray-950 dark:text-white">
                 <div
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(140deg,rgba(245,158,11,0.12)_0%,transparent_28%),linear-gradient(230deg,rgba(244,63,94,0.08)_0%,transparent_34%),repeating-linear-gradient(90deg,rgba(190,24,93,0.035)_0_1px,transparent_1px_74px),repeating-linear-gradient(0deg,rgba(190,24,93,0.028)_0_1px,transparent_1px_74px)] dark:bg-[linear-gradient(140deg,rgba(245,158,11,0.09)_0%,transparent_28%),linear-gradient(230deg,rgba(244,63,94,0.1)_0%,transparent_34%),repeating-linear-gradient(90deg,rgba(255,255,255,0.024)_0_1px,transparent_1px_74px),repeating-linear-gradient(0deg,rgba(255,255,255,0.018)_0_1px,transparent_1px_74px)]"
+                    className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(140deg,rgba(245,158,11,0.12)_0%,transparent_28%),linear-gradient(230deg,rgba(244,63,94,0.08)_0%,transparent_34%),repeating-linear-gradient(90deg,rgba(190,24,93,0.035)_0_1px,transparent_1px_74px),repeating-linear-gradient(0deg,rgba(190,24,93,0.028)_0_1px,transparent_1px_74px)] dark:bg-[linear-gradient(140deg,rgba(245,158,11,0.09)_0%,transparent_28%),linear-gradient(230deg,rgba(244,63,94,0.1)_0%,transparent_34%),repeating-linear-gradient(90deg,rgba(255,255,255,0.024)_0_1px,transparent_1px_74px),repeating-linear-gradient(0deg,rgba(255,255,255,0.018)_0_1px,transparent_1px_74px)] sm:block"
                 />
                 <span aria-hidden="true" className="pointer-events-none absolute left-8 top-56 hidden text-[11rem] font-black leading-none text-amber-900/[0.045] dark:text-white/[0.03] xl:block">学</span>
                 <span aria-hidden="true" className="pointer-events-none absolute right-8 top-[660px] hidden text-[11rem] font-black leading-none text-rose-900/[0.04] dark:text-white/[0.03] xl:block">習</span>
 
                 <section className="relative z-10 border-b border-slate-200 bg-white/90 dark:border-gray-800 dark:bg-gray-900/90">
-                    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-                        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="mx-auto max-w-7xl px-3 py-3 min-[380px]:px-4 sm:px-6 sm:py-10 lg:px-8">
+                        <div className="flex flex-col gap-2.5 sm:gap-6 lg:flex-row lg:items-center lg:justify-between">
                             <div className="max-w-2xl">
-                                <p className="text-xs font-black uppercase tracking-[0.18em] text-rose-600 dark:text-rose-300">Pusat Belajar Siswa</p>
-                                <h1 className="mt-2 text-2xl font-black leading-tight text-slate-950 sm:text-3xl dark:text-white">Kelas Saya</h1>
-                                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-gray-300">
+                                <p className="hidden text-xs font-black uppercase tracking-[0.18em] text-rose-600 dark:text-rose-300 sm:block">Pusat Belajar Siswa</p>
+                                <h1 className="text-xl font-semibold leading-tight text-slate-950 dark:text-white sm:mt-2 sm:text-3xl sm:font-black">Kelas Saya</h1>
+                                <p className="mt-2 hidden text-sm leading-6 text-slate-600 dark:text-gray-300 sm:block">
                                     {enrolledCourses.length > 0
                                         ? `Kelola dan lanjutkan progres dari ${enrolledCourses.length} kelas aktif di akun Anda.`
                                         : 'Ruang belajar pribadi Anda dengan akses uji coba gratis Week 1 untuk seluruh program.'}
                                 </p>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                 {primaryCourse && (
-                                    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-gray-800 dark:bg-gray-800/60">
+                                    <div className="hidden items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-gray-800 dark:bg-gray-800/60 sm:flex">
                                         <div className="min-w-0 max-w-[200px]">
                                             <p className="truncate text-xs font-black text-slate-900 dark:text-white">{primaryCourse.title}</p>
                                             <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">{clampProgress(primaryCourse.progress)}% selesai</p>
@@ -254,30 +269,32 @@ export default function KelasPage({ programs = [], activeLiveToday = null }) {
 
                                 <Link
                                     href={route('user.live-classes.index')}
-                                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-800 shadow-sm transition hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                                    className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:bg-slate-100 fine-pointer:hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:active:bg-gray-700 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm sm:font-bold sm:shadow-sm"
                                 >
                                     <VideoCameraFrontIcon sx={{ fontSize: 18 }} className="text-brand-600 dark:text-brand-400" />
-                                    Jadwal Kelas Live
+                                    <span className="sm:hidden">Jadwal Live</span>
+                                    <span className="hidden sm:inline">Jadwal Kelas Live</span>
                                 </Link>
 
                                 <Link
                                     href={route('katalog')}
-                                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r ${theme.ctaBg} px-5 text-sm font-black text-white shadow-sm transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600`}
+                                    className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r ${theme.ctaBg} px-2.5 text-xs font-semibold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:brightness-90 fine-pointer:hover:brightness-95 sm:gap-2 sm:rounded-xl sm:px-5 sm:text-sm sm:font-black sm:shadow-sm`}
                                 >
                                     <ExploreIcon sx={{ fontSize: 18 }} />
-                                    + Cari Kelas Baru
+                                    <span className="sm:hidden">Cari Kelas</span>
+                                    <span className="hidden sm:inline">+ Cari Kelas Baru</span>
                                 </Link>
                             </div>
                         </div>
 
                         {activeLiveToday && (
-                            <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-emerald-500/40 bg-emerald-50/90 p-4 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-950/30">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+                            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-emerald-500/40 bg-emerald-50/90 p-2.5 dark:border-emerald-500/30 dark:bg-emerald-950/30 sm:mt-6 sm:gap-4 sm:rounded-2xl sm:p-4 sm:shadow-sm">
+                                <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+                                    <div className="hidden size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm sm:flex">
                                         <VideoCameraFrontIcon sx={{ fontSize: 22 }} />
                                     </div>
-                                    <div>
-                                        <div className="flex items-center gap-2">
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                                             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
                                                 {activeLiveToday.is_live ? 'Live Sekarang' : 'Hari Ini'}
                                             </span>
@@ -285,16 +302,17 @@ export default function KelasPage({ programs = [], activeLiveToday = null }) {
                                                 {activeLiveToday.time_formatted || ''}
                                             </span>
                                         </div>
-                                        <p className="mt-0.5 text-sm font-black text-slate-900 dark:text-white">
-                                            Sesi Tatap Muka bersama {activeLiveToday.mentor_name ? `Mentor ${activeLiveToday.mentor_name}` : 'Mentor'}
+                                        <p className="mt-0.5 text-xs font-semibold text-slate-900 [overflow-wrap:anywhere] dark:text-white sm:text-sm sm:font-black">
+                                            <span className="hidden sm:inline">Sesi Tatap Muka bersama </span>{activeLiveToday.mentor_name ? `Mentor ${activeLiveToday.mentor_name}` : 'Mentor'}
                                         </p>
                                     </div>
                                 </div>
                                 <Link
                                     href={activeLiveToday.join_url || route('user.live-classes.index')}
-                                    className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-xs font-black text-white shadow-sm transition hover:bg-emerald-500"
+                                    className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-emerald-700 px-2.5 text-xs font-semibold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:bg-emerald-800 fine-pointer:hover:bg-emerald-800 sm:rounded-xl sm:bg-emerald-600 sm:px-4 sm:font-black sm:shadow-sm"
                                 >
-                                    Buka Ruang Live
+                                    <span className="sm:hidden">{activeLiveToday.is_live ? 'Masuk Live' : 'Lihat Sesi'}</span>
+                                    <span className="hidden sm:inline">Buka Ruang Live</span>
                                     <ArrowForwardIcon sx={{ fontSize: 14 }} />
                                 </Link>
                             </div>
@@ -302,9 +320,9 @@ export default function KelasPage({ programs = [], activeLiveToday = null }) {
                     </div>
                 </section>
 
-                <div className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+                <div className="relative z-10 mx-auto max-w-7xl space-y-4 px-3 py-3 min-[380px]:px-4 sm:space-y-8 sm:px-6 sm:py-8 lg:px-8">
                     {enrolledCourses.length === 0 && trialCourses.length > 0 && (
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-sky-200/80 bg-sky-50/80 p-5 dark:border-sky-900/60 dark:bg-sky-950/20">
+                        <div className="hidden items-center justify-between gap-4 rounded-2xl border border-sky-200/80 bg-sky-50/80 p-5 dark:border-sky-900/60 dark:bg-sky-950/20 sm:flex">
                             <div className="flex items-start gap-3">
                                 <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-600 text-white shadow-sm">
                                     <PlayArrowIcon sx={{ fontSize: 20 }} />
@@ -327,15 +345,18 @@ export default function KelasPage({ programs = [], activeLiveToday = null }) {
 
                     {enrolledCourses.length > 0 && (
                         <section aria-labelledby="kelas-terdaftar-title">
-                            <div className="mb-4 flex items-center justify-between">
+                            <div className="mb-2 flex flex-wrap items-center justify-between gap-x-2 sm:mb-4">
                                 <div>
-                                    <h2 id="kelas-terdaftar-title" className="text-xl font-black text-slate-950 dark:text-white">Program Pembelajaran Terdaftar</h2>
-                                    <p className="text-xs text-slate-500 dark:text-gray-400">Kelas aktif dan program bimbingan mentor yang Anda ikuti.</p>
+                                    <h2 id="kelas-terdaftar-title" className="text-base font-semibold text-slate-950 dark:text-white sm:text-xl sm:font-black">
+                                        <span className="sm:hidden">Kelas Terdaftar</span>
+                                        <span className="hidden sm:inline">Program Pembelajaran Terdaftar</span>
+                                    </h2>
+                                    <p className="hidden text-xs text-slate-500 dark:text-gray-400 sm:block">Kelas aktif dan program bimbingan mentor yang Anda ikuti.</p>
                                 </div>
-                                <span className="text-xs font-bold text-slate-400">{enrolledCourses.length} kelas</span>
+                                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 sm:font-bold sm:text-slate-400">{enrolledCourses.length} kelas</span>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="space-y-2 sm:space-y-4">
                                 {activeEnrolled.map((item) => <OwnedCourseCard key={item.id} item={item} />)}
                                 {waitingEnrolled.map((item) => <OwnedCourseCard key={item.id} item={item} />)}
                             </div>
@@ -344,19 +365,20 @@ export default function KelasPage({ programs = [], activeLiveToday = null }) {
 
                     {trialCourses.length > 0 && (
                         <section aria-labelledby="kelas-trial-title">
-                            <div className="mb-4 flex items-center justify-between">
+                            <div className="mb-2 flex flex-wrap items-center justify-between gap-x-2 sm:mb-4">
                                 <div>
-                                    <h2 id="kelas-trial-title" className="text-xl font-black text-slate-950 dark:text-white">
-                                        {enrolledCourses.length > 0 ? 'Program Lainnya (Uji Coba Minggu 1)' : 'Program Pembelajaran (Uji Coba Minggu 1)'}
+                                    <h2 id="kelas-trial-title" className="text-base font-semibold text-slate-950 dark:text-white sm:text-xl sm:font-black">
+                                        <span className="sm:hidden">Uji Coba Gratis</span>
+                                        <span className="hidden sm:inline">{enrolledCourses.length > 0 ? 'Program Lainnya (Uji Coba Minggu 1)' : 'Program Pembelajaran (Uji Coba Minggu 1)'}</span>
                                     </h2>
-                                    <p className="text-xs text-slate-500 dark:text-gray-400">
+                                    <p className="hidden text-xs text-slate-500 dark:text-gray-400 sm:block">
                                         Pilih program untuk membuka materi Hari 1 s.d. 7 dan evaluasi kuis secara gratis.
                                     </p>
                                 </div>
-                                <span className="text-xs font-bold text-slate-400">{trialCourses.length} kelas</span>
+                                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 sm:font-bold sm:text-slate-400">{trialCourses.length} kelas</span>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="space-y-2 sm:space-y-4">
                                 {trialCourses.map((item) => <OwnedCourseCard key={item.id} item={item} />)}
                             </div>
                         </section>
@@ -364,26 +386,27 @@ export default function KelasPage({ programs = [], activeLiveToday = null }) {
 
                     {programs.length === 0 && (
                         <section aria-labelledby="kelas-kosong-title">
-                            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center dark:border-gray-800 dark:bg-gray-900">
-                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
+                            <div className="rounded-lg border border-dashed border-slate-300 bg-white px-3.5 py-5 text-center dark:border-gray-800 dark:bg-gray-900 sm:rounded-2xl sm:px-6 sm:py-16">
+                                <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 sm:size-14 sm:rounded-2xl">
                                     <SchoolIcon sx={{ fontSize: 32 }} />
                                 </div>
-                                <h3 id="kelas-kosong-title" className="mt-4 text-xl font-black text-slate-950 dark:text-white">Belum Ada Program Pembelajaran</h3>
-                                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-gray-400">
+                                <h2 id="kelas-kosong-title" className="mt-2 text-base font-semibold text-slate-950 dark:text-white sm:mt-4 sm:text-xl sm:font-black">Belum Ada Kelas</h2>
+                                <p className="mx-auto mt-2 hidden max-w-md text-sm leading-6 text-slate-500 dark:text-gray-400 sm:block">
                                     Materi kelas sedang disiapkan oleh tim pengajar. Silakan cek kembali nanti atau buka katalog program.
                                 </p>
                                 <Link
                                     href={route('katalog')}
-                                    className={`mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r ${theme.ctaBg} px-6 text-sm font-black text-white shadow-sm transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600`}
+                                    className={`mt-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r ${theme.ctaBg} px-3 text-sm font-semibold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:brightness-90 fine-pointer:hover:brightness-95 sm:mt-6 sm:rounded-xl sm:px-6 sm:font-black sm:shadow-sm`}
                                 >
                                     <ExploreIcon sx={{ fontSize: 18 }} />
-                                    Buka Katalog Program
+                                    <span className="sm:hidden">Buka Katalog</span>
+                                    <span className="hidden sm:inline">Buka Katalog Program</span>
                                 </Link>
                             </div>
                         </section>
                     )}
                 </div>
-            </main>
+            </div>
         </AuthenticatedLayout>
     );
 }
