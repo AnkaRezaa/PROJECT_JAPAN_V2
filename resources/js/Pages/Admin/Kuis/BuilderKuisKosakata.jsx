@@ -78,7 +78,7 @@ export default function QuizBuilder({
     const initialForm = {
         time_limit: quiz?.time_limit ?? '',
         passing_score: quiz?.passing_score ?? 70,
-        questions: normalizeQuestions(initialQuestions, quiz?.type),
+        questions: initialQuestions.length ? normalizeQuestions(initialQuestions, quiz?.type) : [],
         deleted_question_ids: [],
     };
     const cleanSnapshotRef = useRef(JSON.stringify(initialForm));
@@ -87,6 +87,7 @@ export default function QuizBuilder({
     const { confirmState, openConfirm, closeConfirm, setConfirmProcessing } = useConfirmAction();
 
     const activeQ = data.questions[activeIndex] || data.questions[0] || emptyQuestion(quiz?.type || 'multiple_choice');
+    const canRemoveQuestion = data.questions.length > 1 || quiz?.status === 'draft';
     const editorQuestions = data.questions.filter((question) => question.id || question.question_text?.trim());
     const flashcardSets = flashcardWorkspace?.sets || [];
     const activeFlashcardSet = flashcardSets.find((set) => set.id === activeFlashcardSetId)
@@ -100,7 +101,7 @@ export default function QuizBuilder({
 
     useEffect(() => {
         if (hasUnsavedChanges) return;
-        const normalized = normalizeQuestions(initialQuestions, quiz?.type);
+        const normalized = initialQuestions.length ? normalizeQuestions(initialQuestions, quiz?.type) : [];
         setData((current) => ({
             ...current,
             questions: normalized,
@@ -226,7 +227,7 @@ export default function QuizBuilder({
     };
 
     const removeQuestion = (index) => {
-        if (data.questions.length <= 1) return;
+        if (!canRemoveQuestion || !data.questions[index]) return;
         clearErrors();
         const removed = data.questions[index];
         const updated = data.questions.filter((_, i) => i !== index);
@@ -237,7 +238,7 @@ export default function QuizBuilder({
                 ? Array.from(new Set([...(current.deleted_question_ids || []), removed.id]))
                 : (current.deleted_question_ids || []),
         }));
-        if (activeIndex >= updated.length) setActiveIndex(updated.length - 1);
+        if (activeIndex >= updated.length) setActiveIndex(Math.max(0, updated.length - 1));
     };
 
     const duplicateQuestion = (index) => {
@@ -389,15 +390,17 @@ export default function QuizBuilder({
         const payload = new FormData();
         payload.append('import_file', importPreview.file);
         setImportProcessing(true);
+        setImportError('');
 
         router.post(route('admin.quizzes.questions.import', quiz.id), payload, {
             forceFormData: true,
             preserveScroll: true,
-            preserveState: false,
+            preserveState: 'errors',
             onSuccess: () => {
                 setImportPreview(null);
                 setImportError('');
             },
+            onError: (importErrors) => setImportError(importErrors.import_file || 'Impor soal gagal. Coba lagi.'),
             onFinish: () => setImportProcessing(false),
         });
     };
@@ -418,7 +421,7 @@ export default function QuizBuilder({
                 title={`Editor Soal Q${activeIndex + 1}`}
                 subtitle={`${activeQ.points || 1} poin · ${TYPE_LABELS[qType] || qType}`}
                 speechText={activeQ.question_reading || activeQ.question_text}
-                canDelete={data.questions.length > 1}
+                canDelete={canRemoveQuestion}
                 onDuplicate={() => duplicateQuestion(activeIndex)}
                 onDelete={() => removeQuestion(activeIndex)}
                 extraActions={
@@ -1012,6 +1015,7 @@ export default function QuizBuilder({
         >
             <Head title="Editor Kuis & Repetisi - TOKU-UP" />
             <div className="space-y-6">
+                {importError && !importPreview && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{importError}</p>}
                 {statusError && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{statusError}</p>}
                 {activeTab === 'questions' ? (
                     <div className="grid gap-6 lg:grid-cols-12 items-start">
@@ -1042,7 +1046,7 @@ export default function QuizBuilder({
                                             canMoveUp={i > 0}
                                             canMoveDown={i < data.questions.length - 1}
                                             canDuplicate={true}
-                                            canDelete={data.questions.length > 1}
+                                            canDelete={canRemoveQuestion}
                                             onSelect={() => setActiveIndex(i)}
                                             onMoveUp={() => moveQuestion(i, -1)}
                                             onMoveDown={() => moveQuestion(i, 1)}
@@ -1055,8 +1059,14 @@ export default function QuizBuilder({
                         </div>
 
                         {/* Kolom Kanan: Editor Kanvas In-Place (8 cols) */}
-                        <div className="lg:col-span-8">
-                            {renderEditor()}
+                        <div className="min-w-0 lg:col-span-8">
+                            {data.questions.length > 0 ? renderEditor() : (
+                                <div className="space-y-3 border-y border-gray-200 py-5 dark:border-gray-700">
+                                    {errors.questions && <p role="alert" className="text-sm font-semibold text-red-700 dark:text-red-300">{errors.questions}</p>}
+                                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Belum ada soal.</p>
+                                    <button type="button" onClick={() => addQuestion(quiz?.type || 'multiple_choice')} className="min-h-11 rounded-lg bg-brand-700 px-4 text-sm font-bold text-white hover:bg-brand-800">Tambah Soal</button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ) : activeTab === 'settings' ? (
@@ -1149,6 +1159,7 @@ export default function QuizBuilder({
                                     Tutup
                                 </button>
                             </div>
+                            {importError && <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-200">{importError}</p>}
                             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
                                 <div className="rounded-2xl bg-gray-50 p-4 dark:bg-gray-800/60">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Baris</p>

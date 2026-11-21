@@ -253,9 +253,9 @@ class AdminFlashcardController extends Controller
             'Flashcard set belum memiliki konteks Week dan Day yang valid.'
         );
 
-        $processed = 0;
+        $created = $updated = $skipped = 0;
 
-        DB::transaction(function () use ($flashcardSet, $rows, &$processed) {
+        DB::transaction(function () use ($flashcardSet, $rows, &$created, &$updated, &$skipped) {
             SetFlashcard::whereKey($flashcardSet->id)->lockForUpdate()->firstOrFail();
             $nextOrder = (int) $flashcardSet->flashcards()->max('order') + 1;
 
@@ -264,6 +264,7 @@ class AdminFlashcardController extends Controller
                 $frontText = trim((string) ($row['front_text'] ?? $row['word'] ?? $row['kata'] ?? ''));
 
                 if ($frontText === '') {
+                    $skipped++;
                     continue;
                 }
 
@@ -296,19 +297,19 @@ class AdminFlashcardController extends Controller
                     [
                         'vocabulary_id' => $vocabulary->id,
                         ...$this->flashcardAttributes($vocabulary),
-                        'order' => $existing?->order ?? ($nextOrder + $processed),
+                        'order' => $existing?->order ?? ($nextOrder + $created),
                     ]
                 );
 
-                $processed++;
+                $existing ? $updated++ : $created++;
             }
         });
 
-        if ($processed === 0) {
+        if ($created + $updated === 0) {
             return redirect()->back()->withErrors(['import_file' => 'Tidak ada kartu valid. Pastikan kolom front_text atau word terisi.']);
         }
 
-        return redirect()->back()->with('success', "{$processed} flashcard berhasil disinkronkan dengan Bank Konten.");
+        return redirect()->back()->with('success', "Impor flashcard: {$created} ditambahkan, {$updated} diperbarui, {$skipped} baris dilewati.");
     }
 
     public function downloadImportTemplate(

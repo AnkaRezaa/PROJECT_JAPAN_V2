@@ -41,7 +41,13 @@ class SoalKuisService
             ->max();
 
         DB::transaction(function () use ($quiz, $validated, &$questionIds, $initialSnapshotMaxId) {
-            Kuis::whereKey($quiz->id)->lockForUpdate()->firstOrFail();
+            $lockedQuiz = Kuis::whereKey($quiz->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedQuiz->status === 'published' && empty($validated['questions'])) {
+                throw ValidationException::withMessages([
+                    'questions' => 'Jadikan kuis Draf sebelum mengosongkan soal.',
+                ]);
+            }
 
             $quiz->update([
                 'time_limit' => $validated['time_limit'] ?? null,
@@ -147,6 +153,8 @@ class SoalKuisService
 
             if ($explicitDeletes !== null) {
                 $deleteQuery->whereIn('id', $explicitDeletes);
+            } elseif (empty($validated['questions'])) {
+                $deleteQuery->whereIn('id', []);
             } elseif ($initialSnapshotMaxId !== null) {
                 $deleteQuery->where(function ($query) use ($initialSnapshotMaxId) {
                     $query->where('id', '<=', $initialSnapshotMaxId)

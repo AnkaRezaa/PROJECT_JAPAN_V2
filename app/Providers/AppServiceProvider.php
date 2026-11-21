@@ -90,11 +90,7 @@ class AppServiceProvider extends ServiceProvider
             ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
         RateLimiter::for('live-room-control', fn (Request $request) => Limit::perMinute(30)
             ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
-        RateLimiter::for('admin-imports', fn (Request $request) => Limit::perMinutes(10, 3)
-            ->by(($request->user()?->id ?? 'guest').':'.$request->ip()));
-        RateLimiter::for('admin-flashcard-imports', function (Request $request): array {
-            $key = $request->user()?->id ?? 'guest:'.$request->ip();
-            $response = static function (Request $request, array $headers) {
+        $importLimitResponse = static function (Request $request, array $headers) {
                 $seconds = max(1, (int) ($headers['Retry-After'] ?? 60));
                 $wait = $seconds >= 60 ? (int) ceil($seconds / 60).' menit' : $seconds.' detik';
                 $message = "Batas impor tercapai. Coba lagi dalam {$wait}.";
@@ -104,11 +100,19 @@ class AppServiceProvider extends ServiceProvider
                 }
 
                 return redirect()->back(303)->withErrors(['import_file' => $message]);
-            };
+        };
+        RateLimiter::for('admin-imports', static function (Request $request) use ($importLimitResponse): Limit {
+            $limit = Limit::perMinutes(10, 3)->by(($request->user()?->id ?? 'guest').':'.$request->ip());
 
+            return $request->routeIs('admin.quizzes.questions.import', 'admin.quizzes.questions.import.preview')
+                ? $limit->response($importLimitResponse)
+                : $limit;
+        });
+        RateLimiter::for('admin-flashcard-imports', static function (Request $request) use ($importLimitResponse): array {
+            $key = $request->user()?->id ?? 'guest:'.$request->ip();
             return [
-                Limit::perMinute(3)->by('minute:'.$key)->response($response),
-                Limit::perMinutes(10, 6)->by('ten-minutes:'.$key)->response($response),
+                Limit::perMinute(3)->by('minute:'.$key)->response($importLimitResponse),
+                Limit::perMinutes(10, 6)->by('ten-minutes:'.$key)->response($importLimitResponse),
             ];
         });
         RateLimiter::for('admin-uploads', fn (Request $request) => Limit::perMinutes(10, 20)

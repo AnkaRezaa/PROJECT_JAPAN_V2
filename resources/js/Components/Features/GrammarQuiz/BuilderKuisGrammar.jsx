@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import UnifiedQuizGeneratorModal from '@/Components/Features/Quiz/Shared/UnifiedQuizGeneratorModal';
 import QuestionHighlightField from '@/Components/Features/Quiz/Shared/QuestionHighlightField';
+import { previewQuestionHighlight } from '@/lib/questionMarkup';
 import { grammarQuestionsToDraft, grammarStagesFromDraft } from '@/Components/Features/Quiz/Shared/generatorDraftAdapters';
 import GrammarQuizPreviewDialog from './GrammarQuizPreviewDialog';
 import GrammarBulkImportDialog from './GrammarBulkImportDialog';
@@ -30,7 +31,6 @@ import ErrorOutlineRoundedIcon from '@mui/icons-material/ErrorOutlineRounded';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 import SearchIcon from '@mui/icons-material/Search';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -212,9 +212,6 @@ function ReviewQuestions({
     regeneratingKey,
     onRegenerateAll,
     isGenerating = false,
-    onPreview,
-    onTogglePublish,
-    saving = false,
 }) {
     const [internalStageId, setInternalStageId] = useState(activeStageId);
     const [activeIndex, setActiveIndex] = useState(0);
@@ -233,6 +230,11 @@ function ReviewQuestions({
         stages: draft.stages.map((item, index) => (index === stageIndex ? { ...item, questions } : item)),
     });
     const activeQuestion = stage.questions[activeIndex] || stage.questions[0] || null;
+    const highlightPrompt = activeQuestion?.prompt || '';
+    const highlightTerm = activeQuestion?.highlight_text?.trim() || '';
+    const promptPreview = previewQuestionHighlight(highlightPrompt, highlightTerm);
+    const useSituation = currentStageId === 'context_choice' && Boolean(activeQuestion?.context)
+        && (highlightTerm ? !highlightPrompt.includes(highlightTerm) : !promptPreview.term && !promptPreview.error);
 
     useEffect(() => {
         if (activeIndex > stage.questions.length - 1) {
@@ -324,28 +326,6 @@ function ReviewQuestions({
                         <RefreshIcon sx={{ fontSize: 15 }} className={isGenerating ? 'animate-spin' : ''} />
                         Regenerate Semua
                     </button>
-                    <button
-                        type="button"
-                        onClick={onPreview}
-                        className="flex h-9 items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
-                    >
-                        <VisibilityIcon sx={{ fontSize: 15 }} />
-                        Preview Siswa
-                    </button>
-                    {draft.id && (
-                        <button
-                            type="button"
-                            disabled={saving}
-                            onClick={onTogglePublish}
-                            className={`flex h-9 items-center gap-1 rounded-xl px-3 text-xs font-black transition disabled:opacity-50 ${
-                                draft.status === 'published'
-                                    ? 'border border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200'
-                                    : 'bg-gray-900 text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900'
-                            }`}
-                        >
-                            {draft.status === 'published' ? 'Jadikan Draf' : 'Publikasikan Materi'}
-                        </button>
-                    )}
                 </div>
             </div>
 
@@ -433,7 +413,7 @@ function ReviewQuestions({
                             }
                         >
                             {/* Form Input Komponen */}
-                            <div className="mb-4"><QuestionHighlightField label="Sorotan pada Instruksi" text={activeQuestion.prompt} value={activeQuestion.highlight_text} onChange={(value) => updateActiveQuestion({ ...activeQuestion, highlight_text: value })} /></div>
+                            <div className="mb-4"><QuestionHighlightField label={currentStageId === 'context_choice' ? 'Sorotan pada Instruksi atau Situasi' : 'Sorotan pada Instruksi'} text={useSituation ? activeQuestion.context : highlightPrompt} value={activeQuestion.highlight_text} onChange={(value) => updateActiveQuestion({ ...activeQuestion, highlight_text: value })} /></div>
                             {currentStageId === 'sentence_builder' ? (
                                 <SentenceBuilderEditor question={activeQuestion} onChange={updateActiveQuestion} />
                             ) : (
@@ -671,6 +651,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
         const totalQuestions = draft.stages.reduce((acc, stg) => acc + (stg.questions?.length || 0), 0);
         if (totalQuestions === 0) {
             setError('Belum ada soal pada draf kuis. Buat draf melalui Generator Soal atau tambahkan soal manual terlebih dahulu.');
+            setActiveMainTab('questions');
             return;
         }
 
@@ -707,7 +688,11 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
             const response = draft.id && Number.isInteger(Number(draft.id))
                 ? await window.axios.put(`/admin/grammar-quizzes/${draft.id}`, requestPayload())
                 : await window.axios.post(`/admin/module-days/${day.id}/grammar-quizzes`, requestPayload());
-            const saved = response.data.lesson;
+            const saved = response.data?.lesson;
+            if (!saved?.id || (draft.id && Number(saved.id) !== Number(draft.id))) {
+                setError('Draf Grammar gagal dimuat setelah disimpan. Perubahan Anda masih ada di editor.');
+                return;
+            }
             setDraft(saved);
             cleanSnapshotRef.current = JSON.stringify(saved);
             setFieldErrors({});
@@ -718,13 +703,12 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
             setGeneratorSuccess('');
             const errors = requestError.response?.data?.errors;
             const message = requestError.response?.data?.message;
-            if (errors) {
-                const formatted = {};
-                for (const [key, msgs] of Object.entries(errors)) {
-                    formatted[key] = Array.isArray(msgs) ? msgs[0] : msgs;
-                }
+            const formatted = Object.fromEntries(Object.entries(errors ?? {})
+                .map(([key, messages]) => [key, Array.isArray(messages) ? messages[0] : messages])
+                .filter(([, text]) => typeof text === 'string' && text.trim()));
+            const firstErr = Object.values(formatted)[0];
+            if (firstErr) {
                 setFieldErrors(formatted);
-                const firstErr = Object.values(errors).flat()[0];
                 const cleanErr = firstErr
                     .replace(/lesson\.pattern/gi, 'Pola Grammar')
                     .replace(/lesson\.title/gi, 'Judul Materi')
@@ -932,6 +916,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                     )}
                     {lessons.length > 0 && (
                         <select
+                            aria-label="Pilih lesson Grammar"
                             disabled={saving}
                             value={draft.id ?? ''}
                             onChange={(event) => {
@@ -1064,9 +1049,6 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                             onRegenerateSingle={handleRegenerateSingle}
                             regeneratingKey={regeneratingKey}
                             onRegenerateAll={generateDraft}
-                            onPreview={() => setShowPreview(true)}
-                            onTogglePublish={() => setStatus(draft.status === 'published' ? 'draft' : 'published')}
-                            saving={saving}
                         />
                     </div>
                 )}

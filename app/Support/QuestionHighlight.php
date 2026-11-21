@@ -6,6 +6,22 @@ use Illuminate\Validation\ValidationException;
 
 final class QuestionHighlight
 {
+    /** @return array{prompt: string, context: string, target: ?string, error: ?string} */
+    public static function grammar(mixed $target, string $prompt, string $context, bool $parsePrompt = true, bool $parseContext = true): array
+    {
+        $primary = self::resolve($target, $prompt, $parsePrompt);
+        if ($context !== '' && (
+            (is_string($target) && trim($target) !== '' && ! str_contains($prompt, trim($target)))
+            || ($primary['target'] === null && $primary['error'] === null)
+        )) {
+            $secondary = self::resolve($target, $context, $parseContext);
+
+            return ['prompt' => $prompt, 'context' => $secondary['text'], 'target' => $secondary['target'], 'error' => $secondary['error']];
+        }
+
+        return ['prompt' => $primary['text'], 'context' => $context, 'target' => $primary['target'], 'error' => $primary['error']];
+    }
+
     public static function error(mixed $target, string $text): ?string
     {
         return self::resolve($target, $text)['error'];

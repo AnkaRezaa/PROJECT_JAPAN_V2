@@ -45,7 +45,8 @@ class KuisGrammarService
                     $prompt = trim((string) ($question['prompt'] ?? ''));
                     $existing = $existingQuestions->get($question['id'] ?? 0);
                     $parse = $existing?->question_text !== $prompt;
-                    $normalized = $this->normalizeQuestion($stage['id'], $question, "stages.{$stageIndex}.questions.{$questionIndex}.highlight_text", $parse);
+                    $parseContext = trim((string) ($question['context'] ?? '')) !== (string) ($existing?->options['context'] ?? '');
+                    $normalized = $this->normalizeQuestion($stage['id'], $question, "stages.{$stageIndex}.questions.{$questionIndex}.highlight_text", $parse, $parseContext);
                     if ($stage['id'] !== 'sentence_builder' && ! array_key_exists('choices_reading', $question)
                         && ($existing?->options['choices'] ?? null) === $normalized['options']['choices']) {
                         $normalized['option_readings'] = $existing->option_readings;
@@ -131,7 +132,7 @@ class KuisGrammarService
         ];
     }
 
-    public function normalizeQuestion(string $stage, array $question, string $highlightField = 'highlight_text', bool $parseHighlight = true): array
+    public function normalizeQuestion(string $stage, array $question, string $highlightField = 'highlight_text', bool $parseHighlight = true, bool $parseContext = true): array
     {
         if (! in_array($stage, self::STAGES, true) || (($question['type'] ?? $stage) !== $stage && ($question['type'] ?? '') !== 'multiple_choice')) {
             throw ValidationException::withMessages(['stages' => 'Tipe soal harus sesuai dengan stage Grammar.']);
@@ -180,12 +181,24 @@ class KuisGrammarService
             'transformation' => 'transformation',
             default => 'multiple_choice',
         };
-        $highlight = QuestionHighlight::validated($question['highlight_text'] ?? null, trim((string) ($question['prompt'] ?? '')), $highlightField, $parseHighlight);
+        $highlight = QuestionHighlight::grammar(
+            $question['highlight_text'] ?? null,
+            trim((string) ($question['prompt'] ?? '')),
+            $stage === 'context_choice' ? ($options['context'] ?? '') : '',
+            $parseHighlight,
+            $parseContext,
+        );
+        if ($highlight['error']) {
+            throw ValidationException::withMessages([$highlightField => $highlight['error']]);
+        }
+        if ($stage === 'context_choice') {
+            $options['context'] = $this->nullableText($highlight['context']);
+        }
 
         return [
             'type' => $question['type'] ?? $normalizedType,
             'stage' => $stage,
-            'question_text' => $highlight['text'],
+            'question_text' => $highlight['prompt'],
             'highlight_text' => $highlight['target'],
             'question_reading' => $options['source_reading'],
             'correct_answer' => $correctAnswer,

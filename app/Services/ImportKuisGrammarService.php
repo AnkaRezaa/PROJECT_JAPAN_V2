@@ -37,7 +37,7 @@ class ImportKuisGrammarService
         foreach ($questionRows as $index => $row) {
             $rowNumber = $index + 2;
             $stage = trim((string) ($row['stage'] ?? ''));
-            if ($error = QuestionHighlight::error($row['highlight_text'] ?? null, (string) ($row['prompt'] ?? ''))) {
+            if ($error = $this->rowHighlight($stage, $row)['error']) {
                 $errors[] = $this->error('Soal', $rowNumber, 'highlight_text', $error);
             }
             $items = $this->pipeValues($row['options_or_tokens'] ?? '');
@@ -192,17 +192,26 @@ class ImportKuisGrammarService
         });
     }
 
+    private function rowHighlight(string $stage, array $row): array
+    {
+        return QuestionHighlight::grammar(
+            $row['highlight_text'] ?? null,
+            trim((string) ($row['prompt'] ?? '')),
+            $stage === 'context_choice' ? trim((string) ($row['context'] ?? '')) : '',
+        );
+    }
+
     private function questionPayload(string $stage, array $row, int $index): array
     {
         $items = $this->pipeValues($row['options_or_tokens'] ?? '');
         $correct = $this->pipeValues($row['correct_answer_or_order'] ?? '');
-        $highlight = QuestionHighlight::resolve($row['highlight_text'] ?? null, trim((string) ($row['prompt'] ?? '')));
+        $highlight = $this->rowHighlight($stage, $row);
         $payload = [
             'type' => $stage,
-            'prompt' => $highlight['text'],
+            'prompt' => $highlight['prompt'],
             'highlight_text' => $highlight['target'],
             'japanese' => trim((string) ($row['source_text'] ?? '')) ?: null,
-            'context' => trim((string) ($row['context'] ?? '')) ?: null,
+            'context' => ($stage === 'context_choice' ? $highlight['context'] : trim((string) ($row['context'] ?? ''))) ?: null,
             'explanation' => trim((string) ($row['feedback'] ?? '')) ?: null,
             'points' => max(1, (int) ($row['points'] ?? 1)),
         ];
@@ -276,7 +285,7 @@ class ImportKuisGrammarService
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
             $stage = trim((string) ($row['stage'] ?? ''));
-            if ($error = QuestionHighlight::error($row['highlight_text'] ?? null, (string) ($row['prompt'] ?? ''))) {
+            if ($error = $this->rowHighlight($stage, $row)['error']) {
                 $errors[] = $this->error('CSV', $rowNumber, 'highlight_text', $error);
             }
             $items = $this->pipeValues($row['options_or_tokens'] ?? '');

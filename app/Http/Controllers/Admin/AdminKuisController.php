@@ -59,22 +59,23 @@ class AdminKuisController extends Controller
     public function update(KuisRequest $request, Kuis $quiz, NotifikasiPenggunaService $notifikasi)
     {
         $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $quiz->module_id);
-        $oldStatus = $quiz->status;
         $validated = $request->validated();
         $validated['available_at'] = filled($validated['module_day_id'] ?? null)
             ? null
             : ($validated['available_at'] ?? null);
 
-        if (($validated['status'] ?? $quiz->status) === 'published' && ! $quiz->questions()->exists()) {
-            throw ValidationException::withMessages([
-                'status' => 'Kuis tanpa soal tidak dapat dipublikasikan.',
-            ]);
-        }
-
-        DB::transaction(function () use ($quiz, $validated) {
+        [$quiz, $oldStatus] = DB::transaction(function () use ($quiz, $validated) {
             Modul::query()->lockForUpdate()->findOrFail($validated['module_id']);
+            $current = Kuis::query()->lockForUpdate()->findOrFail($quiz->id);
+            $oldStatus = $current->status;
 
-            $quiz->update($validated);
+            if (($validated['status'] ?? $oldStatus) === 'published' && ! $current->questions()->exists()) {
+                throw ValidationException::withMessages(['status' => 'Kuis tanpa soal tidak dapat dipublikasikan.']);
+            }
+
+            $current->update($validated);
+
+            return [$current, $oldStatus];
         });
 
         if ($oldStatus !== 'published' && $quiz->status === 'published') {
@@ -87,18 +88,24 @@ class AdminKuisController extends Controller
     public function updateStatus(Request $request, Kuis $quiz, NotifikasiPenggunaService $notifikasi)
     {
         $this->kloterService->abortJikaModulDiLuarCakupan($request->user(), (int) $quiz->module_id);
-        $oldStatus = $quiz->status;
         $validated = $request->validate([
             'status' => ['required', 'in:draft,published'],
         ]);
 
-        if ($validated['status'] === 'published' && ! $quiz->questions()->exists()) {
-            throw ValidationException::withMessages([
-                'status' => 'Kuis tanpa soal tidak dapat dipublikasikan.',
-            ]);
-        }
+        [$quiz, $oldStatus] = DB::transaction(function () use ($quiz, $validated) {
+            $current = Kuis::query()->lockForUpdate()->findOrFail($quiz->id);
+            $oldStatus = $current->status;
 
-        $quiz->update($validated);
+            if ($validated['status'] === 'published' && ! $current->questions()->exists()) {
+                throw ValidationException::withMessages([
+                    'status' => 'Kuis tanpa soal tidak dapat dipublikasikan.',
+                ]);
+            }
+
+            $current->update($validated);
+
+            return [$current, $oldStatus];
+        });
 
         if ($oldStatus !== 'published' && $quiz->status === 'published') {
             $this->kirimNotifikasiKuisTerbit($quiz, $notifikasi);
@@ -287,7 +294,6 @@ class AdminKuisController extends Controller
             $quiz->update([
                 'time_limit' => $validated['time_limit'] ?? null,
                 'passing_score' => $validated['passing_score'] ?? ($quiz->passing_score ?? 70),
-                'status' => empty($validated['questions']) ? 'draft' : $quiz->status,
             ]);
 
             $questions->syncQuestions($quiz, $validated);

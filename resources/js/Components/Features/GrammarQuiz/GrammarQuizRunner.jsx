@@ -341,7 +341,9 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
                             ) : (
                                 <>
                                     <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">Situasi</p>
-                                    <p className="mt-2 text-sm font-bold leading-6 text-gray-800 dark:text-gray-100">{question.context}</p>
+                                    <p className="mt-2 text-sm font-bold leading-6 text-gray-800 dark:text-gray-100">
+                                        <HighlightedLearningText text={question.context} term={question.type === 'context_choice' && !String(question.prompt ?? '').includes(question.highlight_text || '') ? question.highlight_text : null} variant="question" />
+                                    </p>
                                 </>
                             )}
                         </QuizSurface>

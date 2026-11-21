@@ -10,6 +10,9 @@ use App\Models\ProgramPembelajaran;
 use App\Models\ProgresHariModul;
 use App\Models\ReviewSoal;
 use App\Models\Soal;
+use App\Models\SetFlashcard;
+use App\Services\TemplateExcelService;
+use Illuminate\Http\UploadedFile;
 
 function grammarPayload(): array
 {
@@ -128,6 +131,93 @@ it('reports why a vocabulary quiz with no saved questions cannot be published', 
         ->assertJsonValidationErrors('status');
 
     expect($quiz->fresh()->status)->toBe('draft');
+});
+
+it('only empties draft quizzes and preserves history and concurrent additions', function () {
+    $fixture = grammarFixture();
+    $quiz = $fixture['checkpoint'];
+    $first = $fixture['checkpointQuestion'];
+    $url = route('admin.quizzes.builder.update', $quiz);
+    $payload = ['questions' => [], 'deleted_question_ids' => [$first->id]];
+
+    $this->actingAs($fixture['admin'])->postJson($url, $payload)
+        ->assertUnprocessable()->assertJsonValidationErrors('questions');
+    expect($quiz->fresh()->status)->toBe('published');
+
+    $this->patchJson(route('admin.quizzes.status', $quiz), ['status' => 'draft'])->assertRedirect();
+    $second = $first->replicate();
+    $second->order = 1;
+    $second->save();
+    $this->postJson($url, $payload)->assertRedirect();
+    expect($quiz->questions()->pluck('id')->all())->toBe([$second->id]);
+
+    $this->postJson($url, ['questions' => []])->assertRedirect();
+    expect($quiz->questions()->pluck('id')->all())->toBe([$second->id]);
+
+    $attempt = $quiz->attempts()->create(['user_id' => $fixture['user']->id]);
+    $answer = $second->attemptAnswers()->create(['attempt_id' => $attempt->id]);
+    $this->postJson($url, ['questions' => [], 'deleted_question_ids' => [$second->id]])
+        ->assertUnprocessable()->assertJsonValidationErrors('questions');
+    expect($answer->fresh())->not->toBeNull();
+
+    $mentor = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'kloter']);
+    $this->actingAs($mentor)->postJson($url, ['questions' => [], 'deleted_question_ids' => [$second->id]])->assertForbidden();
+
+    $draft = Kuis::create(['module_id' => $fixture['module']->id, 'module_day_id' => $fixture['day']->id, 'type' => 'multiple_choice', 'status' => 'draft']);
+    $only = $first->replicate(['id']);
+    $only->quiz_id = $draft->id;
+    $only->save();
+    $this->actingAs($fixture['admin'])->postJson(route('admin.quizzes.builder.update', $draft), ['questions' => [], 'deleted_question_ids' => [$only->id]])->assertRedirect();
+    expect($draft->questions()->count())->toBe(0);
+});
+
+it('resolves Grammar highlights on the situation without changing instruction precedence', function () {
+    $fixture = grammarFixture();
+    $payload = grammarPayload();
+    $payload['stages'][2]['questions'][0]['context'] = 'Besok ke (学校).';
+    $payload['stages'][2]['questions'][0]['highlight_text'] = '学校';
+    $this->actingAs($fixture['admin'])
+        ->postJson(route('admin.grammar-quizzes.store', $fixture['day']), $payload)
+        ->assertSuccessful()
+        ->assertJsonPath('lesson.stages.2.questions.0.context', 'Besok ke 学校.')
+        ->assertJsonPath('lesson.stages.2.questions.0.highlight_text', '学校');
+
+    $highlight = \App\Support\QuestionHighlight::grammar('学校', 'Pilih (学校).', 'Besok ke 学校.');
+    expect($highlight['prompt'])->toBe('Pilih 学校.')->and($highlight['target'])->toBe('学校');
+});
+
+it('keeps quiz import limits and returns an actionable error for both request types', function () {
+    $fixture = grammarFixture();
+    $quiz = $fixture['checkpoint'];
+    $csv = fn () => UploadedFile::fake()->createWithContent('soal.csv', "type,question_text,correct_answer,options\nmultiple_choice,Arti kata?,api,api|air\n");
+    $preview = route('admin.quizzes.questions.import.preview', $quiz);
+    $commit = route('admin.quizzes.questions.import', $quiz);
+    $builder = route('admin.quizzes.builder', $quiz);
+    $client = $this->actingAs($fixture['admin']);
+
+    $client->post($preview, ['import_file' => $csv()], ['Accept' => 'application/json'])->assertOk()->assertJsonPath('valid_count', 1);
+    $file = app(TemplateExcelService::class)->xlsxPath(['type', 'question_text', 'correct_answer', 'options'], [['multiple_choice', 'Arti kata lain?', 'api', 'api|air']], 'Soal', 'audit-admin');
+    try {
+        $client->post($preview, ['import_file' => new UploadedFile($file, 'soal.xlsx', null, null, true)], ['Accept' => 'application/json'])
+            ->assertOk()->assertJsonPath('valid_count', 1);
+    } finally {
+        unlink($file);
+    }
+    $client->from($builder)->post($commit, ['import_file' => $csv()])->assertRedirect($builder)->assertSessionHas('success');
+    $client->post($preview, ['import_file' => $csv()], ['Accept' => 'application/json'])->assertTooManyRequests()->assertHeader('Retry-After')->assertJsonStructure(['errors' => ['import_file']]);
+    $client->from($builder)->withHeader('X-Inertia', 'true')->post($commit, ['import_file' => $csv()])
+        ->assertStatus(303)->assertRedirect($builder)->assertSessionHasErrors('import_file');
+});
+
+it('reports flashcard rows added, updated and skipped', function () {
+    $fixture = grammarFixture();
+    $set = SetFlashcard::create(['module_id' => $fixture['module']->id, 'module_day_id' => $fixture['day']->id, 'title' => 'Audit import', 'status' => 'draft']);
+    $file = fn () => UploadedFile::fake()->createWithContent('cards.csv', "front_text,reading,back_text\nGakkou,,sekolah\n,,lewati\n");
+    $url = route('admin.flashcards.import', $set);
+
+    $this->actingAs($fixture['admin'])->post($url, ['import_file' => $file()])->assertSessionHas('success', 'Impor flashcard: 1 ditambahkan, 0 diperbarui, 1 baris dilewati.');
+    $this->post($url, ['import_file' => $file()])->assertSessionHas('success', 'Impor flashcard: 0 ditambahkan, 1 diperbarui, 1 baris dilewati.');
+    expect($set->flashcards()->count())->toBe(1);
 });
 
 it('authors grammar and completes a day only after grammar and vocabulary checkpoint pass', function () {
