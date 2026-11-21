@@ -218,6 +218,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Admin Routes
     Route::middleware('role:admin,superadmin')->prefix('admin')->name('admin.')->group(function () {
+        Route::redirect('/', '/admin/dashboard');
         Route::post('/quiz-generator/{type}', \App\Http\Controllers\Admin\AdminQuizGeneratorController::class)
             ->whereIn('type', ['vocab', 'grammar', 'dokkai'])->middleware('throttle:admin-generator')->name('quiz-generator');
         Route::get('/dashboard', [AdminBerandaController::class, 'index'])->name('dashboard');

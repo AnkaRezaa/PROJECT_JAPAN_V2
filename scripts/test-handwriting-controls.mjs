@@ -20,14 +20,28 @@ import Quiz from '@/Pages/User/Kuis/KerjakanKuis';
 import BuilderKuisKosakata from '@/Pages/Admin/Kuis/BuilderKuisKosakata';
 import ModuleDayDialog from '@/Components/Features/Admin/ModuleDayDialog';
 import ManajemenKelas from '@/Pages/Admin/ModulMateri/ManajemenKelas';
+import GrammarBuilder from '@/Components/Features/GrammarQuiz/BuilderKuisGrammar';
+import AdminLive from '@/Pages/Admin/RuangKelas/Show';
 import { DayDetailContent, DuolingoPath } from '@/Pages/User/Modul/DaftarModul';
 import '/resources/css/app.css';
 const params = new URLSearchParams(location.search);
 const scenario = params.get('scenario') || 'canvas';
 window.route = (name, id = '') => '/fixture/' + name + '/' + id;
 window.__writing = { requests: [], fail: false, delay: 60, completions: [], created: [] };
+const grammarLesson = {
+    id: 31, status: 'draft', title: 'Grammar audit fixture', pattern: 'ba-hodo', level: 'JLPT N3',
+    intro: { meaning: 'Semakin', formula: 'V-ba', explanation: 'Pola', examples: [] },
+    stages: ['transformation', 'sentence_builder', 'context_choice'].map(id => ({ id, questions: [{
+        id: id + '-fixture', type: id, prompt: 'Instruksi fixture', context: 'Situasi fixture', japanese: 'Contoh',
+        choices: ['A', 'B'], correctAnswer: 'A', explanation: 'Penjelasan', tokens: [{id:'a',text:'A'},{id:'b',text:'B'}], correctOrder: ['a','b'],
+    }] })),
+};
 window.axios = {
     get: async (url) => {
+        if (scenario === 'admin-grammar') {
+            await new Promise(resolve => { window.__writing.releaseGrammar = resolve; });
+            return { data: { lessons: [grammarLesson] } };
+        }
         const state = window.__writing;
         state.requests.push({ url });
         await new Promise(resolve => setTimeout(resolve, state.delay));
@@ -38,7 +52,20 @@ window.axios = {
         window.__writing.requests.push({ url, data });
         return { data: { is_correct: true, explanation: 'Correct', score: 100, xp_earned: 0 } };
     },
+    patch: async (url, { status }) => ({ data: { message: status === 'published' ? 'Lesson terbit' : 'Lesson draf' } }),
+    put: async () => { throw { response: { data: { errors: { 'stages.0.questions.0.explanation': ['Pembahasan tidak valid.'] } } } }; },
 };
+if (scenario === 'admin-live') {
+    Object.defineProperty(navigator, 'mediaDevices', { value: {
+        getUserMedia: async () => { throw new DOMException('Denied by fixture', 'NotAllowedError'); },
+    } });
+}
+if (scenario === 'admin-publish') {
+    router.patch = (url, data, options) => {
+        options.onError?.({ status: 'Kuis tanpa soal tidak dapat dipublikasikan.' });
+        options.onFinish?.();
+    };
+}
 router.post = (url, data, options) => {
     window.__writing.requests.push({ url, data });
     setTimeout(() => {
@@ -69,6 +96,9 @@ function Fixture() {
     window.__openDay = () => setDayOpen(true);
     window.__persistDay = (data) => setDay(current => ({ ...current, ...data }));
     if (scenario === 'class-type') return <ManajemenKelas programs={{data:[],links:[]}} tracks={[{id:1,code:'regular',name:'Regular'}]} />;
+    if (scenario === 'admin-live') return <AdminLive setup={{kloters:[],weeks:[],decks:[]}} exitUrl="/fixture/admin" storeEndpoint="/fixture/live" />;
+    if (scenario === 'admin-grammar') return <GrammarBuilder open={dayOpen} onClose={() => setDayOpen(false)} module={{id:1}} day={{id:881,day_number:1}} defaultLevel="JLPT N3" />;
+    if (scenario === 'admin-publish') return <BuilderKuisKosakata quiz={{id:8801,title:'Kuis kosong',status:'draft',type:'multiple_choice'}} questions={[]} />;
     if (scenario === 'day-create') return <ModuleDayDialog open={dayOpen} onClose={() => setDayOpen(false)} module={{ id: 1, week_number: 1, title: 'Week fixture' }} onCreated={result => window.__writing.created.push(result)} />;
     if (scenario === 'day' || scenario === 'day-exam') return <ModuleDayDialog open={dayOpen} onClose={() => setDayOpen(false)} module={{ id: 1, week_number: 1, title: 'Week fixture' }} day={day}
         examOptions={scenario === 'day-exam' ? [{ id: 901, title: 'JFT reading', category: 'jft_basic' }] : []} />;
@@ -133,7 +163,11 @@ const server = await createServer({ configFile: false, root, cacheDir: path.join
     optimizeDeps: { entries: [], include: ['react', 'react-dom', 'react-dom/client', '@inertiajs/react', 'kanji-recognizer', 'framer-motion', 'react-confetti', '@headlessui/react', '@mui/material/Tooltip', 'tiny-segmenter', ...['Add','ArrowBack','ArrowDownward','ArrowUpward','Assessment','AutoAwesome','AutoStories','BarChart','ChatBubbleOutlined','Check','CheckCircle','CheckCircleOutlineRounded','CheckCircleOutlined','Close','CloseRounded','ContentCopy','DarkMode','Dashboard','DeleteOutlineOutlined','DrawOutlined','EmojiEvents','ErrorOutlineOutlined','ErrorOutlineRounded','Explore','FactCheckOutlined','Favorite','FeedbackOutlined','FlagOutlined','FormatListBulleted','GraphicEq','HelpOutlineOutlined','ImageOutlined','InfoOutlined','KeyboardArrowDown','KeyboardArrowRight','LibraryBooks','LightMode','LightbulbOutlined','LogoutOutlined','Menu','MenuBook','MicNoneOutlined','MonitorHeart','NotificationsOutlined','OpenInNew','People','PlayArrow','PlayArrowRounded','RadioButtonUnchecked','ReceiptLongOutlined','Refresh','Replay','RestartAltRounded','Restore','SaveOutlined','School','SearchRounded','Settings','SettingsOutlined','Shield','Shuffle','SkipNextRounded','Star','StarBorder','StyleOutlined','TimerOutlined','TrendingUp','UndoRounded','UploadFile','VideoCameraFront','Visibility','VisibilityOutlined','VolumeOff','VolumeUp','WarningAmber','WorkspacePremium'].map(name => '@mui/icons-material/'+name)] },
     resolve: { alias: { '@': path.join(root, 'resources/js') } }, plugins: [react(), {
         name: 'writing-fixture',
-        config() { return { optimizeDeps: { include: roadmapDependencies } }; },
+        config() {
+            const auditIcons = ['Bolt', 'DeleteOutlined', 'Mic', 'MicOff', 'Videocam', 'VideocamOff']
+                .map(name => '@mui/icons-material/' + name);
+            return { optimizeDeps: { include: [...roadmapDependencies, ...auditIcons] } };
+        },
         configureServer(vite) { vite.middlewares.use(async (req,res,next) => {
             if (req.url.split('?')[0] !== '/__writing') return next();
             res.setHeader('Content-Type','text/html');
@@ -428,7 +462,50 @@ try {
         writeFileSync(path.join(temp,'class-type-'+width+'.png'),Buffer.from(data,'base64'));
     }
     assert.deepEqual(errors,[],'No uncaught runtime errors');
-    console.log(JSON.stringify({passed:true,checks:['width preserves SVG and geometry','light/dark responsive','skip missing asset','optional props unchanged','actual quiz multi-character skip','double click','review error and retry','learning without completion bonus','disabled writing skips canvas and review','flashcard review failure stays put','session preference survives prop update and resume','last flashcard finishes','legacy checkpoint stays enabled','restart uses latest preference','admin toggle keyboard and retention'],screenshots:'temporary; removed'},null,2));
+    for (const width of [390,1366]) {
+        await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<640});
+        await open('admin-publish');
+        await waitFor('document.body.innerText.toLowerCase().includes("daftar soal (0)") && document.body.innerText.includes("Total Poin: 0")');
+        await click('Terbitkan');
+        await click('Publish');
+        await waitFor('document.querySelector("[role=alert]")?.innerText.includes("Kuis tanpa soal")');
+        await click('Pengaturan');
+        await click('Publish Kuis');
+        await click('Publish');
+        await waitFor('document.querySelector("[role=alert]")?.innerText.includes("Kuis tanpa soal")');
+        assert(await evaluate('document.querySelector("[role=alert]").getBoundingClientRect().width <= innerWidth'));
+        await open('admin-live');
+        await waitFor('document.body.innerText.includes("Izin akses kamera/mikrofon")');
+        assert(!(await evaluate('document.body.innerText.includes("Perangkat siap digunakan")')));
+        assert(await evaluate('Array.from(document.querySelectorAll("button")).find(b => b.textContent.includes("Mulai Kelas Instan")).disabled'));
+        assert(await evaluate('document.querySelector("[role=alert]").getBoundingClientRect().right <= innerWidth'));
+    }
+    await open('admin-grammar');
+    await waitFor('document.querySelector("[role=status]")?.innerText.includes("Memuat lesson Grammar")');
+    assert(!(await evaluate('document.body.innerText.includes("Pola grammar belum diisi")')));
+    await waitFor('window.__writing.releaseGrammar');
+    await evaluate('window.__writing.releaseGrammar()');
+    await waitFor('document.body.innerText.includes("ba-hodo")');
+    await click('Simpan Draf');
+    await waitFor('document.querySelector("[role=alert]")?.innerText.includes("Pembahasan tidak valid")');
+    await evaluate(`(() => { const input = Array.from(document.querySelectorAll('input')).find(el => el.value === 'Instruksi fixture'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'Instruksi diperbaiki'); input.dispatchEvent(new Event('input',{bubbles:true})); })()`);
+    await waitFor('!document.querySelector("[role=alert]")');
+    await click('Terbitkan');
+    await waitFor('document.body.innerText.includes("Lesson terbit") && document.querySelector("input[value=\\"Instruksi diperbaiki\\"]")');
+    await evaluate('window.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))');
+    await waitFor('document.body.innerText.includes("Keluar dari Builder Grammar?")');
+    await click('Keluar Sekarang');
+    await waitFor('!document.body.innerText.includes("Builder Kuis Grammar")');
+    await evaluate('window.__writing.releaseGrammar = null');
+    await evaluate('window.__openDay()');
+    await waitFor('window.__writing.releaseGrammar');
+    await evaluate('window.__writing.releaseGrammar()');
+    await waitFor('document.body.innerText.includes("ba-hodo")');
+    await click('Terbitkan');
+    await waitFor('document.body.innerText.includes("Lesson terbit")');
+    await evaluate('window.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))');
+    await waitFor('!document.body.innerText.includes("Builder Kuis Grammar")');
+    console.log(JSON.stringify({passed:true,checks:['handwriting and roadmap regressions','vocabulary publish errors from both controls','grammar loading, validation, and clean publish','live preview permission rejection'],screenshots:'temporary; removed'},null,2));
 } catch(error) {
     console.error('Writing browser failure:', error.message, errors);
     throw error;

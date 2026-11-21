@@ -538,7 +538,7 @@ export default function PusatBankSoalKonten({
                                             </td>
                                             <td className="whitespace-nowrap px-5 py-4 text-center">
                                                 <span className="inline-flex rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-black tabular-nums text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
-                                                    {item.lessons_count ?? 0} Day
+                                                    {item.lessons_count ?? 0} lesson
                                                 </span>
                                             </td>
                                             <td className="whitespace-nowrap px-5 py-4 text-right">

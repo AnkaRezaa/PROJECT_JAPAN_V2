@@ -606,7 +606,7 @@ function RoomSetup({ setup, upcomingSessions = [], planningSessions, storeEndpoi
                                         onClick={() => submit('start')}
                                         disabled={form.processing || !form.data.kloter_belajar_id || isKloterBusy}
                                         onMouseEnter={() => import('@/Components/Features/Presentation/LiveClassRoom')}
-                                        className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-full bg-orange-600 px-7 text-sm font-bold text-white shadow-md shadow-orange-600/25 transition hover:bg-orange-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-full bg-orange-600 px-7 text-sm font-bold text-white shadow-md shadow-orange-600/25 transition enabled:hover:bg-orange-700 enabled:active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-600 disabled:shadow-none dark:disabled:bg-gray-800 dark:disabled:text-gray-300"
                                     >
                                         <VideocamIcon sx={{ fontSize: 20 }} />
                                         {form.processing ? 'Menyiapkan...' : 'Mulai Kelas Instan'}
@@ -643,7 +643,7 @@ function RoomSetup({ setup, upcomingSessions = [], planningSessions, storeEndpoi
                                                 type="button"
                                                 onClick={() => submit('schedule')}
                                                 disabled={form.processing || !form.data.kloter_belajar_id || !form.data.scheduled_at}
-                                                className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full bg-orange-600 px-5 text-xs font-bold text-white shadow-xs transition hover:bg-orange-700 active:scale-95 disabled:opacity-50"
+                                                className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full bg-orange-600 px-5 text-xs font-bold text-white shadow-xs transition enabled:hover:bg-orange-700 enabled:active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-600 disabled:shadow-none dark:disabled:bg-gray-800 dark:disabled:text-gray-300"
                                             >
                                                 Simpan Jadwal Kelas
                                             </button>
@@ -873,14 +873,8 @@ function RoomSetup({ setup, upcomingSessions = [], planningSessions, storeEndpoi
                                             </div>
                                         )}
 
-                                        {deviceError && (
-                                            <div className="absolute top-4 inset-x-4 rounded-xl bg-red-600/90 p-3 text-xs font-bold text-white shadow-lg backdrop-blur-sm">
-                                                {deviceError}
-                                            </div>
-                                        )}
-
                                         {/* Decibel Audio Level Meter Bar */}
-                                        {micEnabled && (
+                                        {micEnabled && !deviceError && !isDeviceLoading && (
                                             <div className="absolute top-4 left-4 flex items-center gap-2 rounded-full bg-gray-900/80 px-3.5 py-1.5 backdrop-blur-md">
                                                 <VolumeUpIcon sx={{ fontSize: 16 }} className="text-gray-300" />
                                                 <div className="h-2 w-16 overflow-hidden rounded-full bg-white/20">
@@ -988,18 +982,16 @@ function RoomSetup({ setup, upcomingSessions = [], planningSessions, storeEndpoi
                                         </div>
                                     )}
 
-                                    {/* Status Info Card */}
-                                    <div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-xs dark:border-gray-800 dark:bg-gray-900/60">
-                                        <span className="grid h-8 w-8 place-items-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
-                                            <CheckCircleIcon sx={{ fontSize: 18 }} />
-                                        </span>
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-900 dark:text-white">Perangkat Siap Digunakan</p>
-                                            <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                                                Perangkat otomatis tersambung saat ruang kelas live dibuka.
-                                            </p>
-                                        </div>
-                                    </div>
+                                    {deviceError ? (
+                                        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+                                            {deviceError}
+                                        </p>
+                                    ) : !isDeviceLoading && (
+                                        <p role="status" className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-100">
+                                            {(cameraEnabled || micEnabled) && <CheckCircleIcon sx={{ fontSize: 18 }} className="text-emerald-700 dark:text-emerald-400" />}
+                                            {cameraEnabled || micEnabled ? 'Perangkat siap digunakan' : 'Kamera dan mikrofon dinonaktifkan'}
+                                        </p>
+                                    )}
                                 </div>
                             )}
                         </div>

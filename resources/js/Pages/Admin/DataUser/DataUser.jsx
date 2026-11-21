@@ -247,10 +247,10 @@ export default function Users({
                                     {items.map((user) => (
                                         <tr key={user.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40">
                                             <td className="px-5 py-4"><StudentIdentity user={user} /></td>
-                                            <td className="px-4 py-4 text-sm"><strong>{user.lessons_done} modul</strong><p className="text-xs text-gray-500">{user.quizzes_done} percobaan kuis</p></td>
+                                            <td className="px-4 py-4 text-sm"><strong>{user.lessons_done} modul selesai</strong><p className="text-xs text-gray-500">{user.quizzes_done} percobaan kuis</p></td>
                                             <td className="px-4 py-4 text-sm font-black">{user.average_score || 0}</td>
                                             <td className="px-4 py-4 text-sm"><strong>{user.xp.toLocaleString()} XP</strong><p className="text-xs text-gray-500">{user.streak_count} hari streak</p></td>
-                                            <td className="px-4 py-4"><Badge color={user.status === 'active' ? 'green' : 'red'}>{user.status}</Badge></td>
+                                            <td className="px-4 py-4"><Badge color={user.status === 'active' ? 'green' : 'red'}>{{ active: 'Aktif', suspended: 'Ditangguhkan', anonymized: 'Dianonimkan' }[user.status] || user.status}</Badge></td>
                                             <td className="px-5 py-4">
                                                 <div className="flex justify-end gap-2">
                                                     <Link href={detailUrl(user.id)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 dark:border-gray-700 dark:text-gray-300">Detail</Link>
@@ -376,7 +376,10 @@ export default function Users({
                                 options={kloters.map((kloter) => ({ value: kloter.id, label: kloter.name, description: kloter.program_name }))}
                             />
                         </div>
-                        <div className="flex flex-col gap-1 border-b border-gray-100 pb-4 dark:border-gray-800 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="font-black text-gray-900 dark:text-white">{selectedKloter.name}</h2><p className="text-sm text-gray-500 dark:text-gray-400">{selectedKloter.program_name}</p></div><Badge color={selectedKloter.status === 'active' ? 'green' : 'gray'}>{selectedKloter.status}</Badge></div>
+                        <div className="flex flex-col gap-2 border-b border-gray-100 pb-4 dark:border-gray-800 sm:flex-row sm:items-start sm:justify-between">
+                            <div><h2 className="font-black text-gray-900 dark:text-white">{selectedKloter.name}</h2><p className="text-sm text-gray-500 dark:text-gray-400">{selectedKloter.program_name}</p></div>
+                            <button type="button" onClick={() => setActiveTab('students')} className="min-h-11 self-start rounded-lg border border-gray-200 px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Lihat siswa kloter</button>
+                        </div>
                         <div className="mt-4 grid gap-5 xl:grid-cols-2">
                             <form onSubmit={submitSchedule} className="space-y-3"><div><h3 className="text-sm font-black text-gray-900 dark:text-white">Jadwal Kloter</h3><p className="text-xs text-gray-500 dark:text-gray-400">Tanggal mulai menentukan pembukaan roadmap mingguan.</p></div><div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold text-gray-600 dark:text-gray-300">Tanggal mulai<input type="date" value={scheduleForm.data.tanggal_mulai} onChange={(event) => scheduleForm.setData('tanggal_mulai', event.target.value)} disabled={selectedKloter.is_read_only} className="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" /></label><label className="text-xs font-bold text-gray-600 dark:text-gray-300">Tanggal selesai<input type="date" value={scheduleForm.data.tanggal_selesai} onChange={(event) => scheduleForm.setData('tanggal_selesai', event.target.value)} disabled={selectedKloter.is_read_only} className="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" /></label></div>{(scheduleForm.errors.tanggal_mulai || scheduleForm.errors.tanggal_selesai) && <p className="text-xs font-bold text-red-500">{scheduleForm.errors.tanggal_mulai || scheduleForm.errors.tanggal_selesai}</p>}<button disabled={scheduleForm.processing || selectedKloter.is_read_only} className="h-10 rounded-xl bg-brand-600 px-4 text-xs font-black text-white disabled:opacity-50">{scheduleForm.processing ? 'Menyimpan...' : 'Simpan Jadwal'}</button></form>
                             <form onSubmit={submitAssignment} className="space-y-3">
@@ -422,11 +425,11 @@ export default function Users({
 function StudentIdentity({ user }) {
     return (
         <div className="flex min-w-0 items-center gap-3">
-            <Avatar size="sm" />
+            <Avatar name={user.username} size="sm" />
             <div className="min-w-0">
                 <p className="truncate text-sm font-black text-gray-900 dark:text-white">{user.username}</p>
                 <p className="truncate text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
-                <p className="mt-0.5 text-[11px] text-gray-400">Aktif: {user.last_activity}</p>
+                <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">Aktivitas terakhir: {user.last_activity === 'Belum aktif' ? 'Belum tercatat' : user.last_activity}</p>
             </div>
         </div>
     );

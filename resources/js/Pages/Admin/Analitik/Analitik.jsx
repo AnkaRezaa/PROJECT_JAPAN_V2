@@ -67,6 +67,7 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
                         action={<ChartPeriodSelect routeName="admin.analytics" filters={filters} />}
                     >
                         {scoreDistribution.some((item) => item.value > 0) ? (
+                            <>
                             <ChartContainer config={{ score: { label: 'Attempt', theme: { light: '#1d4ed8', dark: '#60a5fa' } } }}>
                                 <PieChart>
                                     <ChartTooltip content={<ChartTooltipContent />} />
@@ -75,6 +76,15 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
                                     </Pie>
                                 </PieChart>
                             </ChartContainer>
+                            <ul aria-label="Legenda distribusi skor" className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                {scoreDistribution.map((item, index) => (
+                                    <li key={item.label} className="flex items-center gap-1.5">
+                                        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: scoreColors[index % scoreColors.length] }} />
+                                        <span>{item.label}: {item.value}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            </>
                         ) : <ChartEmpty>Belum ada attempt kuis pada periode ini.</ChartEmpty>}
                     </ChartCard>
 
@@ -104,7 +114,7 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
                                             <p className="text-sm font-black text-gray-900 dark:text-white">{item.lesson || item.quiz_type}</p>
                                             <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{item.module || 'Tanpa modul'} - {item.attempts_count} attempt</p>
                                         </div>
-                                        <span className="text-sm font-black text-brand-600 dark:text-brand-400">{item.average_score}</span>
+                                        <span className="shrink-0 text-right text-xs text-gray-600 dark:text-gray-300">Rata-rata <strong className="text-sm text-brand-700 dark:text-brand-300">{item.average_score}</strong></span>
                                     </div>
                                 </div>
                             ))}
@@ -157,7 +167,7 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
                                         </td>
                                         <td className="px-4 py-4 text-gray-700 dark:text-gray-300">
                                             <p className="font-bold text-gray-700 dark:text-gray-300">{item.lesson || item.quiz_type || 'Tanpa modul'}</p>
-                                            <p className="text-xs">{item.module || 'Tanpa modul'}</p>
+                                            {item.module && item.module !== (item.lesson || item.quiz_type) && <p className="text-xs">{item.module}</p>}
                                         </td>
                                         <td className="px-4 py-4 text-center font-black text-gray-700 dark:text-gray-300">{item.attempts_count}</td>
                                         <td className="px-4 py-4 text-center font-black text-green-600 dark:text-green-400">{item.correct_count}</td>
@@ -185,6 +195,7 @@ export default function Analitik({ adminScope = 'global', kloters = [], filters 
                                     <p className="mt-2 text-xs font-bold text-gray-600 dark:text-gray-300">Aktivitas terakhir: {student.last_activity_label}</p>
                                 </Link>
                             ))}
+                            {inactiveStudents.length === 0 && <p className="text-sm text-gray-600 dark:text-gray-300">Tidak ada siswa pasif pada periode ini.</p>}
                         </div>
                     </Card>
 

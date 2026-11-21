@@ -630,8 +630,8 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                 const moduleSummary = isPresentationFocus
                                     ? `${module.presentation_count || 0} presentasi`
                                     : isPracticeFocus
-                                        ? `${module.days_count || 0} Hari / ${module.flashcard_count || 0} kartu / ${module.quiz_count || 0} kuis`
-                                        : `${module.days_count || 0} Hari / ${module.flashcard_count || 0} kartu / ${module.quiz_count || 0} kuis / ${module.presentation_count || 0} presentasi`;
+                                        ? `${module.days_count || 0} Hari / ${module.flashcard_count || 0} set kartu / ${module.quiz_count || 0} kuis`
+                                        : `${module.days_count || 0} Hari / ${module.flashcard_count || 0} set kartu / ${module.quiz_count || 0} kuis / ${module.presentation_count || 0} presentasi`;
 
                                 return (
                                     <article key={module.id} className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
@@ -723,6 +723,7 @@ export default function ModulesIndex({ modules, levels = [], programs = [], filt
                                                                                  </span>
                                                                              )}
                                                                          </span>
+                                                                         {!day.is_ready && <span className="mt-0.5 block text-xs text-gray-600 dark:text-gray-300">Perlu flashcard atau kuis checkpoint terbit yang sudah berisi.</span>}
                                                                      </span>
                                                                         <ExpandMoreIcon className={`shrink-0 text-gray-400 transition-transform ${dayOpen ? 'rotate-180' : ''}`} />
                                                                     </button>

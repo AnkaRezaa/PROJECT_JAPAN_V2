@@ -976,7 +976,9 @@ export default function AuthenticatedLayout({ children }) {
                             <div className="flex items-start justify-between gap-3 border-b border-gray-200 p-4 dark:border-gray-800">
                                 <div>
                                     <h3 className="font-black text-gray-950 dark:text-white">{notificationContext.title}</h3>
-                                    <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{unreadCount > 0 ? `${unreadCount} belum dibaca` : notificationContext.empty}</p>
+                                    {(unreadCount > 0 || user?.role !== 'admin') && (
+                                        <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{unreadCount > 0 ? `${unreadCount} belum dibaca` : notificationContext.empty}</p>
+                                    )}
                                 </div>
                                 {unreadCount > 0 && (
                                     <button
