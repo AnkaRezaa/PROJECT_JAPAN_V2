@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -44,5 +45,19 @@ class PengerjaanKuis extends Model
     public function answers(): HasMany
     {
         return $this->hasMany(JawabanPengerjaanKuis::class, 'attempt_id');
+    }
+
+    public function scopeWithCompleteGrammarAnswers(Builder $query): Builder
+    {
+        return $query->whereNotExists(fn ($questions) => $questions->selectRaw('1')
+            ->from('questions')
+            ->whereColumn('questions.quiz_id', 'attempts.quiz_id')
+            ->where('questions.type', '!=', 'handwriting')
+            ->where(fn ($scored) => $scored->whereNull('questions.options->practice_only')
+                ->orWhereJsonDoesntContain('questions.options->practice_only', true))
+            ->whereNotExists(fn ($answers) => $answers->selectRaw('1')
+                ->from('attempt_answers')
+                ->whereColumn('attempt_answers.attempt_id', 'attempts.id')
+                ->whereColumn('attempt_answers.question_id', 'questions.id')));
     }
 }

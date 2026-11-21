@@ -735,7 +735,7 @@ it('requires a Day when an admin creates a quiz', function () {
         ->assertSessionHasErrors(['module_day_id']);
 });
 
-it('allows an admin to clear every exam question and forces the exam back to draft', function () {
+it('requires an admin to switch a published quiz to draft before clearing its questions', function () {
     $fixture = createDayRoadmapFixture();
     $admin = Pengguna::factory()->create(['role' => 'admin']);
     $exam = Kuis::create([
@@ -760,10 +760,11 @@ it('allows an admin to clear every exam question and forces the exam back to dra
             'passing_score' => 70,
             'questions' => [],
         ])
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertSessionHasErrors('questions');
 
-    expect($exam->fresh()->status)->toBe('draft')
-        ->and($exam->questions()->count())->toBe(0);
+    expect($exam->fresh()->status)->toBe('published')
+        ->and($exam->questions()->count())->toBe(1);
 });
 
 it('returns weekly presentation nodes in the roadmap payload', function () {
@@ -1192,7 +1193,14 @@ it('reports each Day quiz progress from completed attempts without embedding the
     }
     $assertProgress('needs_retry');
     foreach ([$checkpoint, $grammar] as $quiz) {
-        PengerjaanKuis::create(['user_id' => $user->id, 'quiz_id' => $quiz->id, 'status' => 'completed', 'score' => 80]);
+        $attempt = PengerjaanKuis::create(['user_id' => $user->id, 'quiz_id' => $quiz->id, 'status' => 'completed', 'score' => 80]);
+        if ($quiz->isGrammar()) {
+            $attempt->answers()->create([
+                'question_id' => $quiz->questions()->firstOrFail()->id,
+                'answer_text' => 'benar',
+                'is_correct' => true,
+            ]);
+        }
     }
     $assertProgress('passed');
 });

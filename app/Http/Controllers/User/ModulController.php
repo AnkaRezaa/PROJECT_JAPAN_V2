@@ -82,6 +82,12 @@ class ModulController extends Controller
                         'quizzes' => fn ($query) => $query
                             ->where('status', 'published')
                             ->withCount('questions')
+                            ->withExists(['attempts as grammar_passed' => fn ($attemptQuery) => $attemptQuery
+                                ->where('quizzes.type', 'grammar')
+                                ->where('attempts.user_id', $user->id)
+                                ->where('attempts.status', 'completed')
+                                ->whereRaw('attempts.score >= COALESCE(quizzes.passing_score, 70)')
+                                ->withCompleteGrammarAnswers()])
                             ->with([
                                 'grammarLesson:id,quiz_id,lesson_key,pattern,title',
                                 'dokkaiPassage:id,quiz_id,title,sub_title,jlpt_level,theme_category,estimated_reading_time,xp_reward',
@@ -233,10 +239,11 @@ class ModulController extends Controller
                 $grammarLessons = $day->quizzes
                     ->where('type', 'grammar')
                     ->filter(fn (Kuis $quiz) => $quiz->questions_count > 0 && $quiz->grammarLesson)
+                    ->sortBy('id')
                     ->map(function (Kuis $quiz) {
                         $bestScore = $quiz->attempts->max('score');
                         $passingScore = (int) ($quiz->passing_score ?? 70);
-                        $progressStatus = $this->quizProgressStatus($bestScore, $passingScore);
+                        $progressStatus = $bestScore === null ? 'not_started' : ($quiz->grammar_passed ? 'passed' : 'needs_retry');
 
                         return [
                             'id' => $quiz->id,

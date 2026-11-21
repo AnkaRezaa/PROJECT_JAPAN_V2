@@ -408,8 +408,10 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
     );
 }
 
-function ResultScreen({ quiz, result, correctQuestionIds, onRestart, onClose, persist }) {
+function ResultScreen({ quiz, result, correctQuestionIds, onRestart, onClose, persist, sequenceProgress, continuation, onRetryNext }) {
     const [showReview, setShowReview] = useState(false);
+    const chainFinished = continuation?.status === 'complete';
+    const lessonFailed = persist && result.passed === false;
     const accuracy = Number.isFinite(result.score)
         ? result.score
         : (result.total > 0 ? Math.round((result.correct / result.total) * 100) : 0);
@@ -420,11 +422,15 @@ function ResultScreen({ quiz, result, correctQuestionIds, onRestart, onClose, pe
                 <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-amber-100 text-amber-600 shadow-[0_5px_0_#fbbf24] dark:bg-amber-950/50 dark:text-amber-300">
                     <EmojiEventsIcon sx={{ fontSize: 44 }} />
                 </span>
-                <p className="mt-6 text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Lesson Selesai</p>
-                <h1 className="mt-2 text-3xl font-black font-japanese text-gray-950 dark:text-white">{quiz?.pattern ? `${quiz.pattern} selesai!` : 'Lesson selesai!'}</h1>
+                <p className="mt-6 text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">{lessonFailed ? 'Belum lulus' : 'Lesson selesai'}</p>
+                <h1 className="mt-2 text-3xl font-black font-japanese text-gray-950 dark:text-white">{chainFinished ? 'Grammar selesai' : lessonFailed ? 'Coba lagi' : quiz?.pattern ? `${quiz.pattern} selesai!` : 'Lesson selesai!'}</h1>
                 <p className="mt-2 text-sm font-medium text-gray-600 dark:text-gray-400">
                     {persist ? 'Hasil, XP, dan progres lesson sudah tersimpan.' : 'Hasil pratinjau ini hanya untuk evaluasi admin.'}
                 </p>
+
+                {sequenceProgress && <p className="mt-3 text-sm font-bold">Grammar: {sequenceProgress}</p>}
+                {continuation?.status === 'loading' && <p role="status" className="mt-3 text-sm">Memuat lesson berikutnya...</p>}
+                {continuation?.status === 'error' && <p role="alert" className="mt-3 text-sm font-semibold text-red-700 dark:text-red-300">Lesson berikutnya gagal dimuat. Hasilmu sudah tersimpan.</p>}
 
                 <div className={`mt-6 grid gap-2 sm:gap-3 ${persist ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     {[
@@ -491,11 +497,12 @@ function ResultScreen({ quiz, result, correctQuestionIds, onRestart, onClose, pe
                 </div>
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                    <button type="button" onClick={onRestart} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-5 text-sm font-black text-gray-700 transition fine-pointer:hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:fine-pointer:hover:bg-gray-800">
+                    {continuation?.status === 'error' && <QuizActionButton onClick={onRetryNext} className="min-h-12">Coba lagi</QuizActionButton>}
+                    {!continuation && <button type="button" onClick={onRestart} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-5 text-sm font-black text-gray-700 transition fine-pointer:hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:fine-pointer:hover:bg-gray-800">
                         <RefreshIcon sx={{ fontSize: 19 }} /> Ulangi Lesson
-                    </button>
+                    </button>}
                     <QuizActionButton onClick={onClose} className="min-h-12">
-                        {persist ? 'Kembali ke Roadmap' : 'Tutup Pratinjau'}
+                        {sequenceProgress ? 'Kembali ke Hari' : persist ? 'Kembali ke Roadmap' : 'Tutup Pratinjau'}
                     </QuizActionButton>
                 </div>
             </div>
@@ -503,7 +510,7 @@ function ResultScreen({ quiz, result, correctQuestionIds, onRestart, onClose, pe
     );
 }
 
-export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
+export default function GrammarQuizRunner({ quiz, onClose, persist = false, hasHistoryEntry, onHistoryBack, manageHistory, onLessonSaved, sequenceProgress, continuation, onRetryNext }) {
     const [screen, setScreen] = useState('intro');
     const [stageIndex, setStageIndex] = useState(0);
     const [questionIndex, setQuestionIndex] = useState(0);
@@ -569,21 +576,12 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
     };
 
     const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
-    const hasPushedStateRef = useRef(false);
+    const finalRequest = useRef(null);
 
-    useEffect(() => {
-        window.history.pushState({ grammarQuiz: true }, '');
-        hasPushedStateRef.current = true;
-
-        return () => {
-            if (hasPushedStateRef.current) {
-                hasPushedStateRef.current = false;
-                window.history.back();
-            }
-        };
-    }, []);
+    useEffect(() => () => finalRequest.current?.abort(), []);
 
     const handleRequestExit = useCallback(() => {
+        if (confirmState.show) return;
         if (screen === 'result') {
             onClose();
             return;
@@ -602,9 +600,9 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
             ],
             onCancel: () => {
                 closeConfirm();
-                if (!hasPushedStateRef.current) {
-                    window.history.pushState({ grammarQuiz: true }, '');
-                    hasPushedStateRef.current = true;
+                if (manageHistory && !hasHistoryEntry.current) {
+                    window.history.pushState({ ...window.history.state, grammarQuiz: true }, '');
+                    hasHistoryEntry.current = true;
                 }
             },
             onConfirm: () => {
@@ -612,7 +610,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
                 onClose();
             },
         });
-    }, [closeConfirm, onClose, openConfirm, persist, quiz?.pattern, screen, stageIndex, stages.length]);
+    }, [closeConfirm, confirmState.show, hasHistoryEntry, manageHistory, onClose, openConfirm, persist, quiz?.pattern, screen, stageIndex, stages.length]);
 
     useEffect(() => {
         const onKeyDown = (event) => {
@@ -623,23 +621,14 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
             }
         };
 
-        const handlePopState = () => {
-            hasPushedStateRef.current = false;
-            if (screen === 'result') {
-                onClose();
-            } else {
-                handleRequestExit();
-            }
-        };
-
         window.addEventListener('keydown', onKeyDown);
-        window.addEventListener('popstate', handlePopState);
+        onHistoryBack.current = handleRequestExit;
 
         return () => {
             window.removeEventListener('keydown', onKeyDown);
-            window.removeEventListener('popstate', handlePopState);
+            onHistoryBack.current = null;
         };
-    }, [handleRequestExit, onClose, screen]);
+    }, [handleRequestExit, onHistoryBack]);
 
     useEffect(() => {
         const draft = restoredDraftRef.current;
@@ -720,6 +709,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
     };
 
     const continueLesson = async () => {
+        if (processing || finalRequest.current) return;
         if (feedback && !feedback.correct) {
             setAnswer(question.type === 'sentence_builder' ? [] : '');
             setFeedback(null);
@@ -745,7 +735,10 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
             return;
         }
         if (persist) {
+            const request = new AbortController();
+            finalRequest.current = request;
             setProcessing(true);
+            setRequestError('');
             try {
                 const { data } = await window.axios.post('/user/attempts', {
                     quiz_id: quiz.id,
@@ -753,15 +746,18 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
                     attempt_id: session.attempt_id,
                     submission_token: session.submission_token,
                     module_flow: true,
-                });
+                }, { signal: request.signal });
+                if (request.signal.aborted) return;
                 clearCheckpoint();
-                setResult({ correct: data.correct_count, total: data.total_questions, xp: data.xp_earned, score: data.score });
+                setResult({ correct: data.correct_count, total: data.total_questions, xp: data.xp_earned, score: data.score, passed: data.passed });
+                onLessonSaved?.({ score: data.score, passed: data.passed === true });
             } catch (error) {
-                setRequestError(error.response?.data?.message || 'Hasil Grammar gagal disimpan.');
-                setProcessing(false);
+                if (!request.signal.aborted) setRequestError(error.response?.data?.message || 'Hasil Grammar gagal disimpan.');
                 return;
+            } finally {
+                finalRequest.current = null;
+                if (!request.signal.aborted) setProcessing(false);
             }
-            setProcessing(false);
         }
         setScreen('result');
         playSoundEffect('complete');
@@ -771,6 +767,9 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
         clearCheckpoint();
         correctQuestionIds.current = new Set();
         firstAttemptedIds.current = new Set();
+        setAnswer(stages[0]?.questions?.[0]?.type === 'sentence_builder' ? [] : '');
+        setFeedback(null);
+        setRequestError('');
         setResult({ correct: 0, total: 0, xp: 0 });
         setSession(null);
         setStageIndex(0);
@@ -813,7 +812,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
             {screen === 'intro' ? (
                 <IntroScreen quiz={quiz} onStart={startLesson} onClose={handleRequestExit} />
             ) : screen === 'result' ? (
-                <ResultScreen quiz={quiz} result={result} correctQuestionIds={correctQuestionIds.current} onRestart={restart} onClose={onClose} persist={persist} />
+                <ResultScreen quiz={quiz} result={result} correctQuestionIds={correctQuestionIds.current} onRestart={restart} onClose={onClose} persist={persist} sequenceProgress={sequenceProgress} continuation={continuation} onRetryNext={onRetryNext} />
             ) : (
                 <>
                     <ProgressHeader quiz={quiz} stageIndex={stageIndex} questionIndex={questionIndex} totalAnswered={answeredBeforeCurrent + (feedback ? 1 : 0)} totalQuestions={totalQuestions} onClose={handleRequestExit} persist={persist} soundEnabled={soundEnabled} onToggleSound={() => setSoundEnabled((value) => !value)} />
@@ -821,7 +820,7 @@ export default function GrammarQuizRunner({ quiz, onClose, persist = false }) {
                 </>
             )}
             <QuizErrorMessage className="fixed bottom-20 left-1/2 z-[170] w-[min(90vw,28rem)] -translate-x-1/2 shadow-lg">{requestError}</QuizErrorMessage>
-            <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
+            <ConfirmActionDialog {...confirmState} onCancel={confirmState.onCancel || closeConfirm} />
         </div>
     );
 }

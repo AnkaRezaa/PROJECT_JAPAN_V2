@@ -100,7 +100,7 @@ class ProgresRoadmapService
             ->whereKey($day->checkpoint_quiz_id)
             ->where('status', 'published')
             ->whereHas('questions')
-            ->first(['id', 'passing_score']);
+            ->first(['id', 'passing_score', 'type']);
 
         if (! $checkpoint) {
             return ['day_completed' => false, 'module_completed' => false, 'was_module_completed' => false];
@@ -111,7 +111,7 @@ class ProgresRoadmapService
             ->where('type', 'grammar')
             ->where('status', 'published')
             ->whereHas('questions')
-            ->get(['id', 'passing_score'])
+            ->get(['id', 'passing_score', 'type'])
             ->prepend($checkpoint)
             ->unique('id');
 
@@ -125,6 +125,7 @@ class ProgresRoadmapService
                 ->where('quiz_id', $requiredQuiz->id)
                 ->where('status', 'completed')
                 ->where('score', '>=', (int) ($requiredQuiz->passing_score ?? 70))
+                ->when($requiredQuiz->isGrammar(), fn ($attempts) => $attempts->withCompleteGrammarAnswers())
                 ->exists();
         });
 

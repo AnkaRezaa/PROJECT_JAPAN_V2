@@ -13,6 +13,7 @@ use App\Models\Soal;
 use App\Models\SetFlashcard;
 use App\Services\TemplateExcelService;
 use Illuminate\Http\UploadedFile;
+use Inertia\Testing\AssertableInertia as Assert;
 
 function grammarPayload(): array
 {
@@ -288,6 +289,36 @@ it('authors grammar and completes a day only after grammar and vocabulary checkp
     ])->assertOk()->assertJsonPath('completed_day', true);
 
     expect(ProgresHariModul::where('user_id', $fixture['user']->id)->where('module_day_id', $fixture['day']->id)->whereNotNull('completed_at')->exists())->toBeTrue();
+});
+
+it('does not unlock Grammar navigation from an incomplete attempt even if its score exceeds the passing score', function () {
+    $fixture = grammarFixture();
+    $this->actingAs($fixture['admin'])->postJson(route('admin.grammar-quizzes.store', $fixture['day']), grammarPayload())->assertCreated();
+    $grammar = Kuis::where('type', 'grammar')->firstOrFail();
+    $grammar->update(['status' => 'published']);
+    $questions = $grammar->questions;
+    $start = $this->actingAs($fixture['user'])->postJson(route('user.attempts.start', $grammar), [
+        'submission_token' => (string) str()->uuid(),
+    ])->assertOk()->json();
+
+    foreach ([[0, 'sureba', []], [2, 'A', []]] as [$index, $answer, $payload]) {
+        $this->postJson(route('user.attempts.answers.first', $start['attempt_id']), [
+            'submission_token' => $start['submission_token'],
+            'question_id' => $questions[$index]->id,
+            'answer_text' => $answer,
+            'answer_payload' => $payload,
+        ])->assertJsonPath('correct', true);
+    }
+    $submit = ['quiz_id' => $grammar->id, 'attempt_id' => $start['attempt_id'], 'submission_token' => $start['submission_token'], 'answers' => []];
+    $this->postJson(route('user.attempts.store'), $submit)->assertOk()->assertJsonPath('score', 67)->assertJsonPath('passed', false);
+    $this->postJson(route('user.attempts.store'), $submit)->assertOk()->assertJsonPath('passed', false)
+        ->assertJsonPath('idempotent', true)->assertJsonPath('xp_earned', 0);
+    $this->get(route('user.modul.program', $fixture['program']->slug))->assertInertia(fn (Assert $page) => $page
+        ->where('weeks.0.days.0.grammar_lessons.0.progress_status', 'needs_retry'));
+    $this->postJson(route('user.attempts.store'), [
+        'quiz_id' => $fixture['checkpoint']->id,
+        'answers' => [['question_id' => $fixture['checkpointQuestion']->id, 'answer_text' => 'api']],
+    ])->assertOk()->assertJsonPath('completed_day', false);
 });
 
 it('only deletes grammar lessons without attempts and within the admin scope', function () {

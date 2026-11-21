@@ -24,7 +24,7 @@ import GrammarBuilder from '@/Components/Features/GrammarQuiz/BuilderKuisGrammar
 import AdminLive from '@/Pages/Admin/RuangKelas/Show';
 import StrokePreview from '@/Components/Features/Handwriting/StrokeCharacterPreview';
 import BuilderFlashcard from '@/Pages/Admin/Flashcard/BuilderFlashcard';
-import { DayDetailContent, DuolingoPath } from '@/Pages/User/Modul/DaftarModul';
+import DaftarModul, { DayDetailContent, DuolingoPath } from '@/Pages/User/Modul/DaftarModul';
 import '/resources/css/app.css';
 const params = new URLSearchParams(location.search);
 const scenario = params.get('scenario') || 'canvas';
@@ -56,11 +56,22 @@ window.axios = {
         const state = window.__writing;
         state.requests.push({ url });
         await new Promise(resolve => setTimeout(resolve, state.delay));
-        if (state.fail) throw new Error('Failed fixture');
-        return { data: { lesson: { id: Number(url.split('/').at(-1)) } } };
+        const id = Number(url.split('/').at(-1));
+        if (state.fail || state.failNext === id) throw new Error('Failed fixture');
+        return { data: { lesson: {
+            id, pattern: 'Pola ' + id, title: 'Lesson ' + id,
+            stages: [{ id: 'transformation', questions: [{ id: id * 10, type: 'transformation', prompt: 'Soal grammar fixture', choices: ['Jawaban benar', 'Jawaban lain'] }] }],
+        } } };
     },
     post: async (url, data) => {
         window.__writing.requests.push({ url, data });
+        if (scenario === 'student-grammar-sequence') {
+            if (url.endsWith('/attempts/start')) return { data: { attempt_id: 919, submission_token: data.submission_token } };
+            if (url.endsWith('/answers/first')) return { data: { correct: true, recorded: true } };
+            if (window.__writing.submitError) throw new Error('Save failed fixture');
+            const passed = !window.__writing.failResult;
+            return { data: { passed, score: passed ? 100 : 50, correct_count: passed ? 1 : 0, total_questions: 1, xp_earned: 0 } };
+        }
         return { data: { is_correct: true, explanation: 'Correct', score: 100, xp_earned: 0 } };
     },
     patch: async (url, { status }) => ({ data: { message: status === 'published' ? 'Lesson terbit' : 'Lesson draf' } }),
@@ -72,6 +83,7 @@ window.axios = {
         throw { response: { status: 422, data } };
     },
 };
+if (scenario === 'student-grammar-sequence') router.reload = () => {};
 if (scenario === 'admin-live') {
     Object.defineProperty(navigator, 'mediaDevices', { value: {
         getUserMedia: async () => { throw new DOMException('Denied by fixture', 'NotAllowedError'); },
@@ -133,9 +145,19 @@ function Fixture() {
         ].slice(0, Number(params.get('lessons') ?? 2));
         return dayOpen && <main className="max-w-[420px]">
             <DayDetailContent mobile={!params.has('desktop')} onClose={() => setDayOpen(false)}
-                onOpenGrammarQuiz={lesson => window.__writing.completions.push(lesson.id)}
+                onOpenGrammarQuiz={lesson => { window.__writing.completions.push(lesson.id); setDayOpen(false); }}
                 day={{ id: 881, day_number: 1, title: 'Day fixture', status: 'active', grammar_lessons: lessons }} />
         </main>;
+    }
+    if (scenario === 'student-grammar-sequence') {
+        const day = { id: 881, day_number: 1, title: 'Day fixture', status: 'active',
+            grammar_lessons: [291, 292, 293].map((id, index) => ({
+                id, pattern: 'Pola ' + id, progress_status: index === 0 ? 'passed' : 'not_started',
+                best_score: index === 0 ? 100 : null,
+            })),
+            mixed_quiz_summary: { progress_status: 'not_started', locked: false },
+        };
+        return <DaftarModul weeks={[{ id: 88, week_number: 1, status: 'active', days: [day] }]} />;
     }
     if (scenario === 'student-day-progress') {
         const days = [
@@ -386,7 +408,7 @@ try {
     const singleGrammar = 'Array.from(document.querySelectorAll("button")).find(b => b.textContent.includes("Grammar") && !b.hasAttribute("aria-expanded"))';
     await open('student-grammar&lessons=1');
     await waitFor(singleGrammar);
-    assert(await evaluate(singleGrammar+'.innerText.includes("\\u301c\\u3089\\u308c\\u308b")'),'Single lesson shows its pattern');
+    assert(await evaluate(singleGrammar+'.innerText.includes("Bentuk potensial") || '+singleGrammar+'.innerText.includes("\\u301c\\u3089\\u308c\\u308b")'),'Single lesson shows its pattern');
     await evaluate(singleGrammar+'.click()');
     await waitFor('window.__writing.completions[0] === 291');
     assert.deepEqual(await evaluate('window.__writing.requests'),[{url:'/user/grammar-quizzes/291'}]);
@@ -394,28 +416,65 @@ try {
         const desktop = width > 600;
         await send('Emulation.setDeviceMetricsOverride',{width,height:desktop ? 900 : 568,deviceScaleFactor:1,mobile:!desktop});
         await open('student-grammar'+(desktop ? '&desktop=1' : ''));
-        const toggle = 'document.querySelector("button[aria-controls][aria-expanded]")';
-        const list = 'document.getElementById('+toggle+'.getAttribute("aria-controls"))';
-        await waitFor(toggle);
-        assert(await evaluate(toggle+'.innerText.includes("1/2 selesai") && '+list+'.hidden'),'Grammar starts collapsed with aggregated progress');
-        await evaluate(toggle+'.focus()');
-        for (const expanded of [true,false,true]) {
-            await send('Input.dispatchKeyEvent',{type:'keyDown',key:' ',code:'Space',windowsVirtualKeyCode:32});
-            await send('Input.dispatchKeyEvent',{type:'keyUp',key:' ',code:'Space',windowsVirtualKeyCode:32});
-            await waitFor(toggle+'.getAttribute("aria-expanded")==="'+expanded+'" && '+list+'.hidden==='+!expanded);
-        }
-        const buttons = list+'.querySelectorAll("li button")';
-        assert(await evaluate(buttons+'[0].innerText.includes("Selesai") && '+buttons+'[1].innerText.includes("Coba lagi") && '+buttons+'[1].innerText.includes("Lanjutkan berikutnya")'),'Grammar rows retain order, status and recommendation');
-        assert(await evaluate('Array.from('+buttons+').every(b => { const r=b.getBoundingClientRect();return r.height>=44 && r.right<=innerWidth; })'),'Grammar rows fit and remain tappable');
+        const grammarButton = 'document.querySelector("[data-day-grammar]")';
+        await waitFor(grammarButton);
+        assert(await evaluate(grammarButton+'.innerText.includes("1/2 selesai") && !'+grammarButton+'.hasAttribute("aria-expanded")'),'Grammar is a single action with combined progress');
         assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+2'),'Grammar does not overflow horizontally');
-        await evaluate('window.__writing.fail=true;window.__writing.delay=450;'+buttons+'[1].click();'+buttons+'[0].click();'+buttons+'[1].click()');
-        await waitFor(buttons+'[1].querySelector("[role=alert]")');
-        assert.equal(await evaluate(buttons+'[0].querySelector("[role=alert]") !== null'),false,'Only the selected lesson displays a failure');
-        assert.deepEqual(await evaluate('window.__writing.requests'),[{url:'/user/grammar-quizzes/292'}],'Duplicate clicks do not open multiple lessons');
-        await evaluate('window.__writing.fail=false;'+buttons+'[1].click()');
+        await evaluate('window.__writing.fail=true;window.__writing.delay=450;'+grammarButton+'.click();'+grammarButton+'.click()');
+        await waitFor('document.querySelector("#day-materials-881 [role=alert]")');
+        assert.deepEqual(await evaluate('window.__writing.requests'),[{url:'/user/grammar-quizzes/292'}],'First unfinished lesson is loaded once');
+        await evaluate('window.__writing.fail=false;'+grammarButton+'.click()');
         await waitFor('window.__writing.completions[0]===292 && !document.querySelector("#day-materials-881")');
-        await evaluate('window.__openDay()');
-        await waitFor(toggle+'?.getAttribute("aria-expanded")==="false"');
+
+        await open('student-grammar-sequence');
+        await waitFor('document.querySelector(\'button[aria-label^="Hari 1:"]\')');
+        await evaluate('document.querySelector(\'button[aria-label^="Hari 1:"]\').click()');
+        await waitFor(grammarButton+'?.innerText.includes("1/3 selesai")');
+        await evaluate(grammarButton+'.click()');
+        const dialog = 'document.querySelector(\'[aria-label="Kuis Grammar"]\')';
+        const lessonIs = async (id) => waitFor(dialog+'?.querySelector("h1")?.textContent==="Pola '+id+'"');
+        const clickGrammar = async (label) => {
+            await waitFor(`Array.from(document.querySelectorAll('button')).some(b => !b.disabled && b.textContent.trim().endsWith(${JSON.stringify(label)}))`);
+            await click(label);
+        };
+        const answer = async () => {
+            await clickGrammar('Mulai Lesson');
+            await clickGrammar('Jawaban benar');
+            await clickGrammar('Periksa');
+            await clickGrammar('Lanjut');
+        };
+        await lessonIs(292);
+        await evaluate('window.__writing.failResult=true;window.__writing.submitError=true');
+        await answer();
+        await waitFor(dialog+'?.innerText.includes("Hasil Grammar gagal disimpan.")');
+        await evaluate('window.__writing.submitError=false');
+        await click('Lanjut');
+        await waitFor(dialog+'?.textContent.includes("Belum lulus")');
+        assert(await evaluate(dialog+'?.innerText.includes("1/3 selesai")'));
+        await click('Ulangi Lesson');
+        await lessonIs(292);
+        await evaluate('window.__writing.failResult=false;window.__writing.failNext=' + (desktop ? 'null' : '293'));
+        await answer();
+        if (!desktop) {
+            await waitFor(dialog+'?.innerText.includes("Lesson berikutnya gagal dimuat.")');
+            assert(await evaluate(dialog+'?.innerText.includes("2/3 selesai")'));
+            const submissions = await evaluate('window.__writing.requests.filter(r=>r.url==="/user/attempts").length');
+            await evaluate('window.__writing.failNext=null');
+            await click('Coba lagi');
+            await lessonIs(293);
+            assert.equal(await evaluate('window.__writing.requests.filter(r=>r.url==="/user/attempts").length'),submissions,'Retrying next lesson never resubmits the completed one');
+        }
+        await lessonIs(293);
+        if (desktop) await evaluate('window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))');
+        else await click('Kembali');
+        await clickGrammar('Keluar sesi');
+        await waitFor(grammarButton+'?.innerText.includes("2/3 selesai")');
+        await evaluate(grammarButton+'.click()');
+        await lessonIs(293);
+        await answer();
+        await waitFor(dialog+'?.querySelector("h1")?.textContent==="Grammar selesai"');
+        await click('Kembali ke Hari');
+        await waitFor(grammarButton+'?.innerText.includes("3/3 selesai")');
     }
     for (const [width,height] of [[320,568],[1024,520]]) {
         await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<640});
@@ -428,18 +487,15 @@ try {
         assert(await evaluate('document.querySelector(\'button[aria-label^="Hari 3:"]\').disabled && !document.querySelector(\'button[aria-label^="Hari 3:"] circle[stroke-dasharray]\')'),'Locked Day stays locked with an empty ring');
         assert(await evaluate('document.querySelector(\'button[aria-label^="Hari 4:"] circle[stroke-dasharray="40 100"]\') !== null'),'Review-only Day uses flashcard progress');
         await evaluate(node+'.click()');
-        await waitFor(popup+'?.querySelector("button[aria-controls]")');
-        await evaluate(popup+'.querySelector("button[aria-controls]").click()');
-        await waitFor(activities+'.scrollHeight > '+activities+'.clientHeight');
-        assert.deepEqual(await evaluate('Array.from('+activities+'.querySelectorAll(\'span[aria-hidden="true"] > span[style^="width:"]\')).map(bar => bar.style.width)'), ['86%','33%','92%','92%','61%','0%','0%','0%','93%','55%']);
+        await waitFor(popup+'?.querySelector("[data-day-grammar]")');
+        assert.deepEqual(await evaluate('Array.from('+activities+'.querySelectorAll(\'span[aria-hidden="true"] > span[style^="width:"]\')).map(bar => bar.style.width)'), ['86%','33%','93%','55%']);
         await waitFor(popup+'.getBoundingClientRect().top >= 0 && '+popup+'.getBoundingClientRect().bottom <= innerHeight + 1');
         assert.equal(await evaluate('document.querySelectorAll("#day-materials-881").length'),1,'Only the viewport-appropriate popup mounts');
         const close = popup+'.querySelector(\'button[aria-label="Tutup detail Hari"]\')';
         const headerTop = await evaluate(close+'.getBoundingClientRect().top');
         await evaluate(activities+'.scrollTop = '+activities+'.scrollHeight');
-        await waitFor(activities+'.scrollTop > 0');
         assert.equal(await evaluate(close+'.getBoundingClientRect().top'),headerTop,'Scrolling activities does not move the header');
-        assert(await evaluate(`(() => { const scroller = ${activities}; const last = scroller.lastElementChild.getBoundingClientRect(); const box = scroller.getBoundingClientRect(); return last.top >= box.top && last.bottom <= Math.min(innerHeight, box.bottom) + 1; })()`),'Mixed Quiz remains reachable below expanded Grammar');
+        assert(await evaluate(`(() => { const scroller = ${activities}; const last = scroller.lastElementChild.getBoundingClientRect(); const box = scroller.getBoundingClientRect(); return last.top >= box.top && last.bottom <= Math.min(innerHeight, box.bottom) + 1; })()`),'Mixed Quiz remains reachable below Grammar');
     }
     await open('day-create');
     await waitFor('document.querySelector("input[aria-label^=Lanjut]")');

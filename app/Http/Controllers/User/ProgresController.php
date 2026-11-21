@@ -298,7 +298,10 @@ class ProgresController extends Controller
 
         if ($attemptAlreadyCompleted) {
             $attempt->loadMissing('answers');
-            $passed = $scoredQuestionCount > 0 && $attempt->score >= $passingScore;
+            $scoredAnswers = $attempt->answers->whereIn('question_id', $scoredQuestionIds);
+            $passed = $scoredQuestionCount > 0
+                && $attempt->score >= $passingScore
+                && (! $isGrammar || ($module && $scoredAnswers->pluck('question_id')->unique()->count() >= $scoredQuestionCount));
             $finishUrl = $module?->programPembelajaran
                 ? route('user.modul.program', $module->programPembelajaran->slug)
                 : route('user.kelas.index');
@@ -313,13 +316,8 @@ class ProgresController extends Controller
                     ->where('module_id', $module?->id)
                     ->whereNotNull('completed_at')
                     ->exists(),
-                'answered_count' => $attempt->answers
-                    ->whereIn('question_id', $scoredQuestionIds)
-                    ->count(),
-                'correct_count' => $attempt->answers
-                    ->whereIn('question_id', $scoredQuestionIds)
-                    ->where('is_correct', true)
-                    ->count(),
+                'answered_count' => $scoredAnswers->count(),
+                'correct_count' => $scoredAnswers->where('is_correct', true)->count(),
                 'total_questions' => $scoredQuestionCount,
                 'passing_score' => $passingScore,
                 'answer_review' => $this->attemptReview($attempt, $quiz),

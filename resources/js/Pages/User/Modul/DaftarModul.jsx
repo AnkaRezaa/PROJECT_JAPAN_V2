@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { AnimatePresence, MotionConfig, motion, useDragControls } from 'framer-motion';
@@ -987,101 +987,60 @@ function quizProgressLabel(lesson) {
     return 'Belum dimulai';
 }
 
-function DayGrammarLessons({ lessons, recommendedId, onClose, onOpenGrammarQuiz, index }) {
-    const [expanded, setExpanded] = useState(false);
-    const [loadingGrammarId, setLoadingGrammarId] = useState(null);
-    const [grammarErrorId, setGrammarErrorId] = useState(null);
-    const pendingRequest = useRef(null);
-    const listId = useId();
+function DayGrammarLessons({ dayId, lessons, enabled, onOpenGrammarQuiz, index }) {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(false);
+    const requestRef = useRef(null);
+    const completed = lessons.filter((lesson) => lesson.progress_status === 'passed').length;
+    const nextLesson = lessons.find((lesson) => lesson.progress_status !== 'passed');
     const singleLesson = lessons.length === 1 ? lessons[0] : null;
-    const completedCount = lessons.filter((lesson) => lesson.progress_status === 'passed').length;
-    const loading = loadingGrammarId !== null;
 
-    useEffect(() => () => pendingRequest.current?.abort(), []);
+    useEffect(() => () => requestRef.current?.abort(), []);
 
-    const openGrammar = async (quizId) => {
-        if (pendingRequest.current) return;
+    const open = async () => {
+        if (!enabled || !onOpenGrammarQuiz || requestRef.current) return;
         const request = new AbortController();
-        pendingRequest.current = request;
-        setLoadingGrammarId(quizId);
-        setGrammarErrorId(null);
+        requestRef.current = request;
+        setLoading(true);
+        setError(false);
+
         try {
-            const { data } = await window.axios.get(`/user/grammar-quizzes/${quizId}`, { signal: request.signal });
-            if (!request.signal.aborted && onOpenGrammarQuiz) {
-                onClose();
-                onOpenGrammarQuiz(data.lesson);
-            }
+            const quiz = await loadDayGrammarLesson((nextLesson ?? lessons[0]).id, request.signal);
+            if (!request.signal.aborted) onOpenGrammarQuiz(quiz, { dayId, lessons, review: !nextLesson });
         } catch {
-            if (!request.signal.aborted) setGrammarErrorId(quizId);
+            if (!request.signal.aborted) setError(true);
         } finally {
-            pendingRequest.current = null;
-            if (!request.signal.aborted) setLoadingGrammarId(null);
+            requestRef.current = null;
+            if (!request.signal.aborted) setLoading(false);
         }
     };
 
-    const renderFeedback = (lesson) => (
-        <>
-            {lesson.id === recommendedId && <span className="block text-xs font-semibold text-sky-800 dark:text-sky-200">Lanjutkan berikutnya</span>}
-            {lesson.id === loadingGrammarId && <span role="status" className="block text-xs text-gray-600 dark:text-gray-300">Memuat kuis...</span>}
-            {lesson.id === grammarErrorId && <span role="alert" className="block text-xs font-semibold text-red-700 dark:text-red-300">Gagal memuat kuis. Coba lagi.</span>}
-        </>
-    );
-
     return (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }}>
-            <button
-                type="button"
-                aria-expanded={singleLesson ? undefined : expanded}
-                aria-controls={singleLesson ? undefined : listId}
-                disabled={loading}
-                onClick={() => singleLesson ? openGrammar(singleLesson.id) : setExpanded((current) => !current)}
-                className="flex min-h-[68px] w-full items-center gap-3 rounded-lg border border-sky-200 bg-white p-2.5 text-left transition-colors hover:border-sky-300 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:opacity-75 dark:border-sky-900/70 dark:bg-gray-800 dark:hover:bg-sky-950/30 sm:px-4"
-            >
+            <button type="button" data-day-grammar disabled={!enabled || !onOpenGrammarQuiz || loading}
+                aria-busy={loading} onClick={open}
+                className="flex min-h-[68px] w-full items-center gap-3 rounded-lg border border-sky-200 bg-white p-2.5 text-left transition-colors hover:border-sky-300 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:opacity-75 dark:border-sky-900/70 dark:bg-gray-800 dark:hover:bg-sky-950/30 sm:px-4">
                 <span aria-hidden="true" className="shrink-0"><SoumatomeNodeBadge type="bunpo" /></span>
                 <span className="min-w-0 flex-1">
                     <span className="block text-sm font-bold text-gray-900 dark:text-white">Grammar</span>
-                    {singleLesson ? (
-                        <>
-                            <span className="block break-words text-sm font-semibold text-sky-900 dark:text-sky-100">{singleLesson.pattern}</span>
-                            <span className="block text-xs text-gray-600 dark:text-gray-300">{quizProgressLabel(singleLesson)}</span>
-                            {renderFeedback(singleLesson)}
-                            <ActivityProgress activity="grammar" value={singleLesson.best_score} />
-                        </>
-                    ) : (
-                        <ActivityProgress activity="grammar" value={100 * completedCount / lessons.length} label={`${completedCount}/${lessons.length} selesai`} />
-                    )}
+                    {singleLesson && <span className="block break-words text-sm font-semibold text-sky-900 dark:text-sky-100">{singleLesson.pattern}</span>}
+                    {!nextLesson && <span className="block text-xs font-semibold text-sky-800 dark:text-sky-200">Grammar selesai</span>}
+                    <ActivityProgress activity="grammar" value={100 * completed / lessons.length} label={`${completed}/${lessons.length} selesai`} />
                 </span>
-                {singleLesson ? (
-                    <ChevronRightIcon className="shrink-0 text-sky-800 dark:text-sky-200" />
-                ) : (
-                    <ExpandMoreIcon className={`shrink-0 text-sky-800 transition-transform dark:text-sky-200 ${expanded ? 'rotate-180' : ''}`} />
-                )}
+                <ChevronRightIcon className="shrink-0 text-sky-800 dark:text-sky-200" />
             </button>
-            {!singleLesson && (
-                <ul id={listId} hidden={!expanded} className="mt-1 divide-y divide-sky-100 border-l border-sky-200 pl-2 dark:divide-sky-900/60 dark:border-sky-900">
-                    {lessons.map((lesson) => (
-                        <li key={lesson.id}>
-                            <button
-                                type="button"
-                                disabled={loading}
-                                onClick={() => openGrammar(lesson.id)}
-                                className="flex min-h-11 w-full items-center gap-2 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 disabled:opacity-75 dark:hover:bg-sky-950/30"
-                            >
-                                <span className="min-w-0 flex-1">
-                                    <span className="block break-words text-sm font-semibold text-gray-900 dark:text-white">{lesson.pattern}</span>
-                                    {lesson.title && lesson.title !== lesson.pattern && <span className="block break-words text-xs text-gray-600 dark:text-gray-300">{lesson.title}</span>}
-                                    {renderFeedback(lesson)}
-                                    <ActivityProgress activity="grammar" value={lesson.best_score} />
-                                </span>
-                                <span className="shrink-0 text-xs font-semibold text-gray-600 dark:text-gray-300">{quizProgressLabel(lesson)}</span>
-                                <ChevronRightIcon className="shrink-0 text-sky-800 dark:text-sky-200" sx={{ fontSize: 18 }} />
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            )}
+            {loading && <p role="status" className="mt-1 px-2 text-xs text-gray-600 dark:text-gray-300">Memuat Grammar...</p>}
+            {error && <p role="alert" className="mt-1 px-2 text-xs font-semibold text-red-700 dark:text-red-300">Grammar gagal dimuat. Coba lagi.</p>}
         </motion.div>
     );
+}
+
+async function loadDayGrammarLesson(id, signal) {
+    const { data } = await window.axios.get(`/user/grammar-quizzes/${id}`, { signal });
+    if (Number(data?.lesson?.id) !== Number(id) || !data.lesson.stages?.some((stage) => stage.questions?.length)) {
+        throw new Error('Materi Grammar tidak tersedia.');
+    }
+    return data.lesson;
 }
 
 export function DayDetailContent({ day, onClose, mobile = false, dragControls = null, onOpenGrammarQuiz = null, dokkaiPreview = null, onRetryDokkai = null, onOpenDokkai = null }) {
@@ -1092,7 +1051,6 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
     const hasGrammar = grammarLessons.length > 0;
     const recommendedId = ['active', 'done'].includes(day.status)
         ? items.find((item) => item.status === 'active' && item.progressStatus !== 'passed')?.key
-            || grammarLessons.find((lesson) => lesson.progress_status !== 'passed')?.id
         : null;
 
     return (
@@ -1245,9 +1203,9 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
 
                 {hasGrammar && <DayGrammarLessons
                     key={day.id}
+                    dayId={day.id}
                     lessons={grammarLessons}
-                    recommendedId={recommendedId}
-                    onClose={onClose}
+                    enabled={['active', 'done'].includes(day.status)}
                     onOpenGrammarQuiz={onOpenGrammarQuiz}
                     index={items.length}
                 />}
@@ -1629,7 +1587,7 @@ export function DuolingoPath({ week, selectedDayId, dayAnchorEl, onDayToggle, on
     );
 }
 
-function WeekRoadmapSection({ week, expanded, onToggle, onOpenDokkai, onOpenGrammarQuiz }) {
+function WeekRoadmapSection({ week, expanded, onToggle, onOpenDokkai, onOpenGrammarQuiz, activeGrammarDayId }) {
     const days = week.days || [];
     const [selectedDayId, setSelectedDayId] = useState(null);
     const [dayAnchorEl, setDayAnchorEl] = useState(null);
@@ -1740,7 +1698,7 @@ function WeekRoadmapSection({ week, expanded, onToggle, onOpenDokkai, onOpenGram
                         <div className="mt-3 rounded-2xl border border-[#cedbd2] bg-[#f1f6f3]/90 px-2 py-3 shadow-[0_18px_44px_-34px_rgba(45,55,66,0.45)] backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/45 min-[380px]:px-3 sm:mt-4 sm:px-6 sm:py-6">
                             <DuolingoPath
                                 week={week}
-                                selectedDayId={selectedDayId}
+                                selectedDayId={activeGrammarDayId === selectedDayId ? null : selectedDayId}
                                 dayAnchorEl={dayAnchorEl}
                                 onDayToggle={toggleDay}
                                 onOpenGrammarQuiz={onOpenGrammarQuiz}
@@ -2118,7 +2076,23 @@ function DesktopLibraryPanel({ program, open, onToggle, onOpenDokkaiDrawer }) {
 }
 
 export default function DaftarModul({ weeks = [], program = null, back_url = null }) {
-    const displayWeeks = weeks.length > 0 ? weeks : [{
+    const [confirmedGrammar, setConfirmedGrammar] = useState({});
+    const displayWeeks = weeks.length > 0 ? weeks.map((week) => ({
+        ...week,
+        days: (week.days || []).map((day) => ({
+            ...day,
+            grammar_lessons: (day.grammar_lessons || []).map((lesson) => {
+                if (lesson.progress_status === 'passed' || !confirmedGrammar[lesson.id]) return lesson;
+                const result = confirmedGrammar[lesson.id];
+                return {
+                    ...lesson,
+                    best_score: Math.max(lesson.best_score ?? 0, result.score),
+                    progress_status: result.passed ? 'passed' : 'needs_retry',
+                    done: result.passed,
+                };
+            }),
+        })),
+    })) : [{
         id: 'empty',
         display_title: 'Roadmap belum tersedia',
         week_number: 1,
@@ -2136,12 +2110,16 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
     const [checkoutError, setCheckoutError] = useState('');
     const [thumbnailFailed, setThumbnailFailed] = useState(false);
     const [activeDokkaiQuiz, setActiveDokkaiQuiz] = useState(null);
-    const [activeGrammarQuiz, setActiveGrammarQuiz] = useState(null);
+    const [grammarFlow, setGrammarFlow] = useState(null);
+    const nextGrammarRequest = useRef(null);
+
+    useEffect(() => () => nextGrammarRequest.current?.abort(), []);
     const [loadingDokkaiId, setLoadingDokkaiId] = useState(null);
     const [dokkaiDrawerOpen, setDokkaiDrawerOpen] = useState(false);
 
     const handleOpenDokkai = async (quizId) => {
-        setActiveGrammarQuiz(null);
+        nextGrammarRequest.current?.abort();
+        setGrammarFlow(null);
         try {
             setLoadingDokkaiId(quizId);
             const endpoint = typeof route !== 'undefined'
@@ -2157,9 +2135,57 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
         }
     };
 
-    const handleOpenGrammarQuiz = (lesson) => {
+    const handleOpenGrammarQuiz = (quiz, { dayId, lessons, review }) => {
         setActiveDokkaiQuiz(null);
-        setActiveGrammarQuiz(lesson);
+        setGrammarFlow({
+            dayId, quiz, review, ids: lessons.map((lesson) => lesson.id),
+            passedIds: lessons.filter((lesson) => lesson.progress_status === 'passed').map((lesson) => lesson.id),
+            continuation: null,
+        });
+    };
+
+    const closeGrammar = () => {
+        nextGrammarRequest.current?.abort();
+        nextGrammarRequest.current = null;
+        setGrammarFlow(null);
+        router.reload({ only: ['weeks', 'auth', 'progress'] });
+    };
+
+    const openNextGrammar = async (nextId) => {
+        if (nextGrammarRequest.current) return;
+        const request = new AbortController();
+        nextGrammarRequest.current = request;
+        setGrammarFlow((flow) => flow && { ...flow, continuation: { status: 'loading', nextId } });
+        try {
+            const quiz = await loadDayGrammarLesson(nextId, request.signal);
+            if (!request.signal.aborted) {
+                setGrammarFlow((flow) => flow && { ...flow, quiz, continuation: null });
+            }
+        } catch {
+            if (!request.signal.aborted) {
+                setGrammarFlow((flow) => flow && { ...flow, continuation: { status: 'error', nextId } });
+            }
+        } finally {
+            if (nextGrammarRequest.current === request) nextGrammarRequest.current = null;
+        }
+    };
+
+    const handleGrammarSaved = ({ passed, score }) => {
+        if (!grammarFlow) return;
+        const quizId = grammarFlow.quiz.id;
+        setConfirmedGrammar((results) => {
+            const previous = results[quizId];
+            return { ...results, [quizId]: {
+                passed: previous?.passed || passed,
+                score: Math.max(previous?.score ?? 0, score),
+            } };
+        });
+        if (!passed || grammarFlow.review) return;
+
+        const passedIds = [...new Set([...grammarFlow.passedIds, quizId])];
+        const nextId = grammarFlow.ids.find((id) => !passedIds.includes(id));
+        setGrammarFlow((flow) => flow && { ...flow, passedIds, continuation: nextId ? null : { status: 'complete' } });
+        if (nextId) void openNextGrammar(nextId);
     };
 
     useScrollLock(Boolean(activeDokkaiQuiz));
@@ -2179,7 +2205,8 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
             : 'Belum ada Minggu yang dapat dibuka';
 
     useEffect(() => {
-        setExpandedWeekId(defaultExpandedWeekId);
+        setExpandedWeekId((current) => weeks.some((week) => week.id === current)
+            ? current : defaultExpandedWeekId);
     }, [defaultExpandedWeekId, program?.id]);
 
     useEffect(() => {
@@ -2376,6 +2403,7 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                                     onToggle={() => setExpandedWeekId((current) => current === week.id ? null : week.id)}
                                     onOpenDokkai={handleOpenDokkai}
                                     onOpenGrammarQuiz={handleOpenGrammarQuiz}
+                                    activeGrammarDayId={grammarFlow?.dayId}
                                 />
                             ))}
                         </div>
@@ -2431,13 +2459,14 @@ export default function DaftarModul({ weeks = [], program = null, back_url = nul
                 )}
 
                 <GrammarQuizPreviewDialog
-                    open={Boolean(activeGrammarQuiz)}
-                    quiz={activeGrammarQuiz}
+                    open={Boolean(grammarFlow)}
+                    quiz={grammarFlow?.quiz}
                     persist
-                    onClose={() => {
-                        setActiveGrammarQuiz(null);
-                        router.reload({ only: ['weeks', 'auth', 'progress'] });
-                    }}
+                    onClose={closeGrammar}
+                    onLessonSaved={handleGrammarSaved}
+                    sequenceProgress={grammarFlow ? `${grammarFlow.passedIds.length}/${grammarFlow.ids.length} selesai` : null}
+                    continuation={grammarFlow?.continuation}
+                    onRetryNext={() => openNextGrammar(grammarFlow.continuation.nextId)}
                 />
             </div>
         </AuthenticatedLayout>
