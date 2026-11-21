@@ -492,9 +492,10 @@ try {
         await waitFor(popup+'.getBoundingClientRect().top >= 0 && '+popup+'.getBoundingClientRect().bottom <= innerHeight + 1');
         assert.equal(await evaluate('document.querySelectorAll("#day-materials-881").length'),1,'Only the viewport-appropriate popup mounts');
         const close = popup+'.querySelector(\'button[aria-label="Tutup detail Hari"]\')';
-        const headerTop = await evaluate(close+'.getBoundingClientRect().top');
+        const headerOffset = close+'.getBoundingClientRect().top - '+popup+'.getBoundingClientRect().top';
+        const headerTop = await evaluate(headerOffset);
         await evaluate(activities+'.scrollTop = '+activities+'.scrollHeight');
-        assert.equal(await evaluate(close+'.getBoundingClientRect().top'),headerTop,'Scrolling activities does not move the header');
+        assert(Math.abs((await evaluate(headerOffset)) - headerTop) < 1,'Scrolling does not move the header within the animating popup');
         assert(await evaluate(`(() => { const scroller = ${activities}; const last = scroller.lastElementChild.getBoundingClientRect(); const box = scroller.getBoundingClientRect(); return last.top >= box.top && last.bottom <= Math.min(innerHeight, box.bottom) + 1; })()`),'Mixed Quiz remains reachable below Grammar');
     }
     await open('day-create');
