@@ -172,6 +172,8 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
     const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState('');
     const thumbnailFileInputRef = useRef(null);
     const form = useForm(emptyForm);
+    const selectedTrack = tracks.find((track) => String(track.id) === String(form.data.curriculum_track_id));
+    const requiresLevel = selectedTrack?.code === 'jlpt';
     const availableLevels = levels.filter((level) => (
         String(level.curriculum_track_id) === String(form.data.curriculum_track_id)
     ));
@@ -605,11 +607,11 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                         <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 to-transparent" />
                                         <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4">
                                             <h3 className="text-base sm:text-lg font-black line-clamp-1">{form.data.title || 'Judul Kelas'}</h3>
-                                            <p className="text-xs font-bold text-white/80">{form.data.instructor_name || 'Nama pengajar'}</p>
+                                            {(form.data.instructor_name || !editing) && <p className="text-xs font-bold text-white/80">{form.data.instructor_name || 'Nama pengajar'}</p>}
                                         </div>
                                     </div>
                                     <div className="p-3 sm:p-4">
-                                        <p className="line-clamp-2 text-xs sm:text-sm font-semibold text-white/80">{form.data.description || 'Deskripsi kelas akan tampil di sini.'}</p>
+                                        {(form.data.description || !editing) && <p className="line-clamp-2 text-xs sm:text-sm font-semibold text-white/80">{form.data.description || 'Deskripsi kelas akan tampil di sini.'}</p>}
                                     </div>
                                 </div>
                             </aside>
@@ -653,7 +655,7 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                                     curriculum_track_id: event.target.value,
                                                     level_id: '',
                                                 }));
-                                                form.clearErrors('curriculum_track_id');
+                                                form.clearErrors('curriculum_track_id', 'level_id');
                                             }}
                                             className={`${inputClass} ${form.errors.curriculum_track_id ? '!border-rose-400 focus:!border-rose-500 focus:!ring-rose-500/20' : ''}`}
                                         >
@@ -661,8 +663,10 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                             {tracks.map((track) => <option key={track.id} value={track.id}>{track.name}</option>)}
                                         </select>
                                     </Field>
-                                    <Field label="Level" error={form.errors.level_id} tooltip="Tingkat kemahiran khusus (misal: N5, N4, N3).">
+                                    <Field label="Level" required={requiresLevel} error={form.errors.level_id}
+                                        hint={requiresLevel && !availableLevels.length ? 'Belum ada level JLPT. Tambahkan level di Kelola Level.' : undefined}>
                                         <select
+                                            aria-label="Level kelas"
                                             value={form.data.level_id}
                                             onChange={(event) => {
                                                 form.setData('level_id', event.target.value);
@@ -671,7 +675,7 @@ export default function ManajemenKelas({ programs = {}, tracks = [], levels = []
                                             disabled={!form.data.curriculum_track_id}
                                             className={`${inputClass} ${form.errors.level_id ? '!border-rose-400 focus:!border-rose-500 focus:!ring-rose-500/20' : ''}`}
                                         >
-                                            <option value="">Tanpa Level</option>
+                                            <option value="" disabled={requiresLevel}>{requiresLevel ? 'Pilih level' : 'Tanpa Level'}</option>
                                             {availableLevels.map((level) => <option key={level.id} value={level.id}>{level.level_name}</option>)}
                                         </select>
                                     </Field>

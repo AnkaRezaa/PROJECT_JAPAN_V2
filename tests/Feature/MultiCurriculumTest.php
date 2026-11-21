@@ -4,8 +4,30 @@ use App\Models\CurriculumTrack;
 use App\Models\LevelPembelajaran;
 use App\Models\Pengguna;
 use App\Models\ProgramPembelajaran;
+use Database\Seeders\JlptLevelSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
+
+it('adds the missing JLPT master levels without changing an existing level', function () {
+    $track = CurriculumTrack::where('code', 'jlpt')->firstOrFail();
+    $n3 = $track->levels()->create(['level_name' => 'N3', 'stage' => 3, 'is_premium' => true]);
+    $admin = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'global']);
+
+    $this->seed(JlptLevelSeeder::class);
+    $this->seed(JlptLevelSeeder::class);
+
+    $levels = $track->levels()->orderBy('stage')->pluck('level_name')->all();
+    expect($levels)->toBe(['JLPT N1', 'JLPT N2', 'N3', 'JLPT N4', 'JLPT N5']);
+    expect((bool) $n3->fresh()->is_premium)->toBeTrue();
+
+    $this->actingAs($admin)->get(route('admin.programs.index'))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('levels', fn ($rows) => collect($rows)
+            ->where('curriculum_track_id', $track->id)->pluck('level_name')->all() === $levels));
+    $this->actingAs($admin)->get(route('admin.exams.create'))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('level_options', fn ($rows) => collect($rows)
+            ->pluck('level_name')->intersect($levels)->values()->all() === $levels));
+});
 
 it('creates classes inside the selected curriculum track', function () {
     $admin = Pengguna::factory()->create(['role' => 'admin']);
@@ -30,6 +52,7 @@ it('creates classes inside the selected curriculum track', function () {
     $this->actingAs($admin)->post(route('admin.programs.store'), [
         'curriculum_track_id' => $jlpt->id,
         'level_id' => $n4->id,
+        'learning_type' => 'mandiri',
         'title' => 'JLPT N4 Mingguan',
         'status' => 'draft',
         'sort_order' => 1,
@@ -38,6 +61,7 @@ it('creates classes inside the selected curriculum track', function () {
     $this->actingAs($admin)->post(route('admin.programs.store'), [
         'curriculum_track_id' => $ssw->id,
         'level_id' => null,
+        'learning_type' => 'mandiri',
         'title' => 'SSW Careworker',
         'status' => 'draft',
         'sort_order' => 2,
@@ -67,6 +91,7 @@ it('rejects a level from a different curriculum track', function () {
     $this->actingAs($admin)->post(route('admin.programs.store'), [
         'curriculum_track_id' => $jlpt->id,
         'level_id' => $sswLevel->id,
+        'learning_type' => 'mandiri',
         'title' => 'Kelas Tidak Valid',
         'status' => 'draft',
         'sort_order' => 1,
@@ -88,6 +113,7 @@ it('stores an uploaded class thumbnail on the public disk', function () {
 
     $this->actingAs($admin)->post(route('admin.programs.store'), [
         'curriculum_track_id' => $track->id,
+        'learning_type' => 'mandiri',
         'title' => 'Kelas dengan Thumbnail',
         'status' => 'draft',
         'sort_order' => 1,

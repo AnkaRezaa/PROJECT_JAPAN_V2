@@ -22,12 +22,20 @@ import ModuleDayDialog from '@/Components/Features/Admin/ModuleDayDialog';
 import ManajemenKelas from '@/Pages/Admin/ModulMateri/ManajemenKelas';
 import GrammarBuilder from '@/Components/Features/GrammarQuiz/BuilderKuisGrammar';
 import AdminLive from '@/Pages/Admin/RuangKelas/Show';
+import StrokePreview from '@/Components/Features/Handwriting/StrokeCharacterPreview';
+import BuilderFlashcard from '@/Pages/Admin/Flashcard/BuilderFlashcard';
 import { DayDetailContent, DuolingoPath } from '@/Pages/User/Modul/DaftarModul';
 import '/resources/css/app.css';
 const params = new URLSearchParams(location.search);
 const scenario = params.get('scenario') || 'canvas';
 window.route = (name, id = '') => '/fixture/' + name + '/' + id;
 window.__writing = { requests: [], fail: false, delay: 60, completions: [], created: [] };
+document.addEventListener('click', event => {
+    if (event.target.matches?.('input[type="file"]')) {
+        event.preventDefault();
+        window.__writing.fileClicks = (window.__writing.fileClicks || 0) + 1;
+    }
+}, true);
 const grammarLesson = {
     id: 31, status: 'draft', title: 'Grammar audit fixture', pattern: 'ba-hodo', level: 'JLPT N3',
     intro: { meaning: 'Semakin', formula: 'V-ba', explanation: 'Pola', examples: [] },
@@ -40,7 +48,10 @@ window.axios = {
     get: async (url) => {
         if (scenario === 'admin-grammar') {
             await new Promise(resolve => { window.__writing.releaseGrammar = resolve; });
-            return { data: { lessons: [grammarLesson] } };
+            return { data: { lessons: [grammarLesson, {
+                ...grammarLesson, id: 32, title: 'Lesson tanpa soal', pattern: 'tara-fixture',
+                stages: grammarLesson.stages.map(stage => ({ ...stage, questions: [] })),
+            }] } };
         }
         const state = window.__writing;
         state.requests.push({ url });
@@ -53,7 +64,13 @@ window.axios = {
         return { data: { is_correct: true, explanation: 'Correct', score: 100, xp_earned: 0 } };
     },
     patch: async (url, { status }) => ({ data: { message: status === 'published' ? 'Lesson terbit' : 'Lesson draf' } }),
-    put: async () => { throw { response: { data: { errors: { 'stages.0.questions.0.explanation': ['Pembahasan tidak valid.'] } } } }; },
+    put: async (url) => {
+        window.__writing.requests.push({ url });
+        const data = window.__writing.grammarEmptyErrors
+            ? { errors: {}, message: 'Draf ditolak oleh server.' }
+            : { errors: { 'stages.0.questions.0.explanation': ['Pembahasan tidak valid.'] } };
+        throw { response: { status: 422, data } };
+    },
 };
 if (scenario === 'admin-live') {
     Object.defineProperty(navigator, 'mediaDevices', { value: {
@@ -95,7 +112,11 @@ function Fixture() {
     window.__setWritingPreference = setWritingEnabled;
     window.__openDay = () => setDayOpen(true);
     window.__persistDay = (data) => setDay(current => ({ ...current, ...data }));
-    if (scenario === 'class-type') return <ManajemenKelas programs={{data:[],links:[]}} tracks={[{id:1,code:'regular',name:'Regular'}]} />;
+    if (scenario === 'class-type') return <ManajemenKelas programs={{data:[],links:[]}} tracks={[{id:1,code:'regular',name:'Regular'},{id:2,code:'jlpt',name:'JLPT'}]} levels={[
+        {id:5,curriculum_track_id:2,level_name:'N5'}, {id:4,curriculum_track_id:2,level_name:'N4'},
+    ]} />;
+    if (scenario === 'admin-stroke') return <StrokePreview open character={'\u4e00'} characters={['\u4e00','\u4e8c']} title="Preview kanji" onClose={() => {}} />;
+    if (scenario === 'admin-flashcard-picker') return <BuilderFlashcard set={{ id: 501, title:'Set fixture' }} />;
     if (scenario === 'admin-live') return <AdminLive setup={{kloters:[],weeks:[],decks:[]}} exitUrl="/fixture/admin" storeEndpoint="/fixture/live" />;
     if (scenario === 'admin-grammar') return <GrammarBuilder open={dayOpen} onClose={() => setDayOpen(false)} module={{id:1}} day={{id:881,day_number:1}} defaultLevel="JLPT N3" />;
     if (scenario === 'admin-publish') return <BuilderKuisKosakata quiz={{id:8801,title:'Kuis kosong',status:'draft',type:'multiple_choice'}} questions={[]} />;
@@ -451,6 +472,16 @@ try {
     assert.equal(await evaluate('Boolean(document.querySelector("input[aria-label^=Lanjut]"))'),false,'Edit keeps existing workflow');
     await open('class-type'); await waitFor('document.body.innerText.includes("Tambah Kelas")');
     await click('Tambah Kelas'); await waitFor('document.querySelector("select[aria-label^=Tipe]")');
+    const levelPicker = 'document.querySelector(\'select[aria-label="Level kelas"]\')';
+    const trackPicker = 'Array.from(document.querySelectorAll("select")).find(s=>Array.from(s.options).some(o=>o.text==="JLPT"))';
+    await waitFor(levelPicker);
+    const select = async (element, value) => evaluate(`(()=>{const select=${element};select.value=${JSON.stringify(value)};select.dispatchEvent(new Event("change",{bubbles:true}));})()`);
+    await select(trackPicker,'2');
+    await waitFor('!'+levelPicker+'.disabled && '+levelPicker+'.options.length===3');
+    assert(await evaluate(levelPicker+'.options[0].disabled && '+levelPicker+'.options[0].text==="Pilih level"'));
+    await select(levelPicker,'5');
+    await select(trackPicker,'1');
+    await waitFor(levelPicker+'.value==="" && '+levelPicker+'.options.length===1');
     assert.equal(await evaluate('document.querySelector("select[aria-label^=Tipe]").value'),'mandiri');
     await evaluate(`(()=>{const s=document.querySelector('select[aria-label="Tipe kelas"]');s.value='mentor';s.dispatchEvent(new Event('change',{bubbles:true}));})()`);
     assert.equal(await evaluate('document.querySelector("select[aria-label^=Tipe]").value'),'mentor');
@@ -486,8 +517,30 @@ try {
     await waitFor('window.__writing.releaseGrammar');
     await evaluate('window.__writing.releaseGrammar()');
     await waitFor('document.body.innerText.includes("ba-hodo")');
+    const grammarPicker = 'document.querySelector(\'select[aria-label="Pilih lesson Grammar"]\')';
+    const openGrammarMaterial = () => evaluate(`Array.from(document.querySelectorAll('button > span')).find(el => el.textContent === 'Materi & Pola Grammar').parentElement.click()`);
+    await select(grammarPicker,'32');
+    await openGrammarMaterial();
+    await evaluate(`(() => { const input = Array.from(document.querySelectorAll('input')).find(el => el.value === 'tara-fixture'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'tara-draf'); input.dispatchEvent(new Event('input',{bubbles:true})); })()`);
+    await click('Simpan Draf');
+    await waitFor('document.querySelector("[role=alert]")?.innerText.includes("Belum ada soal")');
+    assert.equal(await evaluate(grammarPicker+'.value'),'32','An empty lesson stays selected when saving fails');
+    assert.deepEqual(await evaluate('window.__writing.requests'),[],'A lesson without questions is rejected before submitting');
+    await openGrammarMaterial();
+    await waitFor('Array.from(document.querySelectorAll("input")).some(el=>el.value==="tara-draf")');
+    await select(grammarPicker,'31');
+    await waitFor('document.body.innerText.includes("Beralih ke Lesson Lain?")');
+    assert.equal(await evaluate(grammarPicker+'.value'),'32','Lesson changes only after confirmation');
+    await click('Lanjutkan Beralih');
+    await waitFor(grammarPicker+'.value==="31"');
+    await evaluate('window.__writing.grammarEmptyErrors = true');
+    await click('Simpan Draf');
+    await waitFor('document.querySelector("[role=alert]")?.innerText.includes("Draf ditolak oleh server")');
+    assert.equal(await evaluate(grammarPicker+'.value'),'31','An empty server error map leaves the lesson selected');
+    await evaluate('window.__writing.grammarEmptyErrors = false');
     await click('Simpan Draf');
     await waitFor('document.querySelector("[role=alert]")?.innerText.includes("Pembahasan tidak valid")');
+    assert.equal(await evaluate(grammarPicker+'.value'),'31');
     await evaluate(`(() => { const input = Array.from(document.querySelectorAll('input')).find(el => el.value === 'Instruksi fixture'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'Instruksi diperbaiki'); input.dispatchEvent(new Event('input',{bubbles:true})); })()`);
     await waitFor('!document.querySelector("[role=alert]")');
     await click('Terbitkan');
@@ -505,7 +558,29 @@ try {
     await waitFor('document.body.innerText.includes("Lesson terbit")');
     await evaluate('window.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))');
     await waitFor('!document.body.innerText.includes("Builder Kuis Grammar")');
-    console.log(JSON.stringify({passed:true,checks:['handwriting and roadmap regressions','vocabulary publish errors from both controls','grammar loading, validation, and clean publish','live preview permission rejection'],screenshots:'temporary; removed'},null,2));
+    await open('admin-stroke');
+    await waitFor('document.body.innerText.includes("Pratinjau siap")');
+    const secondCharacter = `document.querySelector('[aria-label="Karakter kanji"] button:last-child')`;
+    await evaluate(secondCharacter + '.click()');
+    await waitFor(secondCharacter + '.getAttribute("aria-pressed")==="true"');
+    await waitFor('document.body.innerText.includes("Pratinjau siap")');
+    assert(!(await evaluate('document.body.innerText.includes("Karakter selesai ditulis")')));
+    const clickImport = async pattern => evaluate(`(()=>{const b=Array.from(document.querySelectorAll('button')).find(b=>new RegExp(${JSON.stringify(pattern)}, 'i').test(b.innerText.trim()));if(!b)throw new Error('Import action missing');b.click()})()`);
+    await open('builder');
+    await waitFor('document.body.innerText.includes("Simpan Draf")');
+    await clickImport('^(Import XLSX / CSV|Impor Soal)$');
+    await waitFor('window.__writing.fileClicks===1');
+    await evaluate('Array.from(document.querySelectorAll("button")).find(b=>b.textContent.includes("Materi Repetisi")).click()');
+    await waitFor('Array.from(document.querySelectorAll("button")).some(b=>/^(Import|Impor Flashcard)$/.test(b.innerText.trim()))');
+    await clickImport('^(Import|Impor Flashcard)$');
+    await clickImport('^(Import|Unggah) CSV / Excel$');
+    await waitFor('window.__writing.fileClicks===2');
+    await open('admin-flashcard-picker');
+    await waitFor('Array.from(document.querySelectorAll("button")).some(b=>/^(Import|Impor Flashcard)$/.test(b.innerText.trim()))');
+    await clickImport('^(Import|Impor Flashcard)$');
+    await clickImport('^(Import|Unggah) CSV / Excel$');
+    await waitFor('window.__writing.fileClicks===1');
+    console.log(JSON.stringify({passed:true,checks:['handwriting and roadmap regressions','vocabulary publish errors from both controls','grammar loading, validation, and clean publish','live preview permission rejection','class track filters','stroke character switch','three import file triggers'],screenshots:'temporary; removed'},null,2));
 } catch(error) {
     console.error('Writing browser failure:', error.message, errors);
     throw error;
