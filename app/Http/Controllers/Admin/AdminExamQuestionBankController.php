@@ -74,10 +74,16 @@ class AdminExamQuestionBankController extends Controller
         ]);
 
         $levels = LevelPembelajaran::orderBy('id')->get(['id', 'level_name']);
+        $coveredLevelCount = ExamQuestionBank::query()
+            ->whereNotNull('level_id')
+            ->whereHas('questions')
+            ->distinct()
+            ->count('level_id');
 
         return Inertia::render('Admin/Ujian/BankSoal/Index', [
             'banks' => $banks,
             'levels' => $levels,
+            'coveredLevelCount' => $coveredLevelCount,
             'filters' => $filters,
         ]);
     }

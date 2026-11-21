@@ -12,7 +12,7 @@ import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmAc
 import { AdminExamHeader, AdminExamTabs, AdminPagination, Metric, StatusBadge, fieldClassName } from '@/Components/Features/AdminExam/AdminExamUI';
 import BankSoalNavbar from '@/Components/Features/BankSoal/BankSoalNavbar';
 
-export default function Index({ banks = { data: [] }, levels = [], filters = {} }) {
+export default function Index({ banks = { data: [] }, levels = [], coveredLevelCount = 0, filters = {} }) {
     const [term, setTerm] = useState(filters.search || '');
     const [levelFilter, setLevelFilter] = useState(filters.level || 'all');
     const [statusFilter, setStatusFilter] = useState(filters.status || 'all');
@@ -160,7 +160,7 @@ export default function Index({ banks = { data: [] }, levels = [], filters = {} 
                         <Metric label="Total Bank Soal" value={banks.total || banks.data.length} detail="Semua koleksi" />
                         <Metric label="Total Wacana / Wrapper" value={totalWrappers} detail="Wacana bacaan & audio" />
                         <Metric label="Total Butir Soal" value={totalQuestions} detail="Pertanyaan tersimpan" />
-                        <Metric label="Level Terlayani" value={levels.length} detail="N5 s.d. N1" />
+                        <Metric label="Level Terlayani" value={coveredLevelCount} detail="Level dengan soal di bank" />
                     </div>
 
                     <section className="border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">

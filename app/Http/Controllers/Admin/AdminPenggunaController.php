@@ -52,7 +52,11 @@ class AdminPenggunaController extends Controller
                 });
             })
             ->withCount([
-                'progress as lessons_done' => fn (Builder $query) => $this->batasiProgressProgram($query, $programIds),
+                'progress as lessons_done' => fn (Builder $query) => $this->batasiProgressProgram($query->whereNotNull('completed_at'), $programIds),
+                'dayProgress as days_done' => fn (Builder $query) => $query
+                    ->whereNotNull('completed_at')
+                    ->when($programIds !== null, fn (Builder $query) => $query
+                        ->whereHas('day.module', fn (Builder $module) => $module->whereIn('program_pembelajaran_id', $programIds))),
                 'attempts as quizzes_done' => fn (Builder $query) => $this->batasiAttemptProgram($query, $programIds),
             ])
             ->withAvg([
@@ -582,6 +586,7 @@ class AdminPenggunaController extends Controller
             'level' => (int) $student->level,
             'streak_count' => (int) $student->streak_count,
             'lessons_done' => (int) $student->lessons_done,
+            'days_done' => (int) $student->days_done,
             'quizzes_done' => (int) $student->quizzes_done,
             'average_score' => round((float) $student->average_score, 1),
             'last_activity' => $lastActivity ? date('d M Y H:i', strtotime($lastActivity)) : 'Belum aktif',

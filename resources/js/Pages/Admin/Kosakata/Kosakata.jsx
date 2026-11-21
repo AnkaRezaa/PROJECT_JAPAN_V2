@@ -127,6 +127,8 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
     const openStrokePreview = async (item) => {
         const available = await resolveAvailableCharacters(item.word, item.reading);
         setStrokePreview({
+            id: item.id,
+            characters: available.map(({ character }) => character),
             character: available[0]?.character || writingCharacters(`${item.word || ''}${item.reading || ''}`)[0],
             title: `${item.word} - ${item.meaning_id || item.meaning_en || ''}`,
         });
@@ -293,7 +295,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                             )}
                             <p className="text-xs font-black uppercase tracking-[0.3em] text-orange-600">Bank Konten</p>
                             <h1 className="mt-1 text-3xl font-black text-gray-900 dark:text-white">{program?.title || 'Konten Pembelajaran'}</h1>
-                            <p className="mt-2 max-w-2xl text-sm font-semibold text-gray-500 dark:text-gray-400">
+                            <p className="mt-2 max-w-2xl break-words text-sm font-semibold text-gray-500 dark:text-gray-400">
                                 Satu tempat untuk input kosakata, kanji, dan bunpo. Konten bisa dikunci ke modul mingguan lalu dipakai flashcard dan kuis.
                             </p>
                         </div>
@@ -314,7 +316,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                     <form onSubmit={submitFilters} className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_140px_140px_180px_180px_140px_auto]">
                         <label className="flex h-11 items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 dark:border-gray-700 dark:bg-gray-950">
                             <SearchIcon sx={{ fontSize: 18 }} className="text-gray-400" />
-                            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari konten, reading, arti, sumber..." className="w-full border-0 bg-transparent text-sm font-semibold outline-none focus:ring-0 dark:text-white" />
+                            <input aria-label="Cari konten" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari konten..." className="min-w-0 w-full border-0 bg-transparent text-sm font-semibold outline-none focus:ring-0 dark:text-white" />
                         </label>
                         <select value={contentType} onChange={(event) => setContentType(event.target.value)} className="h-11 rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                             <option value="all">Semua Tipe</option>
@@ -766,6 +768,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                                                 form.clearErrors('stroke_count');
                                             }}
                                             placeholder="12"
+                                            aria-label="Jumlah guratan kanji"
                                             className={`${inputClass} ${form.errors.stroke_count ? '!border-rose-400 focus:!border-rose-500' : ''}`}
                                         />
                                     </Field>
@@ -833,7 +836,9 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                 )}
             </div>
             <StrokeCharacterPreview
+                key={strokePreview?.id}
                 character={strokePreview?.character}
+                characters={strokePreview?.characters}
                 title={strokePreview?.title}
                 open={Boolean(strokePreview)}
                 onClose={() => setStrokePreview(null)}

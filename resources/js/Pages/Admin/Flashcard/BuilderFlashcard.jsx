@@ -720,7 +720,7 @@ export function FlashcardEditorWorkspace({
                                                     <span>Jumlah Guratan</span>
                                                     <TooltipHelp text="Jumlah total guratan (stroke count) penulisan karakter kanji." />
                                                 </span>
-                                                <input type="number" min="1" max="64" value={card.stroke_count || ''} onChange={(event) => updateCard(index, 'stroke_count', event.target.value)} placeholder="12" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                                                <input type="number" aria-label="Jumlah guratan kanji" min="1" max="64" value={card.stroke_count || ''} onChange={(event) => updateCard(index, 'stroke_count', event.target.value)} placeholder="12" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                             </label>
                                             <label className="space-y-1 md:col-span-2">
                                                 <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400">

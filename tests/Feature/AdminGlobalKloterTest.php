@@ -10,6 +10,7 @@ use App\Models\Modul;
 use App\Models\PaketPembayaran;
 use App\Models\Pengguna;
 use App\Models\ProgramPembelajaran;
+use App\Models\ProgresHariModul;
 use App\Models\Soal;
 use App\Models\Transaksi;
 use App\Services\AksesLanggananService;
@@ -519,6 +520,29 @@ it('renders a content workspace for global admin and an intervention workspace f
             ->where('cohorts.0.id', $fixture['kloterA']->id)
             ->has('stats', 4)
             ->has('actionItems', 3));
+});
+
+it('links global admin priorities to the affected items and keeps day progress scoped', function () {
+    $fixture = quizAuthoringScopeFixture();
+    $day = $fixture['quiz']->day;
+    $foreignDay = HariModul::create(['module_id' => $fixture['otherModule']->id, 'day_number' => 1, 'title' => 'Other day', 'status' => 'published']);
+    foreach ([$day, $foreignDay] as $completedDay) {
+        ProgresHariModul::create(['user_id' => $fixture['studentA']->id, 'module_day_id' => $completedDay->id, 'completed_at' => now()]);
+    }
+
+    $emptyQuiz = Kuis::create(['module_id' => $fixture['module']->id, 'module_day_id' => $day->id, 'type' => 'multiple_choice', 'status' => 'draft']);
+    $this->actingAs($fixture['globalAdmin'])
+        ->get(route('admin.dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('actionItems.0.href', route('admin.modules.index', ['program_id' => $fixture['programA']->id, 'week_id' => $fixture['module']->id, 'focus' => 'roadmap']))
+            ->where('actionItems.1.href', route('admin.quizzes.builder', $emptyQuiz))
+            ->where('actionItems.2.href', route('admin.modules.presentations.builder', $fixture['module'])));
+    $this->actingAs($fixture['kloterAdmin'])
+        ->get(route('admin.users', ['kloter' => $fixture['kloterA']->id]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('students.data.0.id', $fixture['studentA']->id)
+            ->where('students.data.0.days_done', 1)
+            ->where('students.data.0.lessons_done', 0));
 });
 
 it('returns an empty student scope when a kloter admin has no assignment', function () {

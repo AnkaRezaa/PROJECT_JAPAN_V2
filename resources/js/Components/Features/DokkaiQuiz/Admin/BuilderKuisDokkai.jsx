@@ -932,9 +932,9 @@ export default function BuilderKuisDokkai({ open, module, day, onClose }) {
             }
             tabs={[
                 { id: 'metadata', label: '1. Metadata Wacana', icon: AutoStoriesIcon },
-                { id: 'paragraphs', label: '2. Teks & Paragraf', icon: FormatListBulletedIcon, count: draft.paragraphs?.length || 0 },
-                { id: 'vocabularies', label: '3. Glosarium Kosakata', icon: MenuBookIcon, count: draft.vocabularies?.length || 0 },
-                { id: 'questions', label: '4. Bank Soal & Eviden', icon: QuizOutlinedIcon, count: draft.questions?.length || 0 },
+                { id: 'paragraphs', label: '2. Teks & Paragraf', icon: FormatListBulletedIcon, count: draft.paragraphs.filter((item) => item.content_raw?.trim()).length },
+                { id: 'vocabularies', label: '3. Glosarium Kosakata', icon: MenuBookIcon, count: draft.vocabularies.filter((item) => item.word?.trim() && item.meaning?.trim()).length },
+                { id: 'questions', label: '4. Bank Soal & Eviden', icon: QuizOutlinedIcon, count: draft.questions.filter((item) => item.question_text?.trim() && item.options?.some((option) => option.is_correct && option.option_text?.trim())).length },
             ]}
             activeTab={activeTab}
             onTabChange={setActiveTab}

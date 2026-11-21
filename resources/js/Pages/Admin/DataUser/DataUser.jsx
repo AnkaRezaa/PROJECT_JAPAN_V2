@@ -8,6 +8,9 @@ import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmAc
 import SearchableSelect from '@/Components/UI/SearchableSelect';
 import AdminDialog from '@/Components/UI/AdminDialog';
 
+const kloterDateFormat = new Intl.DateTimeFormat('id-ID', { dateStyle: 'long', timeZone: 'UTC' });
+const formatKloterDate = (value) => value ? kloterDateFormat.format(new Date(`${value}T00:00:00Z`)) : 'Belum ditentukan';
+
 export default function Users({
     adminScope = 'global',
     students = { data: [], links: [] },
@@ -247,7 +250,7 @@ export default function Users({
                                     {items.map((user) => (
                                         <tr key={user.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40">
                                             <td className="px-5 py-4"><StudentIdentity user={user} /></td>
-                                            <td className="px-4 py-4 text-sm"><strong>{user.lessons_done} modul selesai</strong><p className="text-xs text-gray-500">{user.quizzes_done} percobaan kuis</p></td>
+                                            <td className="px-4 py-4 text-sm"><strong>{user.lessons_done} modul selesai</strong><p className="text-xs text-gray-600 dark:text-gray-300">{user.days_done ?? 0} hari selesai</p><p className="text-xs text-gray-500">{user.quizzes_done} percobaan kuis</p></td>
                                             <td className="px-4 py-4 text-sm font-black">{user.average_score || 0}</td>
                                             <td className="px-4 py-4 text-sm"><strong>{user.xp.toLocaleString()} XP</strong><p className="text-xs text-gray-500">{user.streak_count} hari streak</p></td>
                                             <td className="px-4 py-4"><Badge color={user.status === 'active' ? 'green' : 'red'}>{{ active: 'Aktif', suspended: 'Ditangguhkan', anonymized: 'Dianonimkan' }[user.status] || user.status}</Badge></td>
@@ -377,7 +380,11 @@ export default function Users({
                             />
                         </div>
                         <div className="flex flex-col gap-2 border-b border-gray-100 pb-4 dark:border-gray-800 sm:flex-row sm:items-start sm:justify-between">
-                            <div><h2 className="font-black text-gray-900 dark:text-white">{selectedKloter.name}</h2><p className="text-sm text-gray-500 dark:text-gray-400">{selectedKloter.program_name}</p></div>
+                            <div>
+                                <h2 className="font-black text-gray-900 dark:text-white">{selectedKloter.name}</h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{selectedKloter.program_name}</p>
+                                <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">Mulai: {formatKloterDate(selectedKloter.tanggal_mulai)} / Selesai: {formatKloterDate(selectedKloter.tanggal_selesai)}</p>
+                            </div>
                             <button type="button" onClick={() => setActiveTab('students')} className="min-h-11 self-start rounded-lg border border-gray-200 px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Lihat siswa kloter</button>
                         </div>
                         <div className="mt-4 grid gap-5 xl:grid-cols-2">

@@ -254,15 +254,22 @@ class AdminBerandaController extends Controller
                 'status' => $module->status,
                 'ready_count' => collect($items)->where('ready', true)->count(),
                 'items' => $items,
-                'href' => route('admin.modules.index', ['program_id' => $module->program_pembelajaran_id]),
+                'href' => route('admin.modules.index', ['program_id' => $module->program_pembelajaran_id, 'week_id' => $module->id, 'focus' => 'roadmap']),
             ];
         });
-        $incompleteModules = $allCoverage->filter(fn (array $module) => $module['ready_count'] < 4)->count();
+        $incompleteCoverage = $allCoverage->filter(fn (array $module) => $module['ready_count'] < 4);
+        $incompleteModules = $incompleteCoverage->count();
+        $withoutPresentation = $allModules->filter(fn (Modul $module) => (int) $module->presentation_ready_count === 0);
         $coverage = $allCoverage->take(8)->values();
 
         $quizzesQuery = Kuis::query()->whereHas('module', fn (Builder $query) => $this->scopePrograms($query, $programIds));
         $readyQuizzes = (clone $quizzesQuery)->whereHas('questions')->count();
-        $unreadyQuizzes = (clone $quizzesQuery)->whereDoesntHave('questions')->count();
+        $emptyQuizzes = (clone $quizzesQuery)->whereDoesntHave('questions');
+        $unreadyQuizzes = (clone $emptyQuizzes)->count();
+        $nextQuiz = (clone $emptyQuizzes)->with('module:id,program_pembelajaran_id')->orderBy('id')->first();
+        $quizHref = $nextQuiz ? (in_array($nextQuiz->type, ['grammar', 'dokkai'], true)
+            ? route('admin.modules.index', ['program_id' => $nextQuiz->module->program_pembelajaran_id, 'week_id' => $nextQuiz->module_id, 'day_id' => $nextQuiz->module_day_id, 'focus' => 'roadmap'])
+            : route('admin.quizzes.builder', $nextQuiz)) : null;
         $totalQuestions = Soal::query()->whereHas('quiz.module', fn (Builder $query) => $this->scopePrograms($query, $programIds))->count();
 
         $vocabQuery = Kosakata::query()->when($programIds !== null, fn (Builder $query) => $query->whereHas('module', fn (Builder $module) => $module->whereIn('program_pembelajaran_id', $programIds)));
@@ -308,9 +315,9 @@ class AdminBerandaController extends Controller
                 ),
             ],
             'actionItems' => [
-                $this->actionItem('Modul belum lengkap', $incompleteModules, 'Lengkapi komponen belajar sebelum status publish.', 'warning', route('admin.programs.index')),
-                $this->actionItem('Kuis tanpa soal', $unreadyQuizzes, 'Masuk ke roadmap kelas untuk menambahkan soal.', 'danger', route('admin.programs.index')),
-                $this->actionItem('Presentasi belum publish', (clone $modulesQuery)->whereDoesntHave('presentationDecks', fn (Builder $query) => $query->where('status', 'published'))->count(), 'Buka kelas dan lengkapi presentasi pada Week terkait.', 'info', route('admin.programs.index')),
+                $this->actionItem('Modul belum lengkap', $incompleteModules, 'Periksa materi yang belum siap pada minggu terkait.', 'warning', $incompleteCoverage->first()['href'] ?? null),
+                $this->actionItem('Kuis tanpa soal', $unreadyQuizzes, 'Buka kuis atau hari terkait untuk menambahkan soal.', 'danger', $quizHref),
+                $this->actionItem('Presentasi belum publish', $withoutPresentation->count(), 'Buka builder presentasi pada minggu terkait.', 'info', $withoutPresentation->isNotEmpty() ? route('admin.modules.presentations.builder', $withoutPresentation->first()) : null),
             ],
             'coverage' => $coverage,
         ];
@@ -353,8 +360,8 @@ class AdminBerandaController extends Controller
         return compact('title', 'value', 'icon', 'detail', 'badge', 'href');
     }
 
-    /** @return array{label:string,value:int,description:string,tone:string,href:string} */
-    private function actionItem(string $label, int $value, string $description, string $tone, string $href): array
+    /** @return array{label:string,value:int,description:string,tone:string,href:?string} */
+    private function actionItem(string $label, int $value, string $description, string $tone, ?string $href): array
     {
         return compact('label', 'value', 'description', 'tone', 'href');
     }

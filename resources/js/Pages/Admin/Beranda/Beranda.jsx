@@ -84,18 +84,21 @@ function ActionQueue({ items = [] }) {
                 </div>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
-                {items.map((item) => (
-                    <Link key={item.label} href={item.href} className={`group border p-4 transition hover:-translate-y-0.5 hover:shadow-sm ${actionTone[item.tone] || actionTone.info}`}>
+                {items.map((item) => {
+                    const Action = item.href ? Link : 'div';
+                    return (
+                    <Action key={item.label} href={item.href || undefined} className={`group border p-4 ${item.href ? 'transition hover:-translate-y-0.5 hover:shadow-sm' : ''} ${actionTone[item.tone] || actionTone.info}`}>
                         <div className="flex items-start justify-between gap-3">
                             <div>
                                 <p className="text-2xl font-black tabular-nums">{item.value}</p>
                                 <h3 className="mt-2 text-sm font-black">{item.label}</h3>
                             </div>
-                            <ArrowForwardRounded className="transition group-hover:translate-x-1" fontSize="small" />
+                            {item.href && <ArrowForwardRounded className="transition group-hover:translate-x-1" fontSize="small" />}
                         </div>
                         <p className="mt-2 text-xs font-semibold leading-5 opacity-80">{item.description}</p>
-                    </Link>
-                ))}
+                    </Action>
+                    );
+                })}
             </div>
         </section>
     );
