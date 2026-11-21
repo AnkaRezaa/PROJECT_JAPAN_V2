@@ -367,6 +367,7 @@ class SuperAdminKloterController extends SuperAdminDasarController
         $progressByUser = Progres::query()
             ->whereIn('user_id', $userIds)
             ->whereIn('module_id', $moduleIds)
+            ->whereNotNull('completed_at')
             ->selectRaw('user_id, COUNT(DISTINCT module_id) as total_done')
             ->groupBy('user_id')
             ->pluck('total_done', 'user_id');

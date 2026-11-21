@@ -119,7 +119,7 @@ export default function DataUser({
     };
 
     return (
-        <AuthenticatedLayout>
+        <AuthenticatedLayout feedbackInline>
             <Head title="Superadmin - Data User" />
 
             <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -152,8 +152,9 @@ export default function DataUser({
                             className="h-11 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm text-gray-900 dark:text-white"
                         />
                         <select value={filterForm.data.status} onChange={(e) => filterForm.setData('status', e.target.value)} className="h-11 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm font-bold text-gray-900 dark:text-white">
-                            <option value="all">Semua status (Aktif & Suspended)</option>
+                            <option value="all">Semua status</option>
                             <option value="active">Aktif</option>
+                            <option value="no_activity">Belum ada aktivitas</option>
                             <option value="suspended">Suspended</option>
                             <option value="anonymized">Dihapus / Anonim</option>
                         </select>
@@ -224,8 +225,11 @@ export default function DataUser({
                                                 <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{item.level}</td>
                                                 <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{item.streak}</td>
                                                 <td className="px-6 py-4">
-                                                    <div className="w-28 rounded-full bg-gray-100 dark:bg-gray-800">
-                                                        <div className="rounded-full bg-brand-600 px-2 py-1 text-[10px] font-black text-white" style={{ width: item.progress }}>{item.progress}</div>
+                                                    <div className="flex w-28 items-center gap-2">
+                                                        <div aria-hidden="true" className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                                                            <div className="h-full rounded-full bg-brand-600" style={{ width: item.progress }} />
+                                                        </div>
+                                                        <span className="shrink-0 text-xs font-semibold">{item.progress}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">

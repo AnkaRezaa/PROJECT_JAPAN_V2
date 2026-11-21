@@ -8,10 +8,11 @@ import ChartPeriodSelect from '@/Components/Features/Dashboard/ChartPeriodSelect
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartEmpty, ChartTooltip, ChartTooltipContent } from '@/Components/UI/Chart';
 
-export default function DetailUser({ student, filters = {}, studentActivitySeries = [], levelProgress = [], recentProgress = [], recentAttempts = [], rewardHistory = [], backHref, backLabel = 'Kembali ke Kloter dan Siswa', activityRouteName = 'admin.users.show' }) {
+export default function DetailUser({ student, filters = {}, studentActivitySeries = [], levelProgress = [], recentProgress = [], recentAttempts = [], rewardHistory = [], backHref, backLabel = 'Kembali ke Kloter dan Siswa', activityRouteName = 'admin.users.show', progressScopeLabel = 'Progres Kelas' }) {
     const [activeTab, setActiveTab] = useState('profile');
     const totalModules = levelProgress.reduce((total, level) => total + Number(level.total_lessons || 0), 0);
     const completedModules = levelProgress.reduce((total, level) => total + Number(level.completed_lessons || 0), 0);
+    const progressPercent = totalModules ? Math.round(completedModules / totalModules * 100) : 0;
     const progressDistribution = [{ label: 'Selesai', value: completedModules }, { label: 'Belum selesai', value: Math.max(0, totalModules - completedModules) }];
 
     return (
@@ -24,7 +25,7 @@ export default function DetailUser({ student, filters = {}, studentActivitySerie
                         {student.avatar ? <img src={student.avatar} alt="" className="h-14 w-14 rounded-full object-cover ring-2 ring-brand-100 dark:ring-brand-900/50" /> : <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-100 text-lg font-black text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">{student.username?.slice(0, 1)?.toUpperCase()}</div>}
                         <div className="min-w-0"><Link href={backHref || route('admin.users', filters.kloter ? { kloter: filters.kloter } : {})} className="text-sm font-bold text-brand-600 hover:underline dark:text-brand-400">{backLabel}</Link><h1 className="truncate text-2xl font-black text-gray-900 dark:text-white">{student.username}</h1><p className="truncate text-sm text-gray-500 dark:text-gray-400">{student.email}</p></div>
                     </div>
-                    <span className="w-fit rounded-lg border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 dark:border-gray-700 dark:text-gray-200">Akun {student.status} - {student.subscription_status}</span>
+                    <span className="w-fit rounded-lg border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 dark:border-gray-700 dark:text-gray-200">Akun {{ active: 'Aktif', suspended: 'Ditangguhkan', anonymized: 'Anonim' }[student.status] || 'Tidak diketahui'} · {student.subscription_status === 'premium' ? 'Premium' : 'Reguler'}</span>
                 </div>
 
                 <div className="flex gap-2 border-b border-gray-200 dark:border-gray-800">
@@ -42,11 +43,27 @@ export default function DetailUser({ student, filters = {}, studentActivitySerie
 
                 {activeTab === 'monitoring' && <>
                     <div className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
-                        <ChartCard title="Progres Kelas" subtitle={`${completedModules} dari ${totalModules} modul selesai`}>{totalModules > 0 ? <ChartContainer config={{ complete: { label: 'Selesai', color: '#15803d' } }}><PieChart><ChartTooltip content={<ChartTooltipContent />} /><Pie data={progressDistribution} dataKey="value" nameKey="label" innerRadius={62} outerRadius={92} paddingAngle={3}><Cell fill="#15803d" /><Cell fill="#e5e7eb" /></Pie></PieChart></ChartContainer> : <ChartEmpty>Belum ada modul dalam cakupan siswa ini.</ChartEmpty>}</ChartCard>
+                        <ChartCard title={progressScopeLabel} subtitle={`${completedModules} dari ${totalModules} modul selesai`}>
+                            {totalModules > 0 ? (
+                                <div className="relative">
+                                    <ChartContainer config={{ complete: { label: 'Selesai', color: '#15803d' } }}>
+                                        <PieChart>
+                                            <ChartTooltip content={<ChartTooltipContent />} />
+                                            <Pie data={progressDistribution} dataKey="value" nameKey="label" innerRadius={62} outerRadius={92} paddingAngle={3}>
+                                                <Cell fill="#15803d" /><Cell fill="#e5e7eb" />
+                                            </Pie>
+                                        </PieChart>
+                                    </ChartContainer>
+                                    <div className="pointer-events-none absolute inset-0 grid place-items-center">
+                                        <span data-progress-percent className="text-lg font-black text-gray-900 dark:text-white">{progressPercent}%</span>
+                                    </div>
+                                </div>
+                            ) : <ChartEmpty>Belum ada modul dalam cakupan siswa ini.</ChartEmpty>}
+                        </ChartCard>
                         <ChartCard title="Aktivitas 30 Hari" subtitle="Progres dan attempt kuis" action={<ChartPeriodSelect routeName={activityRouteName} routeParams={student.id} filters={filters} />}>{studentActivitySeries.some((item) => item.progress || item.quiz_attempts) ? <ChartContainer config={{ progress: { label: 'Progres', color: '#15803d' }, quiz_attempts: { label: 'Kuis', color: '#1d4ed8' } }}><BarChart data={studentActivitySeries} margin={{ top: 8, right: 4, left: -20, bottom: 0 }}><CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-800" /><XAxis dataKey="label" tickLine={false} axisLine={false} className="fill-gray-400 text-xs" /><YAxis allowDecimals={false} tickLine={false} axisLine={false} className="fill-gray-400 text-xs" /><ChartTooltip content={<ChartTooltipContent />} /><Bar dataKey="progress" fill="var(--color-progress)" radius={[4, 4, 0, 0]} /><Bar dataKey="quiz_attempts" fill="var(--color-quiz_attempts)" radius={[4, 4, 0, 0]} /></BarChart></ChartContainer> : <ChartEmpty>Belum ada aktivitas pada periode ini.</ChartEmpty>}</ChartCard>
                     </div>
                     <div><Card><h2 className="text-lg font-black text-gray-900 dark:text-white">Progres per Level</h2><div className="mt-4 space-y-4">{levelProgress.map((level) => <div key={level.id}><div className="mb-2 flex justify-between gap-3 text-sm"><span className="font-bold text-gray-700 dark:text-gray-300">{level.name}</span><span className="text-gray-500 dark:text-gray-400">{level.completed_lessons}/{level.total_lessons}</span></div><div className="h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800"><div className="h-full rounded-full bg-brand-600" style={{ width: `${level.percentage}%` }} /></div></div>)}</div></Card></div>
-                    <div className="grid gap-5 xl:grid-cols-3"><Card><h2 className="text-lg font-black text-gray-900 dark:text-white">Modul Terbaru</h2><List items={recentProgress} empty="Belum ada modul selesai." render={(item) => <><p className="font-black text-gray-900 dark:text-white">{item.lesson}</p><p className="text-xs text-gray-500 dark:text-gray-400">{item.completed_at}</p></>} /></Card><Card><h2 className="text-lg font-black text-gray-900 dark:text-white">Attempt Kuis</h2><List items={recentAttempts} empty="Belum ada attempt kuis." render={(item) => <><p className="font-black text-gray-900 dark:text-white">{item.lesson || item.quiz}</p><p className="text-xs font-bold text-brand-600 dark:text-brand-400">Skor {item.score} / {item.xp_earned > 0 ? `+${item.xp_earned} XP` : 'Tidak ada XP tambahan'}</p></>} /></Card><Card><h2 className="text-lg font-black text-gray-900 dark:text-white">Reward History</h2><List items={rewardHistory} empty="Belum ada reward." render={(item) => <><p className="font-black text-gray-900 dark:text-white">{item.description || item.source_type}</p><p className="text-xs text-gray-500 dark:text-gray-400">+{item.xp_amount} XP - {item.created_at}</p></>} /></Card></div>
+                    <div className="grid gap-5 xl:grid-cols-3"><Card><h2 className="text-lg font-black text-gray-900 dark:text-white">Modul Terbaru</h2><List items={recentProgress} empty="Belum ada modul selesai." render={(item) => <><p className="font-black text-gray-900 dark:text-white">{item.lesson}</p><p className="text-xs text-gray-500 dark:text-gray-400">{item.completed_at}</p></>} /></Card><Card><h2 className="text-lg font-black text-gray-900 dark:text-white">Riwayat Kuis</h2><List items={recentAttempts} empty="Belum ada attempt kuis." render={(item) => <><p className="font-black text-gray-900 dark:text-white">{item.quiz || item.lesson || "Kuis"}</p>{item.lesson && item.lesson !== item.quiz && <p className="text-xs text-gray-600 dark:text-gray-400">{item.week_number ? `Minggu ${item.week_number} · ` : ""}{item.lesson}</p>}<p className="text-xs font-bold text-brand-600 dark:text-brand-400">Skor {item.score} / {item.xp_earned > 0 ? `+${item.xp_earned} XP` : 'Tidak ada XP tambahan'}</p></>} /></Card><Card><h2 className="text-lg font-black text-gray-900 dark:text-white">Reward History</h2><List items={rewardHistory} empty="Belum ada reward." render={(item) => <><p className="font-black text-gray-900 dark:text-white">{item.description || item.source_type}</p><p className="text-xs text-gray-500 dark:text-gray-400">+{item.xp_amount} XP - {item.created_at}</p></>} /></Card></div>
                 </>}
             </div>
         </AuthenticatedLayout>

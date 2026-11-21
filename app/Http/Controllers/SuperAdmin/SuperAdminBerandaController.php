@@ -38,7 +38,8 @@ class SuperAdminBerandaController extends SuperAdminDasarController
                 ->map(fn (LogAktivitas $log) => [
                     'actor' => $log->actor?->username ?? 'System',
                     'action' => $log->description ?: str($log->action)->replace(['.', '_'], ' ')->title()->toString(),
-                    'target' => $log->target_type ? $log->target_type.' #'.$log->target_id : 'Platform',
+                    'target' => $this->activityTarget($log),
+                    'description' => $log->description,
                     'time' => $log->created_at?->diffForHumans() ?? '-',
                 ])
                 ->values(),
@@ -80,10 +81,10 @@ class SuperAdminBerandaController extends SuperAdminDasarController
             ->count('user_id');
 
         return [
-            $this->metric('Pendapatan', 'Rp '.number_format($revenue), 'payments', route('superadmin.payments'), $this->comparison($revenue, $previousRevenue)),
+            $this->metric("Pendapatan · {$period} hari", 'Rp '.number_format($revenue), 'payments', route('superadmin.payments', ['period' => $period]), $this->comparison($revenue, $previousRevenue)),
             $this->metric('Premium aktif', number_format($premiumUsers), 'premium', route('superadmin.payments'), ['change' => '', 'changeType' => 'up']),
             $this->metric("Siswa aktif {$period} hari", number_format($activeLearners), 'learners', route('superadmin.users'), $this->comparison($activeLearners, $previousActiveLearners)),
-            $this->metric('Pembayaran sukses', number_format($payments), 'success', route('superadmin.payments'), $this->comparison($payments, $previousPayments)),
+            $this->metric("Pembayaran sukses · {$period} hari", number_format($payments), 'success', route('superadmin.payments', ['period' => $period]), $this->comparison($payments, $previousPayments)),
         ];
     }
 

@@ -466,13 +466,11 @@ export default function Konten({
                             {items.map((item) => (
                                 <div key={item.id} className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
                                     <div className="flex flex-col gap-4 sm:flex-row">
-                                        <div className="h-28 w-full overflow-hidden rounded-2xl bg-gray-100 dark:bg-gray-800 sm:w-40 sm:shrink-0">
-                                            {item.thumbnail_url ? (
-                                            <img src={item.thumbnail_url} alt={item.cover_image_alt || item.title} className="h-full w-full object-cover" />
-                                            ) : (
-                                                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-50 to-gray-100 text-2xl font-black text-brand-200 dark:from-gray-800 dark:to-gray-900 dark:text-gray-700">
-                                                    JP
-                                                </div>
+                                        <div className="relative grid h-28 w-full place-items-center overflow-hidden rounded-2xl bg-gray-100 dark:bg-gray-800 sm:w-40 sm:shrink-0">
+                                            <span aria-hidden="true" className="absolute inset-0 grid place-items-center text-xs font-semibold text-gray-600 dark:text-gray-300">Tanpa sampul</span>
+                                            {item.thumbnail_url && (
+                                                <img key={item.thumbnail_url} src={item.thumbnail_url} alt={item.cover_image_alt || item.title}
+                                                    className="relative h-full w-full object-cover" onError={(event) => { event.currentTarget.hidden = true; }} />
                                             )}
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -569,11 +567,11 @@ export default function Konten({
                         </Card>
 
                         <Card>
-                            <h2 className="text-lg font-black text-gray-900 dark:text-white">Update Terbaru</h2>
+                            <h2 className="text-lg font-black text-gray-900 dark:text-white">Perubahan Konten Tercatat</h2>
                             <div className="mt-4 space-y-3">
                                 {updates.length === 0 && (
                                     <p className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4 text-sm font-medium text-gray-400">
-                                        Belum ada aktivitas konten.
+                                        Belum ada perubahan di log konten.
                                     </p>
                                 )}
 

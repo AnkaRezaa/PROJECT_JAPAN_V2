@@ -278,14 +278,6 @@ export default function PopupManager({ popups = [] }) {
                         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                             Buat pop-up pertama untuk promosi paket belajar, event live, atau pengumuman penting.
                         </p>
-                        <button
-                            type="button"
-                            onClick={openCreate}
-                            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-xs font-black text-white hover:bg-brand-700"
-                        >
-                            <AddIcon sx={{ fontSize: 16 }} />
-                            Tambah Pop-up
-                        </button>
                     </div>
                 )}
             </div>

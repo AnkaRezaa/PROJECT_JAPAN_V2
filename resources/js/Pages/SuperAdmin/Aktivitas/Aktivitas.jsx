@@ -51,11 +51,6 @@ function AnalyticsMonitoringBar({ monitoringLinks = {} }) {
                                 <span className="text-sm font-black text-gray-900 dark:text-white">
                                     {gtm.enabled ? (gtm.id || 'Aktif (ID belum diisi)') : 'Non-aktif'}
                                 </span>
-                                {!gtm.enabled && (
-                                    <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                                        .env: GTM_ENABLED=true
-                                    </span>
-                                )}
                             </div>
                         </div>
                     </div>
@@ -149,7 +144,7 @@ function FeedbackWorkspace({ feedback = { data: [], links: [] }, stats = {}, fil
     const exportXlsxHref = route('superadmin.activity.feedback.export-xlsx', feedbackFilter.data);
     const categoryLabels = { bug: 'Kendala', suggestion: 'Saran', content: 'Materi', payment: 'Pembayaran', other: 'Lainnya', experience: 'Pengalaman fitur' };
     const statusLabels = { new: 'Baru', reviewing: 'Ditinjau', resolved: 'Selesai', dismissed: 'Dilewati' };
-    const featureLabels = { quiz: 'Kuis', exam: 'Ujian', lesson_day: 'Day kelas', live_class: 'Kelas live' };
+    const featureLabels = { quiz: 'Kuis', exam: 'Ujian', lesson_day: 'Hari belajar', live_class: 'Kelas live' };
     const reasonLabels = {
         clear_questions: 'Soal jelas', unclear_explanation: 'Penjelasan kurang', too_difficult: 'Terlalu sulit', too_easy: 'Terlalu mudah',
         technical_issue: 'Kendala teknis', clear_instructions: 'Instruksi jelas', clear_results: 'Hasil jelas', confusing_time: 'Waktu membingungkan',
@@ -186,7 +181,7 @@ function FeedbackWorkspace({ feedback = { data: [], links: [] }, stats = {}, fil
                         <option value="all">Semua role</option><option value="user">User</option><option value="admin">Admin/Mentor</option><option value="superadmin">Superadmin</option>
                     </select>
                     <select value={feedbackFilter.data.feedback_source} onChange={(event) => feedbackFilter.setData('feedback_source', event.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white"><option value="all">Semua sumber</option><option value="manual">Manual</option><option value="contextual">Kontekstual</option></select>
-                    <select value={feedbackFilter.data.feedback_feature} onChange={(event) => feedbackFilter.setData('feedback_feature', event.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white"><option value="all">Semua fitur</option><option value="quiz">Kuis</option><option value="exam">Ujian</option><option value="lesson_day">Day kelas</option><option value="live_class">Kelas live</option></select>
+                    <select value={feedbackFilter.data.feedback_feature} onChange={(event) => feedbackFilter.setData('feedback_feature', event.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white"><option value="all">Semua fitur</option><option value="quiz">Kuis</option><option value="exam">Ujian</option><option value="lesson_day">Hari belajar</option><option value="live_class">Kelas live</option></select>
                     <select value={feedbackFilter.data.feedback_rating} onChange={(event) => feedbackFilter.setData('feedback_rating', event.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white"><option value="all">Semua rating</option>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} / 5</option>)}</select>
                     <select value={feedbackFilter.data.feedback_response} onChange={(event) => feedbackFilter.setData('feedback_response', event.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white"><option value="all">Semua respons</option><option value="submitted">Dikirim</option><option value="skipped">Dilewati</option></select>
                     <div className="flex flex-wrap gap-2 sm:col-span-2 xl:col-span-4">
@@ -340,12 +335,14 @@ export default function Activity({
                     <form onSubmit={submitFilters} className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_1fr_1.2fr_1fr_auto_auto]">
                         <input
                             type="date"
+                            aria-label="Tanggal mulai"
                             value={filterForm.data.date_from}
                             onChange={(event) => filterForm.setData('date_from', event.target.value)}
                             className="h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
                         />
                         <input
                             type="date"
+                            aria-label="Tanggal akhir"
                             value={filterForm.data.date_to}
                             onChange={(event) => filterForm.setData('date_to', event.target.value)}
                             className="h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
@@ -396,7 +393,7 @@ export default function Activity({
                         </div>
                         <div className="space-y-4 p-6">
                             {timelineItems.map((item) => (
-                                <div key={`${item.time}-${item.actor}-${item.target}`} className="flex gap-4 rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
+                                <div key={item.id} className="flex gap-4 rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
                                     <div className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border font-black ${toneClasses(item.tone)}`}>
                                         {(item.actor || 'S').charAt(0)}
                                     </div>
@@ -406,9 +403,10 @@ export default function Activity({
                                             <span className="text-xs font-bold text-gray-400 dark:text-gray-500">{item.time}</span>
                                         </div>
                                         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                            <span className="font-bold text-gray-800 dark:text-gray-200">{item.actor}</span> terhadap{' '}
+                                            <span className="font-bold text-gray-800 dark:text-gray-200">{item.actor}</span>{' · '}
                                             <span className="font-bold text-brand-600 dark:text-brand-400">{item.target}</span>
                                         </p>
+                                        {item.description && <p className="mt-1 text-sm">{item.description}</p>}
                                     </div>
                                 </div>
                             ))}
@@ -437,7 +435,7 @@ export default function Activity({
 
                 <Card padding={false}>
                     <div className="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
-                        <h2 className="text-lg font-black text-gray-900 dark:text-white">Login History</h2>
+                        <h2 className="text-lg font-black text-gray-900 dark:text-white">Riwayat Login</h2>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Daftar riwayat sesi masuk akun pengguna dan pengelola.</p>
                     </div>
                     <div className="overflow-x-auto">
@@ -447,13 +445,14 @@ export default function Activity({
                                     <th className="px-6 py-3">User</th>
                                     <th className="px-6 py-3">Role</th>
                                     <th className="px-6 py-3">Status</th>
+                                    <th className="px-6 py-3">Waktu (WIB)</th>
                                     <th className="px-6 py-3">IP</th>
                                     <th className="px-6 py-3">Perangkat</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loginItems.map((item) => (
-                                    <tr key={`${item.user}-${item.device}-${item.location}`} className="border-t border-gray-100 dark:border-gray-800">
+                                    <tr key={item.id} className="border-t border-gray-100 dark:border-gray-800">
                                         <td className="px-6 py-4 font-bold text-gray-900 dark:text-white">{item.user}</td>
                                         <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{item.role}</td>
                                         <td className="px-6 py-4">
@@ -461,13 +460,14 @@ export default function Activity({
                                                 {item.status}
                                             </span>
                                         </td>
+                                        <td className="whitespace-nowrap px-6 py-4">{item.logged_in_at || "-"}</td>
                                         <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{item.location}</td>
                                         <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{item.device}</td>
                                     </tr>
                                 ))}
                                 {loginItems.length === 0 && (
                                     <tr>
-                                        <td colSpan="5" className="px-6 py-10 text-center text-sm font-bold text-gray-400">Belum ada riwayat login.</td>
+                                        <td colSpan="6" className="px-6 py-10 text-center text-sm font-bold text-gray-400">Belum ada riwayat login.</td>
                                     </tr>
                                 )}
                             </tbody>

@@ -284,10 +284,10 @@ export default function DataAdmin({
                                 {activities.length === 0 && (
                                     <p className="py-6 text-center text-sm font-medium text-gray-400">Belum ada aktivitas admin baru-baru ini.</p>
                                 )}
-                                {activities.map((item, idx) => (
-                                    <div key={idx} className="flex items-center gap-2 rounded-xl border border-gray-100 dark:border-gray-800/80 bg-gray-50/50 dark:bg-gray-800/30 px-3.5 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                {activities.map((item) => (
+                                    <div key={item.id} className="flex items-center gap-2 rounded-xl border border-gray-100 dark:border-gray-800/80 bg-gray-50/50 dark:bg-gray-800/30 px-3.5 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-300">
                                         <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
-                                        <span className="min-w-0 flex-1 truncate">{item}</span>
+                                        <div className="min-w-0 flex-1 break-words"><p>{item.description}</p><p className="mt-1 text-gray-600 dark:text-gray-400">{item.actor} · {item.time} WIB</p></div>
                                     </div>
                                 ))}
                             </div>
@@ -423,7 +423,7 @@ export default function DataAdmin({
                                     clearErrors('email');
                                 }}
                                 className={formInputClass(errors.email)}
-                                placeholder="nama@japanlingo.id"
+                                placeholder="nama@contoh.id"
                             />
                         </FormField>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

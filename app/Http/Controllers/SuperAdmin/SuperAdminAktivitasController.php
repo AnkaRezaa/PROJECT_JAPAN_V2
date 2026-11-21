@@ -48,7 +48,9 @@ class SuperAdminAktivitasController extends SuperAdminDasarController
             ->through(fn (LogAktivitas $log) => [
                 'actor' => $log->actor?->username ?? 'System',
                 'action' => $this->displayAction($log->action),
-                'target' => $log->target_type ? $log->target_type.' #'.$log->target_id : '-',
+                'id' => $log->id,
+                'description' => $log->description,
+                'target' => $this->activityTarget($log),
                 'time' => $log->created_at?->diffForHumans() ?? '-',
                 'tone' => $this->toneForAction($log->action),
             ]);
@@ -64,6 +66,8 @@ class SuperAdminAktivitasController extends SuperAdminDasarController
                 'user' => $history->user?->username ?? $history->email ?? 'Unknown',
                 'role' => ucfirst($history->role ?? '-'),
                 'status' => $history->status === 'success' ? 'Berhasil' : 'Ditolak',
+                'id' => $history->id,
+                'logged_in_at' => $history->logged_in_at?->copy()->timezone('Asia/Jakarta')->translatedFormat('d M Y, H:i'),
                 'location' => $history->ip_address ?? '-',
                 'device' => str($history->user_agent ?? '-')->limit(48)->toString(),
             ]);

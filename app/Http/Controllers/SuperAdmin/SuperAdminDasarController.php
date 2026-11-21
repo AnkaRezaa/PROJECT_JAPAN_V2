@@ -23,6 +23,16 @@ abstract class SuperAdminDasarController extends Controller
         };
     }
 
+    protected function activityTarget(LogAktivitas $log): string
+    {
+        $target = match ($log->target_type) {
+            'system', null => 'Sistem',
+            default => ucfirst($log->target_type),
+        };
+
+        return $log->target_id === null ? $target : $target.' #'.$log->target_id;
+    }
+
     protected function logActivity(
         Request $request,
         string $action,

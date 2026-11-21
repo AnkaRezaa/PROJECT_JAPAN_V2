@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ChartBreakdown from '@/Components/Features/Dashboard/ChartBreakdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router, useForm } from '@inertiajs/react';
 import Card from '@/Components/UI/Card';
@@ -335,7 +336,7 @@ export default function Gamification({
                             </div>
                             <div>
                                 <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-600 dark:text-brand-400">Superadmin</p>
-                                <h1 className="mt-1 text-2xl font-black text-gray-900 dark:text-white">Gamification Control Center</h1>
+                                <h1 className="mt-1 text-2xl font-black text-gray-900 dark:text-white">Pengaturan Gamifikasi</h1>
                                 <p className="mt-2 max-w-2xl text-sm font-semibold text-gray-500 dark:text-gray-400">
                                     Atur angka XP global, bonus streak, dan evaluasi achievement tanpa mengubah alur kuis yang sudah berjalan.
                                 </p>
@@ -380,7 +381,7 @@ export default function Gamification({
 
                     <ChartCard title="Distribusi Liga" subtitle="Posisi siswa berdasarkan XP saat ini">
                         {leagueDistribution.some((item) => item.value > 0) ? (
-                            <ChartContainer config={Object.fromEntries(leagueDistribution.map((item) => [item.chart_key, { color: item.color }]))}>
+                            <div className="space-y-2"><ChartContainer config={Object.fromEntries(leagueDistribution.map((item) => [item.chart_key, { color: item.color }]))}>
                                 <PieChart>
                                     <ChartTooltip content={<ChartTooltipContent />} />
                                     <Pie data={leagueDistribution} dataKey="value" nameKey="label" innerRadius={58} outerRadius={88} paddingAngle={3}>
@@ -388,6 +389,8 @@ export default function Gamification({
                                     </Pie>
                                 </PieChart>
                             </ChartContainer>
+                                <ChartBreakdown items={leagueDistribution} />
+                            </div>
                         ) : <ChartEmpty>Belum ada siswa dalam liga.</ChartEmpty>}
                     </ChartCard>
                 </div>
@@ -558,7 +561,7 @@ export default function Gamification({
                             {[
                                 { key: 'vocabulary', label: 'Kuis Kosakata' },
                                 { key: 'grammar', label: 'Kuis Tata Bahasa' },
-                                { key: 'coming_soon', label: 'Kuis Baru (Coming Soon)' },
+                                { key: 'coming_soon', label: 'Kuis Baru (Disiapkan)' },
                             ].map((tab) => (
                                 <button
                                     key={tab.key}

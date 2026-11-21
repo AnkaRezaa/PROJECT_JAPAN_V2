@@ -5,7 +5,11 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { decodeHTML, encodeXML } from 'entities';
 
+const superadminAudit = process.argv.includes('--superadmin-audit');
 const base = process.env.BETA_LIVE_URL || 'http://127.0.0.1:8000';
+if (superadminAudit) {
+    assert(['localhost', '127.0.0.1', '[::1]'].includes(new URL(base).hostname), 'SuperAdmin fixtures require a local server');
+}
 const response = await fetch(base + '/pricing', { signal: AbortSignal.timeout(15000) });
 assert.equal(response.status, 200);
 const manifest = JSON.parse(readFileSync('public/build/manifest.json', 'utf8'));
@@ -21,6 +25,11 @@ assert(browser);
 const temp = mkdtempSync(path.join(tmpdir(), 'tokuup-beta-'));
 const pending = new Map(), errors = [];
 let submitMode = 'validation';
+const auditTransactions = [1, 2].map(id => ({
+    id, transaction_code: 'AUDIT-' + id, status: 'pending', access_state: 'inactive',
+    amount_formatted: 'Rp 75.000', plan_name: 'Paket Audit', user_name: 'Siswa Audit',
+    payment_method: 'manual', created_at: '2026-11-19T14:08:00Z',
+}));
 const submissions = [];
 let chrome, socket, session, sequence = 0, view = 'User/Referral/Index';
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -37,7 +46,7 @@ async function evaluate(expression) {
     return result.result?.value;
 }
 async function waitFor(expression) {
-    const end = Date.now() + 90000;
+    const end = Date.now() + (superadminAudit ? 20000 : 90000);
     while (Date.now() < end) { if (await evaluate('Boolean(' + expression + ')')) return; await sleep(200); }
     throw new Error('Timeout: ' + expression + ' ' + JSON.stringify({ view, errors, body: await evaluate('document.body.innerText.slice(0,1200)') }));
 }
@@ -57,6 +66,30 @@ try {
         if (message.method === 'Fetch.requestPaused') {
             const settings = { enabled: true, registration_open: true, participants: 12, limit: 50, opens_at: '2026-12-01T02:00:00+00:00', opened_at: null, released: false };
             const fixture = { ...page, component: view, url: '/__beta-fixture', props: { ...page.props, auth: { user: view.startsWith('Public/') || view === 'Auth/Register' ? null : { id: 123, username: 'Beta Browser Test', email: 'fixture@example.com', role: view.startsWith('SuperAdmin') ? 'superadmin' : 'user', status: 'active', email_verified_at: '2026-11-16', xp: 0, level: 1, streak_count: 0 } }, beta: settings, betaSettings: settings, registration: { email: 'fixture@example.com', verified: false }, released: false, status: null, sentAt: null, errors: {}, seo: {}, flash: {}, socialLinks: {} } };
+            if (superadminAudit) {
+                Object.assign(fixture.props, {
+                    transactions: { data: auditTransactions, links: [] }, filters: { period: 7 },
+                    logins: { data: [{ id: 1, user: 'Siswa Audit', logged_in_at: '19 Nov 2026, 21:08' }], links: [] },
+                    timeline: { data: [{ id: 1, actor: 'Admin', action: 'Beta', description: 'Pengaturan beta diperbarui.', target: 'Sistem' }], links: [] },
+                    news: { data: [{ id: 1, title: 'Berita Audit', status: 'published', attachments: [], thumbnail_url: '/missing-superadmin-audit.png' }], links: [] },
+                    users: { data: Array.from({ length: 8 }, (_, index) => ({
+                        id: 9 + index, raw_status: 'active', status: 'Aktif', progress: '0%', name: 'Siswa Audit ' + (index + 1),
+                    })), links: [] },
+                    student: { id: 9, username: 'Siswa Detail', status: 'active', xp: 0, level: 1 },
+                    levelProgress: [{ id: 1, name: 'JLPT N3', total_lessons: 7, completed_lessons: 0, percentage: 0 }],
+                    progressScopeLabel: 'Progres lintas kelas (per level)',
+                    activityRouteName: 'superadmin.users.show',
+                    backHref: '/superadmin/users',
+                });
+                fixture.props.auth.user.role = 'superadmin';
+                if (['PUT', 'PATCH'].includes(message.params.request.method)) {
+                    const { url, postData } = message.params.request;
+                    submissions.push({ url, data: JSON.parse(postData || '{}') });
+                    fixture.props.errors = submitMode === 'validation' ? { current_password: 'Sandi lama tidak sesuai.' } : {};
+                    await send('Fetch.fulfillRequest', { requestId: message.params.requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'X-Inertia', value: 'true' }], body: Buffer.from(JSON.stringify(fixture)).toString('base64') });
+                    return;
+                }
+            }
             if (message.params.request.method === 'POST') {
                 const payload = JSON.parse(message.params.request.postData || '{}');
                 submissions.push(payload);
@@ -84,9 +117,96 @@ try {
     const { targetInfos } = await send('Target.getTargets', {}, null);
     ({ sessionId: session } = await send('Target.attachToTarget', { targetId: targetInfos.find(target => target.type === 'page').targetId, flatten: true }, null));
     await send('Page.enable'); await send('Runtime.enable');
-    await send('Fetch.enable', { patterns: [{ urlPattern: '*__beta-fixture*', resourceType: 'Document', requestStage: 'Request' }, { urlPattern: '*superadmin/system/beta', requestStage: 'Request' }, { urlPattern: '*daftar-beta*', requestStage: 'Request' }] });
+    await send('Fetch.enable', { patterns: [{ urlPattern: '*__beta-fixture*', resourceType: 'Document', requestStage: 'Request' }, { urlPattern: '*superadmin/system/beta', requestStage: 'Request' }, { urlPattern: '*daftar-beta*', requestStage: 'Request' }, ...(superadminAudit ? [
+        { urlPattern: '*/password', requestStage: 'Request' },
+        { urlPattern: '*/superadmin/payments/transactions/*/approve', requestStage: 'Request' },
+    ] : [])] });
     await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-    for (const width of [320, 390, 768, 1366]) {
+    if (superadminAudit) {
+        for (const width of [390, 1366]) {
+            await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 500 });
+            const click = (label) => evaluate(`Array.from(document.querySelectorAll('button')).find(el => el.textContent.trim() === ${JSON.stringify(label)}).click()`);
+            const visible = (fragment) => waitFor(`document.body?.innerText.toLowerCase().includes(${JSON.stringify(fragment.toLowerCase())})`);
+            const open = async (component, title, root = 'SuperAdmin') => {
+                view = root + '/' + component;
+                await send('Page.navigate', { url: base + '/__beta-fixture?view=' + encodeURIComponent(view) });
+                await visible(title);
+                assert(await evaluate('document.documentElement.scrollWidth <= innerWidth + 2'), 'No horizontal overflow ' + component + ' ' + width);
+            };
+
+            await open('Profil/Profil', 'Profil SuperAdmin');
+            await click('Keamanan Sistem');
+            await visible('Status Sistem');
+            assert.equal(await evaluate('document.body.innerText.includes("<CheckCircleIcon")'), false);
+            await click('Setelan Root');
+            await waitFor('document.querySelector("[name=current_password]")');
+            await evaluate(`for (const [name, value] of Object.entries({current_password:'wrong-pass',password:'next-password',password_confirmation:'next-password'})) {
+                const input = document.querySelector('[name=' + name + ']');
+                Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }`);
+            submitMode = 'validation';
+            await click('Perbarui Sandi');
+            await visible('Sandi lama tidak sesuai.');
+            assert.equal(await evaluate('document.body.innerText.includes("Sandi tersimpan.")'), false);
+            submitMode = 'success';
+            await click('Perbarui Sandi');
+            await visible('Sandi tersimpan.');
+            assert.equal(await evaluate('document.querySelector("[name=current_password]").value'), '');
+
+            await open('Pemasukan/Pemasukan', 'Tanggal (WIB)');
+            await evaluate(`Array.from(document.querySelectorAll('button')).filter(el => el.textContent.trim() === 'Approve')[1].click()`);
+            await visible('Setujui transaksi?');
+            await waitFor(`document.querySelector('[role=alertdialog]')?.innerText.includes('AUDIT-2')`);
+            await evaluate(`const field = document.querySelector('[role=alertdialog] textarea');
+                Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(field, 'Catatan audit');
+                field.dispatchEvent(new Event('input', { bubbles: true }));`);
+            await click('Setujui');
+            await waitFor('!document.querySelector("[role=alertdialog]")');
+            assert(submissions.at(-1).url.endsWith('/2/approve'));
+            assert.equal(submissions.at(-1).data.notes, 'Catatan audit');
+
+            await open('Aktivitas/Aktivitas', '21:08');
+            await visible('Pengaturan beta diperbarui.');
+            assert.equal(await evaluate('document.body.innerText.includes("GTM_ENABLED=true")'), false);
+
+            await open('Konten/Konten', 'Berita Audit');
+            await waitFor(`document.querySelector('img[src="/missing-superadmin-audit.png"]')?.hidden`);
+            await visible('Tanpa sampul');
+
+            await open('DataUser/DataUser', 'Siswa Audit');
+            await waitFor(`document.querySelector('div[style="width: 0%;"]')?.getBoundingClientRect().width === 0`);
+            const lastReset = `Array.from(document.querySelectorAll('button')).filter(el => el.textContent.trim() === 'Reset Password').at(-1)`;
+            await evaluate(`${lastReset}.scrollIntoView({ block: 'center', inline: 'center' })`);
+            assert(await evaluate(`(() => {
+                const reset = ${lastReset};
+                const feedback = document.querySelector('[aria-label="Kirim feedback"]');
+                const { x, y, width, height } = reset.getBoundingClientRect();
+                return getComputedStyle(feedback).position !== 'fixed'
+                    && reset.contains(document.elementFromPoint(x + width / 2, y + height / 2));
+            })()`), 'Feedback cannot cover the last Reset Password action');
+            await evaluate(`${lastReset}.click()`);
+            await visible('Reset Password Student?');
+            await click('Batal');
+            await waitFor('!document.querySelector("[role=alertdialog]")');
+
+            await open('DataUser/DetailUser', 'Siswa Detail', 'Admin');
+            await click('Monitoring Belajar');
+            await visible('0 dari 7 modul selesai');
+            await waitFor(`document.querySelector('[data-progress-percent]')?.textContent === '0%' && document.querySelector('.recharts-pie')`);
+            await waitFor(`(() => {
+                const label = document.querySelector('[data-progress-percent]').getBoundingClientRect();
+                const chart = document.querySelector('.recharts-pie').getBoundingClientRect();
+                return chart.width > 0 && Math.abs(label.x + label.width / 2 - chart.x - chart.width / 2) <= 3
+                    && Math.abs(label.y + label.height / 2 - chart.y - chart.height / 2) <= 3;
+            })()`);
+
+            await open('Sistem/Sistem', 'Jadwal buka akses (WIB)');
+            await visible('Akses aplikasi belum dibuka');
+            assert.equal(await evaluate('document.querySelector("input[type=datetime-local]").value'), '2026-12-01T09:00');
+            console.log(`SuperAdmin scenarios passed at ${width}px.`);
+        }
+    } else for (const width of [320, 390, 768, 1366]) {
         await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 500 });
         const views = process.env.BETA_FORMS_ONLY ? ['Public/ReleaseSoon', 'Public/Beta/Register', 'Public/Beta/Confirmation'] : ['Public/ReleaseSoon', 'User/Beta/Waiting', 'SuperAdmin/Sistem/Sistem', 'Auth/Register', 'Public/Beta/Register', 'Public/Beta/Confirmation'];
         for (view of views) {
@@ -156,7 +276,8 @@ try {
         }
     }
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ passed: true, screenshots: temp, checks: ['real built components', '320/390/768/1366', 'new logo loaded', 'light/dark overflow', 'beta form submission', 'inline validation', 'password visibility', 'no automatic login UI', ...(process.env.BETA_FORMS_ONLY ? [] : ['WIB schedule', 'settings submission', 'confirmation cancel'])] }));
+    if (superadminAudit) console.log('SuperAdmin browser checks passed at 390px and 1366px.');
+    else console.log(JSON.stringify({ passed: true, screenshots: temp, checks: ['real built components', '320/390/768/1366', 'new logo loaded', 'light/dark overflow', 'beta form submission', 'inline validation', 'password visibility', 'no automatic login UI', ...(process.env.BETA_FORMS_ONLY ? [] : ['WIB schedule', 'settings submission', 'confirmation cancel'])] }));
 } finally {
     if (socket?.readyState === WebSocket.OPEN) { try { await send('Browser.close', {}, null); } catch {} socket.close(); }
     if (chrome && chrome.exitCode === null) { await Promise.race([new Promise(resolve => chrome.once('exit', resolve)), sleep(3000)]); if (chrome.exitCode === null) chrome.kill(); }

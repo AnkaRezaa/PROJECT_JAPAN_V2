@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import ChartBreakdown from '@/Components/Features/Dashboard/ChartBreakdown';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Card from '@/Components/UI/Card';
@@ -192,7 +193,7 @@ export default function Kloter({
                 <div className="grid min-w-0 grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
                     <ChartCard className="min-w-0 p-4 sm:p-6" title="Status Kloter" subtitle="Distribusi seluruh kloter">
                         {kloterStatusDistribution.some((item) => item.value > 0) ? (
-                            <ChartContainer config={{ active: { color: '#10b981' }, draft: { color: '#f59e0b' }, archived: { color: '#94a3b8' } }}>
+                            <div className="space-y-2"><ChartContainer config={{ active: { color: '#10b981' }, draft: { color: '#f59e0b' }, archived: { color: '#94a3b8' } }}>
                                 <PieChart>
                                     <ChartTooltip content={<ChartTooltipContent />} />
                                     <Pie data={kloterStatusDistribution} dataKey="value" nameKey="label" innerRadius={58} outerRadius={88} paddingAngle={3}>
@@ -200,6 +201,8 @@ export default function Kloter({
                                     </Pie>
                                 </PieChart>
                             </ChartContainer>
+                                <ChartBreakdown items={kloterStatusDistribution} />
+                            </div>
                         ) : <ChartEmpty>Belum ada kloter.</ChartEmpty>}
                     </ChartCard>
 
@@ -224,7 +227,7 @@ export default function Kloter({
                             <input
                                 value={filterForm.data.search}
                                 onChange={(event) => filterForm.setData('search', event.target.value)}
-                                placeholder="Cari kloter, kode, kelas, admin..."
+                                placeholder="Cari kloter atau kode"
                                 className="h-11 min-w-0 rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             />
                             <select value={filterForm.data.status} onChange={(event) => filterForm.setData('status', event.target.value)} className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold dark:border-gray-700 dark:bg-gray-900">
@@ -401,7 +404,7 @@ export default function Kloter({
                                                     <div><p className="font-bold uppercase tracking-wide text-gray-400">Langganan</p><p className="mt-1 font-semibold text-gray-700 dark:text-gray-300">{item.subscription_until || '-'}</p></div>
                                                 </div>
                                                 <div className="mt-4">
-                                                    <div className="mb-1 flex justify-between text-[11px] font-black text-gray-400"><span>Progres</span><span>{item.progress_done}/{item.progress_total} · {item.progress_percent}%</span></div>
+                                                    <div className="mb-1 flex justify-between text-[11px] font-black text-gray-400"><span>Progres kelas ini</span><span>{item.progress_done}/{item.progress_total} · {item.progress_percent}%</span></div>
                                                     <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800"><div className="h-full rounded-full bg-brand-600" style={{ width: `${item.progress_percent || 0}%` }} /></div>
                                                 </div>
                                                 {item.status === 'active' && (

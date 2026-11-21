@@ -78,7 +78,12 @@ class SuperAdminPengelolaAdminController extends SuperAdminDasarController
                 ->latest()
                 ->take(3)
                 ->get()
-                ->map(fn (LogAktivitas $log) => $log->description ?: $log->action)
+                ->map(fn (LogAktivitas $log) => [
+                    'id' => $log->id,
+                    'description' => $log->description ?: $log->action,
+                    'actor' => $log->actor?->username ?? 'Sistem',
+                    'time' => $log->created_at?->copy()->timezone('Asia/Jakarta')->translatedFormat('d M Y, H:i'),
+                ])
                 ->values(),
             'filters' => $filters,
             'kloterOptions' => KloterBelajar::query()

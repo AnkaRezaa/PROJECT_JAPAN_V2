@@ -31,7 +31,8 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
         $students = Pengguna::query()
             ->where('role', 'user')
             ->withCount([
-                'progress as completed_modules_count' => fn ($query) => $query->whereNotNull('completed_at'),
+                'progress as completed_modules_count' => fn ($query) => $query->whereNotNull('completed_at')
+                    ->whereHas('module', fn ($modules) => $modules->where('status', 'published')),
             ])
             ->when($filters['search'], function ($query, $search) {
                 $query->where(function ($inner) use ($search) {
@@ -41,7 +42,9 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
             })
             ->when(
                 $filters['status'] !== 'all',
-                fn ($query) => $query->where('status', $filters['status']),
+                fn ($query) => $filters['status'] === 'no_activity'
+                    ? $query->where('status', 'active')->whereNull('last_activity_date')
+                    : $query->where('status', $filters['status']),
                 fn ($query) => $query->where('status', '!=', 'anonymized')
             )
             ->latest()
@@ -52,7 +55,7 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
             'stats' => [
                 $this->stat('Total Student', number_format(Pengguna::where('role', 'user')->where('status', '!=', 'anonymized')->count()), 'U'),
                 $this->stat('Aktif Mingguan', number_format(Pengguna::where('role', 'user')->where('status', 'active')->whereDate('last_activity_date', '>=', now()->subDays(7)->toDateString())->count()), 'A'),
-                $this->stat('Perlu Review', number_format(Pengguna::where('role', 'user')->where('status', 'active')->whereNull('last_activity_date')->count()), 'R', '0', 'down'),
+                $this->stat('Belum ada aktivitas', number_format(Pengguna::where('role', 'user')->where('status', 'active')->whereNull('last_activity_date')->count()), 'R', '0', 'down'),
                 $this->stat('Akun Suspended', number_format(Pengguna::where('role', 'user')->where('status', 'suspended')->count()), 'S', '0', 'down'),
             ],
             'users' => $students->through(fn (Pengguna $user) => [
@@ -119,7 +122,8 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
             'subscriptions.paymentPlan',
         ]);
 
-        $completedModuleIds = $user->progress->pluck('module_id')->all();
+        $completedProgress = $user->progress->filter(fn (Progres $progress) => $progress->completed_at && $progress->module?->status === 'published');
+        $completedModuleIds = $completedProgress->pluck('module_id')->unique()->all();
         $levels = LevelPembelajaran::with(['modules' => fn ($query) => $query->where('status', 'published')])
             ->orderBy('stage')
             ->get();
@@ -135,6 +139,7 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
             'backHref' => route('superadmin.users'),
             'backLabel' => 'Kembali ke Data User',
             'activityRouteName' => 'superadmin.users.show',
+            'progressScopeLabel' => 'Progres lintas kelas (per level)',
             'filters' => ['period' => $period],
             'studentActivitySeries' => $activity,
             'student' => [
@@ -151,7 +156,7 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
                 'xp' => (int) $user->xp,
                 'level' => (int) $user->level,
                 'streak_count' => (int) $user->streak_count,
-                'lessons_done' => $user->progress->count(),
+                'lessons_done' => count($completedModuleIds),
                 'quizzes_done' => $user->attempts->count(),
                 'average_score' => round((float) $user->attempts->avg('score'), 1),
                 'kloters' => $user->kloterBelajar->map(fn ($kloter) => [
@@ -177,11 +182,11 @@ class SuperAdminPenggunaController extends SuperAdminDasarController
 
                 return ['id' => $level->id, 'name' => $level->level_name, 'total_lessons' => $total, 'completed_lessons' => $completed, 'percentage' => $total > 0 ? round(($completed / $total) * 100) : 0];
             }),
-            'recentProgress' => $user->progress->sortByDesc('updated_at')->take(10)->values()->map(fn (Progres $progress) => [
-                'id' => $progress->id, 'lesson' => $progress->module?->title, 'completed_at' => optional($progress->completed_at ?? $progress->updated_at)->format('d M Y H:i'),
+            'recentProgress' => $completedProgress->sortByDesc('updated_at')->take(10)->values()->map(fn (Progres $progress) => [
+                'id' => $progress->id, 'lesson' => $progress->module?->title, 'completed_at' => optional($progress->completed_at)->format('d M Y H:i'),
             ]),
             'recentAttempts' => $user->attempts->sortByDesc('attempted_at')->take(10)->values()->map(fn (PengerjaanKuis $attempt) => [
-                'id' => $attempt->id, 'quiz' => $attempt->quiz?->type, 'lesson' => $attempt->quiz?->module?->title, 'score' => $attempt->score, 'xp_earned' => $attempt->xp_earned,
+                'id' => $attempt->id, 'quiz' => $attempt->quiz?->title ?: $attempt->quiz?->type, 'week_number' => $attempt->quiz?->module?->week_number, 'lesson' => $attempt->quiz?->module?->title, 'score' => $attempt->score, 'xp_earned' => $attempt->xp_earned,
             ]),
             'rewardHistory' => LogReward::query()->where('user_id', $user->id)->latest()->take(10)->get()->map(fn (LogReward $log) => [
                 'id' => $log->id, 'description' => $log->description, 'source_type' => $log->source_type, 'xp_amount' => $log->xp_amount, 'created_at' => $log->created_at->format('d M Y H:i'),

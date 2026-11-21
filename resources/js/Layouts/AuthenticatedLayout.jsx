@@ -169,7 +169,7 @@ const resolveSidebarExpanded = () => {
     return window.localStorage.getItem('toku-up:sidebar-expanded') !== 'false';
 };
 
-export default function AuthenticatedLayout({ children }) {
+export default function AuthenticatedLayout({ children, feedbackInline = false }) {
     const page = usePage();
     const { user } = page.props.auth;
     const flash = page.props.flash || {};
@@ -513,6 +513,7 @@ export default function AuthenticatedLayout({ children }) {
             icon: <MenuBookIcon sx={{ fontSize: 24 }} />,
             items: [
                 { href: '/superadmin/content', icon: <MonitorHeartIcon sx={{ fontSize: 18 }} />, label: 'News & Konten' },
+                { href: '/superadmin/course-reviews', icon: <ChatBubbleOutlineIcon sx={{ fontSize: 18 }} />, label: 'Ulasan Kelas' },
             ],
         },
         {
@@ -977,7 +978,7 @@ export default function AuthenticatedLayout({ children }) {
                                 <div>
                                     <h3 className="font-black text-gray-950 dark:text-white">{notificationContext.title}</h3>
                                     {(unreadCount > 0 || user?.role !== 'admin') && (
-                                        <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{unreadCount > 0 ? `${unreadCount} belum dibaca` : notificationContext.empty}</p>
+                                        <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{unreadCount > 0 ? `${unreadCount} belum dibaca` : null}</p>
                                     )}
                                 </div>
                                 {unreadCount > 0 && (
@@ -1089,6 +1090,7 @@ export default function AuthenticatedLayout({ children }) {
                 <main className={`min-h-screen bg-slate-50 dark:bg-[#0b1121] text-slate-900 dark:text-slate-100 shadow-[-5px_0_30px_-10px_rgba(0,0,0,0.05)] relative z-0 transition-colors duration-300 ${isAdminSection ? 'font-inter' : ''}`}>
                     {children}
                 </main>
+                {feedbackInline && <div className="flex justify-end px-4 pb-6 sm:px-6 lg:px-8"><ProductFeedbackButton floating={false} /></div>}
                 {isUser && (
                     <footer className="border-t border-gray-200/80 bg-white px-4 py-2 text-xs font-medium text-gray-700 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300">
                         <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-1 text-center sm:flex-row sm:justify-between sm:gap-4 sm:text-left">
@@ -1109,7 +1111,7 @@ export default function AuthenticatedLayout({ children }) {
                 />
             )}
 
-            <ProductFeedbackButton />
+            {!feedbackInline && <ProductFeedbackButton />}
 
             {toastAchievements.length > 0 && (
                 <div className="fixed inset-x-3 top-3 z-[100] flex flex-col gap-3 animate-in sm:inset-x-auto sm:right-6 sm:top-6">

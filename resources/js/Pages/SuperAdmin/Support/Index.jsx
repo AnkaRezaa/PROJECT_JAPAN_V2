@@ -195,7 +195,7 @@ export default function SupportInbox({ chats, filters, selectedChatId = 0, whats
                     <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">Pengunjung dapat membuka percakapan langsung ke nomor ini. Percakapan WhatsApp terpisah dari Inbox Bantuan website.</p>
                     <form onSubmit={saveSettings} className="mt-4 grid gap-3 sm:max-w-lg">
                         <label className="text-sm text-gray-700 dark:text-gray-200">Nomor WhatsApp admin
-                            <input type="tel" inputMode="numeric" value={settings.data.recipient} onChange={(event) => settings.setData('recipient', event.target.value)} placeholder="628123456789" className="mt-1 w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-950" />
+                            <input type="tel" inputMode="numeric" value={settings.data.recipient} onChange={(event) => settings.setData('recipient', event.target.value)} placeholder="Kode negara dan nomor" className="mt-1 w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-950" />
                         </label>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Gunakan kode negara tanpa tanda +, spasi, atau angka 0 di depan.</p>
                         <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"><input type="checkbox" checked={settings.data.enabled} onChange={(event) => settings.setData('enabled', event.target.checked)} />Tampilkan pilihan WhatsApp di chat bantuan</label>

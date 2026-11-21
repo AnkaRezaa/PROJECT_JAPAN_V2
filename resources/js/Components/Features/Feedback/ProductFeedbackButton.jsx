@@ -11,7 +11,7 @@ const categories = [
     { value: 'other', label: 'Lainnya' },
 ];
 
-export default function ProductFeedbackButton() {
+export default function ProductFeedbackButton({ floating = true }) {
     const [open, setOpen] = useState(false);
     const closeButtonRef = useRef(null);
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
@@ -53,11 +53,11 @@ export default function ProductFeedbackButton() {
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="fixed bottom-4 right-4 z-40 inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-white px-3.5 py-2.5 text-sm font-black text-emerald-700 shadow-lg shadow-gray-900/10 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-emerald-900/60 dark:bg-gray-900 dark:text-emerald-300 dark:hover:bg-emerald-950/40 sm:bottom-5 sm:right-5"
+                className={`${floating ? 'fixed bottom-4 right-4 z-40 shadow-lg shadow-gray-900/10 sm:bottom-5 sm:right-5' : ''} inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-white px-3.5 py-2.5 text-sm font-black text-emerald-700 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-emerald-900/60 dark:bg-gray-900 dark:text-emerald-300 dark:hover:bg-emerald-950/40`}
                 aria-label="Kirim feedback"
             >
                 <FeedbackOutlinedIcon sx={{ fontSize: 19 }} />
-                <span className="hidden sm:inline">Feedback</span>
+                <span className={floating ? 'hidden sm:inline' : undefined}>Feedback</span>
             </button>
 
             {open && (

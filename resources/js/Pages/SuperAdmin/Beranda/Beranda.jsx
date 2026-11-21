@@ -66,7 +66,7 @@ function MetricCard({ item }) {
 
 function AttentionQueue({ items = [] }) {
     return (
-        <Card padding={false}>
+        <Card padding={false} className="self-start">
             <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-5 dark:border-gray-800 sm:px-6">
                 <div>
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Operasional</p>
@@ -238,7 +238,7 @@ export default function SuperadminDashboard({
                                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-700 transition group-hover:bg-brand-600 group-hover:text-white dark:bg-gray-800 dark:text-gray-200"><Icon fontSize="small" /></span>
                                         <span className="min-w-0 flex-1">
                                             <span className="block text-sm font-black text-gray-900 dark:text-white">{item.label}</span>
-                                            <span className="mt-0.5 block truncate text-xs font-semibold text-gray-700 dark:text-gray-300">{item.description}</span>
+                                            <span className="mt-0.5 block break-words text-xs font-semibold text-gray-700 dark:text-gray-300">{item.description}</span>
                                         </span>
                                         <ArrowForwardRounded className="text-gray-300 transition group-hover:translate-x-1 group-hover:text-brand-600 dark:text-gray-600 dark:group-hover:text-brand-300" fontSize="small" />
                                     </Link>
@@ -263,6 +263,7 @@ export default function SuperadminDashboard({
                                         <span className="shrink-0 text-xs font-bold text-gray-600 dark:text-gray-300">{item.time}</span>
                                     </div>
                                     <p className="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">{item.actor} · {item.target}</p>
+                                    {item.description && <p className="mt-1 text-xs">{item.description}</p>}
                                 </div>
                             ))}
                             {activities.length === 0 && <EmptyState>Belum ada aktivitas yang tercatat.</EmptyState>}
