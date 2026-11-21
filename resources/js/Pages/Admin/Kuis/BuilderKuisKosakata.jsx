@@ -73,6 +73,7 @@ export default function QuizBuilder({
     const [showVocabularyGenerate, setShowVocabularyGenerate] = useState(false);
     const [showStudentPreview, setShowStudentPreview] = useState(false);
     const [showValidation, setShowValidation] = useState(false);
+    const [statusError, setStatusError] = useState('');
     const importInputRef = useRef(null);
     const initialForm = {
         time_limit: quiz?.time_limit ?? '',
@@ -83,9 +84,10 @@ export default function QuizBuilder({
     const cleanSnapshotRef = useRef(JSON.stringify(initialForm));
 
     const { data, setData, post, processing, recentlySuccessful, errors, clearErrors } = useForm(initialForm);
-    const { confirmState, openConfirm, closeConfirm } = useConfirmAction();
+    const { confirmState, openConfirm, closeConfirm, setConfirmProcessing } = useConfirmAction();
 
     const activeQ = data.questions[activeIndex] || data.questions[0] || emptyQuestion(quiz?.type || 'multiple_choice');
+    const editorQuestions = data.questions.filter((question) => question.id || question.question_text?.trim());
     const flashcardSets = flashcardWorkspace?.sets || [];
     const activeFlashcardSet = flashcardSets.find((set) => set.id === activeFlashcardSetId)
         || flashcardSets[0]
@@ -284,6 +286,7 @@ export default function QuizBuilder({
     };
 
     const toggleQuizStatus = () => {
+        setStatusError('');
         const nextStatus = quiz?.status === 'published' ? 'draft' : 'published';
         requestUnsavedAction(() => openConfirm({
             variant: nextStatus === 'published' ? 'success' : 'warning',
@@ -292,12 +295,14 @@ export default function QuizBuilder({
                 ? 'Kuis akan tersedia mengikuti aturan akses dan progres Day.'
                 : 'Kuis akan disembunyikan sementara dari user.',
             confirmLabel: nextStatus === 'published' ? 'Publish' : 'Ubah ke Draft',
-            onConfirm: () => router.patch(route('admin.quizzes.status', quiz.id), {
-                status: nextStatus,
-            }, {
-                preserveScroll: true,
-                onFinish: closeConfirm,
-            }),
+            onConfirm: () => {
+                setConfirmProcessing(true);
+                router.patch(route('admin.quizzes.status', quiz.id), { status: nextStatus }, {
+                    preserveScroll: true,
+                    onError: (statusErrors) => setStatusError(statusErrors.status || 'Status kuis tidak dapat diperbarui. Coba lagi.'),
+                    onFinish: closeConfirm,
+                });
+            },
         }), {
             title: 'Simpan Soal Terlebih Dahulu',
             message: 'Status tidak dapat diubah sebelum perubahan soal disimpan.',
@@ -400,7 +405,7 @@ export default function QuizBuilder({
 
 
 
-    const totalPoints = data.questions.reduce(
+    const totalPoints = editorQuestions.reduce(
         (total, question) => total + Math.max(1, Number(question.points || 1)),
         0,
     );
@@ -744,11 +749,11 @@ export default function QuizBuilder({
         </div>
     );
     const renderAnalysis = () => {
-        const qCount = data.questions.length;
-        const mcCount = data.questions.filter(q => (q.type || 'multiple_choice') === 'multiple_choice').length;
-        const fillCount = data.questions.filter(q => q.type === 'fill_blank').length;
-        const listenCount = data.questions.filter(q => q.type === 'listening').length;
-        const filledCount = data.questions.filter((_, index) => !questionErrors[index]).length;
+        const qCount = editorQuestions.length;
+        const mcCount = editorQuestions.filter(q => (q.type || 'multiple_choice') === 'multiple_choice').length;
+        const fillCount = editorQuestions.filter(q => q.type === 'fill_blank').length;
+        const listenCount = editorQuestions.filter(q => q.type === 'listening').length;
+        const filledCount = editorQuestions.filter((question) => !getQuestionError(question)).length;
 
         return (
             <div className="max-w-3xl mx-auto space-y-6">
@@ -789,14 +794,14 @@ export default function QuizBuilder({
                                 <th className="px-5 py-3 text-left">#</th>
                                 <th className="px-5 py-3 text-left">Tipe</th>
                                 <th className="px-5 py-3 text-left">Soal</th>
-                                <th className="px-5 py-3 text-center">Difficulty (p)</th>
-                                <th className="px-5 py-3 text-center">Discrimination</th>
+                                <th className="px-5 py-3 text-center">Persentase benar</th>
+                                <th className="px-5 py-3 text-center">Benar / Attempt</th>
                                 <th className="px-5 py-3 text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {data.questions.map((q, i) => {
-                                const isFilled = !questionErrors[i];
+                            {editorQuestions.map((q, i) => {
+                                const isFilled = !getQuestionError(q);
                                 const typeConf = TYPE_LABELS[q.type || 'multiple_choice'];
                                 const typeColor = TYPE_COLORS[q.type || 'multiple_choice'];
                                 return (
@@ -829,8 +834,8 @@ export default function QuizBuilder({
                     <div>
                         <p className="text-sm font-bold text-brand-900 dark:text-emerald-300">Tentang Item Analysis</p>
                         <p className="text-xs text-brand-700 dark:text-brand-400 mt-1 leading-relaxed">
-                            <strong>Difficulty (p-value)</strong>: Proporsi siswa yang menjawab benar. Rentang 0.0 (semua salah) sampai 1.0 (semua benar). Ideal: 0.3 hingga 0.7.<br />
-                            <strong>Discrimination</strong>: Seberapa baik soal membedakan siswa pintar vs kurang. Positif = baik. Nol/negatif = soal perlu direvisi.
+                            <strong>Persentase benar</strong>: Bagian jawaban yang benar, dari 0% sampai 100%.<br />
+                            <strong>Benar / Attempt</strong>: Jumlah jawaban benar dibandingkan seluruh percobaan pada soal itu.
                         </p>
                     </div>
                 </div>
@@ -939,7 +944,7 @@ export default function QuizBuilder({
                     id: 'questions',
                     label: 'Soal Kuis',
                     icon: FormatListBulletedIcon,
-                    count: data.questions.length,
+                    count: initialQuestions.length,
                 },
                 {
                     id: 'flashcards',
@@ -1007,13 +1012,14 @@ export default function QuizBuilder({
         >
             <Head title="Editor Kuis & Repetisi - TOKU-UP" />
             <div className="space-y-6">
+                {statusError && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{statusError}</p>}
                 {activeTab === 'questions' ? (
                     <div className="grid gap-6 lg:grid-cols-12 items-start">
                         {/* Kolom Kiri: Sidebar Navigator (4 cols) */}
                         <div className="lg:col-span-4 rounded-2xl border border-gray-200 bg-white p-3 shadow-xs dark:border-gray-800 dark:bg-gray-900">
                             <div className="flex items-center justify-between border-b border-gray-100 pb-2.5 px-1 dark:border-gray-800">
                                 <span className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                    Daftar Soal ({data.questions.length})
+                                    Daftar Soal ({editorQuestions.length})
                                 </span>
                                 <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                                     Total Poin: {totalPoints}

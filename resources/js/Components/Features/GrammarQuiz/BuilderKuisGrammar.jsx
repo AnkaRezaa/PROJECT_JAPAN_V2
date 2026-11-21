@@ -332,7 +332,7 @@ function ReviewQuestions({
                         <VisibilityIcon sx={{ fontSize: 15 }} />
                         Preview Siswa
                     </button>
-                    {Number.isInteger(Number(draft.id)) && (
+                    {draft.id && (
                         <button
                             type="button"
                             disabled={saving}
@@ -433,7 +433,7 @@ function ReviewQuestions({
                             }
                         >
                             {/* Form Input Komponen */}
-                            <div className="mb-4"><QuestionHighlightField text={activeQuestion.prompt} value={activeQuestion.highlight_text} onChange={(value) => updateActiveQuestion({ ...activeQuestion, highlight_text: value })} /></div>
+                            <div className="mb-4"><QuestionHighlightField label="Sorotan pada Instruksi" text={activeQuestion.prompt} value={activeQuestion.highlight_text} onChange={(value) => updateActiveQuestion({ ...activeQuestion, highlight_text: value })} /></div>
                             {currentStageId === 'sentence_builder' ? (
                                 <SentenceBuilderEditor question={activeQuestion} onChange={updateActiveQuestion} />
                             ) : (
@@ -490,11 +490,19 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [fieldErrors, setFieldErrors] = useState({});
+    const [loadResult, setLoadResult] = useState(null);
+    const [loadRetry, setLoadRetry] = useState(0);
+    const loadKey = `${day?.id}:${defaultLevel}:${loadRetry}`;
     const cleanSnapshotRef = useRef('');
     const { confirmState, openConfirm, closeConfirm, setConfirmProcessing } = useConfirmAction();
 
     const currentSnapshot = useMemo(() => JSON.stringify(draft), [draft]);
     const hasUnsavedChanges = Boolean(cleanSnapshotRef.current && currentSnapshot !== cleanSnapshotRef.current);
+    const editDraft = (next) => {
+        setDraft(next);
+        setError('');
+        setGeneratorSuccess('');
+    };
 
     useEffect(() => {
         const handleBeforeUnload = (event) => {
@@ -560,7 +568,10 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
     };
 
     useEffect(() => {
-        if (!open) return undefined;
+        if (!open) {
+            setLoadResult(null);
+            return undefined;
+        }
         let active = true;
         const initialDraft = makeDraft(day, defaultLevel);
         setDraft(initialDraft);
@@ -578,11 +589,12 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                     setDraft(available[0]);
                     cleanSnapshotRef.current = JSON.stringify(available[0]);
                 }
+                setLoadResult({ key: loadKey });
             })
-            .catch(() => active && setError('Data Grammar belum dapat dimuat.'));
+            .catch(() => active && setLoadResult({ key: loadKey, failed: true }));
         setSavedAt('');
         return () => { active = false; };
-    }, [day?.id, open, defaultLevel]);
+    }, [day?.id, open, defaultLevel, loadKey]);
 
     const totals = useMemo(() => {
         const questions = draft.stages.flatMap((stage) => stage.questions);
@@ -722,6 +734,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                     .replace(/lesson\.examples\.\d+\.japanese/gi, 'Kalimat Jepang pada contoh')
                     .replace(/lesson\.examples\.\d+\.translation/gi, 'Arti pada contoh')
                     .replace(/stages\.\d+\.questions/gi, 'Daftar soal stage');
+                setError(cleanErr);
                 const errKeys = Object.keys(formatted);
                 if (errKeys.some((k) => k.startsWith('lesson.') || k === 'pattern' || k === 'title' || k === 'meaning' || k === 'formula')) {
                     setActiveMainTab('intro');
@@ -737,20 +750,21 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
     };
 
     const setStatus = async (status) => {
-        if (!Number.isInteger(Number(draft.id))) return;
+        if (!draft.id || !Number.isInteger(Number(draft.id))) return;
         setSaving(true);
         setError('');
         setGeneratorSuccess('');
         try {
             const response = await window.axios.patch(`/admin/grammar-quizzes/${draft.id}/status`, { status });
-            const updated = {
-                ...draft,
+            const statusFields = {
                 status,
                 can_delete: response.data.can_delete ?? draft.can_delete,
                 delete_block_reason: response.data.delete_block_reason ?? null,
             };
-            setDraft(updated);
-            setLessons((current) => current.map((lesson) => lesson.id === updated.id ? updated : lesson));
+            const saved = { ...JSON.parse(cleanSnapshotRef.current), ...statusFields };
+            cleanSnapshotRef.current = JSON.stringify(saved);
+            setDraft((current) => ({ ...current, ...statusFields }));
+            setLessons((current) => current.map((lesson) => lesson.id === draft.id ? saved : lesson));
             setGeneratorSuccess(response.data?.message || (status === 'published' ? 'Lesson Grammar berhasil diterbitkan.' : 'Lesson Grammar dikembalikan menjadi draf.'));
         } catch (requestError) {
             setGeneratorSuccess('');
@@ -873,6 +887,21 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
 
     if (!open || typeof document === 'undefined') return null;
 
+    if (loadResult?.key !== loadKey || loadResult.failed) {
+        return (
+            <UnifiedQuizBuilderShell open isModal title="Builder Kuis Grammar" onBack={onClose}>
+                {loadResult?.key === loadKey && loadResult.failed ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                        <p role="alert" className="text-sm text-rose-700 dark:text-rose-200">Data Grammar belum dapat dimuat.</p>
+                        <button type="button" onClick={() => setLoadRetry((value) => value + 1)} className="min-h-11 rounded-lg border px-3 text-sm font-semibold">Coba lagi</button>
+                    </div>
+                ) : (
+                    <p role="status" className="text-sm font-semibold text-gray-600 dark:text-gray-300">Memuat lesson Grammar...</p>
+                )}
+            </UnifiedQuizBuilderShell>
+        );
+    }
+
     return (
         <UnifiedQuizBuilderShell
             open={open}
@@ -886,7 +915,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
             hasUnsavedChanges={hasUnsavedChanges}
             onBack={showGenerator ? undefined : handleRequestClose}
             onSave={saveDraft}
-            onToggleStatus={Number.isInteger(Number(draft.id)) ? () => setStatus(draft.status === 'published' ? 'draft' : 'published') : undefined}
+            onToggleStatus={draft.id ? () => setStatus(draft.status === 'published' ? 'draft' : 'published') : undefined}
             onPreview={() => setShowPreview(true)}
             onImport={() => setShowBulkImport(true)}
             centerContent={
@@ -904,7 +933,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                     {lessons.length > 0 && (
                         <select
                             disabled={saving}
-                            value={Number.isInteger(Number(draft.id)) ? draft.id : ''}
+                            value={draft.id ?? ''}
                             onChange={(event) => {
                                 const selected = lessons.find((lesson) => String(lesson.id) === event.target.value);
                                 handleSwitchLesson(selected || null);
@@ -992,7 +1021,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
         >
             <div className="space-y-6">
                 {error && (
-                    <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
+                    <div role="alert" className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
                         <span>{error}</span>
                         <button type="button" onClick={() => setError('')} className="text-rose-500 hover:text-rose-800">
                             <CloseIcon sx={{ fontSize: 16 }} />
@@ -1029,7 +1058,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
 
                         <ReviewQuestions
                             draft={draft}
-                            onChange={setDraft}
+                            onChange={editDraft}
                             activeStageId={activeStageId}
                             onStageChange={setActiveStageId}
                             onRegenerateSingle={handleRegenerateSingle}
@@ -1054,7 +1083,7 @@ export default function BuilderKuisGrammar({ open, day, module, onClose }) {
                         </div>
                         <IntroEditor
                             draft={draft}
-                            onChange={setDraft}
+                            onChange={editDraft}
                             onOpenBankPicker={() => setShowBankPicker(true)}
                             fieldErrors={fieldErrors}
                             onClearError={clearFieldError}

@@ -262,7 +262,7 @@ class ExamPortalDataService
             'question_count' => (int) $sections->sum('questions_count'),
             'status' => $exam->status,
             'access' => $exam->access_type,
-            'attempt_count' => (int) $exam->attempt_count,
+            'attempt_count' => (int) $exam->attempts_count,
             'updated_at' => $exam->updated_at->format('d F Y, H.i'),
             'version_id' => $version?->id,
             'version_status' => $version?->status,

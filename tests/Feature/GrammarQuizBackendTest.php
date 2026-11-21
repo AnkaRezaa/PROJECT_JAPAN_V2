@@ -113,6 +113,23 @@ function grammarFixture(): array
     return compact('admin', 'user', 'program', 'module', 'day', 'checkpoint', 'checkpointQuestion');
 }
 
+it('reports why a vocabulary quiz with no saved questions cannot be published', function () {
+    $fixture = grammarFixture();
+    $quiz = Kuis::create([
+        'module_id' => $fixture['module']->id,
+        'module_day_id' => $fixture['day']->id,
+        'type' => 'multiple_choice',
+        'status' => 'draft',
+    ]);
+
+    $this->actingAs($fixture['admin'])
+        ->patchJson(route('admin.quizzes.status', $quiz), ['status' => 'published'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('status');
+
+    expect($quiz->fresh()->status)->toBe('draft');
+});
+
 it('authors grammar and completes a day only after grammar and vocabulary checkpoint pass', function () {
     $fixture = grammarFixture();
 

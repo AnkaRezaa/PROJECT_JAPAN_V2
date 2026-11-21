@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\Exam;
+use App\Models\ExamAttempt;
 use App\Models\ExamVersion;
 use App\Models\LevelPembelajaran;
 use App\Models\Pengguna;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
@@ -69,6 +71,31 @@ it('renders known edit and preview pages and rejects unknown exams', function ()
     $this->actingAs($this->admin)
         ->get(route('admin.exams.edit', 'tidak-ada'))
         ->assertNotFound();
+});
+
+it('counts only submitted and timed-out attempts on admin exam packages', function () {
+    $version = $this->exam->versions()->firstOrFail();
+    $session = $version->sessions()->create(['name' => 'Sesi audit', 'status' => 'active']);
+    $student = Pengguna::factory()->create(['role' => 'user']);
+
+    foreach (['submitted', 'timed_out', 'in_progress', 'invalidated'] as $index => $status) {
+        ExamAttempt::create([
+            'exam_session_id' => $session->id,
+            'exam_version_id' => $version->id,
+            'user_id' => $student->id,
+            'submission_token' => (string) Str::uuid(),
+            'attempt_number' => $index + 1,
+            'status' => $status,
+            'started_at' => now()->subMinute(),
+            'deadline_at' => now()->addMinutes(10),
+            'submitted_at' => $status === 'in_progress' ? null : now(),
+        ]);
+    }
+
+    $this->actingAs($this->admin)->get(route('admin.exams.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('exam_packages.0.attempt_count', 2));
+    $this->get(route('admin.exams.sessions'))
+        ->assertInertia(fn (Assert $page) => $page->where('sessions.0.participants', 4));
 });
 
 it('does not expose admin exam management to regular users', function () {
