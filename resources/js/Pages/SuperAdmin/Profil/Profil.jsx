@@ -2,9 +2,8 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import React, { useEffect, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import ConfirmActionDialog from '@/Components/UI/ConfirmActionDialog';
 
 import SecurityIcon from '@mui/icons-material/Security';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
@@ -21,17 +20,13 @@ const TABS = [
     { key: 'security', label: 'Keamanan Sistem', icon: <SecurityIcon sx={{ fontSize: 20 }} /> },
 ];
 
-const InputField = ({ label, type = 'text', defaultValue, placeholder, disabled }) => (
-    <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider transition-colors duration-300">{label}</label>
-        <input
-            type={type}
-            defaultValue={defaultValue}
-            placeholder={placeholder}
-            disabled={disabled}
-            className="w-full bg-slate-50 dark:bg-gray-900/50 border border-slate-200 dark:border-gray-800 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/30 focus:border-focus dark:focus:border-focus transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
-        />
-    </div>
+const InputField = ({ label, error, ...inputProps }) => (
+    <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{label}</span>
+        <input {...inputProps} aria-invalid={Boolean(error)}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+        {error && <span role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</span>}
+    </label>
 );
 
 const BentoCard = ({ children, className = '' }) => (
@@ -72,8 +67,7 @@ export default function ProfilSuperAdmin() {
     const { user } = usePage().props.auth;
     const [activeTab, setActiveTab] = useState('settings');
     const [themeLabel, setThemeLabel] = useState(resolveThemeLabel);
-    const [saved, setSaved] = useState(false);
-    const [confirmMaintenance, setConfirmMaintenance] = useState(false);
+    const passwordForm = useForm({ current_password: '', password: '', password_confirmation: '' });
 
     useEffect(() => {
         const syncThemeLabel = () => setThemeLabel(resolveThemeLabel());
@@ -88,9 +82,13 @@ export default function ProfilSuperAdmin() {
         };
     }, []);
 
-    const handleSave = () => {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2500);
+    const handleSave = (event) => {
+        event.preventDefault();
+        if (passwordForm.processing) return;
+        passwordForm.put(route('password.update'), {
+            preserveScroll: true,
+            onSuccess: () => passwordForm.reset(),
+        });
     };
 
     return (
@@ -101,7 +99,7 @@ export default function ProfilSuperAdmin() {
                 <div className="max-w-7xl mx-auto">
                     {/* Header Page */}
                     <div className="mb-8">
-                        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight transition-colors duration-300">Pengaturan Sistem</h1>
+                        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight transition-colors duration-300">Profil SuperAdmin</h1>
                         <p className="text-slate-500 dark:text-slate-400 mt-1 transition-colors duration-300">Kelola preferensi dan keamanan level root.</p>
                     </div>
 
@@ -194,29 +192,31 @@ export default function ProfilSuperAdmin() {
                                             <BentoCard className="md:col-span-2">
                                                 <SectionTitle 
                                                     icon={<LockIcon sx={{ fontSize: 22 }} />} 
-                                                    subtitle="Perbarui kata sandi root Anda secara paksa jika diperlukan."
+                                                    subtitle="Perbarui kata sandi akun SuperAdmin."
                                                 >
-                                                    Master Password Override
+                                                    Kata Sandi
                                                 </SectionTitle>
                                                 
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-                                                    <InputField label="Email Root (Read-only)" type="email" defaultValue={user.email} disabled />
-                                                    <InputField label="Sandi Lama" type="password" placeholder="••••••••" />
-                                                    <InputField label="Sandi Baru" type="password" placeholder="Min. 12 karakter" />
-                                                    <InputField label="Konfirmasi Sandi" type="password" placeholder="Ulangi sandi baru" />
-                                                </div>
-                                                
-                                                <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-gray-800 mt-4 transition-colors duration-300">
-                                                    <button
-                                                        onClick={handleSave}
-                                                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300
-                                                            ${saved
-                                                                ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/20'
-                                                                : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-gray-200 shadow-md shadow-slate-200 dark:shadow-none'}`}
-                                                    >
-                                                        {saved ? <><CheckCircleIcon sx={{ fontSize: 18 }} /> Tersimpan</> : 'Perbarui Sandi'}
-                                                    </button>
-                                                </div>
+                                                <form onSubmit={handleSave} className="space-y-4">
+                                                    <div className="grid gap-4 md:grid-cols-2">
+                                                        <InputField label="Email akun" type="email" defaultValue={user.email} disabled />
+                                                        {[
+                                                            ['current_password', 'Sandi Lama', 'current-password'],
+                                                            ['password', 'Sandi Baru', 'new-password'],
+                                                            ['password_confirmation', 'Konfirmasi Sandi', 'new-password'],
+                                                        ].map(([name, label, autoComplete]) => (
+                                                            <InputField key={name} name={name} label={label} type="password" autoComplete={autoComplete}
+                                                                value={passwordForm.data[name]} error={passwordForm.errors[name]}
+                                                                onChange={(event) => passwordForm.setData(name, event.target.value)} required />
+                                                        ))}
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center justify-end gap-3">
+                                                        {passwordForm.recentlySuccessful && <span role="status" className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Sandi tersimpan.</span>}
+                                                        <button type="submit" disabled={passwordForm.processing} className="min-h-11 rounded-lg bg-slate-900 px-4 text-sm font-bold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900">
+                                                            {passwordForm.processing ? 'Menyimpan...' : 'Perbarui Sandi'}
+                                                        </button>
+                                                    </div>
+                                                </form>
                                             </BentoCard>
                                         </div>
                                     </motion.div>
@@ -230,9 +230,9 @@ export default function ProfilSuperAdmin() {
                                     >
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             {[
-                                                { label: 'Status Sistem', value: 'Online', icon: '<CheckCircleIcon className="w-5 h-5 text-emerald-500 inline-block" />', bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-100 dark:border-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-400' },
-                                                { label: 'Mode Akses', value: 'Produksi', icon: '<RocketLaunchIcon className="w-5 h-5 inline-block text-brand-500" />', bg: 'bg-brand-50 dark:bg-brand-900/20', border: 'border-brand-100 dark:border-brand-900/30', text: 'text-brand-700 dark:text-brand-400' },
-                                                { label: 'Role Aktif', value: 'Root', icon: '<WorkspacePremiumIcon className="w-5 h-5 text-amber-500 inline-block" />', bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-100 dark:border-rose-900/30', text: 'text-rose-700 dark:text-rose-400' },
+                                                { label: 'Status Sistem', value: 'Online', icon: <CheckCircleIcon className="w-5 h-5 text-emerald-500 inline-block" />, bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-100 dark:border-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-400' },
+                                                { label: 'Mode Akses', value: 'Produksi', icon: <RocketLaunchIcon className="w-5 h-5 inline-block text-brand-500" />, bg: 'bg-brand-50 dark:bg-brand-900/20', border: 'border-brand-100 dark:border-brand-900/30', text: 'text-brand-700 dark:text-brand-400' },
+                                                { label: 'Role Aktif', value: 'Root', icon: <WorkspacePremiumIcon className="w-5 h-5 text-amber-500 inline-block" />, bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-100 dark:border-rose-900/30', text: 'text-rose-700 dark:text-rose-400' },
                                             ].map(stat => (
                                                 <BentoCard key={stat.label} className={`!p-6 ${stat.bg} ${stat.border}`}>
                                                     <div className="flex flex-col h-full justify-between gap-3">
@@ -265,12 +265,12 @@ export default function ProfilSuperAdmin() {
                                                         </p>
                                                         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 transition-colors duration-300">Aktifkan untuk mengunci akses pengguna reguler selama perbaikan.</p>
                                                     </div>
-                                                    <button
-                                                        onClick={() => setConfirmMaintenance(true)}
+                                                    <Link
+                                                        href={route('superadmin.system')}
                                                         className="shrink-0 px-6 py-3 rounded-xl font-bold text-sm text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20 hover:bg-brand-100 dark:hover:bg-brand-900/40 transition-colors duration-300 border border-brand-100 dark:border-brand-900/30"
                                                     >
-                                                        Aktifkan Mode
-                                                    </button>
+                                                        Pengaturan Sistem
+                                                    </Link>
                                                 </div>
                                             </div>
                                         </BentoCard>
@@ -281,22 +281,6 @@ export default function ProfilSuperAdmin() {
                     </div>
                 </div>
             </div>
-            <ConfirmActionDialog
-                show={confirmMaintenance}
-                variant="danger"
-                title="Aktifkan Mode Maintenance?"
-                message="Aksi ini akan mengunci akses pengguna reguler selama perbaikan. Pastikan pengumuman sudah disiapkan sebelum mode ini dipakai."
-                details={[
-                    { label: 'Operator', value: user?.username || user?.name || 'Superadmin' },
-                    { label: 'Dampak', value: 'Akses user reguler dibatasi' },
-                ]}
-                confirmLabel="Konfirmasi"
-                onConfirm={() => {
-                    setConfirmMaintenance(false);
-                    handleSave();
-                }}
-                onCancel={() => setConfirmMaintenance(false)}
-            />
         </AuthenticatedLayout>
     );
 }

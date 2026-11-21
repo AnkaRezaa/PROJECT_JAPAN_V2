@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import ChartBreakdown from '@/Components/Features/Dashboard/ChartBreakdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import Card from '@/Components/UI/Card';
@@ -73,7 +74,8 @@ export default function Pemasukan({
     const [showAccessKeyForm, setShowAccessKeyForm] = useState(false);
     const [editingPlan, setEditingPlan] = useState(null);
     const [rejectTarget, setRejectTarget] = useState(null);
-    const [approvalNotes, setApprovalNotes] = useState('');
+    const [approvalTarget, setApprovalTarget] = useState(null);
+    const approvalForm = useForm({ notes: '' });
     const [rejectionNotes, setRejectionNotes] = useState('');
     const [newKeyModalData, setNewKeyModalData] = useState(null);
     const [copied, setCopied] = useState(false);
@@ -181,13 +183,11 @@ export default function Pemasukan({
         });
     };
 
-    const approve = (transactionId) => {
-        router.patch(route('superadmin.payments.transactions.approve', transactionId), {
-            notes: approvalNotes,
-        }, {
+    const approve = () => {
+        if (!approvalTarget || approvalForm.processing) return;
+        approvalForm.patch(route('superadmin.payments.transactions.approve', approvalTarget.id), {
             preserveScroll: true,
-            onSuccess: () => setApprovalNotes(''),
-            onFinish: closeConfirm,
+            onSuccess: () => setApprovalTarget(null),
         });
     };
 
@@ -234,7 +234,7 @@ export default function Pemasukan({
                 </div>
 
                 <div className="grid min-w-0 grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
-                    <ChartCard className="min-w-0 p-4 sm:p-6" title="Pendapatan Berhasil" subtitle="Hanya transaksi berstatus success" action={<ChartPeriodSelect routeName="superadmin.payments" filters={filters} />}>
+                    <ChartCard className="min-w-0 p-4 sm:p-6" title="Pendapatan Berhasil" subtitle={`Transaksi sukses · ${filters.period || 30} hari terakhir`} action={<ChartPeriodSelect routeName="superadmin.payments" filters={filters} />}>
                         {revenueSeries.some((item) => item.revenue > 0) ? (
                             <ChartContainer config={{ revenue: { label: 'Pendapatan', theme: { light: '#15803d', dark: '#4ade80' } }, transactions: { label: 'Transaksi', theme: { light: '#1d4ed8', dark: '#60a5fa' } } }}>
                                 <AreaChart data={revenueSeries} margin={{ top: 8, right: 4, left: 8, bottom: 0 }}>
@@ -256,15 +256,16 @@ export default function Pemasukan({
 
                     <ChartCard className="min-w-0 p-4 sm:p-6" title="Status Transaksi" subtitle="Semua transaksi tercatat">
                         {transactionStatusDistribution.some((item) => item.value > 0) ? (
-                            <ChartContainer config={{ success: { color: '#10b981' }, pending: { color: '#f59e0b' }, failed: { color: '#dc2626' } }}>
+                            <div className="space-y-2"><ChartContainer config={{ success: { color: '#10b981' }, pending: { color: '#f59e0b' }, failed: { color: '#dc2626' } }}>
                                 <PieChart>
                                     <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Legend wrapperStyle={{ fontSize: '12px', fontWeight: 700 }} />
                                     <Pie data={transactionStatusDistribution} dataKey="value" nameKey="label" innerRadius={55} outerRadius={84} paddingAngle={3}>
                                         {transactionStatusDistribution.map((item) => <Cell key={item.label} fill={item.fill} />)}
                                     </Pie>
                                 </PieChart>
                             </ChartContainer>
+                                <ChartBreakdown items={transactionStatusDistribution} />
+                            </div>
                         ) : <ChartEmpty>Belum ada transaksi.</ChartEmpty>}
                     </ChartCard>
                 </div>
@@ -274,7 +275,7 @@ export default function Pemasukan({
                         <ChartContainer config={Object.fromEntries(paymentMethodDistribution.map((item) => [item.chart_key, { color: item.color }]))}>
                             <PieChart>
                                 <ChartTooltip content={<ChartTooltipContent />} />
-                                <Legend wrapperStyle={{ fontSize: '12px', fontWeight: 700 }} />
+                                <Legend wrapperStyle={{ fontSize: '12px', fontWeight: 700 }}  />
                                 <Pie data={paymentMethodDistribution} dataKey="value" nameKey="label" innerRadius={52} outerRadius={80} paddingAngle={3}>
                                     {paymentMethodDistribution.map((item) => <Cell key={item.label} fill={item.fill} />)}
                                 </Pie>
@@ -315,6 +316,7 @@ export default function Pemasukan({
                                 <thead className="bg-gray-50 dark:bg-gray-800/50 text-left text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
                                     <tr>
                                         <th className="px-4 py-3">Kode</th>
+                                        <th className="px-4 py-3">Tanggal (WIB)</th>
                                         <th className="px-4 py-3">User</th>
                                         <th className="px-4 py-3">Plan</th>
                                         <th className="px-4 py-3">Amount</th>
@@ -327,19 +329,23 @@ export default function Pemasukan({
                                 <tbody>
                                     {items.length === 0 && (
                                         <tr>
-                                            <td colSpan="8" className="px-4 py-10 text-center text-sm font-bold text-gray-400">Belum ada transaksi.</td>
+                                            <td colSpan="9" className="px-4 py-10 text-center text-sm font-bold text-gray-400">Belum ada transaksi.</td>
                                         </tr>
                                     )}
                                     {items.map((item) => (
                                         <tr key={item.id} className="border-t border-gray-100 dark:border-gray-800">
                                             <td className="px-4 py-4 font-bold text-gray-900 dark:text-white">{item.transaction_code}</td>
+                                            <td className="whitespace-nowrap px-4 py-4 text-gray-700 dark:text-gray-300">
+                                                {item.created_at ? new Intl.DateTimeFormat('id-ID', {
+                                                    dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta',
+                                                }).format(new Date(item.created_at)) : '-'}
+                                            </td>
                                             <td className="px-4 py-4">
                                                 <div className="font-bold text-gray-900 dark:text-white">{item.user_name}</div>
                                                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.user_email}</div>
                                             </td>
                                             <td className="px-4 py-4">
                                                 <div className="font-bold text-gray-700 dark:text-gray-200">{item.plan_name}</div>
-                                                <div className="mt-1 text-xs font-semibold text-gray-400">{item.scope_label}</div>
                                             </td>
                                             <td className="px-4 py-4 font-bold text-gray-900 dark:text-white">{item.amount_formatted}</td>
                                             <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{item.payment_method}</td>
@@ -364,23 +370,16 @@ export default function Pemasukan({
                                                     {item.status === 'pending' && (
                                                         <>
                                                             <button
-                                                                onClick={() => openConfirm({
-                                                                    variant: 'success',
-                                                                    title: 'Approve Transaksi?',
-                                                                    message: 'Transaksi akan disetujui dan akses belajar user akan diproses.',
-                                                                    confirmLabel: 'Iya, Approve',
-                                                                    details: [
-                                                                        { label: 'Kode', value: item.transaction_code },
-                                                                        { label: 'User', value: item.user_name },
-                                                                        { label: 'Nominal', value: item.amount_formatted },
-                                                                    ],
-                                                                    onConfirm: () => approve(item.id),
-                                                                })}
+                                                                onClick={() => {
+                                                                    approvalForm.reset();
+                                                                    approvalForm.clearErrors();
+                                                                    setApprovalTarget(item);
+                                                                }}
                                                                 className="rounded-lg border border-emerald-100 dark:border-emerald-900/30 px-3 py-2 text-xs font-black text-emerald-700 dark:text-emerald-400"
                                                             >
                                                                 Approve
                                                             </button>
-                                                            <button onClick={() => setRejectTarget(item)} className="rounded-lg border border-red-100 dark:border-red-900/30 px-3 py-2 text-xs font-black text-red-600 dark:text-red-400">
+                                                            <button onClick={() => { setRejectionNotes(''); setRejectTarget(item); }} className="rounded-lg border border-red-100 dark:border-red-900/30 px-3 py-2 text-xs font-black text-red-600 dark:text-red-400">
                                                                 Reject
                                                             </button>
                                                         </>
@@ -393,9 +392,6 @@ export default function Pemasukan({
                             </table>
                         </div>
 
-                        <div className="mt-4">
-                            <textarea value={approvalNotes} onChange={(e) => setApprovalNotes(e.target.value)} rows={2} placeholder="Catatan approval opsional" className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 text-sm text-gray-900 dark:text-white" />
-                        </div>
 
                         {transactions?.links && transactions.links.length > 3 && (
                             <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -879,6 +875,23 @@ export default function Pemasukan({
                 </AdminDialog>
             )}
 
+            {approvalTarget && (
+                <ConfirmActionDialog show variant="success" title="Setujui transaksi?"
+                    message="Persetujuan memproses akses belajar pengguna." confirmLabel="Setujui"
+                    details={[
+                        { label: 'Kode', value: approvalTarget.transaction_code },
+                        { label: 'Nominal', value: approvalTarget.amount_formatted },
+                    ]}
+                    processing={approvalForm.processing} onCancel={() => setApprovalTarget(null)} onConfirm={approve}>
+                    <label className="block text-sm font-semibold">
+                        Catatan persetujuan (opsional)
+                        <textarea value={approvalForm.data.notes} onChange={(event) => approvalForm.setData('notes', event.target.value)}
+                            rows={3} className="mt-2 w-full rounded-lg border border-gray-300 bg-transparent p-3" />
+                    </label>
+                    {approvalForm.errors.notes && <p role="alert" className="mt-2 text-sm text-red-700 dark:text-red-300">{approvalForm.errors.notes}</p>}
+                    {approvalForm.errors.transaction && <p role="alert" className="mt-2 text-sm text-red-700 dark:text-red-300">{approvalForm.errors.transaction}</p>}
+                </ConfirmActionDialog>
+            )}
             {rejectTarget && (
                 <ConfirmActionDialog
                     show

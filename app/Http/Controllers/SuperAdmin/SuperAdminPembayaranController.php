@@ -63,10 +63,10 @@ class SuperAdminPembayaranController extends SuperAdminDasarController
 
         return Inertia::render('SuperAdmin/Pemasukan/Pemasukan', [
             'stats' => [
-                $this->stat('Pending Payments', number_format(Transaksi::where('status', 'pending')->count()), 'P'),
-                $this->stat('Success Transactions', number_format(Transaksi::where('status', 'success')->count()), 'S'),
-                $this->stat('Active Premium Users', number_format(Langganan::where('status', 'active')->distinct('user_id')->count('user_id')), 'U'),
-                $this->stat('Revenue', 'Rp '.number_format((int) Transaksi::where('status', 'success')->sum('amount')), '$'),
+                $this->stat('Pembayaran menunggu', number_format(Transaksi::where('status', 'pending')->count()), 'P'),
+                $this->stat('Transaksi sukses · sepanjang waktu', number_format(Transaksi::where('status', 'success')->count()), 'S'),
+                $this->stat('Pengguna premium aktif', number_format(Langganan::where('status', 'active')->distinct('user_id')->count('user_id')), 'U'),
+                $this->stat('Pendapatan · sepanjang waktu', 'Rp '.number_format((int) Transaksi::where('status', 'success')->sum('amount')), '$'),
             ],
             'revenueSeries' => $chartData->dailySeries($period, [
                 'revenue' => $revenueByDay->mapWithKeys(fn (Transaksi $transaction) => [$transaction->day => (int) $transaction->revenue]),
@@ -118,7 +118,7 @@ class SuperAdminPembayaranController extends SuperAdminDasarController
                 'access_state' => $this->transactionAccessState($transaction),
                 'notes' => $transaction->notes,
                 'processed_at' => optional($transaction->processed_at)->diffForHumans(),
-                'created_at' => optional($transaction->created_at)->format('d M Y H:i'),
+                'created_at' => $transaction->created_at?->toIso8601String(),
                 'proof_url' => $transaction->proof_of_payment_path ? asset("storage/{$transaction->proof_of_payment_path}") : null,
             ]),
             'plans' => PaketPembayaran::query()
@@ -374,6 +374,11 @@ class SuperAdminPembayaranController extends SuperAdminDasarController
         DB::transaction(function () use ($request, $transaction) {
             $transaction = Transaksi::query()->lockForUpdate()->findOrFail($transaction->id);
             abort_unless($transaction->status === 'pending', 422, 'Hanya transaksi pending yang dapat disetujui.');
+            if (! $transaction->payment_plan_id) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'transaction' => 'Transaksi tidak punya paket pembayaran dan belum dapat disetujui.',
+                ]);
+            }
 
             $oldStatus = $transaction->status;
 
