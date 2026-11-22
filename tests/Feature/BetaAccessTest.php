@@ -119,8 +119,21 @@ test('two committed parallel registrations compete safely for the final slot', f
     $users = Pengguna::factory()->count(49)->create(['beta_registered_at' => now()]);
     DB::commit();
     $emails = ['beta-concurrency-'.bin2hex(random_bytes(6)).'@example.com', 'beta-concurrency-'.bin2hex(random_bytes(6)).'@example.com'];
+    $database = DB::connection()->getConfig();
+    $workerEnv = [
+        'APP_ENV' => 'testing',
+        'DB_CONNECTION' => 'mysql',
+        'DB_HOST' => (string) $database['host'],
+        'DB_PORT' => (string) $database['port'],
+        'DB_DATABASE' => (string) $database['database'],
+        'DB_USERNAME' => (string) $database['username'],
+        'DB_PASSWORD' => (string) $database['password'],
+        'DB_URL' => '',
+        'NIGHTWATCH_ENABLED' => 'false',
+        'TELESCOPE_ENABLED' => 'false',
+    ];
     try {
-        $processes = array_map(fn ($email) => new Process([PHP_BINARY, base_path('tests/Support/beta-registration-worker.php'), $email], base_path(), ['APP_ENV' => 'testing', 'NIGHTWATCH_ENABLED' => 'false', 'TELESCOPE_ENABLED' => 'false']), $emails);
+        $processes = array_map(fn ($email) => new Process([PHP_BINARY, base_path('tests/Support/beta-registration-worker.php'), $email], base_path(), $workerEnv), $emails);
         foreach ($processes as $process) {
             $process->start();
         }
