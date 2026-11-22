@@ -6,6 +6,7 @@ import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import UndoRoundedIcon from '@mui/icons-material/UndoRounded';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import SkipNextRoundedIcon from '@mui/icons-material/SkipNextRounded';
+import StopRoundedIcon from '@mui/icons-material/StopRounded';
 import Modal from '@/Components/Modal';
 import { QuizErrorMessage } from '@/Components/UI/QuizUI';
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
@@ -113,7 +114,20 @@ export default function KanjiHandwritingCanvas({
             strokeWidth,
         });
         let active = true;
-        hintWriter.animate().catch(() => {
+        const play = async () => {
+            for (const path of strokeData.paths) {
+                if (!active) break;
+                await hintWriter.animateStroke(path, {
+                    duration: hintWriter.options.stepDuration,
+                    color: hintWriter.options.strokeColor,
+                    strokeWidth,
+                    strokeOpacity: 0.45,
+                    removeAfter: false,
+                    targetGroup: hintWriter.drawnGroup,
+                });
+            }
+        };
+        play().catch(() => {
             if (active) setMessage('Urutan goresan tidak dapat diputar.');
         }).finally(() => {
             if (active) setIsQuizHintPlaying(false);
@@ -521,7 +535,7 @@ export default function KanjiHandwritingCanvas({
     };
 
     return (
-        <fieldset disabled={disabled || isQuizHintPlaying} className={`mx-auto min-w-0 w-full ${compact ? 'max-w-[260px]' : 'max-w-[460px] [@media(max-height:820px)]:max-w-[300px] max-sm:max-w-none'}`}>
+        <fieldset disabled={disabled} className={`mx-auto min-w-0 w-full ${compact ? 'max-w-[260px]' : 'max-w-[460px] [@media(max-height:820px)]:max-w-[300px] max-sm:max-w-none'}`}>
             <div className="mb-2 flex items-center justify-between gap-3 text-xs font-bold text-gray-500 dark:text-gray-400">
                 <span>
                     {strokeData
@@ -544,11 +558,24 @@ export default function KanjiHandwritingCanvas({
                     aria-label={mode === 'preview' ? `Animasi goresan ${character}` : `Area latihan menulis ${character}`}
                     style={{ pointerEvents: disabled || isQuizHintPlaying ? 'none' : undefined }}
                 />
-                {isQuizHintPlaying && <div id={`${containerId}-hint`} className="pointer-events-none absolute inset-0" aria-hidden="true" />}
+                {isQuizHintPlaying && (
+                    <>
+                        <div id={`${containerId}-hint`} className="pointer-events-none absolute inset-0" aria-hidden="true" />
+                        <button
+                            type="button"
+                            aria-label="Hentikan animasi"
+                            onClick={() => setIsQuizHintPlaying(false)}
+                            className="absolute right-2 top-2 inline-flex min-h-11 items-center gap-1 rounded-lg border border-gray-300 bg-white px-2.5 text-xs font-semibold text-gray-800 focus-visible:outline-2 focus-visible:outline-orange-500"
+                        >
+                            <StopRoundedIcon fontSize="small" /> Hentikan
+                        </button>
+                    </>
+                )}
             </div>
             <p role={mode === 'preview' ? 'status' : undefined} className={`mt-2 min-h-5 text-center text-xs font-bold ${status === 'error' ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>
                 {mode === 'quiz' ? <span aria-live="polite">{isQuizHintPlaying ? 'Memutar urutan goresan...' : message}</span> : message}
             </p>
+            <fieldset disabled={isQuizHintPlaying} className="min-w-0">
             {!(selfEvaluation && evaluation && evaluationPreview) && <QuizErrorMessage className="mt-3">{errorMessage}</QuizErrorMessage>}
             {mode === 'quiz' && (onStrokeWidthChange || onSkip) && !(selfEvaluation && evaluation) && (
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 sm:mt-3 sm:gap-3">
@@ -706,6 +733,7 @@ export default function KanjiHandwritingCanvas({
                     )}
                 </div>
             )}
+            </fieldset>
         </fieldset>
     );
 }
