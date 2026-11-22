@@ -31,7 +31,7 @@ const scenario = params.get('scenario') || 'canvas';
 window.route = (name, id = '') => '/fixture/' + name + '/' + id;
 window.__writing = { requests: [], fail: false, delay: 60, completions: [], created: [] };
 document.addEventListener('click', event => {
-    if (event.target.matches?.('input[type="file"]')) {
+    if (event.target.matches?.('input[type="file"]') && !event.target.closest('[aria-label="Impor Flashcard"]')) {
         event.preventDefault();
         window.__writing.fileClicks = (window.__writing.fileClicks || 0) + 1;
     }
@@ -96,6 +96,15 @@ if (scenario === 'admin-publish') {
     };
 }
 router.post = (url, data, options) => {
+    if (url.includes('admin.flashcards.import')) {
+        window.__writing.requests.push({ url, filename: data.get('import_file').name });
+        setTimeout(() => {
+            if (window.__writing.importLimited) options.onError?.({ import_file: 'Batas impor tercapai. Coba lagi dalam 2 menit.' });
+            else options.onSuccess?.();
+            options.onFinish?.();
+        }, window.__writing.delay);
+        return;
+    }
     window.__writing.requests.push({ url, data });
     setTimeout(() => {
         if (url.includes('admin.module-days.store')) {
@@ -126,6 +135,7 @@ function Fixture() {
     window.__persistDay = (data) => setDay(current => ({ ...current, ...data }));
     if (scenario === 'class-type') return <ManajemenKelas programs={{data:[],links:[]}} tracks={[{id:1,code:'regular',name:'Regular'},{id:2,code:'jlpt',name:'JLPT'}]} levels={[
         {id:5,curriculum_track_id:2,level_name:'N5'}, {id:4,curriculum_track_id:2,level_name:'N4'},
+        {id:3,curriculum_track_id:2,level_name:'N3'}, {id:2,curriculum_track_id:2,level_name:'N2'}, {id:1,curriculum_track_id:2,level_name:'N1'},
     ]} />;
     if (scenario === 'admin-stroke') return <BankKosakata vocabulary={{ total: 1, links: [], data: [{
         id: 881, word: '\u4f1a\u8b70', reading: '\u304b\u3044\u304e', meaning_id: 'Rapat', content_type: 'kosakata',
@@ -223,7 +233,7 @@ const server = await createServer({ configFile: false, root, cacheDir: path.join
         load(id) { if(id === entry) return fixture; },
     }], server: { host: '127.0.0.1', port: 5203, strictPort: false, hmr: false } });
 let chrome, socket, session, sequence = 0;
-const pending = new Map(), errors = [];
+const pending = new Map(), errors = [], fileChoosers = [];
 const sleep = ms => new Promise(resolve => setTimeout(resolve,ms));
 function send(method, params = {}, sessionId = session) { return new Promise((resolve,reject) => {
     const id = ++sequence;
@@ -261,6 +271,10 @@ try {
     socket = new WebSocket(endpoint);
     await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true});});
     socket.addEventListener('message',event=>{const m=JSON.parse(event.data);if(pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);}if(m.method==='Runtime.exceptionThrown')errors.push(m.params.exceptionDetails.exception?.description||m.params.exceptionDetails.text);});
+    socket.addEventListener('message', event => {
+        const message = JSON.parse(event.data);
+        if (message.method === 'Page.fileChooserOpened') fileChoosers.push(message.params);
+    });
     const {targetInfos}=await send('Target.getTargets',{},null);
     ({sessionId:session}=await send('Target.attachToTarget',{targetId:targetInfos.find(t=>t.type==='page').targetId,flatten:true},null));
     await send('Runtime.enable'); await send('Page.enable');
@@ -314,20 +328,6 @@ try {
     assert.equal(writes.length,2,'One failed request and one retry');
     assert(writes.every(r=>r.data.action==='learning'&&!r.data.completed));
 
-    await open('quiz&writing=off'); await waitFor('document.body.innerText.includes("Answer A")');
-    await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
-    await waitFor('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))');
-    await evaluate('window.__writing.failReading=true'); await click('Sudah Paham');
-    await waitFor('window.__writing.requests.some(r=>r.url.includes("user.flashcards.review"))');
-    await sleep(200);
-    assert(await evaluate('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))'),'Failed flashcard review must not advance');
-    await evaluate('window.__writing.failReading=false;window.__setWritingPreference(true)');
-    await click('Sudah Paham'); await waitFor('document.body.innerText.includes("Question 2")');
-    assert.equal(await evaluate('Boolean(document.querySelector("[id^=kanji-writer-]"))'),false,'Disabled session must skip canvas despite changed props');
-    assert.equal(await evaluate('window.__writing.requests.filter(r=>r.data.skill==="writing").length'),0,'Disabled writing creates no writing review');
-    assert.equal(await evaluate('JSON.parse(localStorage.getItem("japanlingo_cp_vocab_8801_u881")).handwriting_enabled'),false);
-
-    await open('quiz&writing=on', true); await waitFor('document.body.innerText.includes("Lanjutkan Latihan?")');
     await open('quiz&client-hint=1');
     await waitFor('document.body.innerText.includes("Answer A")');
     await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")');
@@ -358,6 +358,20 @@ try {
     assert(await evaluate('document.body.innerText.includes("1/9 stroke dibuat")'));
     assert.equal(await evaluate('window.__writing.requests.filter(r => r.data.skill === "writing").length'), 0, 'Hint never submits or completes writing');
 
+    await open('quiz&writing=off'); await waitFor('document.body.innerText.includes("Answer A")');
+    await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
+    await waitFor('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))');
+    await evaluate('window.__writing.failReading=true'); await click('Sudah Paham');
+    await waitFor('window.__writing.requests.some(r=>r.url.includes("user.flashcards.review"))');
+    await sleep(200);
+    assert(await evaluate('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))'),'Failed flashcard review must not advance');
+    await evaluate('window.__writing.failReading=false;window.__setWritingPreference(true)');
+    await click('Sudah Paham'); await waitFor('document.body.innerText.includes("Question 2")');
+    assert.equal(await evaluate('Boolean(document.querySelector("[id^=kanji-writer-]"))'),false,'Disabled session must skip canvas despite changed props');
+    assert.equal(await evaluate('window.__writing.requests.filter(r=>r.data.skill==="writing").length'),0,'Disabled writing creates no writing review');
+    assert.equal(await evaluate('JSON.parse(localStorage.getItem("japanlingo_cp_vocab_8801_u881")).handwriting_enabled'),false);
+
+    await open('quiz&writing=on', true); await waitFor('document.body.innerText.includes("Lanjutkan Latihan?")');
     await click('Lanjutkan'); await waitFor('document.body.innerText.includes("Question 2")');
     await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
     await waitFor('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))'); await click('Sudah Paham');
@@ -567,9 +581,13 @@ try {
     await waitFor(levelPicker);
     const select = async (element, value) => evaluate(`(()=>{const select=${element};select.value=${JSON.stringify(value)};select.dispatchEvent(new Event("change",{bubbles:true}));})()`);
     await select(trackPicker,'2');
-    await waitFor('!'+levelPicker+'.disabled && '+levelPicker+'.options.length===3');
+    await waitFor('!'+levelPicker+'.disabled && '+levelPicker+'.options.length===6');
     assert(await evaluate(levelPicker+'.options[0].disabled && '+levelPicker+'.options[0].text==="Pilih level"'));
-    await select(levelPicker,'5');
+    assert(await evaluate('Array.from('+levelPicker+'.options).slice(1).every(option => !option.disabled)'));
+    for (const id of ['5', '4', '3', '2', '1']) {
+        await select(levelPicker, id);
+        assert.equal(await evaluate(levelPicker + '.value'), id);
+    }
     await select(trackPicker,'1');
     await waitFor(levelPicker+'.value==="" && '+levelPicker+'.options.length===1');
     assert.equal(await evaluate('document.querySelector("select[aria-label^=Tipe]").value'),'mandiri');
@@ -665,6 +683,7 @@ try {
     await waitFor(previewState('0/20 stroke', 'Memutar animasi...'));
     await waitFor(previewState('20/20 stroke', 'Animasi selesai.'));
     assert(!(await evaluate('document.body.innerText.includes("Karakter selesai ditulis")')));
+    assert.deepEqual(await evaluate('window.__writing.requests'), []);
     const clickImport = async pattern => evaluate(`(()=>{const b=Array.from(document.querySelectorAll('button')).find(b=>new RegExp(${JSON.stringify(pattern)}, 'i').test(b.innerText.trim()));if(!b)throw new Error('Import action missing');b.click()})()`);
     await open('builder');
     await waitFor('document.body.innerText.includes("Simpan Draf")');
@@ -674,13 +693,57 @@ try {
     await waitFor('Array.from(document.querySelectorAll("button")).some(b=>/^(Import|Impor Flashcard)$/.test(b.innerText.trim()))');
     await clickImport('^(Import|Impor Flashcard)$');
     await clickImport('^(Import|Unggah) CSV / Excel$');
-    await waitFor('window.__writing.fileClicks===2');
+    const uploadDialog = 'document.querySelector(\'[role="dialog"][aria-label="Impor Flashcard"]\')';
+    const uploadInput = uploadDialog + '?.querySelector(\'input[type="file"]\')';
+    await waitFor(uploadInput + '?.getBoundingClientRect().width > 0');
+    assert.equal(await evaluate('window.__writing.fileClicks'), 1);
+    await evaluate(uploadDialog + '.querySelector(\'[aria-label="Tutup"]\').click()');
+    await waitFor('!' + uploadDialog);
+    assert.deepEqual(await evaluate('window.__writing.requests'), []);
     await open('admin-flashcard-picker');
     await waitFor('Array.from(document.querySelectorAll("button")).some(b=>/^(Import|Impor Flashcard)$/.test(b.innerText.trim()))');
+    await send('Page.setInterceptFileChooserDialog', { enabled: true });
+    const chooseFile = async (...files) => {
+        const before = fileChoosers.length;
+        const coordinates = await evaluate(`(() => {
+            const field = ${uploadInput};
+            field.scrollIntoView({ block: 'center' });
+            const { x, y, width, height } = field.getBoundingClientRect();
+            return { x: x + Math.min(32, width / 2), y: y + height / 2 };
+        })()`);
+        await send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...coordinates });
+        await send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...coordinates });
+        for (let i = 0; i < 25 && fileChoosers.length === before; i++) await sleep(80);
+        assert.equal(fileChoosers.length, before + 1, 'Trusted click must request a native file chooser');
+        await send('DOM.setFileInputFiles', { files, backendNodeId: fileChoosers.at(-1).backendNodeId });
+    };
+    const csv = path.join(temp, 'flashcards.csv');
+    const invalid = path.join(temp, 'invalid.png');
+    writeFileSync(csv, 'front_text,back_text\neki,stasiun\n');
+    writeFileSync(invalid, 'Not a CSV');
     await clickImport('^(Import|Impor Flashcard)$');
     await clickImport('^(Import|Unggah) CSV / Excel$');
-    await waitFor('window.__writing.fileClicks===1');
-    console.log(JSON.stringify({passed:true,checks:['handwriting and roadmap regressions','vocabulary publish errors from both controls','grammar loading, validation, and clean publish','live preview permission rejection','class track filters','stroke character switch','three import file triggers'],screenshots:'temporary; removed'},null,2));
+    await waitFor(uploadInput + '?.getBoundingClientRect().width > 0');
+    await chooseFile();
+    assert.deepEqual(await evaluate('window.__writing.requests'), []);
+    await chooseFile(invalid);
+    await waitFor(uploadDialog + '?.innerText.includes("Gunakan file CSV")');
+    assert.deepEqual(await evaluate('window.__writing.requests'), []);
+    await evaluate('window.__writing.importLimited = true');
+    await chooseFile(csv);
+    await waitFor(uploadDialog + '?.innerText.includes("Coba lagi dalam 2 menit")');
+    await evaluate('window.__writing.importLimited = false');
+    await chooseFile(csv);
+    await waitFor('!' + uploadDialog);
+    assert.deepEqual((await evaluate('window.__writing.requests')).map(item => item.filename), ['flashcards.csv', 'flashcards.csv']);
+    await send('Page.setInterceptFileChooserDialog', { enabled: false });
+    await click('Kartu Baru');
+    await clickImport('^(Import|Impor Flashcard)$');
+    await clickImport('^(Import|Unggah) CSV / Excel$');
+    await waitFor('document.body.innerText.includes("Simpan perubahan kartu sebelum mengimpor.")');
+    assert.equal(await evaluate('Boolean(' + uploadDialog + ')'), false);
+    assert.equal(await evaluate('window.__writing.requests.length'), 2);
+    console.log(JSON.stringify({passed:true,checks:['handwriting and roadmap regressions','vocabulary publish errors from both controls','grammar loading, validation, and clean publish','live preview permission rejection','class track filters','stroke character switch','quiz import and native flashcard import'],screenshots:'temporary; removed'},null,2));
 } catch(error) {
     console.error('Writing browser failure:', error.message, errors);
     throw error;
@@ -694,4 +757,3 @@ try {
         try{rmSync(resolved,{recursive:true,force:true,maxRetries:5,retryDelay:300});}catch(error){console.warn('Temporary test cleanup:',error.code,resolved);}
     }
 }
-    assert.deepEqual(await evaluate('window.__writing.requests'), []);

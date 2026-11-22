@@ -429,6 +429,10 @@ it('limits flashcard imports independently and rejects excess uploads before any
         ->assertStatus(429)->assertHeader('Retry-After', '478')
         ->assertJsonPath('errors.import_file.0', 'Batas impor tercapai. Coba lagi dalam 8 menit.');
 
+    $this->travel(479)->seconds();
+    $upload($second, 'flashcard-limit-recovered')->assertRedirect()->assertSessionDoesntHaveErrors();
+    expect($second->flashcards()->where('front_text', 'flashcard-limit-recovered')->count())->toBe(1);
+
     $this->actingAs(Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'kloter']));
     $upload($first, 'flashcard-blocked-scope')->assertForbidden();
     expect(Kosakata::where('word', 'like', 'flashcard-blocked-%')->exists())->toBeFalse()

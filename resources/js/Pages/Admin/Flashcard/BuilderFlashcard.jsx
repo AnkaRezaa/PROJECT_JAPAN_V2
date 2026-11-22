@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AdminDialog from '@/Components/UI/AdminDialog';
 import Card from '@/Components/UI/Card';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
 import { TooltipHelp } from '@/Components/UI/QuizField';
@@ -103,7 +104,6 @@ export function FlashcardEditorWorkspace({
         })
         : route('admin.programs.index');
     const rows = vocabulary.data || [];
-    const importInputRef = useRef(null);
     const importInFlightRef = useRef(false);
     const [cards, setCards] = useState(() => (set.flashcards || []).map((card) => normalizeCard(card, true, set.module_id)));
     const [search, setSearch] = useState(filters.search || '');
@@ -112,6 +112,7 @@ export function FlashcardEditorWorkspace({
     const [setRecordStatus, setSetRecordStatus] = useState(set.status || 'draft');
     const [activeIndex, setActiveIndex] = useState(0);
     const [showImportMenu, setShowImportMenu] = useState(false);
+    const [showImportDialog, setShowImportDialog] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [importError, setImportError] = useState('');
     const [showLibrary, setShowLibrary] = useState(false);
@@ -313,7 +314,10 @@ export function FlashcardEditorWorkspace({
             forceFormData: true,
             preserveScroll: true,
             preserveState: true,
-            onSuccess: () => { confirmed = true; },
+            onSuccess: () => {
+                confirmed = true;
+                setShowImportDialog(false);
+            },
             onError: (errors) => {
                 confirmed = true;
                 setImportError(errors.import_file || 'Impor gagal. Periksa file lalu coba lagi.');
@@ -418,7 +422,7 @@ export function FlashcardEditorWorkspace({
                                             setShowImportMenu(false);
                                             if (canStartImport()) {
                                                 setImportError('');
-                                                importInputRef.current?.click();
+                                                setShowImportDialog(true);
                                             }
                                         }}
                                         className="block w-full px-4 py-3 text-left text-sm font-bold text-gray-700 hover:bg-teal-50 hover:text-teal-700 dark:text-gray-200 dark:hover:bg-teal-900/20 dark:hover:text-teal-300"
@@ -442,7 +446,6 @@ export function FlashcardEditorWorkspace({
                                 </div>
                             )}
                         </div>
-                        <input ref={importInputRef} type="file" accept=".csv,.txt,.xlsx" className="hidden" onChange={importCards} />
                         <select value={setRecordStatus} onChange={(event) => setSetRecordStatus(event.target.value)} className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                             <option value="draft">Draft</option>
                             <option value="published">Published</option>
@@ -458,7 +461,7 @@ export function FlashcardEditorWorkspace({
                     </div>
                 </div>
 
-                {importError && (
+                {importError && !showImportDialog && (
                     <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
                         {importError}
                     </p>
@@ -864,6 +867,31 @@ export function FlashcardEditorWorkspace({
                         </form>
                     </div>
                 )}
+                <AdminDialog
+                    open={showImportDialog}
+                    onClose={() => {
+                        if (importInFlightRef.current) return;
+                        setShowImportDialog(false);
+                        setImportError('');
+                    }}
+                    title="Impor Flashcard"
+                    maxWidth="max-w-md"
+                >
+                    <label className="block text-sm font-bold text-gray-900 dark:text-white">
+                        File CSV, TXT, atau XLSX
+                        <input
+                            type="file"
+                            accept=".csv,.txt,.xlsx"
+                            autoFocus
+                            disabled={isImporting}
+                            onChange={importCards}
+                            className="mt-2 block w-full min-w-0 rounded-lg border border-gray-300 p-2 text-sm file:me-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:font-semibold disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:file:bg-gray-800 dark:file:text-gray-200"
+                        />
+                    </label>
+                    <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">Maksimal 4 MB.</p>
+                    {isImporting && <p role="status" className="mt-3 text-sm text-gray-700 dark:text-gray-200">Mengimpor...</p>}
+                    {importError && <p role="alert" className="mt-3 text-sm font-semibold text-rose-700 dark:text-rose-300">{importError}</p>}
+                </AdminDialog>
                 <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
             </fieldset>
     );
