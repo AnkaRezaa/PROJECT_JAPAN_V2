@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Kosakata;
 use App\Models\Kuis;
 use App\Models\Pengguna;
 use App\Models\ReviewFlashcard;
@@ -15,6 +16,31 @@ use App\Models\PengerjaanKuis;
 use App\Models\ProgresHariModul;
 use App\Services\PembelajaranPenggunaService;
 use Database\Seeders\KelasDemoSeeder;
+use Inertia\Testing\AssertableInertia as Assert;
+
+it('serves the full vocabulary word and reading to the read-only admin stroke preview', function () {
+    $admin = Pengguna::factory()->create(['role' => 'admin', 'admin_scope' => 'global']);
+    $entry = Kosakata::create([
+        'word' => "\u{4f1a}\u{8b70}",
+        'reading' => "\u{304b}\u{3044}\u{304e}",
+        'meaning_id' => 'Rapat',
+        'status' => 'published',
+    ]);
+    $before = $entry->fresh()->getAttributes();
+
+    $this->actingAs($admin)->get(route('admin.vocabulary.index', ['search' => $entry->word]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Admin/Kosakata/Kosakata')
+            ->has('vocabulary.data', 1)
+            ->where('vocabulary.data.0.id', $entry->id)
+            ->where('vocabulary.data.0.word', $entry->word)
+            ->where('vocabulary.data.0.reading', $entry->reading));
+
+    expect($entry->fresh()->getAttributes())->toBe($before)
+        ->and(ReviewFlashcard::count())->toBe(0)
+        ->and(ProgresHariModul::count())->toBe(0);
+});
 
 it('prioritizes due flashcards and excludes legacy handwriting questions from quiz payloads', function () {
     $this->seed(KelasDemoSeeder::class);

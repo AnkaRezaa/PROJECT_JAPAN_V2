@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { KanjiWriter } from 'kanji-recognizer';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
@@ -62,6 +62,7 @@ export default function KanjiHandwritingCanvas({
     const writerRef = useRef(null);
     const startedAtRef = useRef(Date.now());
     const resultRef = useRef(initialResult);
+    const previewAnimationRef = useRef(null);
     const onChangeRef = useRef(onChange);
     const onCompleteRef = useRef(onComplete);
     const onErrorRef = useRef(onError);
@@ -71,6 +72,7 @@ export default function KanjiHandwritingCanvas({
     const [progress, setProgress] = useState(0);
     const [drawnStrokes, setDrawnStrokes] = useState(0);
     const [mistakesOnStroke, setMistakesOnStroke] = useState(0);
+    const [previewPlaying, setPreviewPlaying] = useState(false);
     const [failedChecks, setFailedChecks] = useState(0);
     const [evaluation, setEvaluation] = useState(null);
     const [evaluationPreview, setEvaluationPreview] = useState(null);
@@ -80,6 +82,28 @@ export default function KanjiHandwritingCanvas({
     useEffect(() => {
         onChangeRef.current = onChange;
         onCompleteRef.current = onComplete;
+    const playPreview = useCallback(async () => {
+        const writer = writerRef.current;
+        if (!writer || previewAnimationRef.current === writer) return;
+
+        previewAnimationRef.current = writer;
+        setProgress(0);
+        setPreviewPlaying(true);
+        setMessage('Memutar animasi...');
+
+        try {
+            await writer.animate();
+            if (writerRef.current !== writer) return;
+            setProgress(writer.currentStrokeIndex);
+            setMessage('Animasi selesai.');
+        } catch {
+            if (writerRef.current === writer) setMessage('Animasi tidak dapat diputar.');
+        } finally {
+            if (previewAnimationRef.current === writer) previewAnimationRef.current = null;
+            if (writerRef.current === writer) setPreviewPlaying(false);
+        }
+    }, []);
+
         onErrorRef.current = onError;
     }, [onChange, onComplete, onError]);
 
@@ -161,7 +185,10 @@ export default function KanjiHandwritingCanvas({
 
         let handleFullStrokeEnd;
 
-        if (isQuizMode) {
+        if (mode === 'preview') {
+            writer.svg.style.pointerEvents = 'none';
+            playPreview();
+        } else if (isQuizMode) {
             const renderFullGuide = () => {
                 writer.bgGroup.innerHTML = '';
                 writer.kanjiData.forEach((pathData) => {
@@ -284,10 +311,6 @@ export default function KanjiHandwritingCanvas({
             };
         }
 
-        if (mode === 'preview') {
-            writer.animate().catch(() => setMessage('Animasi tidak dapat diputar.'));
-        }
-
         return () => {
             if (handleFullStrokeEnd) {
                 writer.svg.removeEventListener('pointerup', handleFullStrokeEnd);
@@ -297,7 +320,7 @@ export default function KanjiHandwritingCanvas({
             writer.destroy();
             writerRef.current = null;
         };
-    }, [containerId, mode, selfEvaluation, status, strokeData]);
+    }, [containerId, mode, playPreview, selfEvaluation, status, strokeData]);
 
     useEffect(() => {
         const writer = writerRef.current;
@@ -312,6 +335,14 @@ export default function KanjiHandwritingCanvas({
         writerRef.current?.clear();
         if (writerRef.current?.svg) writerRef.current.svg.style.pointerEvents = '';
         startedAtRef.current = Date.now();
+        if (mode === 'preview') {
+            if (!writerRef.current || previewAnimationRef.current === writerRef.current) return;
+            writerRef.current.clear();
+            setProgress(0);
+            setMessage('Pratinjau siap.');
+            return;
+        }
+
         resultRef.current = initialResult;
         setProgress(0);
         setDrawnStrokes(0);
@@ -321,13 +352,7 @@ export default function KanjiHandwritingCanvas({
         if (mode !== 'quiz') setFailedChecks(0);
         setCompleted(false);
         setStrokeFeedback(null);
-        setMessage(
-            mode === 'preview'
-                ? 'Pratinjau diulang.'
-                : mode === 'quiz'
-                    ? 'Tulis ulang seluruh karakter, lalu periksa.'
-                    : 'Mulai lagi dari stroke pertama.'
-        );
+        setMessage(mode === 'quiz' ? 'Tulis ulang seluruh karakter, lalu periksa.' : 'Mulai lagi dari stroke pertama.');
         emitResult(initialResult);
     };
 
@@ -485,10 +510,10 @@ export default function KanjiHandwritingCanvas({
             <div
                 id={containerId}
                 className={`mx-auto aspect-square w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-inner dark:border-gray-700 ${compact ? '' : 'max-sm:max-w-[min(22rem,max(12rem,calc(100dvh-18rem)))]'}`}
-                aria-label={`Area latihan menulis ${character}`}
+                aria-label={mode === 'preview' ? `Animasi goresan ${character}` : `Area latihan menulis ${character}`}
                 style={{ pointerEvents: disabled ? 'none' : undefined }}
             />
-            <p className={`mt-2 min-h-5 text-center text-xs font-bold ${status === 'error' ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>
+            <p role={mode === 'preview' ? 'status' : undefined} className={`mt-2 min-h-5 text-center text-xs font-bold ${status === 'error' ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>
                 {message}
             </p>
             {!(selfEvaluation && evaluation && evaluationPreview) && <QuizErrorMessage className="mt-3">{errorMessage}</QuizErrorMessage>}
@@ -598,11 +623,11 @@ export default function KanjiHandwritingCanvas({
             {status === 'ready' && (
                 <div className={`mt-3 grid gap-2 sm:grid-cols-4 ${mode === 'quiz' && !completed && !(selfEvaluation && evaluation) ? 'grid-cols-[2.75rem_2.75rem_minmax(0,1fr)_2.75rem]' : 'grid-cols-2'}`}>
                     {mode === 'preview' && (
-                        <button type="button" onClick={() => writerRef.current?.animate()} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white text-xs font-black text-gray-700 transition fine-pointer:hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:fine-pointer:hover:bg-gray-700">
+                        <button type="button" onClick={playPreview} disabled={previewPlaying} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white text-xs font-black text-gray-700 transition fine-pointer:hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/40 disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:fine-pointer:hover:bg-gray-700">
                             <PlayArrowRoundedIcon sx={{ fontSize: 18 }} /> Putar
                         </button>
                     )}
-                    <button type="button" onClick={reset} aria-label="Ulangi tulisan" title="Ulangi tulisan" disabled={mode === 'quiz' && (drawnStrokes === 0 || (selfEvaluation && evaluation))} className="inline-flex min-h-11 sm:min-h-10 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white text-xs font-black text-gray-700 transition fine-pointer:hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gray-300/50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:fine-pointer:hover:bg-gray-700">
+                    <button type="button" onClick={reset} aria-label={mode === 'preview' ? 'Reset pratinjau' : 'Ulangi tulisan'} title={mode === 'preview' ? 'Reset pratinjau' : 'Ulangi tulisan'} disabled={mode === 'preview' ? previewPlaying : mode === 'quiz' && (drawnStrokes === 0 || (selfEvaluation && evaluation))} className="inline-flex min-h-11 sm:min-h-10 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white text-xs font-black text-gray-700 transition fine-pointer:hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gray-300/50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:fine-pointer:hover:bg-gray-700">
                         <RestartAltRoundedIcon sx={{ fontSize: 18 }} /> <span className={mode === 'quiz' && !completed && !(selfEvaluation && evaluation) ? 'hidden sm:inline' : ''}>Ulangi</span>
                     </button>
                     {mode === 'quiz' && !completed && !(selfEvaluation && evaluation) && (

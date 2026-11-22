@@ -22,7 +22,7 @@ import ModuleDayDialog from '@/Components/Features/Admin/ModuleDayDialog';
 import ManajemenKelas from '@/Pages/Admin/ModulMateri/ManajemenKelas';
 import GrammarBuilder from '@/Components/Features/GrammarQuiz/BuilderKuisGrammar';
 import AdminLive from '@/Pages/Admin/RuangKelas/Show';
-import StrokePreview from '@/Components/Features/Handwriting/StrokeCharacterPreview';
+import BankKosakata from '@/Pages/Admin/Kosakata/Kosakata';
 import BuilderFlashcard from '@/Pages/Admin/Flashcard/BuilderFlashcard';
 import DaftarModul, { DayDetailContent, DuolingoPath } from '@/Pages/User/Modul/DaftarModul';
 import '/resources/css/app.css';
@@ -127,7 +127,10 @@ function Fixture() {
     if (scenario === 'class-type') return <ManajemenKelas programs={{data:[],links:[]}} tracks={[{id:1,code:'regular',name:'Regular'},{id:2,code:'jlpt',name:'JLPT'}]} levels={[
         {id:5,curriculum_track_id:2,level_name:'N5'}, {id:4,curriculum_track_id:2,level_name:'N4'},
     ]} />;
-    if (scenario === 'admin-stroke') return <StrokePreview open character={'\u4e00'} characters={['\u4e00','\u4e8c']} title="Preview kanji" onClose={() => {}} />;
+    if (scenario === 'admin-stroke') return <BankKosakata vocabulary={{ total: 1, links: [], data: [{
+        id: 881, word: '\u4f1a\u8b70', reading: '\u304b\u3044\u304e', meaning_id: 'Rapat', content_type: 'kosakata',
+        status: 'published',
+    }] }} />;
     if (scenario === 'admin-flashcard-picker') return <BuilderFlashcard set={{ id: 501, title:'Set fixture' }} />;
     if (scenario === 'admin-live') return <AdminLive setup={{kloters:[],weeks:[],decks:[]}} exitUrl="/fixture/admin" storeEndpoint="/fixture/live" />;
     if (scenario === 'admin-grammar') return <GrammarBuilder open={dayOpen} onClose={() => setDayOpen(false)} module={{id:1}} day={{id:881,day_number:1}} defaultLevel="JLPT N3" />;
@@ -207,7 +210,7 @@ const server = await createServer({ configFile: false, root, cacheDir: path.join
     resolve: { alias: { '@': path.join(root, 'resources/js') } }, plugins: [react(), {
         name: 'writing-fixture',
         config() {
-            const auditIcons = ['Bolt', 'DeleteOutlined', 'Mic', 'MicOff', 'Videocam', 'VideocamOff']
+            const auditIcons = ['Bolt', 'DeleteOutlined', 'Edit', 'FileUpload', 'Mic', 'MicOff', 'Videocam', 'VideocamOff']
                 .map(name => '@mui/icons-material/' + name);
             return { optimizeDeps: { include: [...roadmapDependencies, ...auditIcons] } };
         },
@@ -616,11 +619,21 @@ try {
     await evaluate('window.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))');
     await waitFor('!document.body.innerText.includes("Builder Kuis Grammar")');
     await open('admin-stroke');
-    await waitFor('document.body.innerText.includes("Pratinjau siap")');
-    const secondCharacter = `document.querySelector('[aria-label="Karakter kanji"] button:last-child')`;
+    await click('Stroke');
+    const dialog = 'document.querySelector("[aria-label=\\"Pratinjau guratan\\"]")';
+    const previewState = (count, status) => '(' + dialog + '?.innerText.includes(' + JSON.stringify(count)
+        + ') && ' + dialog + '?.querySelector("[role=status]")?.textContent === ' + JSON.stringify(status) + ')';
+    await waitFor(previewState('0/6 stroke', 'Memutar animasi...'));
+    await waitFor(previewState('6/6 stroke', 'Animasi selesai.'));
+    const secondCharacter = 'Array.from(document.querySelectorAll(\'[aria-label="Karakter kanji"] button\')).find(button => button.textContent === "\u8b70")';
     await evaluate(secondCharacter + '.click()');
     await waitFor(secondCharacter + '.getAttribute("aria-pressed")==="true"');
-    await waitFor('document.body.innerText.includes("Pratinjau siap")');
+    await waitFor(previewState('20/20 stroke', 'Animasi selesai.'));
+    await evaluate(dialog + '.querySelector(\'[aria-label="Reset pratinjau"]\').click()');
+    await waitFor(previewState('0/20 stroke', 'Pratinjau siap.'));
+    await click('Putar');
+    await waitFor(previewState('0/20 stroke', 'Memutar animasi...'));
+    await waitFor(previewState('20/20 stroke', 'Animasi selesai.'));
     assert(!(await evaluate('document.body.innerText.includes("Karakter selesai ditulis")')));
     const clickImport = async pattern => evaluate(`(()=>{const b=Array.from(document.querySelectorAll('button')).find(b=>new RegExp(${JSON.stringify(pattern)}, 'i').test(b.innerText.trim()));if(!b)throw new Error('Import action missing');b.click()})()`);
     await open('builder');
@@ -651,3 +664,4 @@ try {
         try{rmSync(resolved,{recursive:true,force:true,maxRetries:5,retryDelay:300});}catch(error){console.warn('Temporary test cleanup:',error.code,resolved);}
     }
 }
+    assert.deepEqual(await evaluate('window.__writing.requests'), []);
