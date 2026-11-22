@@ -1,6 +1,4 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { DialogTitle } from '@headlessui/react';
-import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { KanjiWriter } from 'kanji-recognizer';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
@@ -73,7 +71,7 @@ export default function KanjiHandwritingCanvas({
     const [message, setMessage] = useState('Memuat urutan stroke...');
     const [progress, setProgress] = useState(0);
     const [previewPlaying, setPreviewPlaying] = useState(false);
-    const [showHintPreview, setShowHintPreview] = useState(false);
+    const [isQuizHintPlaying, setIsQuizHintPlaying] = useState(false);
     const [drawnStrokes, setDrawnStrokes] = useState(0);
     const [mistakesOnStroke, setMistakesOnStroke] = useState(0);
     const [failedChecks, setFailedChecks] = useState(0);
@@ -103,6 +101,30 @@ export default function KanjiHandwritingCanvas({
             if (writerRef.current === writer) setPreviewPlaying(false);
         }
     }, []);
+
+    useEffect(() => {
+        if (!isQuizHintPlaying || !strokeData) return undefined;
+
+        // animate() clears its writer's canvas, so never play it on the student's writer.
+        const hintWriter = new KanjiWriter(`${containerId}-hint`, strokeData.paths, {
+            showGhost: false,
+            showGrid: true,
+            strokeColor: '#b45309',
+            strokeWidth,
+        });
+        let active = true;
+        hintWriter.animate().catch(() => {
+            if (active) setMessage('Urutan goresan tidak dapat diputar.');
+        }).finally(() => {
+            if (active) setIsQuizHintPlaying(false);
+        });
+
+        return () => {
+            active = false;
+            hintWriter.recognizer?.measurePath?.remove();
+            hintWriter.destroy();
+        };
+    }, [containerId, isQuizHintPlaying, strokeData, strokeWidth]);
 
     useEffect(() => {
         onChangeRef.current = onChange;
@@ -444,10 +466,11 @@ export default function KanjiHandwritingCanvas({
     };
 
     const hint = () => {
+        if (!writerRef.current || isQuizHintPlaying) return;
         const nextResult = { ...resultRef.current, hintsUsed: resultRef.current.hintsUsed + 1 };
         resultRef.current = nextResult;
         if (mode === 'quiz') {
-            setShowHintPreview(true);
+            setIsQuizHintPlaying(true);
         } else {
             writerRef.current?.hint();
             setMessage('Ikuti arah stroke berwarna kuning.');
@@ -498,7 +521,7 @@ export default function KanjiHandwritingCanvas({
     };
 
     return (
-        <fieldset disabled={disabled} className={`mx-auto min-w-0 w-full ${compact ? 'max-w-[260px]' : 'max-w-[460px] [@media(max-height:820px)]:max-w-[300px] max-sm:max-w-none'}`}>
+        <fieldset disabled={disabled || isQuizHintPlaying} className={`mx-auto min-w-0 w-full ${compact ? 'max-w-[260px]' : 'max-w-[460px] [@media(max-height:820px)]:max-w-[300px] max-sm:max-w-none'}`}>
             <div className="mb-2 flex items-center justify-between gap-3 text-xs font-bold text-gray-500 dark:text-gray-400">
                 <span>
                     {strokeData
@@ -514,14 +537,17 @@ export default function KanjiHandwritingCanvas({
                     </span>
                 )}
             </div>
-            <div
-                id={containerId}
-                className={`mx-auto aspect-square w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-inner dark:border-gray-700 ${compact ? '' : 'max-sm:max-w-[min(22rem,max(12rem,calc(100dvh-18rem)))]'}`}
-                aria-label={mode === 'preview' ? `Animasi goresan ${character}` : `Area latihan menulis ${character}`}
-                style={{ pointerEvents: disabled ? 'none' : undefined }}
-            />
+            <div className={`relative mx-auto aspect-square w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-inner dark:border-gray-700 ${compact ? '' : 'max-sm:max-w-[min(22rem,max(12rem,calc(100dvh-18rem)))]'}`}>
+                <div
+                    id={containerId}
+                    className={`absolute inset-0 ${isQuizHintPlaying ? 'invisible' : ''}`}
+                    aria-label={mode === 'preview' ? `Animasi goresan ${character}` : `Area latihan menulis ${character}`}
+                    style={{ pointerEvents: disabled || isQuizHintPlaying ? 'none' : undefined }}
+                />
+                {isQuizHintPlaying && <div id={`${containerId}-hint`} className="pointer-events-none absolute inset-0" aria-hidden="true" />}
+            </div>
             <p role={mode === 'preview' ? 'status' : undefined} className={`mt-2 min-h-5 text-center text-xs font-bold ${status === 'error' ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>
-                {message}
+                {mode === 'quiz' ? <span aria-live="polite">{isQuizHintPlaying ? 'Memutar urutan goresan...' : message}</span> : message}
             </p>
             {!(selfEvaluation && evaluation && evaluationPreview) && <QuizErrorMessage className="mt-3">{errorMessage}</QuizErrorMessage>}
             {mode === 'quiz' && (onStrokeWidthChange || onSkip) && !(selfEvaluation && evaluation) && (
@@ -557,21 +583,6 @@ export default function KanjiHandwritingCanvas({
                             : `${evaluation.correct} stroke tepat, ${evaluation.incorrect} perlu diperbaiki.`}
                     </p>
                 </div>
-            )}
-            {mode === 'quiz' && showHintPreview && (
-                <Modal show maxWidth="sm" onClose={() => setShowHintPreview(false)}>
-                    <div className="w-full min-w-0 p-4 sm:p-5">
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                            <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
-                                Urutan goresan <span lang="ja">{character}</span>
-                            </DialogTitle>
-                            <button type="button" aria-label="Tutup petunjuk" title="Tutup petunjuk" onClick={() => setShowHintPreview(false)} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-700 focus-visible:outline-2 focus-visible:outline-orange-500 dark:border-gray-600 dark:text-gray-200">
-                                <CloseRoundedIcon fontSize="small" />
-                            </button>
-                        </div>
-                        <KanjiHandwritingCanvas key={character} character={character} mode="preview" compact />
-                    </div>
-                </Modal>
             )}
             {mode === 'quiz' && selfEvaluation && evaluation && evaluationPreview && (
                 <Modal show maxWidth="lg" closeable={false}>

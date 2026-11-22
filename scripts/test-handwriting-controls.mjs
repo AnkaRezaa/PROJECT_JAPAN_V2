@@ -335,7 +335,7 @@ try {
     await waitFor('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))');
     await click('Sudah Paham');
     const studentArea = 'document.querySelector(\'[aria-label="Area latihan menulis \u6d17"]\')';
-    const hintDialog = 'document.querySelector(\'[role="dialog"]\')';
+    const hintLayer = studentArea + '?.nextElementSibling';
     await waitFor(studentArea + '?.querySelector("svg")');
     await evaluate(`(() => {
         const svg = ${studentArea}.querySelector('svg');
@@ -345,14 +345,32 @@ try {
         }
         window.__hintStudentSvg = svg;
         window.__hintStudentPaths = [...svg.querySelectorAll('path')].map(path => path.getAttribute('d'));
+        window.__hintAnimatedStrokes = [];
+        window.__hintObserver = new MutationObserver(() => {
+            const strokes = svg.parentElement.nextElementSibling?.querySelectorAll('svg > g:nth-child(3) > path');
+            if (strokes?.length > window.__hintAnimatedStrokes.length) {
+                window.__hintAnimatedStrokes = [...strokes].map(path => path.getAttribute('d'));
+            }
+        });
+        window.__hintObserver.observe(svg.parentElement.parentElement, { childList: true, subtree: true });
     })()`);
     await waitFor('document.body.innerText.includes("1/9 stroke dibuat")');
     await evaluate('document.querySelector(\'button[aria-label="Petunjuk goresan"]\').click()');
-    await waitFor(hintDialog + '?.innerText.includes("Urutan goresan \u6d17")');
-    await waitFor(hintDialog + '?.innerText.includes("9/9 stroke") && ' + hintDialog + '.innerText.includes("Animasi selesai.")');
-    assert(await evaluate('document.documentElement.scrollWidth <= innerWidth + 2'), 'Hint fits mobile');
-    await evaluate(hintDialog + '.querySelector(\'[aria-label="Tutup petunjuk"]\').click()');
-    await waitFor('!' + hintDialog);
+    await waitFor(hintLayer + '?.querySelector("svg")');
+    assert.equal(await evaluate('Boolean(document.querySelector(\'[role="dialog"]\'))'), false);
+    assert.equal(await evaluate('getComputedStyle(' + studentArea + ').visibility'), 'hidden');
+    assert.equal(await evaluate('document.querySelector(\'button[aria-label="Periksa tulisan"]\').matches(":disabled")'), true);
+    assert(await evaluate(`(() => {
+        const primary = ${studentArea}.getBoundingClientRect();
+        const overlay = ${hintLayer}.getBoundingClientRect();
+        return ['x', 'y', 'width', 'height'].every(key => Math.abs(primary[key] - overlay[key]) < 1);
+    })()`), 'Hint overlay must match the main canvas bounds');
+    await waitFor('!(' + hintLayer + ')');
+    await evaluate('window.__hintObserver.disconnect()');
+    const animatedStrokes = await evaluate('window.__hintAnimatedStrokes');
+    assert.equal(animatedStrokes.length, 9);
+    assert.deepEqual(animatedStrokes, await evaluate('[...window.__hintStudentSvg.querySelectorAll(":scope > g:nth-child(2) > path")].map(path => path.getAttribute("d"))'));
+    assert.equal(await evaluate('getComputedStyle(' + studentArea + ').visibility'), 'visible');
     assert(await evaluate(studentArea + '.querySelector("svg") === window.__hintStudentSvg'), 'Hint must not recreate the student canvas');
     assert.deepEqual(await evaluate('[...window.__hintStudentSvg.querySelectorAll("path")].map(path => path.getAttribute("d"))'), await evaluate('window.__hintStudentPaths'));
     assert(await evaluate('document.body.innerText.includes("1/9 stroke dibuat")'));
