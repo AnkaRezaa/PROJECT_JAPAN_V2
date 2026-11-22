@@ -200,6 +200,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/activity/feedback-export', [SuperAdminAktivitasController::class, 'exportFeedback'])->name('activity.feedback.export');
         Route::get('/activity/feedback-export-xlsx', [SuperAdminAktivitasController::class, 'exportFeedbackXlsx'])->name('activity.feedback.export-xlsx');
         Route::get('/payments', SuperAdminPembayaranController::class)->name('payments');
+        Route::get('/pemasukan', static fn (Request $request) => redirect()->route(
+            'superadmin.payments',
+            $request->only(['period', 'status', 'payment_method', 'search', 'page']),
+        ));
         Route::post('/payments/plans', [SuperAdminPembayaranController::class, 'storePlan'])->name('payments.plans.store');
         Route::put('/payments/plans/{plan}', [SuperAdminPembayaranController::class, 'updatePlan'])->name('payments.plans.update');
         Route::post('/payments/transactions', [SuperAdminPembayaranController::class, 'storeTransaction'])->name('payments.transactions.store');

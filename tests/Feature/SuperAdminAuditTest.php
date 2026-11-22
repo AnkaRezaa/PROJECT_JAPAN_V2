@@ -36,6 +36,25 @@ it('keeps the admin dashboard restricted by its role policy even when the route 
 
 it('records distinct transport IPs for fresh logins without trusting forwarded headers from arbitrary clients', function () {
     $operator = Pengguna::factory()->create(['role' => 'superadmin', 'status' => 'active']);
+it('redirects the legacy payment address with its filters only for superadmins', function () {
+    $legacy = '/superadmin/pemasukan?period=7&status=pending&page=2';
+    $destination = route('superadmin.payments', ['period' => 7, 'status' => 'pending', 'page' => 2]);
+
+    $this->get($legacy)->assertRedirect(route('login'));
+
+    foreach (['admin', 'user'] as $role) {
+        $this->actingAs(Pengguna::factory()->create(['role' => $role]))
+            ->get($legacy)->assertForbidden();
+    }
+
+    $this->actingAs(Pengguna::factory()->create(['role' => 'superadmin']))
+        ->get($legacy.'&redirect=https://example.test')->assertRedirect($destination);
+    $this->get($destination)->assertInertia(fn (Assert $page) => $page
+        ->component('SuperAdmin/Pemasukan/Pemasukan')
+        ->where('filters.period', 7)
+        ->where('filters.status', 'pending'));
+});
+
 
     foreach (['192.0.2.11', '198.51.100.12'] as $address) {
         $this->withServerVariables(['REMOTE_ADDR' => $address])
