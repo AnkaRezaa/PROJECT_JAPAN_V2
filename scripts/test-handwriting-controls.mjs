@@ -192,7 +192,7 @@ function Fixture() {
         quiz={{ id: 8801, title: 'Writing fixture', passing_score: 70, time_limit: 0, handwriting_enabled: writingEnabled }}
         questions={(params.get('single') ? [1] : [1,2]).map(id => ({ id, type: 'multiple_choice', question: 'Question '+id, options: ['Answer A','Answer B'], correct_answer: 'Answer A' }))}
         preview={params.get('preview') === '1'}
-        flashcards={[{ id: 881, front_text: '\u4e00\u4e8c', back_text: 'One two', writing_characters: [] }]} />;
+        flashcards={[{ id: 881, front_text: params.has('client-hint') ? '\u6d17\u5264' : '\u4e00\u4e8c', back_text: params.has('client-hint') ? 'Deterjen' : 'One two', writing_characters: [] }]} />;
     return <main className="p-4"><Canvas character={scenario === 'error' ? '\u{20000}' : '\u4e00'} mode="quiz" selfEvaluation
         {...(scenario === 'legacy' ? {} : { strokeWidth: width, onStrokeWidthChange: setWidth, onSkip: () => window.__writing.completions.push('skipped') })}
         onComplete={result => window.__writing.completions.push(result)} /></main>;
@@ -328,6 +328,36 @@ try {
     assert.equal(await evaluate('JSON.parse(localStorage.getItem("japanlingo_cp_vocab_8801_u881")).handwriting_enabled'),false);
 
     await open('quiz&writing=on', true); await waitFor('document.body.innerText.includes("Lanjutkan Latihan?")');
+    await open('quiz&client-hint=1');
+    await waitFor('document.body.innerText.includes("Answer A")');
+    await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")');
+    await click('LANJUT');
+    await waitFor('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))');
+    await click('Sudah Paham');
+    const studentArea = 'document.querySelector(\'[aria-label="Area latihan menulis \u6d17"]\')';
+    const hintDialog = 'document.querySelector(\'[role="dialog"]\')';
+    await waitFor(studentArea + '?.querySelector("svg")');
+    await evaluate(`(() => {
+        const svg = ${studentArea}.querySelector('svg');
+        const { x, y, width, height } = svg.getBoundingClientRect();
+        for (const [type, px, py] of [['pointerdown',20,25],['pointermove',24,29],['pointerup',27,31]]) {
+            svg.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 1, clientX: x+px*width/109, clientY: y+py*height/109 }));
+        }
+        window.__hintStudentSvg = svg;
+        window.__hintStudentPaths = [...svg.querySelectorAll('path')].map(path => path.getAttribute('d'));
+    })()`);
+    await waitFor('document.body.innerText.includes("1/9 stroke dibuat")');
+    await evaluate('document.querySelector(\'button[aria-label="Petunjuk goresan"]\').click()');
+    await waitFor(hintDialog + '?.innerText.includes("Urutan goresan \u6d17")');
+    await waitFor(hintDialog + '?.innerText.includes("9/9 stroke") && ' + hintDialog + '.innerText.includes("Animasi selesai.")');
+    assert(await evaluate('document.documentElement.scrollWidth <= innerWidth + 2'), 'Hint fits mobile');
+    await evaluate(hintDialog + '.querySelector(\'[aria-label="Tutup petunjuk"]\').click()');
+    await waitFor('!' + hintDialog);
+    assert(await evaluate(studentArea + '.querySelector("svg") === window.__hintStudentSvg'), 'Hint must not recreate the student canvas');
+    assert.deepEqual(await evaluate('[...window.__hintStudentSvg.querySelectorAll("path")].map(path => path.getAttribute("d"))'), await evaluate('window.__hintStudentPaths'));
+    assert(await evaluate('document.body.innerText.includes("1/9 stroke dibuat")'));
+    assert.equal(await evaluate('window.__writing.requests.filter(r => r.data.skill === "writing").length'), 0, 'Hint never submits or completes writing');
+
     await click('Lanjutkan'); await waitFor('document.body.innerText.includes("Question 2")');
     await click('Answer A'); await waitFor('document.body.innerText.includes("LANJUT")'); await click('LANJUT');
     await waitFor('Boolean(document.querySelector(\'button[aria-label="Sudah paham"]\'))'); await click('Sudah Paham');

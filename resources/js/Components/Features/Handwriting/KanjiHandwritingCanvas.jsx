@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { DialogTitle } from '@headlessui/react';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { KanjiWriter } from 'kanji-recognizer';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
@@ -60,9 +62,9 @@ export default function KanjiHandwritingCanvas({
     const reactId = useId().replace(/:/g, '');
     const containerId = `kanji-writer-${reactId}`;
     const writerRef = useRef(null);
+    const previewAnimationRef = useRef(null);
     const startedAtRef = useRef(Date.now());
     const resultRef = useRef(initialResult);
-    const previewAnimationRef = useRef(null);
     const onChangeRef = useRef(onChange);
     const onCompleteRef = useRef(onComplete);
     const onErrorRef = useRef(onError);
@@ -70,18 +72,16 @@ export default function KanjiHandwritingCanvas({
     const [status, setStatus] = useState('loading');
     const [message, setMessage] = useState('Memuat urutan stroke...');
     const [progress, setProgress] = useState(0);
+    const [previewPlaying, setPreviewPlaying] = useState(false);
+    const [showHintPreview, setShowHintPreview] = useState(false);
     const [drawnStrokes, setDrawnStrokes] = useState(0);
     const [mistakesOnStroke, setMistakesOnStroke] = useState(0);
-    const [previewPlaying, setPreviewPlaying] = useState(false);
     const [failedChecks, setFailedChecks] = useState(0);
     const [evaluation, setEvaluation] = useState(null);
     const [evaluationPreview, setEvaluationPreview] = useState(null);
     const [completed, setCompleted] = useState(false);
     const [strokeFeedback, setStrokeFeedback] = useState(null);
 
-    useEffect(() => {
-        onChangeRef.current = onChange;
-        onCompleteRef.current = onComplete;
     const playPreview = useCallback(async () => {
         const writer = writerRef.current;
         if (!writer || previewAnimationRef.current === writer) return;
@@ -104,6 +104,9 @@ export default function KanjiHandwritingCanvas({
         }
     }, []);
 
+    useEffect(() => {
+        onChangeRef.current = onChange;
+        onCompleteRef.current = onComplete;
         onErrorRef.current = onError;
     }, [onChange, onComplete, onError]);
 
@@ -332,9 +335,6 @@ export default function KanjiHandwritingCanvas({
     }, [strokeWidth, onStrokeWidthChange, status, strokeData]);
 
     const reset = () => {
-        writerRef.current?.clear();
-        if (writerRef.current?.svg) writerRef.current.svg.style.pointerEvents = '';
-        startedAtRef.current = Date.now();
         if (mode === 'preview') {
             if (!writerRef.current || previewAnimationRef.current === writerRef.current) return;
             writerRef.current.clear();
@@ -343,6 +343,9 @@ export default function KanjiHandwritingCanvas({
             return;
         }
 
+        writerRef.current?.clear();
+        if (writerRef.current?.svg) writerRef.current.svg.style.pointerEvents = '';
+        startedAtRef.current = Date.now();
         resultRef.current = initialResult;
         setProgress(0);
         setDrawnStrokes(0);
@@ -441,10 +444,14 @@ export default function KanjiHandwritingCanvas({
     };
 
     const hint = () => {
-        writerRef.current?.hint();
         const nextResult = { ...resultRef.current, hintsUsed: resultRef.current.hintsUsed + 1 };
         resultRef.current = nextResult;
-        setMessage('Ikuti arah stroke berwarna kuning.');
+        if (mode === 'quiz') {
+            setShowHintPreview(true);
+        } else {
+            writerRef.current?.hint();
+            setMessage('Ikuti arah stroke berwarna kuning.');
+        }
         emitResult(nextResult);
     };
 
@@ -550,6 +557,21 @@ export default function KanjiHandwritingCanvas({
                             : `${evaluation.correct} stroke tepat, ${evaluation.incorrect} perlu diperbaiki.`}
                     </p>
                 </div>
+            )}
+            {mode === 'quiz' && showHintPreview && (
+                <Modal show maxWidth="sm" onClose={() => setShowHintPreview(false)}>
+                    <div className="w-full min-w-0 p-4 sm:p-5">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
+                                Urutan goresan <span lang="ja">{character}</span>
+                            </DialogTitle>
+                            <button type="button" aria-label="Tutup petunjuk" title="Tutup petunjuk" onClick={() => setShowHintPreview(false)} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-700 focus-visible:outline-2 focus-visible:outline-orange-500 dark:border-gray-600 dark:text-gray-200">
+                                <CloseRoundedIcon fontSize="small" />
+                            </button>
+                        </div>
+                        <KanjiHandwritingCanvas key={character} character={character} mode="preview" compact />
+                    </div>
+                </Modal>
             )}
             {mode === 'quiz' && selfEvaluation && evaluation && evaluationPreview && (
                 <Modal show maxWidth="lg" closeable={false}>
