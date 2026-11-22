@@ -1,48 +1,42 @@
 # TOKU-UP
 
-TOKU-UP (Tokutei-Ginou Upgrade) adalah platform belajar bahasa Jepang berbasis kelas. Aplikasi menggabungkan roadmap Week/Day, presentasi, bank konten, kuis dan repetisi, ujian mingguan, handwriting kanji, progress, gamifikasi, pembayaran Midtrans, kloter mentor, serta ruang kelas realtime.
+TOKU-UP (Tokutei-Ginou Upgrade) adalah platform belajar bahasa Jepang untuk siswa mandiri dan kelas yang dipandu mentor. Siswa mengikuti materi per Minggu dan Hari, mengulang kosakata, berlatih menulis kanji, serta mengambil latihan dan simulasi JLPT, JFT-Basic, dan SSW.
 
-## Dokumentasi
-
-Handbook lengkap tersedia di [docs/README.md](docs/README.md). Mulai dari sana untuk:
-
-- setup Windows/Laragon;
-- deployment VPS Debian, Nginx, TLS, scheduler, dan backup;
-- Google OAuth dan verifikasi email;
-- Mailtrap SMTP/template;
-- Midtrans, idempotensi, reconciliation, dan approval kelas mentor;
-- Reverb dan LiveKit untuk kelas realtime;
-- struktur konten, roadmap, ujian, handwriting, dan gamifikasi;
-- hardening keamanan, testing, serta troubleshooting.
-
-Folder `.A_context_project/` menyimpan riwayat keputusan dan revisi klien. Untuk prosedur operasional gunakan `docs/`; untuk perilaku sistem gunakan kode dan test aktif.
+- **Siswa:** roadmap belajar, materi dan presentasi, flashcard, kuis Kosakata/Grammar/Dokkai, ujian, progres, dan ruang kelas live.
+- **Admin dan mentor:** kelola materi, bank konten, kuis, serta aktivitas belajar sesuai cakupan.
+- **SuperAdmin:** kelola operasional, pembayaran, kloter, dan pengaturan platform.
 
 ## Stack
 
-- Laravel 13 dan PHP 8.3
-- MySQL/MariaDB
-- Inertia.js, React 18, Vite 8, Tailwind CSS
-- Midtrans Snap
-- Laravel Socialite
-- Mailtrap
-- Laravel Reverb dan LiveKit
+| Bagian | Teknologi |
+| --- | --- |
+| Backend | PHP 8.3, Laravel 13, MySQL/MariaDB |
+| Frontend | Inertia.js, React 18, Vite 8, Tailwind CSS |
+| Kelas live | LiveKit untuk audio/video, Laravel Reverb untuk event realtime |
+| Integrasi | Midtrans Snap, Google OAuth melalui Laravel Socialite, Mailtrap |
+| Pengujian dan CI | Pest, GitHub Actions |
 
-## Quick Start
+## Mulai di Lokal
+
+Prasyarat: PHP 8.3 dan Composer 2, Node.js 22.12+ dan npm, serta MySQL/MariaDB. Dari root repo:
 
 ```bash
 composer install
-npm install
+npm ci
 cp .env.example .env
 php artisan key:generate
-php artisan migrate
-php artisan db:seed
-php artisan serve
-npm run dev
 ```
 
-Pada PowerShell gunakan `Copy-Item .env.example .env` sebagai pengganti `cp`.
+Di PowerShell, ganti `cp` dengan `Copy-Item .env.example .env`. Buat database lokal dan isi pengaturan `DB_*` di `.env`, lalu jalankan:
 
-Untuk kelas realtime, Reverb dan LiveKit harus dijalankan sebagai proses terpisah. Lihat [setup realtime development](docs/06-live-class/development.md).
+```bash
+php artisan migrate
+php artisan storage:link
+```
+
+Buka dua terminal: jalankan `php artisan serve` di terminal pertama dan `npm run dev` di terminal kedua. Aplikasi tersedia di `http://127.0.0.1:8000`. Seeder demo bersifat opsional dan hanya untuk database lokal yang boleh direset.
+
+Untuk menguji ruang kelas live, siapkan Reverb dan LiveKit secara terpisah. Lihat [panduan realtime lokal](docs/06-live-class/development.md).
 
 ## Aturan Produk Utama
 
@@ -55,7 +49,9 @@ Untuk kelas realtime, Reverb dan LiveKit harus dijalankan sebagai proses terpisa
 - Konten program disimpan sekali dan dipakai bersama oleh seluruh kloter program.
 - Presentasi offline dan ruang kelas live menggunakan deck yang sama.
 
-## Pemeriksaan Dasar
+## Pengujian dan Deploy
+
+Tes Laravel memakai database terpisah `Project_japan_test` dari [phpunit.xml](phpunit.xml). Siapkan database tes sebelum menjalankan suite; jangan arahkan tes ke database produksi.
 
 ```bash
 php artisan test
@@ -65,3 +61,11 @@ npm audit --omit=dev
 ```
 
 Jangan commit `.env`, credential vendor, `livekit.yaml`, backup database, atau file yang mengandung secret.
+
+[GitHub Actions](.github/workflows/ci-deploy.yml) menjalankan tes dan build pada pull request dan push ke `main`. Deploy awal dijalankan manual dari GitHub Actions setelah konfigurasi environment `production`. VPS menerima commit yang diuji serta aset hasil build; workflow tidak menjalankan migrasi atau seeder produksi.
+
+## Dokumentasi
+
+- [Handbook proyek](docs/README.md): arsitektur, integrasi, dan panduan pemeliharaan.
+- [Deploy VPS dan setup GitHub Actions](docs/02-deployment/vps-debian.md#github-actions-tes-otomatis-deploy-manual).
+- [Testing dan checklist rilis](docs/10-testing/release-checklist.md).
