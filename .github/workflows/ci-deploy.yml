@@ -1,0 +1,135 @@
+name: TokuUp CI and Deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Test and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: Project_japan_test
+          MYSQL_USER: tokuup_ci
+          MYSQL_PASSWORD: ci-test-password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h 127.0.0.1 --silent" --health-interval=10s --health-timeout=5s --health-retries=12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.3'
+          extensions: bcmath, curl, dom, gd, intl, mbstring, pdo_mysql, zip
+          tools: composer:v2
+          coverage: none
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Prepare isolated test environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+      - run: npm ci
+      - name: Build frontend assets
+        env:
+          VITE_SEO_SITE_NAME: ${{ vars.VITE_SEO_SITE_NAME || 'TOKU-UP' }}
+          VITE_REVERB_APP_KEY: ${{ vars.VITE_REVERB_APP_KEY }}
+          VITE_REVERB_HOST: ${{ vars.VITE_REVERB_HOST || 'tokuup.com' }}
+          VITE_REVERB_PORT: ${{ vars.VITE_REVERB_PORT || '443' }}
+          VITE_REVERB_SCHEME: ${{ vars.VITE_REVERB_SCHEME || 'https' }}
+          VITE_SENTRY_ENABLED: ${{ vars.VITE_SENTRY_ENABLED || 'false' }}
+          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+          VITE_SENTRY_ENVIRONMENT: production
+          VITE_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE || '0.05' }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch && "$GITHUB_REF" == refs/heads/main && -z "$VITE_REVERB_APP_KEY" ]]; then
+            echo 'Set repository variable VITE_REVERB_APP_KEY before the first production deployment.'
+            exit 1
+          fi
+          npm run build
+      - name: Run Laravel tests
+        env:
+          DB_USERNAME: tokuup_ci
+          DB_PASSWORD: ci-test-password
+        run: php artisan test
+      - name: Validate deployment script
+        run: bash -n scripts/deploy-vps.sh
+      - name: Package release
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+        run: tar -czf "$RUNNER_TEMP/tokuup-release.tar.gz" public/build scripts/deploy-vps.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+        with:
+          name: tokuup-release-${{ github.sha }}
+          path: ${{ runner.temp }}/tokuup-release.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+  deploy:
+    name: Deploy tested main to VPS
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    concurrency:
+      group: tokuup-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: tokuup-release-${{ github.sha }}
+          path: ${{ runner.temp }}/release
+      - name: Deliver tested release
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          VPS_PORT: ${{ vars.VPS_PORT || '22' }}
+          VPS_APP_PATH: ${{ vars.VPS_APP_PATH || '/var/www/project_japan_v2' }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          [[ "$VPS_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]] || { echo 'Invalid or missing VPS_HOST'; exit 1; }
+          [[ "$VPS_USER" =~ ^[a-z_][a-z0-9_-]*$ && "$VPS_USER" != root ]] || { echo 'Set a non-root VPS_USER'; exit 1; }
+          [[ "$VPS_PORT" =~ ^[0-9]{1,5}$ && "$VPS_PORT" -le 65535 && "$VPS_PORT" -gt 0 ]] || { echo 'Invalid VPS_PORT'; exit 1; }
+          [[ "$VPS_APP_PATH" =~ ^/var/www/[a-zA-Z0-9_-]+$ ]] || { echo 'Invalid VPS_APP_PATH'; exit 1; }
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          [[ -n "$VPS_SSH_KEY" && -n "$VPS_KNOWN_HOSTS" ]] || { echo 'Deploy key or known_hosts missing'; exit 1; }
+
+          umask 077
+          ssh_dir=$(mktemp -d)
+          trap 'rm -rf -- "$ssh_dir"' EXIT
+          printf '%s\n' "$VPS_SSH_KEY" > "$ssh_dir/key"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$ssh_dir/known_hosts"
+
+          ssh -i "$ssh_dir/key" -p "$VPS_PORT" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o "UserKnownHostsFile=$ssh_dir/known_hosts" -o ConnectTimeout=10 \
+            -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+            "$VPS_USER@$VPS_HOST" \
+            "set -eu; stage=\$(mktemp -d /tmp/tokuup-deploy.XXXXXXXX); trap 'rm -rf -- \"\$stage\"' EXIT; tar -xzf - -C \"\$stage\"; bash \"\$stage/scripts/deploy-vps.sh\" '$VPS_APP_PATH' '$GITHUB_SHA' \"\$stage/public/build\"" \
+            < "$RUNNER_TEMP/release/tokuup-release.tar.gz"
+      - name: Check production health
+        env:
+          DEPLOY_HEALTH_URL: ${{ vars.DEPLOY_HEALTH_URL || 'https://tokuup.com/up' }}
+        run: |
+          code=$(curl --proto '=https' --fail --silent --show-error --retry 3 --max-time 15 \
+            --output /dev/null --write-out '%{http_code}' "$DEPLOY_HEALTH_URL")
+          [[ "$code" == 200 ]] || { echo "Expected HTTP 200, got $code"; exit 1; }

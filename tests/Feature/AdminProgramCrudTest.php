@@ -29,6 +29,7 @@ it('allows global admin to store, update, and destroy programs', function () {
     $storeResponse = $this->actingAs($admin)->post(route('admin.programs.store'), [
         'curriculum_track_id' => $track->id,
         'level_id' => $level->id,
+        'learning_type' => 'mandiri',
         'title' => 'Kelas Baru CRUD',
         'description' => 'Deskripsi kelas',
         'instructor_name' => 'Sensei Budi',
@@ -41,6 +42,7 @@ it('allows global admin to store, update, and destroy programs', function () {
         'title' => 'Kelas Baru CRUD',
         'curriculum_track_id' => $track->id,
         'level_id' => $level->id,
+        'learning_type' => 'mandiri',
     ]);
 
     $program = ProgramPembelajaran::where('title', 'Kelas Baru CRUD')->firstOrFail();

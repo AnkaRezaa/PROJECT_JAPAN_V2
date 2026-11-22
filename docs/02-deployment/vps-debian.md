@@ -285,6 +285,19 @@ php artisan up
 
 Untuk perubahan besar, gunakan release directory/symlink agar rollback lebih aman. `git pull` langsung cocok hanya untuk deployment sederhana dengan backup dan downtime yang diterima.
 
+### GitHub Actions: tes otomatis, deploy manual
+
+Workflow **TokuUp CI and Deploy** menjalankan tes Laravel dengan MySQL sementara dan membangun aset pada PR dan push ke `main`. Deploy produksi pada tahap awal hanya berjalan melalui **Actions > TokuUp CI and Deploy > Run workflow**, pilih `main`. Workflow mengulang tes dan build untuk commit itu, lalu mentransfer aset yang sama ke VPS.
+
+1. Di **Settings > Environments**, buat environment `production`. Isi variable `VPS_HOST` dan `VPS_USER` (akun deploy non-root tanpa akses sudo). Opsional: `VPS_PORT` (default `22`), `VPS_APP_PATH` (default `/var/www/project_japan_v2`), `DEPLOY_HEALTH_URL` (default `https://tokuup.com/up`).
+2. Isi secret `VPS_SSH_KEY` dengan private key khusus dari GitHub ke VPS. Pasang public key pasangannya pada akun deploy. Isi `VPS_KNOWN_HOSTS` dengan entri host key VPS yang fingerprint-nya sudah diverifikasi lewat konsol tepercaya. GitHub tidak menerima password VPS dan tidak menonaktifkan verifikasi host.
+3. Di **Settings > Secrets and variables > Actions > Variables**, isi variable repo `VITE_REVERB_APP_KEY` dengan **public app key** Reverb yang sama dengan situs. Bila berbeda dari default, sesuaikan `VITE_REVERB_HOST`, `VITE_REVERB_PORT`, dan `VITE_REVERB_SCHEME`. Samakan `VITE_SEO_SITE_NAME` dan opsi `VITE_SENTRY_*` bila dipakai. Nilai `VITE_*` masuk ke bundle publik; jangan gunakan private key, token API, atau `REVERB_APP_SECRET` untuk nilai ini.
+4. Di VPS, pastikan checkout `main` bersih, `git fetch origin main` berfungsi dengan kredensial VPS yang sudah ada, `.env` produksi sudah siap, dan tidak ada `public/hot`. Akun deploy memerlukan akses tulis ke checkout, `public/build`, dan `storage`, serta PHP, Composer, Git, dan `flock`. Jika PHP-FPM memakai OPcache tanpa validasi timestamp, operator perlu menyiapkan reload PHP-FPM terpisah; workflow tidak memakai sudo.
+
+Deploy menggunakan fast-forward ke SHA yang lulus dan menolak commit lama bila `main` sudah bergerak. Aset file ber-hash dikopi sebelum manifest diganti, dan hash lama tidak dihapus agar klien dengan halaman lama tetap bisa memuatnya. Pantau penggunaan disk dan bersihkan aset lama pada jadwal operasi terpisah.
+
+**Tidak ada migrasi, seeder, atau perubahan `.env` otomatis.** Jika ada migrasi baru atau tertunda, jalankan prosedur update manual di atas. Jika deploy gagal sesudah maintenance dimulai, periksa log dan siapkan pemulihan sebelum menjalankan `php artisan up`. Setelah deploy manual pertama lulus, baru evaluasi aktivasi deploy otomatis pada push ke `main`.
+
 ## 10. Verifikasi
 
 ```bash
