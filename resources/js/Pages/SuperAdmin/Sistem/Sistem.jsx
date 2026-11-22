@@ -304,7 +304,7 @@ export default function System({
                                 <div className="flex items-center justify-between py-2.5">
                                     <span className="font-sans font-bold text-gray-500 dark:text-gray-400">Google Tag Manager</span>
                                     <span className={`font-bold ${analyticsStatus?.gtm?.enabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
-                                        {analyticsStatus?.gtm?.enabled ? (analyticsStatus.gtm.id || 'Aktif') : 'Non-aktif'}
+                                        {analyticsStatus?.gtm?.enabled ? (analyticsStatus.gtm.id || 'Aktif') : 'Nonaktif'}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between py-2.5">

@@ -8,6 +8,7 @@ use App\Models\ExamSection;
 use App\Models\ExamVersion;
 use App\Models\LevelPembelajaran;
 use App\Models\Pengguna;
+use App\Services\ExamAuthoringService;
 use App\Services\ExamQuestionBankService;
 use Illuminate\Http\UploadedFile;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -69,6 +70,45 @@ it('allows admin to view question banks index and denies regular user', function
             ->component('Admin/Ujian/BankSoal/Index')
             ->has('banks.data', 1)
             ->where('banks.data.0.title', 'Shin Kanzen Master N3 Dokkai'));
+});
+
+it('counts published exam package questions separately from the empty question bank', function () {
+    $exam = Exam::create([
+        'level_id' => $this->level->id,
+        'slug' => 'published-package-with-manual-questions',
+        'title' => 'Published package with manual questions',
+        'type' => 'simulation',
+        'access_type' => 'all',
+        'status' => 'published',
+    ]);
+    $version = $exam->versions()->create(['version_number' => 1, 'status' => 'draft']);
+    $section = $version->sections()->create([
+        'key' => 'grammar_reading',
+        'title' => 'Tata Bahasa & Bacaan',
+        'sort_order' => 1,
+        'time_limit_seconds' => 1800,
+    ]);
+    app(ExamAuthoringService::class)->syncQuestions($section, [[
+        'type' => 'multiple_choice',
+        'sort_order' => 1,
+        'points' => 1,
+        'question_text' => 'Soal paket yang ditulis langsung.',
+        'options' => ['A', 'B'],
+        'correct_answer' => 'A',
+    ]]);
+    $version->update(['status' => 'published', 'published_at' => now()]);
+
+    $this->actingAs($this->admin)->get(route('admin.exams.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('exam_packages.0.status', 'published')
+            ->where('exam_packages.0.question_count', 1));
+    $this->get(route('admin.exams.question-banks.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('banks.data', 0)
+            ->where('coveredLevelCount', 0));
+    $this->assertDatabaseCount('exam_bank_questions', 0);
 });
 
 it('allows admin to create, update, and delete question bank', function () {

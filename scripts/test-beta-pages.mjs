@@ -31,6 +31,8 @@ const auditTransactions = [1, 2].map(id => ({
     payment_method: 'manual', created_at: '2026-11-19T14:08:00Z',
 }));
 const submissions = [];
+let analyticsConfigured = false;
+const ga4Url = 'https://analytics.google.com/analytics/web/#/p123456';
 let chrome, socket, session, sequence = 0, view = 'User/Referral/Index';
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 function send(method, params = {}, sessionId = session) {
@@ -67,7 +69,10 @@ try {
             const settings = { enabled: true, registration_open: true, participants: 12, limit: 50, opens_at: '2026-12-01T02:00:00+00:00', opened_at: null, released: false };
             const fixture = { ...page, component: view, url: '/__beta-fixture', props: { ...page.props, auth: { user: view.startsWith('Public/') || view === 'Auth/Register' ? null : { id: 123, username: 'Beta Browser Test', email: 'fixture@example.com', role: view.startsWith('SuperAdmin') ? 'superadmin' : 'user', status: 'active', email_verified_at: '2026-11-16', xp: 0, level: 1, streak_count: 0 } }, beta: settings, betaSettings: settings, registration: { email: 'fixture@example.com', verified: false }, released: false, status: null, sentAt: null, errors: {}, seo: {}, flash: {}, socialLinks: {} } };
             if (superadminAudit) {
+                const gtm = { enabled: analyticsConfigured, id: analyticsConfigured ? 'GTM-FIXTURE' : null };
                 Object.assign(fixture.props, {
+                    monitoringLinks: { gtm, ga4: analyticsConfigured ? ga4Url : null },
+                    analyticsStatus: { gtm, ga4: { configured: analyticsConfigured, url: analyticsConfigured ? ga4Url : null } },
                     transactions: { data: auditTransactions, links: [] }, filters: { period: 7 },
                     logins: { data: [{ id: 1, user: 'Siswa Audit', logged_in_at: '19 Nov 2026, 21:08' }], links: [] },
                     timeline: { data: [{ id: 1, actor: 'Admin', action: 'Beta', description: 'Pengaturan beta diperbarui.', target: 'Sistem' }], links: [] },
@@ -168,6 +173,8 @@ try {
 
             await open('Aktivitas/Aktivitas', '21:08');
             await visible('Pengaturan beta diperbarui.');
+            await visible('Belum terhubung');
+            assert.equal(await evaluate('document.body.innerText.includes("GA4_PROPERTY_URL")'), false);
             assert.equal(await evaluate('document.body.innerText.includes("GTM_ENABLED=true")'), false);
 
             await open('Konten/Konten', 'Berita Audit');
@@ -204,6 +211,16 @@ try {
             await open('Sistem/Sistem', 'Jadwal buka akses (WIB)');
             await visible('Akses aplikasi belum dibuka');
             assert.equal(await evaluate('document.querySelector("input[type=datetime-local]").value'), '2026-12-01T09:00');
+            await visible('Nonaktif');
+            assert.equal(await evaluate('document.body.innerText.includes("GA4_PROPERTY_URL")'), false);
+
+            analyticsConfigured = true;
+            await open('Aktivitas/Aktivitas', 'GTM-FIXTURE');
+            assert(await evaluate('Array.from(document.links).some(link => link.href === ' + JSON.stringify(ga4Url) + ')'));
+            assert.equal(await evaluate('document.body.innerText.includes("Belum terhubung")'), false);
+            await open('Sistem/Sistem', 'GTM-FIXTURE');
+            assert.equal(await evaluate('document.body.innerText.includes("GA4_PROPERTY_URL")'), false);
+            analyticsConfigured = false;
             console.log(`SuperAdmin scenarios passed at ${width}px.`);
         }
     } else for (const width of [320, 390, 768, 1366]) {

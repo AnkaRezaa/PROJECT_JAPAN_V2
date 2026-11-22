@@ -49,7 +49,7 @@ function AnalyticsMonitoringBar({ monitoringLinks = {} }) {
                             <p className="text-[11px] font-black uppercase tracking-wider text-gray-400">Google Tag Manager</p>
                             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                                 <span className="text-sm font-black text-gray-900 dark:text-white">
-                                    {gtm.enabled ? (gtm.id || 'Aktif (ID belum diisi)') : 'Non-aktif'}
+                                    {gtm.enabled ? (gtm.id || 'Aktif (ID belum diisi)') : 'Nonaktif'}
                                 </span>
                             </div>
                         </div>
@@ -63,13 +63,8 @@ function AnalyticsMonitoringBar({ monitoringLinks = {} }) {
                             <p className="text-[11px] font-black uppercase tracking-wider text-gray-400">Google Analytics 4</p>
                             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                                 <span className="text-sm font-black text-gray-900 dark:text-white">
-                                    {ga4 ? 'Terkoneksi' : 'Belum Terhubung'}
+                                    {ga4 ? 'Terhubung' : 'Belum terhubung'}
                                 </span>
-                                {!ga4 && (
-                                    <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                                        .env: GA4_PROPERTY_URL
-                                    </span>
-                                )}
                             </div>
                         </div>
                     </div>

@@ -28,6 +28,27 @@ it('restores only the intended panel for superadmin login', function (string $in
     'external destination' => ['https://example.test/', '/superadmin/dashboard'],
 ]);
 
+it('keeps the admin dashboard restricted by its role policy even when the route group accepts a superadmin', function () {
+    $operator = Pengguna::factory()->create(['role' => 'superadmin', 'status' => 'active']);
+    $this->actingAs($operator)->get('/admin/dashboard')->assertForbidden();
+    expect($operator->fresh()->role)->toBe('superadmin');
+});
+
+it('records distinct transport IPs for fresh logins without trusting forwarded headers from arbitrary clients', function () {
+    $operator = Pengguna::factory()->create(['role' => 'superadmin', 'status' => 'active']);
+
+    foreach (['192.0.2.11', '198.51.100.12'] as $address) {
+        $this->withServerVariables(['REMOTE_ADDR' => $address])
+            ->post('/login', ['email' => $operator->email, 'password' => 'password'], [
+                'X-Forwarded-For' => '203.0.113.1',
+            ])->assertRedirect('/superadmin/dashboard');
+        $this->post('/logout')->assertRedirect();
+    }
+
+    expect(RiwayatLogin::where('user_id', $operator->id)->where('status', 'success')
+        ->orderBy('id')->pluck('ip_address')->all())->toBe(['192.0.2.11', '198.51.100.12']);
+});
+
 it('validates and updates the password from the superadmin profile', function () {
     $operator = Pengguna::factory()->create(['role' => 'superadmin']);
     $this->actingAs($operator)->from('/superadmin/profile')
@@ -66,13 +87,21 @@ it('separates lifetime revenue from selected-period revenue and keeps the period
     );
     $this->get('/superadmin/dashboard?period=7')->assertInertia(fn (Assert $page) => $page
         ->where('metrics.0.value', 'Rp 10,000')
-        ->where('metrics.0.href', route('superadmin.payments', ['period' => 7])));
+        ->where('metrics.0.href', route('superadmin.payments', ['period' => 7]))
+        ->where('quickActions', fn ($actions) => collect($actions)->contains(
+            fn ($item) => $item['label'] === 'Pembayaran' && $item['href'] === route('superadmin.payments')
+        )));
 
     $selected = Transaksi::where('transaction_code', 'WAITING')->firstOrFail();
     $this->from('/superadmin/payments')->patch(route('superadmin.payments.transactions.approve', $selected), [
         'notes' => 'Bukti pembayaran diperiksa.',
     ])->assertRedirect('/superadmin/payments');
     expect($selected->fresh()->notes)->toBe('Bukti pembayaran diperiksa.');
+    $this->assertDatabaseHas('activity_logs', [
+        'actor_id' => $operator->id,
+        'action' => 'payment.transaction_approved',
+        'target_id' => $selected->id,
+    ]);
     expect(Transaksi::where('transaction_code', 'PAID-RECENT')->value('notes'))->toBeNull();
 
     $orphaned = Transaksi::create(['transaction_code' => 'NO-PLAN', 'user_id' => $student->id, 'status' => 'pending', 'amount' => 10000]);
