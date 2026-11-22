@@ -16,6 +16,7 @@ use App\Models\Soal;
 use App\Services\ChartDataService;
 use App\Services\KloterBelajarService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -28,9 +29,13 @@ class AdminBerandaController extends Controller
         Request $request,
         KloterBelajarService $kloterService,
         ChartDataService $chartData
-    ): Response {
+    ): Response|RedirectResponse {
         /** @var Pengguna $admin */
         $admin = $request->user();
+        if ($admin->role === 'superadmin') {
+            return redirect()->route('superadmin.dashboard');
+        }
+
         $selectedKloter = $kloterService->resolveKloterDikelola($admin, $request->integer('kloter') ?: null);
         $programIds = $kloterService->programIdsDikelola($admin, $selectedKloter);
         $period = $chartData->resolvePeriod($request);

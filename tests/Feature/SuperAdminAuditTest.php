@@ -28,14 +28,14 @@ it('restores only the intended panel for superadmin login', function (string $in
     'external destination' => ['https://example.test/', '/superadmin/dashboard'],
 ]);
 
-it('keeps the admin dashboard restricted by its role policy even when the route group accepts a superadmin', function () {
+it('redirects superadmins out of the admin dashboard without granting other admin access', function () {
     $operator = Pengguna::factory()->create(['role' => 'superadmin', 'status' => 'active']);
-    $this->actingAs($operator)->get('/admin/dashboard')->assertForbidden();
+    $this->actingAs($operator)->get('/admin/dashboard?kloter=999999')
+        ->assertRedirect(route('superadmin.dashboard'));
+    $this->get(route('admin.exams.index'))->assertForbidden();
     expect($operator->fresh()->role)->toBe('superadmin');
 });
 
-it('records distinct transport IPs for fresh logins without trusting forwarded headers from arbitrary clients', function () {
-    $operator = Pengguna::factory()->create(['role' => 'superadmin', 'status' => 'active']);
 it('redirects the legacy payment address with its filters only for superadmins', function () {
     $legacy = '/superadmin/pemasukan?period=7&status=pending&page=2';
     $destination = route('superadmin.payments', ['period' => 7, 'status' => 'pending', 'page' => 2]);
@@ -55,6 +55,8 @@ it('redirects the legacy payment address with its filters only for superadmins',
         ->where('filters.status', 'pending'));
 });
 
+it('records distinct transport IPs for fresh logins without trusting forwarded headers from arbitrary clients', function () {
+    $operator = Pengguna::factory()->create(['role' => 'superadmin', 'status' => 'active']);
 
     foreach (['192.0.2.11', '198.51.100.12'] as $address) {
         $this->withServerVariables(['REMOTE_ADDR' => $address])
