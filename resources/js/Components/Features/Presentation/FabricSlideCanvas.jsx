@@ -99,7 +99,7 @@ function serializeCanvas(canvas) {
     };
 
     return {
-        ...canvas.toJSON(['kind', 'src', 'shapeType']),
+        ...canvas.toJSON(['kind', 'src', 'shapeType', 'rx', 'ry', 'angle', 'originX', 'originY']),
         width: logicalSize.width,
         height: logicalSize.height,
         backgroundColor: canvas.backgroundColor || '#ffffff',
@@ -757,16 +757,70 @@ async function applyBackgroundImage(canvas, url) {
 
 async function loadCustomObjects(canvas, objects) {
     for (const object of objects) {
+        const angle = Number(object.angle || 0);
+        const hasAngle = Math.abs(angle) > 0.01;
+
+        if (object.kind === 'shape') {
+            const width = Math.max(1, object.width || 240);
+            const height = Math.max(1, object.height || 120);
+            const left = hasAngle ? (object.left || 0) + width / 2 : (object.left || 0);
+            const top = hasAngle ? (object.top || 0) + height / 2 : (object.top || 0);
+            const originX = hasAngle ? 'center' : 'left';
+            const originY = hasAngle ? 'center' : 'top';
+            const isRounded = object.shapeType === 'rounded';
+            const rx = object.rx != null ? object.rx : (isRounded ? 16 : 0);
+            const ry = object.ry != null ? object.ry : (isRounded ? 16 : 0);
+
+            if (object.shapeType === 'line') {
+                canvas.add(new Line([object.left || 0, object.top || 0, (object.left || 0) + width, (object.top || 0) + height], {
+                    stroke: object.stroke || object.fill || '#111827',
+                    strokeWidth: object.strokeWidth || 2,
+                    angle,
+                    kind: 'shape',
+                    shapeType: 'line',
+                }));
+                continue;
+            }
+
+            canvas.add(new Rect({
+                left,
+                top,
+                originX,
+                originY,
+                width,
+                height,
+                angle,
+                rx,
+                ry,
+                fill: object.fill || 'transparent',
+                stroke: object.stroke || null,
+                strokeWidth: object.strokeWidth || 0,
+                kind: 'shape',
+                shapeType: object.shapeType || 'rectangle',
+            }));
+            continue;
+        }
+
         if (object.kind === 'image' && object.src) {
             try {
                 const image = await FabricImage.fromURL(object.src, { crossOrigin: 'anonymous' });
+                const width = Math.max(1, object.width || image.width || 1);
+                const height = Math.max(1, object.height || image.height || 1);
+                const scaleX = width / Math.max(1, image.width || 1);
+                const scaleY = height / Math.max(1, image.height || 1);
+                const left = hasAngle ? (object.left || 0) + width / 2 : (object.left || 0);
+                const top = hasAngle ? (object.top || 0) + height / 2 : (object.top || 0);
+                const originX = hasAngle ? 'center' : 'left';
+                const originY = hasAngle ? 'center' : 'top';
+
                 image.set({
-                    left: object.left || 0,
-                    top: object.top || 0,
-                    originX: 'left',
-                    originY: 'top',
-                    scaleX: (object.width || image.width || 1) / Math.max(1, image.width || 1),
-                    scaleY: (object.height || image.height || 1) / Math.max(1, image.height || 1),
+                    left,
+                    top,
+                    originX,
+                    originY,
+                    scaleX,
+                    scaleY,
+                    angle,
                     kind: 'image',
                     src: object.src,
                 });
@@ -778,39 +832,32 @@ async function loadCustomObjects(canvas, objects) {
         }
 
         if (object.kind === 'textbox') {
+            const width = Math.max(20, (object.width || 420) + 4);
+            const height = Math.max(20, object.height || 80);
+            const left = hasAngle ? (object.left || 0) + width / 2 : (object.left || 0);
+            const top = hasAngle ? (object.top || 0) + height / 2 : (object.top || 0);
+            const originX = hasAngle ? 'center' : 'left';
+            const originY = hasAngle ? 'center' : 'top';
+
             canvas.add(new Textbox(object.text || '', {
-                left: object.left || 0,
-                top: object.top || 0,
-                originX: 'left',
-                originY: 'top',
-                width: object.width || 420,
-                height: object.height || 80,
+                left,
+                top,
+                originX,
+                originY,
+                width,
+                angle,
                 fontSize: object.fontSize || 28,
                 fill: object.fill || '#111827',
-                fontFamily: 'Inter, Arial, sans-serif',
-                fontWeight: object.fontWeight || '700',
+                fontFamily: object.fontFamily || 'Inter, Arial, sans-serif',
+                fontWeight: object.fontWeight || 'normal',
+                fontStyle: object.fontStyle || 'normal',
                 textAlign: object.textAlign || 'left',
+                lineHeight: 1.16,
+                splitByGrapheme: false,
+                backgroundColor: object.backgroundColor || '',
                 kind: 'textbox',
             }));
             continue;
-        }
-
-        if (object.kind === 'shape') {
-            canvas.add(new Rect({
-                left: object.left || 0,
-                top: object.top || 0,
-                originX: 'left',
-                originY: 'top',
-                width: object.width || 240,
-                height: object.height || 120,
-                rx: object.shapeType === 'rounded' ? 24 : 0,
-                ry: object.shapeType === 'rounded' ? 24 : 0,
-                fill: object.fill || '#FFE4D6',
-                stroke: object.stroke || '#22C55E',
-                strokeWidth: object.strokeWidth || 2,
-                kind: 'shape',
-                shapeType: object.shapeType || 'rectangle',
-            }));
         }
     }
 }

@@ -583,6 +583,7 @@ export default function BuilderPresentasi({
     const [mediaFile, setMediaFile] = useState(null);
     const [isMediaUploading, setIsMediaUploading] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
+    const [importError, setImportError] = useState(null);
     const [showTemplatePanel, setShowTemplatePanel] = useState(true);
     const [showEditPanel, setShowEditPanel] = useState(true);
     const pendingImportStartIndexRef = useRef(null);
@@ -971,6 +972,7 @@ export default function BuilderPresentasi({
 
         pendingImportStartIndexRef.current = slides.length;
         setIsImporting(true);
+        setImportError(null);
         router.post(route('admin.presentations.import.pptx', deck.id), {
             pptx_file: pptxFile,
         }, {
@@ -979,6 +981,10 @@ export default function BuilderPresentasi({
             onSuccess: () => {
                 setShowImportMenu(false);
                 setPptxFile(null);
+                setImportError(null);
+            },
+            onError: (err) => {
+                setImportError(err.pptx_file || 'Gagal mengimpor file PPTX.');
             },
             onFinish: () => setIsImporting(false),
         });
@@ -1220,15 +1226,20 @@ export default function BuilderPresentasi({
                                         <form onSubmit={importPptx} className="space-y-2">
                                             <div>
                                                 <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-600">PPTX Draft</p>
-                                                <p className="text-xs font-bold text-gray-500">Maks 25 MB. Tidak convert ke PDF otomatis; dipakai untuk draft editable dan wajib review layout.</p>
+                                                <p className="text-xs font-bold text-gray-500">Maks 50 MB. File PPTX (termasuk export dari Canva/Google Slides) diimport sebagai slide draft editable.</p>
                                             </div>
+                                            {importError && (
+                                                <p className="rounded-xl bg-red-50 p-2 text-xs font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                                                    {importError}
+                                                </p>
+                                            )}
                                             <input
                                                 type="file"
                                                 accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                                                onChange={(event) => setPptxFile(event.target.files?.[0] || null)}
+                                                onChange={(event) => { setPptxFile(event.target.files?.[0] || null); setImportError(null); }}
                                                 className="w-full text-xs font-bold text-gray-600 file:mr-2 file:rounded-xl file:border-0 file:bg-orange-50 file:px-3 file:py-2 file:text-xs file:font-black file:text-orange-700 dark:text-gray-300 dark:file:bg-orange-900/20 dark:file:text-orange-300"
                                             />
-                                            <button disabled={!pptxFile || isImporting} className="h-9 w-full rounded-xl bg-orange-600 px-4 text-xs font-black text-white disabled:opacity-50">Import Draft Editable</button>
+                                            <button disabled={!pptxFile || isImporting} className="h-9 w-full rounded-xl bg-orange-600 px-4 text-xs font-black text-white disabled:opacity-50">{isImporting ? 'Mengimpor...' : 'Import Draft Editable'}</button>
                                         </form>
                                         <form onSubmit={importPdf} className="space-y-2 border-t border-gray-100 pt-4 dark:border-gray-800">
                                             <div>

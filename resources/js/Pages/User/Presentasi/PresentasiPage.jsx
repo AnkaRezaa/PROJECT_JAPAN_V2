@@ -25,8 +25,8 @@ const backgroundClass = {
 };
 
 const slideDimensions = (slide = {}) => {
-    const sourceWidth = Number(slide.canvas_width);
-    const sourceHeight = Number(slide.canvas_height);
+    const sourceWidth = Number(slide.canvas_width || slide.canvas_json?.width);
+    const sourceHeight = Number(slide.canvas_height || slide.canvas_json?.height);
 
     if (Number.isFinite(sourceWidth) && Number.isFinite(sourceHeight) && sourceWidth > 0 && sourceHeight > 0) {
         return {
@@ -45,21 +45,31 @@ function SlideFrame({ slide, size }) {
     const visualUrl = snapshot || slide.media_url;
     const isEditableMedia = slide.layout === 'media' && slide.media_url;
     const hasCanvasObjects = Boolean(slide.canvas_json?.objects?.length);
+    const isCanvasSlide = hasCanvasObjects || slide.layout === 'canvas';
     const backdrop = backgroundClass[slide.background] || backgroundClass.light;
     const title = slide.title || 'Slide Presentasi';
 
-    if (!visualUrl) {
-        if (hasCanvasObjects) {
-            return (
-                <div style={slideAspectStyle(size)} className={`relative w-full overflow-hidden ${backdrop}`}>
-                    <FabricSlideCanvas value={slide.canvas_json} readonly={true} />
-                </div>
-            );
-        }
-
-        const hasCanvas = slide.layout === 'canvas' && size;
+    if (isCanvasSlide) {
         return (
-            <article style={hasCanvas ? slideAspectStyle(size) : undefined} className={`flex flex-col justify-center px-4 py-5 sm:px-8 sm:py-8 ${hasCanvas ? 'min-h-min' : 'min-h-48 sm:min-h-64'} ${backdrop}`}>
+            <div style={slideAspectStyle(size)} className={`relative w-full overflow-hidden ${backdrop}`}>
+                <FabricSlideCanvas
+                    key={slide.id || slide.order || 'canvas'}
+                    value={slide.canvas_json}
+                    readonly={true}
+                    transparent={slide.layout === 'media'}
+                    underlay={slide.layout === 'media' && slide.media_url ? (
+                        <div className="absolute inset-0">
+                            <EmbedFrame url={slide.media_url} title={title} />
+                        </div>
+                    ) : null}
+                />
+            </div>
+        );
+    }
+
+    if (!visualUrl) {
+        return (
+            <article style={slideAspectStyle(size)} className={`flex flex-col justify-center px-4 py-5 sm:px-8 sm:py-8 min-h-48 sm:min-h-64 ${backdrop}`}>
                 <h3 className="text-xl font-bold leading-snug [overflow-wrap:anywhere] sm:text-3xl">{title}</h3>
                 <p className="mt-3 max-w-prose whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere] sm:text-lg sm:leading-8">{slide.content || 'Konten slide belum tersedia.'}</p>
             </article>
@@ -72,10 +82,10 @@ function SlideFrame({ slide, size }) {
         <figure style={slideAspectStyle(size)} className={`relative w-full overflow-hidden ${isExternalLink ? 'min-h-[220px]' : ''} ${backdrop}`}>
             <div className="absolute inset-0">
                 {snapshot && !isEditableMedia
-                    ? <img src={snapshot} alt={title} className="h-full w-full object-contain" />
+                    ? <img src={snapshot} alt={title} className="h-full w-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     : <EmbedFrame url={mediaUrl} title={title} />}
             </div>
-            {isEditableMedia && snapshot && <img src={snapshot} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-contain" />}
+            {isEditableMedia && snapshot && <img src={snapshot} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
         </figure>
     );
 }
@@ -94,7 +104,9 @@ function SlideCarousel({ deck }) {
         activeSlide?.layout === 'media'
             && (isVideoUrl(activeSlide?.media_url || '') || isEmbeddableUrl(activeSlide?.media_url || '')),
     );
-    const hasVisual = Boolean(activeSlide?.snapshot_url || activeSlide?.jamboard_snapshot || activeSlide?.snapshot_data || activeSlide?.media_url);
+    const hasCanvasObjects = Boolean(activeSlide?.canvas_json?.objects?.length);
+    const isCanvasSlide = hasCanvasObjects || activeSlide?.layout === 'canvas';
+    const hasVisual = Boolean(activeSlide?.snapshot_url || activeSlide?.jamboard_snapshot || activeSlide?.snapshot_data || activeSlide?.media_url || isCanvasSlide);
     const canZoom = Boolean(activeSlide && (
         isImageUrl(activeSlide.media_url || '') ||
         (activeSlide.layout !== 'media' && (activeSlide.snapshot_url || activeSlide.jamboard_snapshot || activeSlide.snapshot_data))
@@ -214,7 +226,7 @@ function SlideCarousel({ deck }) {
                         atMaximum: zoom >= 2.5,
                     } : null}
                 />
-                {!fullscreen.expanded && hasVisual && (
+                {!fullscreen.expanded && hasVisual && !isCanvasSlide && (
                     <div className="border-t border-slate-200 px-3 py-3 dark:border-slate-800 sm:px-5">
                         <h3 className="text-base font-bold [overflow-wrap:anywhere]">{activeSlide.title || 'Slide Presentasi'}</h3>
                         {activeSlide.content && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-700 [overflow-wrap:anywhere] dark:text-slate-300">{activeSlide.content}</p>}
@@ -223,7 +235,8 @@ function SlideCarousel({ deck }) {
                 {!fullscreen.expanded && slides.length > 1 && (
                     <nav aria-label="Daftar slide" className="flex gap-2 overflow-x-auto overscroll-x-contain border-t border-slate-200 p-2 dark:border-slate-800">
                         {slides.map((slide, index) => {
-                            const preview = slide.snapshot_url || slide.jamboard_snapshot || slide.snapshot_data || (isImageUrl(slide.media_url || '') ? slide.media_url : null);
+                            const isSlideCanvas = Boolean(slide.canvas_json?.objects?.length) || slide.layout === 'canvas';
+                            const preview = isSlideCanvas ? null : (slide.snapshot_url || slide.jamboard_snapshot || slide.snapshot_data || (isImageUrl(slide.media_url || '') ? slide.media_url : null));
                             return (
                                 <button
                                     key={slide.id || index}
@@ -233,7 +246,15 @@ function SlideCarousel({ deck }) {
                                     aria-current={activeIndex === index ? 'step' : undefined}
                                     className={`relative grid h-12 w-[76px] shrink-0 place-items-center overflow-hidden rounded-lg border-2 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${activeIndex === index ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:border-emerald-400 dark:bg-emerald-950 dark:text-emerald-200' : 'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}
                                 >
-                                    {preview && <img src={preview} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-contain" />}
+                                    {preview && (
+                                        <img
+                                            src={preview}
+                                            alt=""
+                                            loading="lazy"
+                                            className="absolute inset-0 h-full w-full object-contain"
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        />
+                                    )}
                                     <span className={preview ? 'absolute bottom-0.5 left-0.5 rounded bg-slate-950 px-1 text-xs text-white' : ''}>{index + 1}</span>
                                 </button>
                             );

@@ -370,7 +370,7 @@ class AdminPresentasiController extends Controller
     {
         $this->assertCanEditDeck($request->user(), $presentationDeck);
         $validated = $request->validate([
-            'pptx_file' => ['required', 'file', 'mimes:pptx', 'max:25600'],
+            'pptx_file' => ['required', 'file', 'extensions:pptx', 'max:51200'],
         ]);
 
         $count = $importer->import($presentationDeck, $validated['pptx_file']);
