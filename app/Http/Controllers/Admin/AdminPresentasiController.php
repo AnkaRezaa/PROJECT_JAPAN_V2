@@ -310,6 +310,11 @@ class AdminPresentasiController extends Controller
         }
 
         DB::transaction(function () use ($presentationDeck, $validated, $storage, &$ids) {
+            $hasPdfSlide = collect($validated['slides'])->contains(fn ($s) => ($s['layout'] ?? '') === 'pdf');
+            $newSourceType = $hasPdfSlide
+                ? 'pdf'
+                : ($presentationDeck->source_type === 'pdf' ? 'manual' : ($presentationDeck->source_type ?? 'manual'));
+
             $presentationDeck->update([
                 'status' => $validated['status'],
                 'week_slot' => $validated['week_slot'],
@@ -317,6 +322,7 @@ class AdminPresentasiController extends Controller
                     ? $validated['module_day_id']
                     : null,
                 'sort_order' => $validated['sort_order'],
+                'source_type' => $newSourceType,
             ]);
 
             foreach ($validated['slides'] as $index => $slide) {

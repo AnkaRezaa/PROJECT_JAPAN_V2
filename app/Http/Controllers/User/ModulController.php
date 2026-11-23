@@ -770,6 +770,7 @@ class ModulController extends Controller
                         'week_number' => $deck->module->week_number,
                     ] : null,
                     'slides_count' => $deck->slides_count,
+                    'source_type' => $deck->source_type,
                     'source_file_url' => $deck->finalPdfPath()
                         ? route('presentations.pdf.content', $deck, false)
                         : null,
@@ -788,6 +789,7 @@ class ModulController extends Controller
                             'order' => $slide->order,
                             'jamboard_snapshot' => $slide->jamboard_snapshot,
                             'snapshot_url' => $slide->snapshot_url,
+                            'canvas_json' => $slide->canvas_json,
                             'canvas_width' => $meta['canvas_width'] ?? $meta['width'] ?? $canvas['width'] ?? null,
                             'canvas_height' => $meta['canvas_height'] ?? $meta['height'] ?? $canvas['height'] ?? null,
                         ];

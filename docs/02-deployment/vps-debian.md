@@ -171,6 +171,12 @@ server {
     index index.php;
     client_max_body_size 25m;
 
+    # Pastikan ekstensi modul modern .mjs disajikan dengan MIME type application/javascript
+    include /etc/nginx/mime.types;
+    types {
+        application/javascript mjs;
+    }
+
     location / {
         try_files $uri $uri/ /index.php?$query_string;
     }

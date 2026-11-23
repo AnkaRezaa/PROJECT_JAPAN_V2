@@ -1,12 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePage } from '@inertiajs/react';
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import pdfWorkerVite from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ReaderControls, { useReaderFullscreen } from './ReaderControls';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+if (typeof window !== 'undefined') {
+    // Prioritaskan file worker berekstensi .js statis agar Nginx/Apache selalu mengirimkan
+    // header Content-Type: application/javascript (menghindari penolakan modul .mjs oleh browser).
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
+}
 
 const debug = (...args) => console.log('[PdfCarousel]', ...args);
 const transportKey = new TextEncoder().encode('toku-up-pdf-viewer');

@@ -102,7 +102,7 @@ class AppServiceProvider extends ServiceProvider
                 return redirect()->back(303)->withErrors(['import_file' => $message]);
         };
         RateLimiter::for('admin-imports', static function (Request $request) use ($importLimitResponse): Limit {
-            $limit = Limit::perMinutes(10, 3)->by(($request->user()?->id ?? 'guest').':'.$request->ip());
+            $limit = Limit::perMinute(30)->by(($request->user()?->id ?? 'guest').':'.$request->ip());
 
             return $request->routeIs('admin.quizzes.questions.import', 'admin.quizzes.questions.import.preview')
                 ? $limit->response($importLimitResponse)

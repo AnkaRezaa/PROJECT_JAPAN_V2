@@ -5,6 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PdfCarousel from '@/Components/Features/Presentation/PdfCarousel';
 import EmbedFrame, { isEmbeddableUrl, isImageUrl, isVideoUrl } from '@/Components/Features/Presentation/EmbedFrame';
 import ReaderControls, { useReaderFullscreen } from '@/Components/Features/Presentation/ReaderControls';
+import FabricSlideCanvas from '@/Components/Features/Presentation/FabricSlideCanvas';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
@@ -43,10 +44,19 @@ function SlideFrame({ slide, size }) {
     const snapshot = slide.snapshot_url || slide.snapshot_data || slide.jamboard_snapshot;
     const visualUrl = snapshot || slide.media_url;
     const isEditableMedia = slide.layout === 'media' && slide.media_url;
+    const hasCanvasObjects = Boolean(slide.canvas_json?.objects?.length);
     const backdrop = backgroundClass[slide.background] || backgroundClass.light;
     const title = slide.title || 'Slide Presentasi';
 
     if (!visualUrl) {
+        if (hasCanvasObjects) {
+            return (
+                <div style={slideAspectStyle(size)} className={`relative w-full overflow-hidden ${backdrop}`}>
+                    <FabricSlideCanvas value={slide.canvas_json} readonly={true} />
+                </div>
+            );
+        }
+
         const hasCanvas = slide.layout === 'canvas' && size;
         return (
             <article style={hasCanvas ? slideAspectStyle(size) : undefined} className={`flex flex-col justify-center px-4 py-5 sm:px-8 sm:py-8 ${hasCanvas ? 'min-h-min' : 'min-h-48 sm:min-h-64'} ${backdrop}`}>
@@ -301,7 +311,7 @@ export default function PresentasiPage({ program = {}, decks = [], modules = [],
                                     {moduleLabel && <p className="mb-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300">{moduleLabel}</p>}
                                     <h2 className="text-lg font-bold leading-snug [overflow-wrap:anywhere] sm:text-xl">{selectedDeck.title}</h2>
                                 </header>
-                                {selectedDeck.source_file_url
+                                {selectedDeck.source_file_url && (selectedDeck.source_type === 'pdf' || !selectedDeck.source_type)
                                     ? <PdfCarousel key={selectedDeck.id} url={selectedDeck.source_file_url} title={selectedDeck.title} studentReader />
                                     : <SlideCarousel key={selectedDeck.id} deck={selectedDeck} />}
                                 {selectedDeck.description && (

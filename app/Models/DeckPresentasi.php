@@ -99,7 +99,11 @@ class DeckPresentasi extends Model
 
     public function finalPdfPath(): ?string
     {
-        if ($this->source_type === 'pdf' && filled($this->source_file_path)) {
+        if ($this->source_type !== 'pdf') {
+            return null;
+        }
+
+        if (filled($this->source_file_path)) {
             return $this->source_file_path;
         }
 
