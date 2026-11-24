@@ -9,6 +9,7 @@ use App\Models\Modul;
 use App\Models\Pengguna;
 use App\Models\SlidePresentasi;
 use App\Services\AksesPremiumService;
+use App\Services\ImportPresentasiCanvaService;
 use App\Services\ImportPresentasiGambarService;
 use App\Services\ImportPresentasiPdfService;
 use App\Services\ImportPresentasiPptxService;
@@ -376,6 +377,40 @@ class AdminPresentasiController extends Controller
         $count = $importer->import($presentationDeck, $validated['pptx_file']);
 
         return redirect()->back()->with('success', "{$count} slide draft berhasil diimport dari PPTX. Ini bukan convert PDF otomatis; cek ulang layout sebelum publish.");
+    }
+
+    public function importCanva(Request $request, DeckPresentasi $presentationDeck, ImportPresentasiCanvaService $importer)
+    {
+        $this->assertCanEditDeck($request->user(), $presentationDeck);
+        $validated = $request->validate([
+            'canva_url' => ['required', 'string', 'max:1000'],
+            'title' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $slide = $importer->import($presentationDeck, $validated['canva_url'], $validated['title'] ?? null);
+
+        $authorInfo = filled($slide->source_meta['author_name'] ?? null)
+            ? " oleh {$slide->source_meta['author_name']}"
+            : '';
+
+        return redirect()->back()->with('success', "Presentasi Canva '{$slide->title}'{$authorInfo} berhasil dibaca dan ditambahkan ke deck.");
+    }
+
+    public function resolveCanva(Request $request, ImportPresentasiCanvaService $importer)
+    {
+        $validated = $request->validate([
+            'url' => ['required', 'string', 'max:1000'],
+        ]);
+
+        try {
+            $data = $importer->resolveCanvaUrl($validated['url']);
+            return response()->json($data);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     public function importImages(Request $request, DeckPresentasi $presentationDeck, ImportPresentasiGambarService $importer)

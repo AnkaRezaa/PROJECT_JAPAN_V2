@@ -63,14 +63,16 @@ class BroadcastPopup extends Model
             return null;
         }
 
-        if (str_starts_with($this->image_path, 'http://') || str_starts_with($this->image_path, 'https://')) {
-            return $this->image_path;
+        $normalized = ProgramPembelajaran::normalizeThumbnailUrl($this->image_path) ?? $this->image_path;
+
+        if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
+            return $normalized;
         }
 
-        if (str_starts_with($this->image_path, '/')) {
-            return $this->image_path;
+        if (str_starts_with($normalized, '/')) {
+            return $normalized;
         }
 
-        return Storage::url($this->image_path);
+        return '/storage/'.ltrim($normalized, '/');
     }
 }

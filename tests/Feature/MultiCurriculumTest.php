@@ -121,8 +121,45 @@ it('stores an uploaded class thumbnail on the public disk', function () {
     ])->assertSessionHasNoErrors();
 
     $program = ProgramPembelajaran::where('title', 'Kelas dengan Thumbnail')->firstOrFail();
+    expect($program->thumbnail_url)
+        ->toStartWith('/storage/kelas-thumbnails/')
+        ->not->toContain('localhost');
+
     $thumbnailPath = ltrim(str_replace('/storage/', '', $program->thumbnail_url), '/');
 
     expect($thumbnailPath)->toStartWith('kelas-thumbnails/');
     Storage::disk('public')->assertExists($thumbnailPath);
+});
+
+it('normalizes legacy localhost storage thumbnail URLs and popup storage URLs', function () {
+    $track = CurriculumTrack::create([
+        'code' => 'legacy-thumb-test',
+        'name' => 'Legacy Thumb Test',
+        'status' => 'active',
+        'sort_order' => 2,
+    ]);
+
+    $program = ProgramPembelajaran::create([
+        'curriculum_track_id' => $track->id,
+        'learning_type' => 'mandiri',
+        'title' => 'JLPT N3',
+        'slug' => 'jlpt-n3-test',
+        'status' => 'published',
+        'sort_order' => 1,
+    ]);
+
+    \Illuminate\Support\Facades\DB::table('program_pembelajaran')
+        ->where('id', $program->id)
+        ->update([
+            'thumbnail_url' => 'http://localhost/storage/kelas-thumbnails/CzXOLPv5UEln4PmR0Meyiqh5kJrBOjQHoZZmrlCx.jpg',
+        ]);
+
+    $freshProgram = ProgramPembelajaran::findOrFail($program->id);
+    expect($freshProgram->thumbnail_url)
+        ->toBe('/storage/kelas-thumbnails/CzXOLPv5UEln4PmR0Meyiqh5kJrBOjQHoZZmrlCx.jpg');
+
+    $popup = new \App\Models\BroadcastPopup([
+        'image_path' => 'uploads/popups/banner.jpg',
+    ]);
+    expect($popup->imageUrl())->toBe('/storage/uploads/popups/banner.jpg');
 });

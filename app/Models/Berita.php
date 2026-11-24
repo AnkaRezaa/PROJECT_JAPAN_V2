@@ -91,7 +91,10 @@ class Berita extends Model
             return null;
         }
 
-        $src = html_entity_decode($matches[1]);
+        $src = ProgramPembelajaran::normalizeThumbnailUrl(html_entity_decode($matches[1])) ?? '';
+        if ($src === '') {
+            return null;
+        }
 
         if (str_starts_with($src, 'http://') || str_starts_with($src, 'https://')) {
             return $src;

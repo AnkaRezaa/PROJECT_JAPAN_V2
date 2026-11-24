@@ -309,6 +309,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/presentations/{presentationDeck}/builder', [AdminPresentasiController::class, 'builder'])->name('presentations.builder');
         Route::post('/presentations/{presentationDeck}/builder', [AdminPresentasiController::class, 'updateSlides'])->middleware('throttle:admin-builder')->name('presentations.builder.update');
         Route::post('/presentations/{presentationDeck}/import/pptx', [AdminPresentasiController::class, 'importPptx'])->middleware('throttle:admin-imports')->name('presentations.import.pptx');
+        Route::post('/presentations/{presentationDeck}/import/canva', [AdminPresentasiController::class, 'importCanva'])->middleware('throttle:admin-imports')->name('presentations.import.canva');
+        Route::post('/presentations/resolve-canva', [AdminPresentasiController::class, 'resolveCanva'])->middleware('throttle:admin-imports')->name('presentations.resolve.canva');
         Route::post('/presentations/{presentationDeck}/import/pdf', [AdminPresentasiController::class, 'importPdf'])->middleware('throttle:admin-imports')->name('presentations.import.pdf');
         Route::post('/presentations/{presentationDeck}/import/images', [AdminPresentasiController::class, 'importImages'])->middleware('throttle:admin-imports')->name('presentations.import.images');
         Route::post('/presentations/{presentationDeck}/background-image', [AdminPresentasiController::class, 'uploadBackgroundImage'])->middleware('throttle:admin-uploads')->name('presentations.background.upload');

@@ -120,7 +120,7 @@ function SlideCarousel({ deck }) {
     useEffect(() => {
         if (!isPlaying) return undefined;
 
-        if (slides.length <= 1 || isInteractiveMediaSlide) {
+        if (slides.length <= 1) {
             setIsPlaying(false);
             return undefined;
         }
@@ -141,7 +141,7 @@ function SlideCarousel({ deck }) {
         }, 5000);
 
         return () => window.clearTimeout(timer);
-    }, [activeIndex, isInteractiveMediaSlide, isPlaying, slides.length]);
+    }, [activeIndex, isPlaying, slides.length]);
 
     if (!activeSlide) {
         return (
@@ -215,7 +215,7 @@ function SlideCarousel({ deck }) {
                     onNext={next}
                     playing={isPlaying}
                     onTogglePlay={togglePlay}
-                    canPlay={!isInteractiveMediaSlide}
+                    canPlay={slides.length > 1}
                     fullscreen={fullscreen}
                     zoom={canZoom ? {
                         out: () => changeZoom(Math.max(1, zoom - 0.25)),
@@ -256,6 +256,9 @@ function SlideCarousel({ deck }) {
                                         />
                                     )}
                                     <span className={preview ? 'absolute bottom-0.5 left-0.5 rounded bg-slate-950 px-1 text-xs text-white' : ''}>{index + 1}</span>
+                                    {slide.source_type === 'canva' && (
+                                        <span className="absolute right-0.5 top-0.5 rounded bg-purple-600 px-1 text-[8px] font-black uppercase tracking-wider text-white">Canva</span>
+                                    )}
                                 </button>
                             );
                         })}

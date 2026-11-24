@@ -90,12 +90,16 @@ export default function PresentationStage({ slide, contained = false, className 
                 )}
 
                 {slide.layout === 'media' && (
-                    <div className="my-auto min-h-0">
-                        <h1 className={`${contained ? 'mb-4 text-3xl sm:text-5xl' : 'mb-8 text-6xl'} font-black`}>{slide.title || 'Media'}</h1>
+                    <div className="my-auto min-h-0 w-full">
+                        {slide.title && slide.title !== 'Media' && (
+                            <h1 className={`${contained ? 'mb-3 text-2xl sm:text-3xl' : 'mb-4 text-4xl sm:text-5xl'} font-black truncate`}>{slide.title}</h1>
+                        )}
                         {slide.media_url ? (
-                            <div className={`${contained ? 'h-[55vh] max-h-[70%]' : 'h-[62vh]'} relative overflow-hidden rounded-2xl bg-gray-950 shadow-2xl`}>
+                            <div className={`${contained ? 'h-[55vh] max-h-[70%]' : 'h-[78vh]'} relative overflow-hidden rounded-2xl bg-gray-950 shadow-2xl`}>
                                 <EmbedFrame url={slide.media_url} title={slide.title || 'Media'} />
-                                {(slide.snapshot_url || slide.snapshot_data) && <img src={slide.snapshot_url || slide.snapshot_data} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-contain" />}
+                                {!slide.media_url.includes('canva') && (slide.snapshot_url || slide.snapshot_data) && (
+                                    <img src={slide.snapshot_url || slide.snapshot_data} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-contain" />
+                                )}
                             </div>
                         ) : (
                             <div className={`${contained ? 'h-[45vh]' : 'h-[55vh]'} grid place-items-center rounded-2xl border-4 border-dashed border-gray-300 text-2xl font-black opacity-40`}>Media URL</div>

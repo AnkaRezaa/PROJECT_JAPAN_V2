@@ -453,7 +453,9 @@ class AdminModulController extends Controller
 
         if ($request->hasFile('thumbnail_file')) {
             $thumbnailPath = $request->file('thumbnail_file')->store('kelas-thumbnails', 'public');
-            $validated['thumbnail_url'] = Storage::disk('public')->url($thumbnailPath);
+            $validated['thumbnail_url'] = '/storage/'.ltrim($thumbnailPath, '/');
+        } elseif (array_key_exists('thumbnail_url', $validated)) {
+            $validated['thumbnail_url'] = ProgramPembelajaran::normalizeThumbnailUrl($validated['thumbnail_url']);
         }
 
         unset($validated['thumbnail_file']);

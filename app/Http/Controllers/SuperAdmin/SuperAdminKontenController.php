@@ -217,7 +217,7 @@ class SuperAdminKontenController extends SuperAdminDasarController
         $path = $validated['image']->store('uploads/news/editor', 'public');
 
         return response()->json([
-            'url' => asset("storage/{$path}"),
+            'url' => '/storage/'.ltrim($path, '/'),
         ]);
     }
 

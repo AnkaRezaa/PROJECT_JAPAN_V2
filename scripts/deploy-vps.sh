@@ -45,6 +45,9 @@ php artisan down --retry=30
 maintenance=1
 git merge --ff-only "$revision"
 composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
+if grep -Eq '^APP_URL=https?://(localhost|127\.0\.0\.1)([:/]|$)' .env; then
+    printf 'Warning: .env APP_URL still points to localhost; set APP_URL=https://tokuup.com in %s/.env so CLI and queue URLs use the production domain.\n' "$app" >&2
+fi
 php artisan optimize
 mv -f -- "$manifest" public/build/manifest.json
 php artisan queue:restart

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,6 +28,32 @@ class ProgramPembelajaran extends Model
         'status',
         'sort_order',
     ];
+
+    protected function thumbnailUrl(): Attribute
+    {
+        return Attribute::make(
+            get: static fn (?string $value): ?string => self::normalizeThumbnailUrl($value),
+            set: static fn (?string $value): ?string => self::normalizeThumbnailUrl($value),
+        );
+    }
+
+    public static function normalizeThumbnailUrl(?string $url): ?string
+    {
+        if ($url === null) {
+            return null;
+        }
+
+        $trimmed = trim($url);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if (preg_match('#^https?://(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(/storage/.*)$#i', $trimmed, $matches)) {
+            return $matches[1];
+        }
+
+        return $trimmed;
+    }
 
     public function liveClassSessions(): HasMany
     {

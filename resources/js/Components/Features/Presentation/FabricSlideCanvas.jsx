@@ -10,6 +10,7 @@ import RedoIcon from '@mui/icons-material/Redo';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import CleaningServicesOutlinedIcon from '@mui/icons-material/CleaningServicesOutlined';
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
+import TouchAppOutlinedIcon from '@mui/icons-material/TouchAppOutlined';
 
 const CANVAS_WIDTH = 1280;
 const CANVAS_HEIGHT = 720;
@@ -122,7 +123,13 @@ export default function FabricSlideCanvas({
     const historyRef = useRef([]);
     const historyIndexRef = useRef(-1);
     const contextTargetRef = useRef(null);
-    const [mode, setMode] = useState('select');
+    const [mode, setMode] = useState(underlay ? 'interact' : 'select');
+
+    useEffect(() => {
+        if (underlay && (!value?.objects || value.objects.length === 0)) {
+            setMode('interact');
+        }
+    }, [underlay]);
     const [selectedType, setSelectedType] = useState('');
     const [drawColor, setDrawColor] = useState('#22C55E');
     const [drawSize, setDrawSize] = useState(5);
@@ -227,6 +234,18 @@ export default function FabricSlideCanvas({
     useEffect(() => {
         const canvas = fabricRef.current;
         if (!canvas) return;
+
+        if (mode === 'interact') {
+            canvas.isDrawingMode = false;
+            canvas.selection = false;
+            canvas.discardActiveObject();
+            canvas.getObjects().forEach((object) => {
+                object.selectable = false;
+                object.evented = false;
+            });
+            canvas.renderAll();
+            return;
+        }
 
         canvas.isDrawingMode = mode === 'draw' && !readonly;
         canvas.selection = mode === 'select' && !readonly;
@@ -613,6 +632,19 @@ export default function FabricSlideCanvas({
             {!readonly && (
                 <div className="space-y-2 rounded-2xl border border-gray-200 bg-white p-2.5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <div className="flex flex-wrap items-center gap-2">
+                        {underlay && (
+                            <ToolButton
+                                label="Mode Interaksi (klik tombol slide Canva / player langsung)"
+                                active={mode === 'interact'}
+                                onClick={() => {
+                                    setMode('interact');
+                                    fabricRef.current?.discardActiveObject();
+                                    fabricRef.current?.requestRenderAll();
+                                }}
+                            >
+                                <TouchAppOutlinedIcon fontSize="small" />
+                            </ToolButton>
+                        )}
                         <ToolButton label="Pilih dan edit" active={mode === 'select'} onClick={() => setMode('select')}><PanToolAltOutlinedIcon fontSize="small" /></ToolButton>
                         <ToolButton label="Pena Jamboard" active={mode === 'draw'} onClick={() => setMode('draw')}><DrawOutlinedIcon fontSize="small" /></ToolButton>
                         <ToolButton label="Tambah teks" onClick={addText}><TextFieldsIcon fontSize="small" /></ToolButton>
@@ -699,8 +731,8 @@ export default function FabricSlideCanvas({
                 className="relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800"
                 style={{ aspectRatio: `${size.width} / ${size.height}` }}
             >
-                {underlay && <div className="absolute inset-0 z-0">{underlay}</div>}
-                <div className={`absolute inset-0 z-10 ${transparent ? 'bg-transparent' : ''}`}>
+                {underlay && <div className="absolute inset-0 z-0 pointer-events-auto">{underlay}</div>}
+                <div className={`absolute inset-0 z-10 ${transparent ? 'bg-transparent' : ''} ${mode === 'interact' ? 'pointer-events-none [&_*]:pointer-events-none' : 'pointer-events-auto'}`}>
                     <canvas ref={canvasElementRef} />
                 </div>
                 {contextMenu && (

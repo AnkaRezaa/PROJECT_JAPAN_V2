@@ -577,6 +577,9 @@ export default function BuilderPresentasi({
     const [pptxFile, setPptxFile] = useState(null);
     const [pdfFile, setPdfFile] = useState(null);
     const [imageFiles, setImageFiles] = useState([]);
+    const [canvaUrl, setCanvaUrl] = useState('');
+    const [canvaError, setCanvaError] = useState(null);
+    const [isImportingCanva, setIsImportingCanva] = useState(false);
     const [embedUrl, setEmbedUrl] = useState('');
     const [embedTitle, setEmbedTitle] = useState('');
     const [mediaMode, setMediaMode] = useState('link');
@@ -1030,10 +1033,60 @@ export default function BuilderPresentasi({
         });
     };
 
+    const importCanva = (event) => {
+        event.preventDefault();
+        const url = canvaUrl.trim();
+        if (!url) return;
+
+        setCanvaError(null);
+        setIsImportingCanva(true);
+        router.post(route('admin.presentations.import.canva', deck.id), {
+            canva_url: url,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowImportMenu(false);
+                setCanvaUrl('');
+                setCanvaError(null);
+            },
+            onError: (err) => {
+                setCanvaError(err.canva_url || 'Gagal membaca URL share Canva. Pastikan URL share bersifat publik.');
+            },
+            onFinish: () => setIsImportingCanva(false),
+        });
+    };
+
     const importEmbedLink = (event) => {
         event.preventDefault();
         const url = embedUrl.trim();
         if (!url) return;
+
+        // Jika URL merupakan link Canva (termasuk canva.link shortlink), otomatis route ke import Canva interaktif
+        if (/canva\.(com|link|me|site)/i.test(url)) {
+            setCanvaUrl(url);
+            setShowImportMenu(false);
+            setEmbedUrl('');
+            setEmbedTitle('');
+            setIsImportingCanva(true);
+            router.post(route('admin.presentations.import.canva', deck.id), {
+                canva_url: url,
+                title: embedTitle.trim() || undefined,
+            }, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsImportingCanva(false);
+                    setCanvaUrl('');
+                    setCanvaError(null);
+                },
+                onError: (err) => {
+                    setIsImportingCanva(false);
+                    setCanvaError(err.canva_url || 'Gagal membaca URL share Canva. Pastikan URL share bersifat publik.');
+                    setShowImportMenu(true);
+                },
+                onFinish: () => setIsImportingCanva(false),
+            });
+            return;
+        }
 
         const nextSlide = {
             ...emptySlide,
@@ -1120,7 +1173,7 @@ export default function BuilderPresentasi({
     };
 
     return (
-        <AuthenticatedLayout>
+        <AuthenticatedLayout feedbackInline={true}>
             <Head title={`Presentasi Minggu ${moduleContext.week_number || '-'} - ${moduleContext.title || 'Builder'}`} />
 
             <div className="min-h-screen bg-surface-muted">
@@ -1268,10 +1321,32 @@ export default function BuilderPresentasi({
                                             />
                                             <button disabled={!imageFiles.length || isImporting} className="h-9 w-full rounded-xl bg-blue-600 px-4 text-xs font-black text-white disabled:opacity-50">Import Gambar</button>
                                         </form>
-                                        <form onSubmit={importEmbedLink} className="space-y-2 border-t border-gray-100 pt-4 dark:border-gray-800">
+                                        <form onSubmit={importCanva} className="space-y-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="rounded-md bg-purple-600 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">Canva</span>
+                                                <p className="text-xs font-black uppercase tracking-[0.16em] text-purple-700 dark:text-purple-300">URL Share Canva</p>
+                                            </div>
+                                            <p className="text-xs font-bold text-gray-500">Membaca judul & player presentasi interaktif Canva otomatis dari link share publik.</p>
+                                             {canvaError && (
+                                                <p className="rounded-xl bg-red-50 p-2 text-xs font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                                                    {canvaError}
+                                                </p>
+                                            )}
+                                            <input
+                                                type="url"
+                                                value={canvaUrl}
+                                                onChange={(event) => { setCanvaUrl(event.target.value); setCanvaError(null); }}
+                                                placeholder="https://canva.link/... atau https://www.canva.com/design/..."
+                                                className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-700 dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                                            />
+                                            <button disabled={!canvaUrl.trim() || isImportingCanva} className="h-9 w-full rounded-xl bg-purple-600 px-4 text-xs font-black text-white hover:bg-purple-700 disabled:opacity-50">
+                                                {isImportingCanva ? 'Membaca Canva...' : 'Baca & Tambah dari Canva'}
+                                            </button>
+                                        </form>
+                                        <form onSubmit={importEmbedLink} className="space-y-2 border-t border-gray-100 pt-3 dark:border-gray-800">
                                             <div>
-                                                <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-600">Link Canva / Google Drive / PPT Online</p>
-                                                <p className="text-xs font-bold text-gray-500">Tidak masuk storage. Gunakan link public/embed agar tampil ke user.</p>
+                                                <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-600 dark:text-gray-400">Link Eksternal Lainnya</p>
+                                                <p className="text-xs font-bold text-gray-500">Google Drive, YouTube, atau web embed publik lainnya.</p>
                                             </div>
                                             <input
                                                 value={embedTitle}
@@ -1282,10 +1357,10 @@ export default function BuilderPresentasi({
                                             <input
                                                 value={embedUrl}
                                                 onChange={(event) => setEmbedUrl(event.target.value)}
-                                                placeholder="https://drive.google.com/drive/folders/... atau https://www.canva.com/design/..."
+                                                placeholder="https://drive.google.com/drive/folders/... atau https://youtube.com/..."
                                                 className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-700 dark:border-gray-700 dark:bg-gray-950 dark:text-white"
                                             />
-                                            <button disabled={!embedUrl.trim()} className="h-9 w-full rounded-xl bg-violet-600 px-4 text-xs font-black text-white disabled:opacity-50">Tambah Link ke Slide</button>
+                                            <button disabled={!embedUrl.trim()} className="h-9 w-full rounded-xl bg-gray-800 px-4 text-xs font-black text-white hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-50">Tambah Link Eksternal</button>
                                         </form>
                                     </div>
                                 )}
@@ -1414,9 +1489,9 @@ export default function BuilderPresentasi({
                     </div>
                 )}
 
-                <main className="grid min-w-0 grid-cols-1 gap-3 overflow-x-hidden p-3 lg:grid-cols-[220px_minmax(0,1fr)_300px] lg:p-4">
+                <main className="grid min-w-0 grid-cols-1 gap-4 overflow-x-hidden p-3 lg:grid-cols-[230px_minmax(0,1fr)] lg:p-4">
                     <aside className="min-w-0 space-y-3 lg:sticky lg:top-[68px] lg:self-start">
-                        <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
+                        <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                             <div className="mb-2 flex items-center justify-between gap-2">
                                 <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-gray-500">Slides</h2>
                                 <div className="flex items-center gap-2">
@@ -1428,14 +1503,19 @@ export default function BuilderPresentasi({
                                 {slides.map((slide, index) => (
                                     <button key={slide._clientKey} onClick={() => setActiveIndex(index)} className={`w-full rounded-xl border p-1.5 text-left transition ${activeIndex === index ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/20' : 'border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-gray-800 dark:bg-gray-950'}`}>
                                         <SlidePreview slide={slide} small />
-                                        <p className="mt-1 truncate px-1 text-[11px] font-black text-gray-700 dark:text-gray-200">{index + 1}. {slide.title || 'Untitled'}</p>
+                                        <div className="mt-1 flex items-center justify-between gap-1 px-1">
+                                            <p className="truncate text-[11px] font-black text-gray-700 dark:text-gray-200">{index + 1}. {slide.title || 'Untitled'}</p>
+                                            {slide.source_type === 'canva' && (
+                                                <span className="shrink-0 rounded bg-purple-600 px-1 py-0.5 text-[8px] font-black uppercase tracking-wider text-white">Canva</span>
+                                            )}
+                                        </div>
                                     </button>
                                 ))}
                             </div>
                         </div>
                     </aside>
 
-                    <section className="min-w-0 space-y-3">
+                    <section className="min-w-0 space-y-4 pb-16">
                         {activeSlide ? (
                             <>
                                 {activeSlide.layout !== 'pdf' ? (
@@ -1445,7 +1525,7 @@ export default function BuilderPresentasi({
                                         onUploadBackground={uploadBackgroundImage}
                                         transparent={activeSlide.layout === 'media'}
                                         underlay={activeSlide.layout === 'media' ? (
-                                            <div className="h-full w-full bg-gray-950">
+                                            <div className="h-full w-full bg-gray-950 pointer-events-auto">
                                                 <EmbedFrame url={activeSlide.media_url} title={activeSlide.title || 'Media'} />
                                             </div>
                                         ) : null}
@@ -1458,12 +1538,326 @@ export default function BuilderPresentasi({
                                 ) : (
                                     <PdfCarousel url={activeSlide.media_url || deck.source_file_url} title={activeSlide.title || deck.title} />
                                 )}
-                                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                                    <button onClick={() => moveSlide(-1)} className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-black text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Naik</button>
-                                    <button onClick={() => moveSlide(1)} className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-black text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Turun</button>
-                                    <button onClick={duplicateSlide} className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-black text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Duplicate</button>
-                                    <button onClick={removeSlide} className="rounded-lg border border-red-100 bg-white px-3 py-1.5 text-[11px] font-black text-red-600 dark:border-red-900/40 dark:bg-gray-900">Hapus</button>
+
+                                {/* Bar Tombol Aksi & Toggle Panel */}
+                                <div className="flex flex-wrap items-center gap-2.5 rounded-2xl border border-gray-200 bg-white p-2.5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => moveSlide(-1)}
+                                            disabled={activeIndex <= 0}
+                                            className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-700 transition hover:bg-gray-100 disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                                        >
+                                            ↑ Naik
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => moveSlide(1)}
+                                            disabled={activeIndex >= slides.length - 1}
+                                            className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-700 transition hover:bg-gray-100 disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                                        >
+                                            ↓ Turun
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={duplicateSlide}
+                                            className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                                        >
+                                            ⧉ Duplicate
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={removeSlide}
+                                            className="rounded-xl border border-red-100 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-900/40"
+                                        >
+                                            ✕ Hapus
+                                        </button>
+                                    </div>
+                                    <span className="hidden h-5 w-px bg-gray-200 sm:inline-block dark:bg-gray-700" />
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowTemplatePanel((v) => !v)}
+                                            className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-black transition ${
+                                                showTemplatePanel
+                                                    ? 'border-orange-500 bg-orange-50 text-orange-700 dark:border-orange-500 dark:bg-orange-950/40 dark:text-orange-300'
+                                                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200'
+                                            }`}
+                                        >
+                                            <span>+ Template Slide</span>
+                                            <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-black text-orange-700 dark:bg-orange-900/50 dark:text-orange-300">
+                                                {templates.length}
+                                            </span>
+                                        </button>
+                                        {activeSlide && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowEditPanel((v) => !v)}
+                                                className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-black transition ${
+                                                    showEditPanel
+                                                        ? 'border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-950/40 dark:text-brand-300'
+                                                        : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200'
+                                                }`}
+                                            >
+                                                <span>✏️ Edit Slide</span>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
+
+                                {/* Panel Template Slide Horizontal & Responsif */}
+                                {showTemplatePanel && (
+                                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <div>
+                                                <h3 className="text-xs font-black uppercase tracking-[0.18em] text-gray-700 dark:text-gray-200">
+                                                    Pilih Template Slide
+                                                </h3>
+                                                <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                                                    Klik template untuk menambahkan halaman slide baru ke presentasi
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowTemplatePanel(false)}
+                                                className="rounded-lg p-1 text-xs font-bold text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                                            >
+                                                Tutup ✕
+                                            </button>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 md:grid-cols-7">
+                                            {templates.map((template) => (
+                                                <button
+                                                    key={template.label}
+                                                    type="button"
+                                                    onClick={() => addSlide(template)}
+                                                    className="group flex flex-col rounded-xl border border-gray-200 bg-gray-50 p-2 text-left transition hover:-translate-y-0.5 hover:border-orange-400 hover:bg-orange-50 hover:shadow-md dark:border-gray-800 dark:bg-gray-950 dark:hover:border-orange-500 dark:hover:bg-orange-950/30"
+                                                >
+                                                    <div className="aspect-video w-full overflow-hidden rounded-lg bg-white shadow-xs dark:bg-gray-900">
+                                                        <SlidePreview slide={{ ...emptySlide, ...template }} small />
+                                                    </div>
+                                                    <div className="mt-2 flex items-center justify-between">
+                                                        <span className="truncate text-xs font-black text-gray-800 group-hover:text-orange-600 dark:text-gray-200 dark:group-hover:text-orange-400">
+                                                            {template.label}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-gray-400 group-hover:text-orange-500">
+                                                            +
+                                                        </span>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Panel Edit Slide Horizontal & Responsif */}
+                                {activeSlide && showEditPanel && (
+                                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                                        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3 dark:border-gray-800">
+                                            <div className="flex items-center gap-2">
+                                                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-500 text-xs font-black text-white">
+                                                    {activeIndex + 1}
+                                                </span>
+                                                <h3 className="text-xs font-black uppercase tracking-[0.16em] text-gray-700 dark:text-gray-200">
+                                                    Edit Slide: <span className="text-orange-600 dark:text-orange-400">{activeSlide.title || 'Untitled'}</span>
+                                                </h3>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {activeSlide.source_type === 'canva' && (
+                                                    <span className="flex items-center gap-1 rounded-md bg-purple-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
+                                                        Canva Interaktif
+                                                    </span>
+                                                )}
+                                                <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                                    Layout: {activeSlide.layout}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowEditPanel(false)}
+                                                    className="rounded-lg p-1 text-xs font-bold text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                                                >
+                                                    Tutup ✕
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                                            {/* Kolom 1: Informasi Dasar & Tampilan */}
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-gray-500">
+                                                        Judul Slide
+                                                    </label>
+                                                    <input
+                                                        value={activeSlide.title || ''}
+                                                        onChange={(event) => updateSlide('title', event.target.value)}
+                                                        placeholder="Judul slide"
+                                                        className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3 text-xs font-bold transition focus:border-orange-500 focus:bg-white focus:ring-1 focus:ring-orange-500 dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-gray-500">
+                                                        Layout Slide
+                                                    </label>
+                                                    <select
+                                                        value={activeSlide.layout}
+                                                        onChange={(event) => changeSlideLayout(event.target.value)}
+                                                        className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3 text-xs font-bold transition focus:border-orange-500 focus:bg-white dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                                                    >
+                                                        <option value="title">Title (Sampul)</option>
+                                                        <option value="content">Content (Materi)</option>
+                                                        <option value="vocabulary">Vocabulary (Kosakata)</option>
+                                                        <option value="kanji">Kanji</option>
+                                                        <option value="media">Media (Canva / Embed / Video)</option>
+                                                        <option value="question">Question (Pertanyaan)</option>
+                                                        <option value="board">Jamboard (Papan Tulis)</option>
+                                                        <option value="canvas">Canvas Bebas</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-gray-500">
+                                                        Tema Background & Aksen
+                                                    </label>
+                                                    <div className="grid grid-cols-[1fr_52px] gap-2">
+                                                        <select
+                                                            value={activeSlide.background}
+                                                            onChange={(event) => updateSlide('background', event.target.value)}
+                                                            className="h-10 rounded-xl border border-gray-200 bg-gray-50/50 px-3 text-xs font-bold dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                                                        >
+                                                            {backgroundOptions.map(([value, label]) => (
+                                                                <option key={value} value={value}>{label}</option>
+                                                            ))}
+                                                        </select>
+                                                        <input
+                                                            type="color"
+                                                            value={activeSlide.accent_color || '#22C55E'}
+                                                            onChange={(event) => updateSlide('accent_color', event.target.value)}
+                                                            title="Warna aksen"
+                                                            className="h-10 w-full cursor-pointer rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-950"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Kolom 2: Konten Slide / Media */}
+                                            <div className="space-y-3">
+                                                {activeSlide.layout === 'media' ? (
+                                                    <div className="space-y-2.5 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-950">
+                                                        <div className="flex items-center justify-between">
+                                                            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500">
+                                                                Pengaturan Media
+                                                            </label>
+                                                            <div className="grid grid-cols-2 rounded-lg bg-gray-200 p-0.5 dark:bg-gray-800">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setMediaMode('link')}
+                                                                    className={`rounded-md px-2 py-1 text-[10px] font-black transition ${
+                                                                        mediaMode === 'link'
+                                                                            ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+                                                                            : 'text-gray-500 dark:text-gray-400'
+                                                                    }`}
+                                                                >
+                                                                    Link Media
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setMediaMode('upload')}
+                                                                    className={`rounded-md px-2 py-1 text-[10px] font-black transition ${
+                                                                        mediaMode === 'upload'
+                                                                            ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+                                                                            : 'text-gray-500 dark:text-gray-400'
+                                                                    }`}
+                                                                >
+                                                                    Upload MP4
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {mediaMode === 'link' ? (
+                                                            <div className="space-y-1.5">
+                                                                <input
+                                                                    value={activeSlide.media_url || ''}
+                                                                    onChange={(event) => updateSlide('media_url', event.target.value)}
+                                                                    placeholder="Tempel link Canva, YouTube, Google Drive..."
+                                                                    className="h-9 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                                />
+                                                                <p className="text-[10px] font-medium text-gray-400">
+                                                                    Mendukung Canva share link, YouTube, dan Google Drive.
+                                                                </p>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-1.5">
+                                                                <input
+                                                                    type="file"
+                                                                    accept="video/mp4,.mp4"
+                                                                    onChange={(event) => setMediaFile(event.target.files?.[0] || null)}
+                                                                    className="w-full text-xs text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-orange-50 file:px-2.5 file:py-1.5 file:text-xs file:font-black file:text-orange-700"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={uploadMedia}
+                                                                    disabled={!mediaFile || isMediaUploading}
+                                                                    className="h-8 w-full rounded-xl bg-orange-600 px-3 text-xs font-black text-white hover:bg-orange-700 disabled:opacity-40"
+                                                                >
+                                                                    {isMediaUploading ? 'Mengupload...' : 'Upload Video MP4 (maks. 50 MB)'}
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                        <textarea
+                                                            value={activeSlide.content || ''}
+                                                            onChange={(event) => updateSlide('content', event.target.value)}
+                                                            placeholder="Deskripsi atau caption media (opsional)..."
+                                                            rows={2}
+                                                            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-gray-500">
+                                                            Konten Materi / Poin Slide
+                                                        </label>
+                                                        <textarea
+                                                            value={activeSlide.content || ''}
+                                                            onChange={(event) => updateSlide('content', event.target.value)}
+                                                            placeholder="Tulis poin materi (1 baris per poin untuk layout Content, atau arti & reading untuk Vocabulary/Kanji)..."
+                                                            className="min-h-[148px] w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3 text-xs font-medium leading-relaxed transition focus:border-orange-500 focus:bg-white dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Kolom 3: Catatan Presenter (Speaker Notes) & Info */}
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-gray-500">
+                                                        Catatan Sensei (Presenter Notes)
+                                                    </label>
+                                                    <textarea
+                                                        value={activeSlide.speaker_notes || ''}
+                                                        onChange={(event) => updateSlide('speaker_notes', event.target.value)}
+                                                        placeholder="Catatan panduan mengajar, hanya muncul di mode presenter..."
+                                                        className="min-h-[105px] w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3 text-xs font-medium leading-relaxed transition focus:border-orange-500 focus:bg-white dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                                                    />
+                                                </div>
+                                                {activeSlide.source_type === 'canva' && (
+                                                    <div className="rounded-xl border border-purple-200 bg-purple-50 p-2.5 text-xs text-purple-900 dark:border-purple-900/40 dark:bg-purple-950/30 dark:text-purple-200">
+                                                        <div className="flex items-center gap-1.5 font-black text-purple-800 dark:text-purple-300">
+                                                            <span>✨ Terhubung Canva</span>
+                                                        </div>
+                                                        {activeSlide.source_meta?.author_name && (
+                                                            <p className="mt-1 text-[11px] text-purple-700 dark:text-purple-300">
+                                                                Dibuat oleh: <span className="font-bold">{activeSlide.source_meta.author_name}</span>
+                                                            </p>
+                                                        )}
+                                                        <p className="mt-1 text-[10px] text-purple-600 dark:text-purple-400">
+                                                            Gunakan tombol navigasi &lt; 1 / 7 &gt; pada canvas untuk memutar halaman Canva.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </>
                         ) : (
                             <div className="grid min-h-[320px] place-items-center rounded-2xl border-2 border-dashed border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
@@ -1471,91 +1865,6 @@ export default function BuilderPresentasi({
                             </div>
                         )}
                     </section>
-
-                    <aside className="min-w-0 space-y-3 lg:sticky lg:top-[68px] lg:self-start">
-                        <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
-                            <button type="button" onClick={() => setShowTemplatePanel((value) => !value)} className="flex w-full items-center justify-between text-left">
-                                <span className="text-[11px] font-black uppercase tracking-[0.18em] text-gray-500">Template</span>
-                                <span className="rounded-lg bg-gray-100 px-2 py-1 text-[11px] font-black text-gray-600 dark:bg-gray-800 dark:text-gray-300">{showTemplatePanel ? 'Tutup' : 'Buka'}</span>
-                            </button>
-                            {showTemplatePanel && (
-                                <div className="mt-3 grid grid-cols-2 gap-2">
-                                    {templates.map((template) => (
-                                        <button
-                                            key={template.label}
-                                            type="button"
-                                            onClick={() => addSlide(template)}
-                                            className="rounded-xl border border-gray-100 bg-gray-50 p-2 text-left transition hover:border-orange-200 hover:bg-orange-50 dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-orange-900/20"
-                                        >
-                                            <SlidePreview slide={{ ...emptySlide, ...template }} small />
-                                            <span className="mt-2 block truncate text-xs font-black text-gray-800 dark:text-gray-100">{template.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {activeSlide && (
-                            <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
-                                <button type="button" onClick={() => setShowEditPanel((value) => !value)} className="flex w-full items-center justify-between text-left">
-                                    <span className="text-[11px] font-black uppercase tracking-[0.18em] text-gray-500">Edit Slide</span>
-                                    <span className="rounded-lg bg-gray-100 px-2 py-1 text-[11px] font-black text-gray-600 dark:bg-gray-800 dark:text-gray-300">{showEditPanel ? 'Tutup' : 'Buka'}</span>
-                                </button>
-                                {showEditPanel && (
-                                <div className="mt-3 space-y-2">
-                                    <input value={activeSlide.title || ''} onChange={(event) => updateSlide('title', event.target.value)} placeholder="Judul slide" className="h-9 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
-                                    <select value={activeSlide.layout} onChange={(event) => changeSlideLayout(event.target.value)} className="h-9 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs dark:border-gray-700 dark:bg-gray-950 dark:text-white">
-                                        <option value="title">Title</option>
-                                        <option value="content">Materi</option>
-                                        <option value="vocabulary">Kosakata</option>
-                                        <option value="kanji">Kanji</option>
-                                        <option value="media">Media</option>
-                                        <option value="question">Pertanyaan</option>
-                                        <option value="board">Jamboard</option>
-                                        <option value="canvas">Canvas</option>
-                                    </select>
-                                    <textarea value={activeSlide.content || ''} onChange={(event) => updateSlide('content', event.target.value)} placeholder="Catatan atau deskripsi slide." className="min-h-20 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
-                                    {activeSlide.layout === 'media' && (
-                                        <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-950">
-                                            <div className="grid grid-cols-2 rounded-lg bg-gray-200 p-1 dark:bg-gray-800">
-                                                <button type="button" onClick={() => setMediaMode('link')} className={`rounded-md px-2 py-1.5 text-[11px] font-black ${mediaMode === 'link' ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>Link media</button>
-                                                <button type="button" onClick={() => setMediaMode('upload')} className={`rounded-md px-2 py-1.5 text-[11px] font-black ${mediaMode === 'upload' ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>Upload MP4</button>
-                                            </div>
-                                            {mediaMode === 'link' ? (
-                                                <div className="space-y-2">
-                                                    <label className="block text-[10px] font-black uppercase tracking-[0.14em] text-gray-500">YouTube, Google Drive, gambar, atau URL MP4</label>
-                                                    <input value={activeSlide.media_url || ''} onChange={(event) => updateSlide('media_url', event.target.value)} placeholder="Tempel link share media di sini" className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
-                                                    <p className="text-[10px] font-semibold leading-4 text-gray-400">Pastikan link Google Drive dapat dilihat siapa pun yang memiliki link.</p>
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-2">
-                                                    <input type="file" accept="video/mp4,.mp4" onChange={(event) => setMediaFile(event.target.files?.[0] || null)} className="w-full text-xs font-semibold text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-orange-50 file:px-3 file:py-2 file:text-xs file:font-black file:text-orange-700" />
-                                                    <button type="button" onClick={uploadMedia} disabled={!mediaFile || isMediaUploading} className="h-9 w-full rounded-xl bg-orange-600 px-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
-                                                        {isMediaUploading ? 'Mengupload...' : 'Upload video (maks. 50 MB)'}
-                                                    </button>
-                                                </div>
-                                            )}
-                                            {activeSlide.media_url && (
-                                                <div className="aspect-video overflow-hidden rounded-xl bg-black">
-                                                    <EmbedFrame url={activeSlide.media_url} title={activeSlide.title || 'Preview media'} />
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <select value={activeSlide.background} onChange={(event) => updateSlide('background', event.target.value)} className="h-9 rounded-xl border border-gray-200 bg-white px-3 text-xs dark:border-gray-700 dark:bg-gray-950 dark:text-white">
-                                            {backgroundOptions.map(([value, label]) => (
-                                                <option key={value} value={value}>{label}</option>
-                                            ))}
-                                        </select>
-                                        <input type="color" value={activeSlide.accent_color || '#22C55E'} onChange={(event) => updateSlide('accent_color', event.target.value)} className="h-9 w-full rounded-xl border border-gray-200 bg-white p-1.5 dark:border-gray-700 dark:bg-gray-950" />
-                                    </div>
-                                    <textarea value={activeSlide.speaker_notes || ''} onChange={(event) => updateSlide('speaker_notes', event.target.value)} placeholder="Catatan sensei, hanya tampil di presenter mode." className="min-h-20 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
-                                </div>
-                                )}
-                            </div>
-                        )}
-                    </aside>
                 </main>
                     </>
                 )}

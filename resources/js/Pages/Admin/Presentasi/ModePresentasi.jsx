@@ -7,11 +7,14 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import PauseIcon from '@mui/icons-material/Pause';
 
 export default function ModePresentasi({ deck }) {
     const page = usePage();
     const slides = deck.slides || [];
     const [index, setIndex] = useState(0);
+    const [isPlaying, setIsPlaying] = useState(false);
     const [notesOpen, setNotesOpen] = useState(false);
     const activeSlide = slides[index] || null;
     const progress = slides.length > 0 ? ((index + 1) / slides.length) * 100 : 0;
@@ -23,14 +26,36 @@ export default function ModePresentasi({ deck }) {
     const classroomExitUrl = route('admin.programs.index');
 
     useEffect(() => {
+        if (!isPlaying || classroomPreview) return undefined;
+        if (slides.length <= 1) {
+            setIsPlaying(false);
+            return undefined;
+        }
+
+        const timer = window.setTimeout(() => {
+            setIndex((value) => {
+                if (value >= slides.length - 1) {
+                    setIsPlaying(false);
+                    return value;
+                }
+                return value + 1;
+            });
+        }, 5000);
+
+        return () => window.clearTimeout(timer);
+    }, [isPlaying, index, slides.length, classroomPreview]);
+
+    useEffect(() => {
         if (classroomPreview) return undefined;
 
         const handleKeyDown = (event) => {
             if (event.key === 'ArrowRight' || event.key === ' ') {
+                setIsPlaying(false);
                 setIndex((value) => Math.min(slides.length - 1, value + 1));
             }
 
             if (event.key === 'ArrowLeft') {
+                setIsPlaying(false);
                 setIndex((value) => Math.max(0, value - 1));
             }
         };
@@ -66,9 +91,20 @@ export default function ModePresentasi({ deck }) {
                     </div>
 
                     <div className="flex flex-1 items-center justify-center gap-1.5 md:flex-none">
-                        <button type="button" onClick={() => setIndex((value) => Math.max(0, value - 1))} className="grid h-10 w-10 place-items-center rounded-xl bg-white/5 transition hover:bg-white/10 disabled:opacity-35" disabled={index <= 0} aria-label="Slide sebelumnya"><ChevronLeftIcon /></button>
+                        <button type="button" onClick={() => { setIsPlaying(false); setIndex((value) => Math.max(0, value - 1)); }} className="grid h-10 w-10 place-items-center rounded-xl bg-white/5 transition hover:bg-white/10 disabled:opacity-35" disabled={index <= 0} aria-label="Slide sebelumnya"><ChevronLeftIcon /></button>
+                        {slides.length > 1 && (
+                            <button
+                                type="button"
+                                onClick={() => setIsPlaying((p) => !p)}
+                                className={`grid h-10 w-10 place-items-center rounded-xl transition ${isPlaying ? 'bg-orange-500 text-white' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                                aria-label={isPlaying ? 'Jeda otomatis' : 'Putar otomatis'}
+                                title={isPlaying ? 'Jeda presentasi' : 'Putar slide otomatis'}
+                            >
+                                {isPlaying ? <PauseIcon sx={{ fontSize: 20 }} /> : <PlayArrowIcon sx={{ fontSize: 20 }} />}
+                            </button>
+                        )}
                         <span className="min-w-16 text-center text-xs font-black">{slides.length > 0 ? index + 1 : 0} / {slides.length}</span>
-                        <button type="button" onClick={() => setIndex((value) => Math.min(slides.length - 1, value + 1))} className="grid h-10 w-10 place-items-center rounded-xl bg-white/5 transition hover:bg-white/10 disabled:opacity-35" disabled={index >= slides.length - 1} aria-label="Slide berikutnya"><ChevronRightIcon /></button>
+                        <button type="button" onClick={() => { setIsPlaying(false); setIndex((value) => Math.min(slides.length - 1, value + 1)); }} className="grid h-10 w-10 place-items-center rounded-xl bg-white/5 transition hover:bg-white/10 disabled:opacity-35" disabled={index >= slides.length - 1} aria-label="Slide berikutnya"><ChevronRightIcon /></button>
                     </div>
 
                     <div className="flex items-center gap-1.5">
