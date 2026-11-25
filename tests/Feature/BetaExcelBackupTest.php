@@ -3,6 +3,7 @@
 use App\Models\Pengguna;
 use App\Services\BetaBackupExcelService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -109,4 +110,34 @@ it('allows only superadmin to download the beta excel backup', function () {
         ->toContain('.xlsx');
 
     Storage::disk('local')->assertExists(BetaBackupExcelService::RELATIVE_PATH);
+});
+
+it('pushes beta participant rows to the configured google sheets apps script webhook', function () {
+    Storage::fake('local');
+    Notification::fake();
+    Http::fake([
+        'https://script.google.com/*' => Http::response(['ok' => true, 'count' => 1], 200),
+    ]);
+
+    config([
+        'beta.google_sheets.webhook_url' => 'https://script.google.com/macros/s/test-webhook/exec',
+        'beta.google_sheets.webhook_secret' => 'rahasia-beta-123',
+    ]);
+    enableOpenBetaForBackupTest();
+
+    $this->post(route('public.beta.register.store'), [
+        'name' => 'Peserta Sheets',
+        'email' => 'sheets@example.com',
+        'password' => 'Password123!',
+        'password_confirmation' => 'Password123!',
+        'terms_accepted' => true,
+    ])->assertRedirect(route('public.beta.confirmation'));
+
+    Http::assertSent(function ($request) {
+        return $request->url() === 'https://script.google.com/macros/s/test-webhook/exec'
+            && $request['secret'] === 'rahasia-beta-123'
+            && count($request['headers']) === 10
+            && count($request['rows']) === 1
+            && $request['rows'][0][3] === 'sheets@example.com';
+    });
 });

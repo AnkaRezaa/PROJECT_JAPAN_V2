@@ -11,4 +11,8 @@ return [
         'ga4' => env('GA4_PROPERTY_URL'),
         'monitoring' => env('MONITORING_DASHBOARD_URL'),
     ],
+    'google_sheets' => [
+        'webhook_url' => env('BETA_GOOGLE_SHEETS_WEBHOOK_URL'),
+        'webhook_secret' => env('BETA_GOOGLE_SHEETS_WEBHOOK_SECRET'),
+    ],
 ];

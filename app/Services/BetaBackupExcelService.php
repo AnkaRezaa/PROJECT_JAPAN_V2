@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Pengguna;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class BetaBackupExcelService
@@ -16,15 +18,59 @@ class BetaBackupExcelService
 
     public function __construct(private readonly TemplateExcelService $excel) {}
 
-    public function sync(): string
+    public function sync(bool $pushToSheets = true): string
     {
-        return Cache::lock(self::LOCK_KEY, 10)->block(5, fn (): string => $this->writeWorkbook());
+        [$targetPath, $rows] = Cache::lock(self::LOCK_KEY, 10)->block(5, fn (): array => $this->writeWorkbook());
+
+        if ($pushToSheets) {
+            $this->syncGoogleSheetsSafely($rows);
+        }
+
+        return $targetPath;
     }
 
     public function syncSafely(): void
     {
         try {
-            $this->sync();
+            $this->sync(true);
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    public function syncGoogleSheets(?array $rows = null): bool
+    {
+        $webhookUrl = trim((string) config('beta.google_sheets.webhook_url', ''));
+        if ($webhookUrl === '') {
+            return false;
+        }
+
+        $rows ??= $this->buildRows();
+        $response = Http::connectTimeout(5)
+            ->timeout(10)
+            ->acceptJson()
+            ->post($webhookUrl, [
+                'secret' => (string) config('beta.google_sheets.webhook_secret', ''),
+                'headers' => $this->headers(),
+                'rows' => $rows,
+            ]);
+
+        if (! $response->successful() || $response->json('ok') === false) {
+            Log::warning('Sinkronisasi backup beta ke Google Sheets gagal.', [
+                'status' => $response->status(),
+                'error' => $response->json('error'),
+            ]);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private function syncGoogleSheetsSafely(array $rows): void
+    {
+        try {
+            $this->syncGoogleSheets($rows);
         } catch (\Throwable $exception) {
             report($exception);
         }
@@ -66,7 +112,53 @@ class BetaBackupExcelService
         ];
     }
 
-    private function writeWorkbook(): string
+    /**
+     * @return array{0: string, 1: array<int, array<int, string>>}
+     */
+    private function writeWorkbook(): array
+    {
+        $rows = $this->buildRows();
+        $tempPath = $this->excel->xlsxPath($this->headers(), $rows, 'Peserta Beta', 'beta-backup-');
+
+        try {
+            $contents = file_get_contents($tempPath);
+            if ($contents === false) {
+                throw new \RuntimeException('Gagal membaca file sementara backup Excel beta.');
+            }
+
+            $disk = Storage::disk(self::DISK);
+            $targetPath = $disk->path(self::RELATIVE_PATH);
+            $directory = dirname($targetPath);
+
+            if (! is_dir($directory) && ! mkdir($directory, 0755, true) && ! is_dir($directory)) {
+                throw new \RuntimeException('Gagal membuat direktori backup beta.');
+            }
+
+            $stagedPath = $targetPath.'.tmp.'.bin2hex(random_bytes(4));
+            if (file_put_contents($stagedPath, $contents, LOCK_EX) === false) {
+                throw new \RuntimeException('Gagal menulis file backup Excel beta.');
+            }
+
+            if (! @rename($stagedPath, $targetPath)) {
+                @unlink($targetPath);
+                if (! rename($stagedPath, $targetPath)) {
+                    @unlink($stagedPath);
+                    throw new \RuntimeException('Gagal mengganti file backup Excel beta.');
+                }
+            }
+
+            return [$targetPath, $rows];
+        } finally {
+            if (is_file($tempPath)) {
+                @unlink($tempPath);
+            }
+        }
+    }
+
+    /**
+     * @return array<int, array<int, string>>
+     */
+    private function buildRows(): array
     {
         $participants = Pengguna::query()
             ->whereNotNull('beta_registered_at')
@@ -119,41 +211,7 @@ class BetaBackupExcelService
             );
         }
 
-        $tempPath = $this->excel->xlsxPath($this->headers(), $rows, 'Peserta Beta', 'beta-backup-');
-
-        try {
-            $contents = file_get_contents($tempPath);
-            if ($contents === false) {
-                throw new \RuntimeException('Gagal membaca file sementara backup Excel beta.');
-            }
-
-            $disk = Storage::disk(self::DISK);
-            $targetPath = $disk->path(self::RELATIVE_PATH);
-            $directory = dirname($targetPath);
-
-            if (! is_dir($directory) && ! mkdir($directory, 0755, true) && ! is_dir($directory)) {
-                throw new \RuntimeException('Gagal membuat direktori backup beta.');
-            }
-
-            $stagedPath = $targetPath.'.tmp.'.bin2hex(random_bytes(4));
-            if (file_put_contents($stagedPath, $contents, LOCK_EX) === false) {
-                throw new \RuntimeException('Gagal menulis file backup Excel beta.');
-            }
-
-            if (! @rename($stagedPath, $targetPath)) {
-                @unlink($targetPath);
-                if (! rename($stagedPath, $targetPath)) {
-                    @unlink($stagedPath);
-                    throw new \RuntimeException('Gagal mengganti file backup Excel beta.');
-                }
-            }
-
-            return $targetPath;
-        } finally {
-            if (is_file($tempPath)) {
-                @unlink($tempPath);
-            }
-        }
+        return $rows;
     }
 
     private function safeCell(mixed $value): string

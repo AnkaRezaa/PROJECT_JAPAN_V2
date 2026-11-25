@@ -28,9 +28,17 @@ Superadmin -> Sistem -> Beta:
 - Logo mengikuti varian resmi `Copy of TokuUp 1@2x-100.jpg`. Pembaruan 17 November: PNG transparan diekspor dari sumber native `Copy of mentahan tokuup.ai`, bukan hasil generatif. Logo lengkap digunakan pada Coming Soon/halaman tunggu; wordmark/emblem baru menggantikan logo di navbar, footer, login, sidebar seluruh role, portal ujian, loader, dan favicon. Varian dark mengubah tulisan hitam menjadi putih tanpa membalik hijau.
 - `node scripts/export-brand-logo.mjs` meregenerasi aset dari file AI lokal melalui PDF.js dan Chrome dengan Vite lokal pada port 5173. Ini alat ekspor aset, tidak diperlukan pada VPS/build produksi. File sumber klien tetap utuh. PNG memiliki alpha; bagian putih di dalam lambang dipertahankan.
 
+## Backup Excel Peserta Beta (`.xlsx`)
+
+- Setiap pendaftaran peserta baru saat Mode beta aktif (lewat `/daftar-beta`, `/register`, maupun daftar baru via Google) serta setiap perubahan status verifikasi email peserta beta otomatis menyinkronkan data dari database ke **1 file Excel tunggal** pada disk privat server: `storage/app/private/backups/peserta-beta.xlsx` (`App\Services\BetaBackupExcelService`).
+- Penyimpanan memakai disk `local` (privat, tidak dapat diakses lewat URL publik) dengan penguncian `Cache::lock('beta:excel-backup')` dan mekanisme file sementara + *atomic rename* agar aman terhadap pendaftaran bersamaan dan tidak pernah korup. Kegagalan penulisan backup dicatat lewat `report()` tanpa menggagalkan proses pendaftaran atau verifikasi peserta.
+- Kolom yang dicatat: `No`, `User ID`, `Nama / Username`, `Email`, `Metode Daftar`, `Status Verifikasi`, `Waktu Verifikasi (WIB)`, `Status Akun`, `Waktu Daftar Beta (WIB)`, dan `Direferensikan Oleh`. Kata sandi/hash tidak pernah disimpan di file Excel, dan seluruh sel disanitasi terhadap *Excel Formula Injection*.
+- Superadmin dapat mengunduh salinan terbaru kapan saja melalui **Superadmin -> Sistem -> Beta -> Unduh Backup Excel (`.xlsx`)** (`GET /superadmin/system/beta/export-xlsx`). Akses dibatasi khusus role `superadmin`, sinkronisasi ulang dijalankan sebelum unduhan, dan setiap unduhan dicatat di log aktivitas (`beta.backup_exported`).
+- **Sinkronisasi Opsional ke Google Spreadsheet**: Bila `BETA_GOOGLE_SHEETS_WEBHOOK_URL` dan `BETA_GOOGLE_SHEETS_WEBHOOK_SECRET` diisi di `.env` (mengarah ke Web App Google Apps Script `/exec`), setiap sinkronisasi otomatis mengirim payload `{ secret, headers, rows }` ke Google Sheet tersebut secara non-blocking (kegagalan jaringan ke Google tidak pernah menggagalkan pendaftaran atau backup `.xlsx` lokal).
+
 ## Pengujian
 
-`php artisan test --compact tests/Feature/BetaAccessTest.php tests/Feature/ReferralTest.php tests/Feature/Auth/GoogleAuthenticationTest.php tests/Feature/Auth/RegistrationTest.php tests/Feature/ReleaseSoonPageTest.php`
+`php artisan test --compact tests/Feature/BetaExcelBackupTest.php tests/Feature/BetaAccessTest.php tests/Feature/ReferralTest.php tests/Feature/Auth/GoogleAuthenticationTest.php tests/Feature/Auth/RegistrationTest.php tests/Feature/ReleaseSoonPageTest.php`
 
 Tes concurrency memakai dua proses PHP pada MySQL `Project_japan_test` lokal, dengan fixture committed dan cleanup. Jangan menjalankannya bersamaan dengan suite lain pada database testing yang sama. Worker tidak ditujukan untuk database produksi.
 
