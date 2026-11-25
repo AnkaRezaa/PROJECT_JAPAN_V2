@@ -4,8 +4,11 @@ import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import FormField, { formInputClass } from '@/Components/UI/FormField';
 import { socialChannels } from '@/Components/Marketing/SocialLinks';
 
-export default function SocialLinksForm({ links = {} }) {
-    const form = useForm({ links: Object.fromEntries(socialChannels.map(({ key }) => [key, links[key] || ''])) });
+export default function SocialLinksForm({ links = {}, instagramFeed = [] }) {
+    const form = useForm({
+        links: Object.fromEntries(socialChannels.map(({ key }) => [key, links[key] || ''])),
+        instagram_feed: instagramFeed.map((item) => item.url).join('\n'),
+    });
     const submit = (event) => {
         event.preventDefault();
         if (form.processing) return;
@@ -27,6 +30,23 @@ export default function SocialLinksForm({ links = {} }) {
                 ))}
             </div>
             {form.errors.links && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{form.errors.links}</p>}
+            <FormField
+                label="Feed Postingan Instagram (@toku.up)"
+                tooltip="Tempel link postingan atau reels Instagram (1 link per baris, maksimal 6) untuk ditampilkan di halaman depan."
+                error={form.errors.instagram_feed}
+            >
+                <textarea
+                    rows={3}
+                    value={form.data.instagram_feed}
+                    disabled={form.processing}
+                    placeholder={'https://www.instagram.com/p/...\nhttps://www.instagram.com/reel/...'}
+                    onChange={(event) => {
+                        form.setData('instagram_feed', event.target.value);
+                        form.clearErrors('instagram_feed');
+                    }}
+                    className={`${formInputClass(Boolean(form.errors.instagram_feed))} h-auto py-2.5`}
+                />
+            </FormField>
             <button type="submit" disabled={form.processing} className="inline-flex min-h-[44px] items-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-bold text-white hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50">
                 <SaveOutlinedIcon sx={{ fontSize: 18 }} />{form.processing ? 'Menyimpan...' : 'Simpan'}
             </button>

@@ -17,6 +17,8 @@ class SocialLinksSettings
 
     private const KEY = 'social_links';
     private const CACHE_KEY = 'public_social_links';
+    private const FEED_KEY = 'instagram_feed';
+    private const FEED_CACHE_KEY = 'public_instagram_feed';
 
     public function all(): array
     {
@@ -65,5 +67,73 @@ class SocialLinksSettings
             ...($exists ? [] : ['created_at' => now()]),
         ]);
         DB::afterCommit(fn () => Cache::forget(self::CACHE_KEY));
+    }
+
+    /**
+     * @return list<array{url: string, embed_url: string, type: string, code: string}>
+     */
+    public function feed(): array
+    {
+        return Cache::remember(self::FEED_CACHE_KEY, now()->addMinutes(5), function (): array {
+            $raw = DB::table('app_settings')->where('key', self::FEED_KEY)->value('value');
+            $stored = $raw ? json_decode($raw, true) : [];
+
+            return is_array($stored) ? array_values($stored) : [];
+        });
+    }
+
+    public function saveFeed(?string $rawInput): void
+    {
+        $items = $this->parseFeedUrls((string) $rawInput);
+        $exists = DB::table('app_settings')->where('key', self::FEED_KEY)->exists();
+        DB::table('app_settings')->updateOrInsert(['key' => self::FEED_KEY], [
+            'value' => json_encode($items),
+            'updated_at' => now(),
+            ...($exists ? [] : ['created_at' => now()]),
+        ]);
+        DB::afterCommit(fn () => Cache::forget(self::FEED_CACHE_KEY));
+    }
+
+    /**
+     * @return list<array{url: string, embed_url: string, type: string, code: string}>
+     */
+    public function parseFeedUrls(string $rawInput): array
+    {
+        $lines = preg_split('/[\r\n,\s]+/', trim($rawInput)) ?: [];
+        $items = [];
+        $seen = [];
+
+        foreach ($lines as $line) {
+            $url = trim($line);
+            if ($url === '' || ! filter_var($url, FILTER_VALIDATE_URL)) {
+                continue;
+            }
+            $parts = parse_url($url);
+            $host = preg_replace('/^www\./', '', strtolower($parts['host'] ?? ''));
+            if (($parts['scheme'] ?? '') !== 'https' || $host !== 'instagram.com') {
+                continue;
+            }
+            if (! preg_match('#^/(p|reel|tv)/([A-Za-z0-9_-]+)(?:/|$)#', $parts['path'] ?? '', $matches)) {
+                continue;
+            }
+            $type = $matches[1];
+            $code = $matches[2];
+            $key = "{$type}:{$code}";
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $items[] = [
+                'url' => "https://www.instagram.com/{$type}/{$code}/",
+                'embed_url' => "https://www.instagram.com/{$type}/{$code}/embed/",
+                'type' => $type,
+                'code' => $code,
+            ];
+            if (count($items) >= 6) {
+                break;
+            }
+        }
+
+        return $items;
     }
 }

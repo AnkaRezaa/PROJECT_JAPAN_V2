@@ -105,6 +105,7 @@ class SuperAdminSistemController extends SuperAdminDasarController
                 'backup' => app(BetaBackupExcelService::class)->metadata(),
             ],
             'socialLinks' => app(SocialLinksSettings::class)->all(),
+            'instagramFeed' => app(SocialLinksSettings::class)->feed(),
             'analyticsStatus' => [
                 'gtm' => [
                     'enabled' => (bool) config('beta.google_tag_manager.enabled'),
@@ -130,9 +131,13 @@ class SuperAdminSistemController extends SuperAdminDasarController
                 },
             ];
         }
+        $rules['instagram_feed'] = ['nullable', 'string', 'max:4000'];
         $validated = $request->validate($rules);
         DB::transaction(function () use ($request, $settings, $validated) {
             $settings->save($validated['links']);
+            if ($request->exists('instagram_feed')) {
+                $settings->saveFeed($validated['instagram_feed'] ?? '');
+            }
             $this->logActivity($request, 'update_social_links', 'system', null, 'Tautan medsos diperbarui.');
         });
 

@@ -33,6 +33,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'socialLinks' => fn () => app(\App\Services\SocialLinksSettings::class)->all(),
+            'instagramFeed' => fn () => app(\App\Services\SocialLinksSettings::class)->feed(),
             'auth' => [
                 'user' => $request->user() ? array_merge(
                     $request->user()->only([

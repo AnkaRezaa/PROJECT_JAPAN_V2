@@ -56,6 +56,7 @@ export default function System({
     diagnostics = {},
     stats = [],
     socialLinks = {},
+    instagramFeed = [],
     betaSettings = null,
     themeSettings = { activeTheme: DEFAULT_THEME, customTheme: {} },
     analyticsStatus = { gtm: { enabled: false, id: null }, ga4: { configured: false, url: null } },
@@ -176,7 +177,7 @@ export default function System({
                     </div>
                 </section>
 
-                <SocialLinksForm links={socialLinks} />
+                <SocialLinksForm links={socialLinks} instagramFeed={instagramFeed} />
                 {betaSettings && <BetaSettingsForm settings={betaSettings} />}
 
                 {/* System-like Telemetry Cards */}
