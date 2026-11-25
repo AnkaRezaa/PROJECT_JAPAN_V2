@@ -31,11 +31,15 @@ class BetaBackupExcelService
 
     public function syncSafely(): void
     {
+        $rows = null;
+
         try {
-            $this->sync(true);
+            [, $rows] = Cache::lock(self::LOCK_KEY, 10)->block(5, fn (): array => $this->writeWorkbook());
         } catch (\Throwable $exception) {
             report($exception);
         }
+
+        $this->syncGoogleSheetsSafely($rows);
     }
 
     public function syncGoogleSheets(?array $rows = null): bool
@@ -67,7 +71,7 @@ class BetaBackupExcelService
         return true;
     }
 
-    private function syncGoogleSheetsSafely(array $rows): void
+    private function syncGoogleSheetsSafely(?array $rows = null): void
     {
         try {
             $this->syncGoogleSheets($rows);
