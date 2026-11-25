@@ -6,6 +6,7 @@ use App\Exceptions\EmailDeliveryUnavailable;
 use App\Http\Controllers\Controller;
 use App\Models\Pengguna;
 use App\Services\BetaAccessService;
+use App\Services\BetaBackupExcelService;
 use App\Services\ReferralService;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\RedirectResponse;
@@ -88,7 +89,10 @@ class BetaRegistrationController extends Controller
             abort_unless(hash_equals(sha1($user->getEmailForVerification()), $hash), 403);
 
             if (! $user->hasVerifiedEmail() && $user->markEmailAsVerified()) {
-                DB::afterCommit(fn () => event(new Verified($user)));
+                DB::afterCommit(static function () use ($user): void {
+                    event(new Verified($user));
+                    app(BetaBackupExcelService::class)->syncSafely();
+                });
             }
 
             return $user;

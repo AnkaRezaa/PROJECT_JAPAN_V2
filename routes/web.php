@@ -146,6 +146,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dashboard', SuperAdminBerandaController::class)->name('dashboard');
         Route::get('/users', SuperAdminPenggunaController::class)->name('users');
         Route::put('/system/beta', [SuperAdminSistemController::class, 'updateBeta'])->name('system.beta.update');
+        Route::get('/system/beta/export-xlsx', [SuperAdminSistemController::class, 'exportBetaXlsx'])->name('system.beta.export-xlsx');
         Route::get('/users/{user}', [SuperAdminPenggunaController::class, 'show'])->name('users.show');
         Route::patch('/users/{user}/status', [SuperAdminPenggunaController::class, 'updateStatus'])->name('users.status');
         Route::post('/users/{user}/reset-password', [SuperAdminPenggunaController::class, 'resetPassword'])->name('users.reset-password');

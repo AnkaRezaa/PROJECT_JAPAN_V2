@@ -6,6 +6,7 @@ use App\Exceptions\EmailDeliveryUnavailable;
 use App\Http\Controllers\Controller;
 use App\Models\Pengguna;
 use App\Services\BetaAccessService;
+use App\Services\BetaBackupExcelService;
 use App\Services\ReferralService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -78,6 +79,10 @@ class RegistrasiPenggunaController extends Controller
 
             return $user;
         });
+
+        if ($user->beta_registered_at) {
+            app(BetaBackupExcelService::class)->syncSafely();
+        }
 
         $emailUnavailable = false;
         try {

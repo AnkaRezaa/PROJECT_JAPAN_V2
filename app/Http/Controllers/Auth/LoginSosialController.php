@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Pengguna;
 use App\Models\RiwayatLogin;
+use App\Services\BetaBackupExcelService;
 use App\Services\ReferralService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -151,6 +152,10 @@ class LoginSosialController extends Controller
                     ]);
 
                     $user->forceFill(['email_verified_at' => now(), 'referred_by_user_id' => $referrerId, 'beta_registered_at' => $betaTimestamp])->save();
+
+                    if ($betaTimestamp) {
+                        DB::afterCommit(static fn () => app(BetaBackupExcelService::class)->syncSafely());
+                    }
                 }
 
                 return [$user, $recovered, false];

@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
+use App\Services\BetaBackupExcelService;
 use App\Services\SocialLinksSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class SuperAdminSistemController extends SuperAdminDasarController
 {
@@ -98,7 +100,10 @@ class SuperAdminSistemController extends SuperAdminDasarController
             'diagnostics' => $systemDiagnostics,
             'stats' => [],
             'themeSettings' => $this->themeSettings(),
-            'betaSettings' => app(\App\Services\BetaAccessService::class)->payload(),
+            'betaSettings' => [
+                ...app(\App\Services\BetaAccessService::class)->payload(),
+                'backup' => app(BetaBackupExcelService::class)->metadata(),
+            ],
             'socialLinks' => app(SocialLinksSettings::class)->all(),
             'analyticsStatus' => [
                 'gtm' => [
@@ -156,6 +161,18 @@ class SuperAdminSistemController extends SuperAdminDasarController
             $this->logActivity($request, 'beta.updated', 'system', null, 'Pengaturan beta diperbarui.');
         });
         return back()->with('success', 'Pengaturan beta tersimpan.');
+    }
+
+    public function exportBetaXlsx(Request $request, BetaBackupExcelService $backup): BinaryFileResponse
+    {
+        $path = $backup->sync();
+        $this->logActivity($request, 'beta.backup_exported', 'system', null, 'Backup Excel peserta beta diunduh.');
+
+        return response()->download(
+            $path,
+            'peserta-beta-tokuup-'.now('Asia/Jakarta')->format('Ymd-His').'.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        );
     }
 
     public function runMaintenance(Request $request)
