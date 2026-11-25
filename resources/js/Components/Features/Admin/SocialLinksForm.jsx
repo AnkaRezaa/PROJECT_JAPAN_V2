@@ -32,11 +32,11 @@ export default function SocialLinksForm({ links = {}, instagramFeed = [] }) {
             {form.errors.links && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{form.errors.links}</p>}
             <FormField
                 label="Feed Postingan Instagram (@toku.up)"
-                tooltip="Tempel link postingan atau reels Instagram (1 link per baris, maksimal 6) untuk ditampilkan di halaman depan."
+                tooltip="Tempel link postingan atau reels Instagram (1 link per baris, maksimal 100) untuk ditampilkan di halaman depan."
                 error={form.errors.instagram_feed}
             >
                 <textarea
-                    rows={3}
+                    rows={6}
                     value={form.data.instagram_feed}
                     disabled={form.processing}
                     placeholder={'https://www.instagram.com/p/...\nhttps://www.instagram.com/reel/...'}

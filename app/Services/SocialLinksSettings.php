@@ -129,7 +129,7 @@ class SocialLinksSettings
                 'type' => $type,
                 'code' => $code,
             ];
-            if (count($items) >= 6) {
+            if (count($items) >= 100) {
                 break;
             }
         }

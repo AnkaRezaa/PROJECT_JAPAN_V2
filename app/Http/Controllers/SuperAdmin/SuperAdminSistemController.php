@@ -131,7 +131,7 @@ class SuperAdminSistemController extends SuperAdminDasarController
                 },
             ];
         }
-        $rules['instagram_feed'] = ['nullable', 'string', 'max:4000'];
+        $rules['instagram_feed'] = ['nullable', 'string', 'max:20000'];
         $validated = $request->validate($rules);
         DB::transaction(function () use ($request, $settings, $validated) {
             $settings->save($validated['links']);
