@@ -690,10 +690,62 @@ function dayChildItems(day) {
     return [quizItem(day, available)];
 }
 
+function DayFourArcRing({ day, locked }) {
+    const kanjiDone = Boolean(day?.moji_goi?.kanji_done);
+    const kotobaDone = Boolean(day?.moji_goi?.kotoba_done);
+    const grammarLessons = day?.grammar_lessons || [];
+    const grammarDone = grammarLessons.length > 0 && grammarLessons.every((lesson) => lesson.done);
+    const mixedDone = Boolean(day?.mixed_quiz_summary?.is_done);
+
+    const arcs = [
+        { key: 'kanji', done: kanjiDone, color: '#7C3AED', offset: -2 },
+        { key: 'kotoba', done: kotobaDone, color: '#DB2777', offset: -27 },
+        { key: 'grammar', done: grammarDone, color: '#0284C7', offset: -52 },
+        { key: 'mixed', done: mixedDone, color: '#F97316', offset: -77 },
+    ];
+
+    const paleRail = locked ? 'rgba(148, 163, 184, 0.35)' : 'rgba(203, 213, 225, 0.72)';
+
+    return (
+        <svg
+            aria-hidden="true"
+            viewBox="0 0 76 76"
+            className="pointer-events-none absolute -inset-[7px] h-[calc(100%+14px)] w-[calc(100%+14px)] -rotate-90 fill-none"
+        >
+            {arcs.map((arc) => (
+                <circle
+                    key={arc.key}
+                    cx="38"
+                    cy="38"
+                    r="34"
+                    pathLength="100"
+                    strokeWidth="4.5"
+                    strokeLinecap="round"
+                    strokeDasharray="21 79"
+                    strokeDashoffset={arc.offset}
+                    stroke={arc.done ? arc.color : paleRail}
+                />
+            ))}
+        </svg>
+    );
+}
+
 function PathNodeCircle({ item, selected = false, size = 68 }) {
     const colors = nodeColors(item);
     const active = item.status === 'active';
     const locked = ['locked', 'unavailable'].includes(item.status);
+    const day = item.kind === 'day' ? item.day : null;
+    const grammarLessons = day?.grammar_lessons || [];
+    const allFourDone = Boolean(
+        day
+        && day.moji_goi?.kanji_done
+        && day.moji_goi?.kotoba_done
+        && grammarLessons.length > 0
+        && grammarLessons.every((lesson) => lesson.done)
+        && day.mixed_quiz_summary?.is_done,
+    );
+    const resolvedBg = allFourDone ? '#059669' : colors.color;
+    const resolvedShadow = allFourDone ? '#047857' : colors.shadow;
 
     return (
         <span
@@ -703,12 +755,12 @@ function PathNodeCircle({ item, selected = false, size = 68 }) {
             style={{
                 width: `${size}px`,
                 height: `${size}px`,
-                backgroundColor: locked ? undefined : colors.color,
-                boxShadow: locked ? undefined : `0 6px 0 ${colors.shadow}`,
+                backgroundColor: locked ? undefined : resolvedBg,
+                boxShadow: locked ? undefined : `0 6px 0 ${resolvedShadow}`,
                 outline: selected
-                    ? `4px solid ${colors.color}88`
+                    ? `4px solid ${resolvedBg}88`
                     : active
-                        ? `3px solid ${colors.color}55`
+                        ? `3px solid ${resolvedBg}55`
                         : 'none',
             }}
         >
@@ -721,14 +773,14 @@ function PathNodeCircle({ item, selected = false, size = 68 }) {
                     aria-hidden="true"
                 />
             )}
-            {item.kind === 'day' && (
-                <svg aria-hidden="true" viewBox="0 0 64 64" className="pointer-events-none absolute inset-0 h-full w-full -rotate-90 fill-none">
-                    <circle cx="32" cy="32" r="29.5" strokeWidth="3" className={locked ? 'stroke-gray-400/60 dark:stroke-gray-500' : 'stroke-black/25'} />
-                    {item.progress > 0 && (
-                        <circle cx="32" cy="32" r="29.5" pathLength="100" strokeWidth="3" strokeLinecap="round"
-                            strokeDasharray={`${item.progress} 100`} className="stroke-white" />
-                    )}
-                </svg>
+            {item.kind === 'day' && <DayFourArcRing day={day} locked={locked} />}
+            {item.kind === 'day' && allFourDone && (
+                <span
+                    aria-label="Semua 4 aktivitas hari selesai"
+                    className="absolute -right-2 -top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-white shadow-sm dark:border-gray-950"
+                >
+                    <CheckCircleIcon sx={{ fontSize: 15 }} />
+                </span>
             )}
             {iconFor(item, size <= 48 ? 23 : 32)}
         </span>

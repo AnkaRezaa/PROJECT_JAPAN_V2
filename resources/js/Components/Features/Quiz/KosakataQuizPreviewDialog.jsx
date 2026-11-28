@@ -38,7 +38,11 @@ export default function KosakataQuizPreviewDialog({
             explanation_reading: q.explanation_reading || '',
             audio_url: q.audio_url || '',
             stage: q.stage || null,
-            disable_question_narration: Boolean(q.disable_question_narration || q.stage === 'word_to_reading'),
+            disable_question_narration: Boolean(
+                q.disable_question_narration
+                || q.stage === 'word_to_reading'
+                || (q.type !== 'listening' && /cara\s*baca|yomikata|bacaan|読み方/i.test(String(q.question_text || q.question || ''))),
+            ),
             points: Number(q.points || 1),
         }));
     }, [questions]);

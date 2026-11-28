@@ -294,7 +294,7 @@ class QuickQuizSessionService
             'question_reading' => $question->questionReadingForStudent(),
             'type' => $question->type,
             'stage' => $question->stage,
-            'disable_question_narration' => (bool) ($question->stage === 'word_to_reading'),
+            'disable_question_narration' => $question->shouldDisableQuestionNarration(),
             'options' => $question->options,
             'option_readings' => $question->option_readings,
             'audio_url' => $question->audio_url,

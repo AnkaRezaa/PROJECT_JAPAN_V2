@@ -54,6 +54,7 @@ export default function KanjiHandwritingCanvas({
     onSkip,
     disabled = false,
     errorMessage = '',
+    onBlankModeChange = null,
     onChange,
     onComplete,
     onError,
@@ -80,6 +81,51 @@ export default function KanjiHandwritingCanvas({
     const [evaluationPreview, setEvaluationPreview] = useState(null);
     const [completed, setCompleted] = useState(false);
     const [strokeFeedback, setStrokeFeedback] = useState(null);
+    const [blankMode, setBlankMode] = useState(false);
+    const blankModeRef = useRef(false);
+    const onBlankModeChangeRef = useRef(onBlankModeChange);
+
+    useEffect(() => {
+        onBlankModeChangeRef.current = onBlankModeChange;
+    }, [onBlankModeChange]);
+
+    const applyGridVisibility = useCallback((writer, hidden) => {
+        if (!writer?.svg) return;
+        if (writer.gridGroup) {
+            writer.gridGroup.style.display = hidden ? 'none' : '';
+        }
+        writer.svg.querySelectorAll('line').forEach((lineEl) => {
+            lineEl.style.display = hidden ? 'none' : '';
+        });
+        Array.from(writer.svg.children).forEach((child) => {
+            if (child === writer.bgGroup || child === writer.drawnGroup) return;
+            if (child.tagName?.toLowerCase() === 'g' && child.querySelector('line')) {
+                child.style.display = hidden ? 'none' : '';
+            }
+        });
+    }, []);
+
+    useEffect(() => {
+        blankModeRef.current = blankMode;
+        onBlankModeChangeRef.current?.(blankMode);
+        const writer = writerRef.current;
+        if (!writer) return;
+        writer.options.showGhost = !blankMode;
+        writer.options.showGrid = !blankMode;
+        applyGridVisibility(writer, blankMode);
+        if (typeof writer.renderUpcomingStrokes === 'function') {
+            writer.renderUpcomingStrokes();
+        } else if (writer.bgGroup) {
+            writer.bgGroup.style.display = blankMode ? 'none' : '';
+        }
+        if (mode === 'quiz' && !completed) {
+            setMessage(
+                blankMode
+                    ? 'Mode kosongan aktif: tulis karakter dari ingatan tanpa panduan & garis bantu.'
+                    : 'Tulis seluruh karakter mengikuti panduan transparan.',
+            );
+        }
+    }, [applyGridVisibility, blankMode, completed, mode]);
 
     const playPreview = useCallback(async () => {
         const writer = writerRef.current;
@@ -207,7 +253,7 @@ export default function KanjiHandwritingCanvas({
         const writer = new KanjiWriter(containerId, strokeData.paths, {
             width: 109,
             height: 109,
-            showGhost: true,
+            showGhost: !blankModeRef.current,
             showGrid: true,
             checkMode: isQuizMode ? 'full' : 'stroke',
             passThreshold: 15,
@@ -221,6 +267,7 @@ export default function KanjiHandwritingCanvas({
             strokeWidth,
         });
         writerRef.current = writer;
+        applyGridVisibility(writer, blankModeRef.current);
 
         let handleFullStrokeEnd;
 
@@ -230,6 +277,7 @@ export default function KanjiHandwritingCanvas({
         } else if (isQuizMode) {
             const renderFullGuide = () => {
                 writer.bgGroup.innerHTML = '';
+                if (blankModeRef.current) return;
                 writer.kanjiData.forEach((pathData) => {
                     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                     path.setAttribute('d', pathData);
@@ -549,6 +597,34 @@ export default function KanjiHandwritingCanvas({
                     <span className={evaluation.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                         {evaluation.correct} tepat
                     </span>
+                )}
+                {mode !== 'preview' && (
+                    <div className="inline-flex items-center rounded-lg border border-gray-200 bg-gray-100 p-0.5 dark:border-gray-700 dark:bg-gray-800" role="group" aria-label="Mode panduan menulis">
+                        <button
+                            type="button"
+                            onClick={() => setBlankMode(false)}
+                            aria-pressed={!blankMode}
+                            className={`rounded-md px-2 py-1 text-[11px] font-black transition ${
+                                !blankMode
+                                    ? 'bg-white text-orange-600 shadow-xs dark:bg-gray-900 dark:text-orange-300'
+                                    : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
+                            }`}
+                        >
+                            Panduan
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setBlankMode(true)}
+                            aria-pressed={blankMode}
+                            className={`rounded-md px-2 py-1 text-[11px] font-black transition ${
+                                blankMode
+                                    ? 'bg-white text-violet-700 shadow-xs dark:bg-gray-900 dark:text-violet-300'
+                                    : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
+                            }`}
+                        >
+                            Kosongan
+                        </button>
+                    </div>
                 )}
             </div>
             <div className={`relative mx-auto aspect-square w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-inner dark:border-gray-700 ${compact ? '' : 'max-sm:max-w-[min(22rem,max(12rem,calc(100dvh-18rem)))]'}`}>

@@ -19,6 +19,8 @@ class HariModul extends Model
         'day_number',
         'title',
         'description',
+        'kotoba_intro_title',
+        'kotoba_intro_body',
         'status',
         'checkpoint_quiz_id',
         'exam_id',

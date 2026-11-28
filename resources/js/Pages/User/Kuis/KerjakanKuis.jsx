@@ -52,6 +52,11 @@ function normalizeQuestionType(type) {
 }
 
 const getJapaneseSpeechText = (question, { includeCorrectAnswer = true } = {}) => {
+    const preferredReading = question?.question_tts_reading || question?.question_reading;
+    if (preferredReading && String(preferredReading).trim().length > 0) {
+        return japaneseSpeechText(preferredReading);
+    }
+
     return japaneseSpeechText(
         question?.kanji,
         questionDisplayText(question?.question),
@@ -180,6 +185,7 @@ export default function Quiz({
     const [flashcardIndex, setFlashcardIndex] = useState(0);
     const [flashcardReviewing, setFlashcardReviewing] = useState(false);
     const [handwritingStrokeWidth, setHandwritingStrokeWidth] = useState(5);
+    const [handwritingBlankMode, setHandwritingBlankMode] = useState(false);
     const [handwritingReviewError, setHandwritingReviewError] = useState('');
     const hasTimeLimit = Number(quiz?.time_limit || 0) > 0;
     const [secondsLeft, setSecondsLeft] = useState(Number(quiz?.time_limit || 0));
@@ -547,6 +553,7 @@ export default function Quiz({
         try {
             const response = await window.axios.post(route('user.attempts.store'), {
                 quiz_id: quiz.id,
+                focus: quiz?.focus || null,
                 module_flow,
                 finished_by_timeout: timeout,
                 attempt_id: attemptSession?.attempt_id || null,
@@ -668,7 +675,7 @@ export default function Quiz({
     };
 
     const continueWithHandwriting = async () => {
-        if (!sessionHandwritingEnabled) {
+        if (!sessionHandwritingEnabled || activeFlashcard?.content_type !== 'kanji') {
             continueAfterFlashcard();
             return;
         }
@@ -691,6 +698,7 @@ export default function Quiz({
                     flashcard_id: activeFlashcard?.id,
                     title: activeFlashcard?.front_text,
                     reading: activeFlashcard?.reading,
+                    audio_reading_override: activeFlashcard?.audio_reading_override || null,
                     meaning: activeFlashcard?.back_text,
                     audio_url: activeFlashcard?.audio_url,
                 });
@@ -1077,7 +1085,9 @@ export default function Quiz({
                             </div>
                         </div>
                         <p className="mt-2 text-[10px] font-black uppercase tracking-[0.22em] text-orange-600 dark:text-orange-300">Penguatan setelah flashcard</p>
-                        <h1 className="truncate text-lg font-black text-gray-900 dark:text-white">Tulis {activeWritingCharacter.character}</h1>
+                        <h1 className="truncate text-lg font-black text-gray-900 dark:text-white">
+                            {handwritingBlankMode ? 'Tulis Kanji dari Ingatan' : `Tulis ${activeWritingCharacter.character}`}
+                        </h1>
                         {handwritingTotal > 1 && <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Karakter {handwritingStep} dari {handwritingTotal}</p>}
                     </div>
                     <QuizSoundToggle enabled={soundEnabled} onToggle={() => setSoundEnabled((value) => !value)} />
@@ -1086,15 +1096,26 @@ export default function Quiz({
                     <div className="mb-3 text-center md:mb-0 md:pt-3 md:text-left">
                         <div className="max-sm:flex max-sm:items-center max-sm:justify-center max-sm:gap-2">
                         <div className="min-w-0">
-                        <JapaneseReading
-                            japanese={handwritingPractice.title}
-                            reading={handwritingPractice.reading}
-                            className="items-center text-xl font-black text-gray-900 dark:text-white sm:text-3xl md:items-start"
-                        />
+                        {handwritingBlankMode ? (
+                            <div className="space-y-1">
+                                <span className="inline-flex rounded-full bg-violet-100 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
+                                    Mode Kosongan
+                                </span>
+                                {handwritingPractice.reading && (
+                                    <p className="text-2xl font-black text-gray-900 dark:text-white sm:text-3xl">{handwritingPractice.reading}</p>
+                                )}
+                            </div>
+                        ) : (
+                            <JapaneseReading
+                                japanese={handwritingPractice.title}
+                                reading={handwritingPractice.reading}
+                                className="items-center text-xl font-black text-gray-900 dark:text-white sm:text-3xl md:items-start"
+                            />
+                        )}
                         {handwritingPractice.meaning && <p className="mt-1 text-sm font-bold text-gray-700 dark:text-gray-300">{handwritingPractice.meaning}</p>}
                         </div>
                         <JapaneseSpeechButton
-                            text={[handwritingPractice.title, handwritingPractice.reading].filter(Boolean).join('、')}
+                            text={handwritingPractice.audio_reading_override || handwritingPractice.reading || handwritingPractice.title}
                             audioUrl={handwritingPractice.audio_url}
                             autoPlay
                             autoPlayEnabled={soundEnabled}
@@ -1102,7 +1123,11 @@ export default function Quiz({
                             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-orange-200 bg-orange-50 text-orange-600 transition fine-pointer:hover:bg-orange-100 dark:border-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:fine-pointer:hover:bg-orange-900/70 sm:mx-auto sm:mt-3 sm:h-10 sm:w-10 md:mx-0"
                         />
                         </div>
-                        <p className="mt-3 hidden text-xs font-semibold leading-5 text-gray-600 dark:text-gray-300 sm:block">Tulis seluruh karakter mengikuti panduan transparan, lalu periksa hasilnya.</p>
+                        <p className="mt-3 hidden text-xs font-semibold leading-5 text-gray-600 dark:text-gray-300 sm:block">
+                            {handwritingBlankMode
+                                ? 'Karakter kanji disembunyikan. Tulis bentuk kanji dari ingatan berdasarkan bacaan & artinya.'
+                                : 'Tulis seluruh karakter mengikuti panduan transparan, lalu periksa hasilnya.'}
+                        </p>
                     </div>
                     <KanjiHandwritingCanvas
                         key={`${handwritingPractice.flashcard_id}-${handwritingPractice.character_index}-${activeWritingCharacter.character}`}
@@ -1111,6 +1136,7 @@ export default function Quiz({
                         selfEvaluation
                         strokeWidth={handwritingStrokeWidth}
                         onStrokeWidthChange={setHandwritingStrokeWidth}
+                        onBlankModeChange={setHandwritingBlankMode}
                         onSkip={() => finishHandwritingPractice({ outcome: 'skipped' })}
                         disabled={flashcardReviewing}
                         errorMessage={handwritingReviewError}
@@ -1183,7 +1209,7 @@ export default function Quiz({
 
                             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:mt-5 sm:gap-3">
                                 <JapaneseSpeechButton
-                                    text={activeFlashcard.front_text || activeFlashcard.reading}
+                                    text={activeFlashcard.audio_reading_override || activeFlashcard.reading || activeFlashcard.front_text}
                                     audioUrl={activeFlashcard.audio_url}
                                     autoPlay
                                     autoPlayEnabled={soundEnabled}
@@ -1209,7 +1235,9 @@ export default function Quiz({
                                 </div>
                             )}
 
-                            <StrokeGuideGallery text={activeFlashcard.front_text} />
+                            {activeFlashcard.content_type === 'kanji' && (
+                                <StrokeGuideGallery text={activeFlashcard.front_text} />
+                            )}
 
                             {(activeFlashcard.example_sentence || activeFlashcard.example_meaning) && (
                                 <div className="mx-auto mt-4 max-w-2xl rounded-2xl bg-gray-50 p-3 text-left dark:bg-gray-800 sm:mt-5 sm:p-4">
@@ -1499,6 +1527,21 @@ export default function Quiz({
                                             reading={answerFeedback?.reading}
                                         />
                                     </div>
+                                    {(currentQ?.audio_url || rawSpeechText) && (
+                                        <div className="mt-1.5 flex items-center gap-2">
+                                            <JapaneseSpeechButton
+                                                text={rawSpeechText || currentQ?.question_tts_reading || currentQ?.kanji || questionDisplayText(currentQ?.question)}
+                                                audioUrl={isStreamableAudio(currentQ?.audio_url) ? currentQ.audio_url : null}
+                                                autoPlay={false}
+                                                autoPlayEnabled={soundEnabled}
+                                                playbackKey={`feedback-${currentQ?.attemptKey}`}
+                                                title="Dengarkan pelafalan di pembahasan"
+                                                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-black/10 bg-white/90 px-2.5 text-xs font-extrabold text-gray-800 shadow-xs transition fine-pointer:hover:bg-white dark:border-white/15 dark:bg-gray-900 dark:text-gray-100"
+                                            >
+                                                <span>Dengarkan pelafalan</span>
+                                            </JapaneseSpeechButton>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

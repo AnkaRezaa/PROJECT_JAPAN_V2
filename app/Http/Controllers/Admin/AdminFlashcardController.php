@@ -356,22 +356,38 @@ class AdminFlashcardController extends Controller
                 ),
             ],
             'mode' => ['required', Rule::in(['word_to_meaning', 'meaning_to_word', 'reading_to_word', 'word_to_reading'])],
+            'content_type' => ['nullable', Rule::in(['all', 'kanji', 'kosakata'])],
             'count' => ['required', 'integer', 'min:1', 'max:50'],
         ]);
+
+        $contentTypeFilter = $validated['content_type'] ?? 'all';
 
         $quiz = Kuis::query()
             ->where('module_id', $flashcardSet->module_id)
             ->where('module_day_id', $flashcardSet->module_day_id)
             ->findOrFail($validated['quiz_id']);
-        $cards = $flashcardSet->flashcards()->whereNotNull('back_text')->inRandomOrder()->take($validated['count'])->get();
+        $cardsQuery = $flashcardSet->flashcards()
+            ->with('vocabulary:id,content_type')
+            ->whereNotNull('back_text');
+
+        if ($contentTypeFilter === 'kanji') {
+            $cardsQuery->whereHas('vocabulary', fn ($q) => $q->where('content_type', 'kanji'));
+        } elseif ($contentTypeFilter === 'kosakata') {
+            $cardsQuery->where(function ($query) {
+                $query->whereHas('vocabulary', fn ($q) => $q->where('content_type', '!=', 'kanji'))
+                    ->orWhereNull('vocabulary_id');
+            });
+        }
+
+        $cards = $cardsQuery->inRandomOrder()->take($validated['count'])->get();
 
         if ($cards->count() < 2) {
-            return redirect()->back()->withErrors(['generate' => 'Minimal butuh 2 kartu dengan arti untuk membuat soal pilihan ganda.']);
+            return redirect()->back()->withErrors(['generate' => 'Minimal butuh 2 kartu dengan arti sesuai jenis konten yang dipilih untuk membuat soal pilihan ganda.']);
         }
 
         $created = 0;
 
-        DB::transaction(function () use ($quiz, $cards, $validated, &$created) {
+        DB::transaction(function () use ($quiz, $cards, $validated, $contentTypeFilter, &$created) {
             Kuis::whereKey($quiz->id)->lockForUpdate()->firstOrFail();
             $nextOrder = (int) $quiz->questions()->max('order') + 1;
 
@@ -380,6 +396,8 @@ class AdminFlashcardController extends Controller
                 $sourceType = $card->vocabulary_id ? 'vocabulary' : 'flashcard';
                 $sourceId = (int) ($card->vocabulary_id ?: $card->id);
                 $generationMode = $validated['mode'];
+                $resolvedContentType = $card->vocabulary?->content_type
+                    ?: ($contentTypeFilter !== 'all' ? $contentTypeFilter : null);
 
                 $isDuplicate = $quiz->questions()
                     ->where('source_type', $sourceType)
@@ -398,6 +416,7 @@ class AdminFlashcardController extends Controller
                     'source_type' => $sourceType,
                     'source_id' => $sourceId,
                     'generation_mode' => $generationMode,
+                    'content_type' => $resolvedContentType,
                     'question_text' => $question['question_text'],
                     'correct_answer' => $question['correct_answer'],
                     'options' => $question['options'],

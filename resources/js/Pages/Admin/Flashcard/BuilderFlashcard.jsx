@@ -123,7 +123,7 @@ export function FlashcardEditorWorkspace({
     const [saveSuccess, setSaveSuccess] = useState('');
     const cardErrors = useMemo(() => cards.map(getCardError), [cards]);
     const totalInvalid = useMemo(() => cardErrors.filter(Boolean).length, [cardErrors]);
-    const generateForm = useForm({ quiz_id: '', mode: 'word_to_meaning', count: 10 });
+    const generateForm = useForm({ quiz_id: '', mode: 'word_to_meaning', content_type: 'all', count: 10 });
     const settingsForm = useForm({
         title: set.title || '',
         description: set.description || '',
@@ -802,6 +802,12 @@ export function FlashcardEditorWorkspace({
                                     <option value="word_to_meaning">Kata ke arti</option>
                                     <option value="meaning_to_word">Arti ke kata</option>
                                     <option value="reading_to_word">Reading ke kata</option>
+                                    <option value="word_to_reading">Kata/Kanji ke cara baca</option>
+                                </select>
+                                <select value={generateForm.data.content_type} onChange={(event) => generateForm.setData('content_type', event.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white">
+                                    <option value="all">Semua jenis kartu</option>
+                                    <option value="kanji">Khusus Kanji (漢字)</option>
+                                    <option value="kosakata">Khusus Kotoba (言葉)</option>
                                 </select>
                                 <input type="number" min="1" max="50" value={generateForm.data.count} onChange={(event) => generateForm.setData('count', event.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                                 {generateForm.errors.generate && <p className="text-xs font-bold text-red-600">{generateForm.errors.generate}</p>}

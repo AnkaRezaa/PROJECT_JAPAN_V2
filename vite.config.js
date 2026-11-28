@@ -6,6 +6,10 @@ import { fileURLToPath, URL } from 'node:url';
 const appEntry = fileURLToPath(new URL('./resources/js/app.jsx', import.meta.url));
 
 export default defineConfig({
+    server: {
+        port: 5173,
+        strictPort: true,
+    },
     plugins: [
         laravel({
             input: appEntry,

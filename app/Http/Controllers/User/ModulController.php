@@ -74,10 +74,14 @@ class ModulController extends Controller
                             ->withCount('flashcards')
                             ->with([
                                 'flashcards' => fn ($cardQuery) => $cardQuery
-                                    ->select(['id', 'flashcard_set_id'])
-                                    ->with(['reviews' => fn ($reviewQuery) => $reviewQuery
-                                        ->where('user_id', $user->id)
-                                        ->select(['id', 'flashcard_id', 'user_id'])]),
+                                    ->select(['id', 'flashcard_set_id', 'vocabulary_id'])
+                                    ->with([
+                                        'vocabulary:id,content_type',
+                                        'reviews' => fn ($reviewQuery) => $reviewQuery
+                                            ->where('user_id', $user->id)
+                                            ->where('skill', 'recognition')
+                                            ->select(['id', 'flashcard_id', 'user_id', 'status', 'skill']),
+                                    ]),
                             ]),
                         'quizzes' => fn ($query) => $query
                             ->where('status', 'published')
@@ -94,7 +98,7 @@ class ModulController extends Controller
                                 'attempts' => fn ($attemptQuery) => $attemptQuery
                                     ->where('user_id', $user->id)
                                     ->where('status', 'completed')
-                                    ->select(['id', 'user_id', 'quiz_id', 'score', 'status']),
+                                    ->select(['id', 'user_id', 'quiz_id', 'focus', 'score', 'status']),
                             ]),
                         'presentationDecks' => fn ($query) => $query
                             ->shared()
@@ -344,6 +348,46 @@ class ModulController extends Controller
                     ->values();
                 $kanjiCount = $day->vocabulary->where('content_type', 'kanji')->count();
                 $kotobaCount = $day->vocabulary->where('content_type', '!=', 'kanji')->count();
+                $dayFlashcards = $day->flashcardSets->flatMap->flashcards->unique('id')->values();
+                $kanjiFlashcards = $dayFlashcards->filter(fn ($card) => $card->vocabulary?->content_type === 'kanji')->values();
+                $kotobaFlashcards = $dayFlashcards->filter(fn ($card) => $card->vocabulary?->content_type !== 'kanji')->values();
+                $kanjiKnownCount = $kanjiFlashcards->filter(
+                    fn ($card) => $card->reviews->contains(fn ($review) => in_array($review->status, ['review', 'known'], true))
+                )->count();
+                $kotobaKnownCount = $kotobaFlashcards->filter(
+                    fn ($card) => $card->reviews->contains(fn ($review) => in_array($review->status, ['review', 'known'], true))
+                )->count();
+                $kanjiTotalCards = $kanjiFlashcards->count();
+                $kotobaTotalCards = $kotobaFlashcards->count();
+                $checkpointQuizModel = $day->quizzes->firstWhere('id', $checkpointQuiz?->id);
+                $checkpointAttempts = $checkpointQuizModel?->attempts ?? collect();
+                $checkpointPassingScore = (int) ($checkpointQuiz->passing_score ?? 70);
+                $checkpointNonHandwriting = $checkpointQuiz
+                    ? $checkpointQuiz->questions->where('type', '!=', 'handwriting')->values()
+                    : collect();
+                $kanjiQuizCount = $checkpointNonHandwriting->isNotEmpty()
+                    ? \App\Services\PembelajaranPenggunaService::filterQuestionsByFocus($checkpointNonHandwriting, 'kanji', true)->count()
+                    : 0;
+                $kotobaQuizCount = $checkpointNonHandwriting->isNotEmpty()
+                    ? \App\Services\PembelajaranPenggunaService::filterQuestionsByFocus($checkpointNonHandwriting, 'kosakata', true)->count()
+                    : 0;
+                $kanjiBestScore = $checkpointAttempts->where('focus', 'kanji')->max('score');
+                $kotobaBestScore = $checkpointAttempts->where('focus', 'kosakata')->max('score');
+                $kanjiQuizPassed = $kanjiBestScore !== null && (int) $kanjiBestScore >= $checkpointPassingScore;
+                $kotobaQuizPassed = $kotobaBestScore !== null && (int) $kotobaBestScore >= $checkpointPassingScore;
+                $kanjiCardsDone = $kanjiTotalCards === 0 || $kanjiKnownCount >= $kanjiTotalCards;
+                $kotobaCardsDone = $kotobaTotalCards === 0 || $kotobaKnownCount >= $kotobaTotalCards;
+                $kanjiDone = ($kanjiTotalCards > 0 || $kanjiQuizCount > 0)
+                    && $kanjiCardsDone
+                    && ($kanjiQuizCount === 0 || $kanjiQuizPassed);
+                $kotobaDone = ($kotobaTotalCards > 0 || $kotobaQuizCount > 0)
+                    && $kotobaCardsDone
+                    && ($kotobaQuizCount === 0 || $kotobaQuizPassed);
+                $dayUnlockedForMoji = $weekCanOpen && $previousDayDone && $isReady;
+                $mojiGoiDone = ($kanjiTotalCards > 0 || $kotobaTotalCards > 0 || $kanjiQuizCount > 0 || $kotobaQuizCount > 0)
+                    ? ((($kanjiTotalCards === 0 && $kanjiQuizCount === 0) || $kanjiDone)
+                        && (($kotobaTotalCards === 0 && $kotobaQuizCount === 0) || $kotobaDone))
+                    : ($this->quizProgressStatus($checkpointBestScore, $checkpointPassingScore) === 'passed');
 
                 return [
                     'id' => $day->id,
@@ -391,14 +435,29 @@ class ModulController extends Controller
                         : null,
                     'quiz_url' => $checkpointQuiz && $quizAccess['allowed'] ? route('user.quizzes.show', $checkpointQuiz->id) : null,
                     'moji_goi' => [
-                        'kanji_count' => $kanjiCount,
-                        'kotoba_count' => $kotobaCount,
-                        'kanji_url' => $checkpointQuiz && $quizAccess['allowed']
-                            ? route('user.quizzes.show', ['quiz' => $checkpointQuiz->id, 'focus' => 'kanji'])
-                            : null,
-                        'kotoba_url' => $checkpointQuiz && $quizAccess['allowed']
-                            ? route('user.quizzes.show', ['quiz' => $checkpointQuiz->id, 'focus' => 'kosakata'])
-                            : null,
+                        'kanji_count' => $kanjiTotalCards > 0 ? $kanjiTotalCards : $kanjiCount,
+                        'kotoba_count' => $kotobaTotalCards > 0 ? $kotobaTotalCards : $kotobaCount,
+                        'kanji_known' => $kanjiKnownCount,
+                        'kotoba_known' => $kotobaKnownCount,
+                        'kanji_quiz_count' => $kanjiQuizCount,
+                        'kotoba_quiz_count' => $kotobaQuizCount,
+                        'kanji_best_score' => $kanjiBestScore,
+                        'kotoba_best_score' => $kotobaBestScore,
+                        'kanji_quiz_passed' => $kanjiQuizPassed,
+                        'kotoba_quiz_passed' => $kotobaQuizPassed,
+                        'kanji_done' => $kanjiDone,
+                        'kotoba_done' => $kotobaDone,
+                        'moji_goi_done' => $mojiGoiDone,
+                        'kanji_url' => $dayUnlockedForMoji && $kanjiTotalCards > 0
+                            ? route('user.moji-goi.show', ['moduleDay' => $day->id, 'focus' => 'kanji'])
+                            : ($checkpointQuiz && $quizAccess['allowed']
+                                ? route('user.quizzes.show', ['quiz' => $checkpointQuiz->id, 'focus' => 'kanji'])
+                                : null),
+                        'kotoba_url' => $dayUnlockedForMoji && $kotobaTotalCards > 0
+                            ? route('user.moji-goi.show', ['moduleDay' => $day->id, 'focus' => 'kotoba'])
+                            : ($checkpointQuiz && $quizAccess['allowed']
+                                ? route('user.quizzes.show', ['quiz' => $checkpointQuiz->id, 'focus' => 'kosakata'])
+                                : null),
                     ],
                     'quiz_locked_reason' => $checkpointQuiz && ! $quizAccess['allowed'] ? $quizAccess['message'] : null,
                     'primary_url' => $checkpointQuiz && $quizAccess['allowed']

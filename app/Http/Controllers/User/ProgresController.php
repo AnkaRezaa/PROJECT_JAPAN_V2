@@ -143,6 +143,7 @@ class ProgresController extends Controller
             'answers.*.answer_payload.ordered_token_ids' => ['nullable', 'array', 'max:20'],
             'answers.*.answer_payload.ordered_token_ids.*' => ['string', 'max:80'],
             'module_flow' => ['nullable', 'boolean'],
+            'focus' => ['nullable', 'in:kanji,kosakata,kotoba'],
             'finished_by_timeout' => ['nullable', 'boolean'],
             'attempt_id' => ['nullable', 'integer', 'exists:attempts,id'],
             'submission_token' => ['nullable', 'uuid'],
@@ -159,7 +160,15 @@ class ProgresController extends Controller
 
         $module = $quiz->module;
         $isGrammar = $quiz->isGrammar();
-        $scoredQuestionIds = $quiz->questions
+        $normalizedFocus = \App\Services\PembelajaranPenggunaService::normalizeFocus($validated['focus'] ?? null);
+        $activeQuestions = $normalizedFocus !== null
+            ? \App\Services\PembelajaranPenggunaService::filterQuestionsByFocus(
+                $quiz->questions->where('type', '!=', 'handwriting')->values(),
+                $normalizedFocus,
+                false
+            )
+            : $quiz->questions;
+        $scoredQuestionIds = $activeQuestions
             ->where('type', '!=', 'handwriting')
             ->pluck('id');
         $scoredQuestionCount = $scoredQuestionIds->count();
@@ -186,7 +195,7 @@ class ProgresController extends Controller
             ->where('source_id', $quiz->id)
             ->exists();
 
-        $attempt = DB::transaction(function () use ($validated, $quiz, $user, $repetisi, $gamifikasiConfig, $isGrammar, $rewardAlreadyGranted, &$wrongAttemptCount, &$answeredUniqueCount, &$attemptAlreadyCompleted) {
+        $attempt = DB::transaction(function () use ($validated, $quiz, $user, $repetisi, $gamifikasiConfig, $isGrammar, $normalizedFocus, $activeQuestions, $rewardAlreadyGranted, &$wrongAttemptCount, &$answeredUniqueCount, &$attemptAlreadyCompleted) {
             $lockedQuiz = Kuis::query()->whereKey($quiz->id)->lockForUpdate()->firstOrFail();
             $attempt = null;
 
@@ -210,6 +219,11 @@ class ProgresController extends Controller
                 $completedCount = PengerjaanKuis::query()
                     ->where('user_id', $user->id)
                     ->where('quiz_id', $quiz->id)
+                    ->when(
+                        $normalizedFocus !== null,
+                        fn ($q) => $q->where('focus', $normalizedFocus),
+                        fn ($q) => $q->whereNull('focus')
+                    )
                     ->where('status', 'completed')
                     ->count();
 
@@ -232,7 +246,7 @@ class ProgresController extends Controller
             $answers = $answerEvents
                 ->keyBy(fn ($answer) => (int) $answer['question_id'])
                 ->values();
-            $questionMap = $quiz->questions->keyBy('id');
+            $questionMap = $activeQuestions->keyBy('id');
             $scoredQuestionMap = $questionMap->reject(fn ($question) => $this->penilaian->soalLatihan($question));
             $scoredAnswers = $answers->filter(
                 fn ($answer) => $scoredQuestionMap->has((int) $answer['question_id'])
@@ -265,6 +279,7 @@ class ProgresController extends Controller
                 ->count();
 
             $attemptPayload = [
+                'focus' => $normalizedFocus,
                 'status' => 'completed',
                 'score' => $score,
                 'xp_earned' => $xpEarned,

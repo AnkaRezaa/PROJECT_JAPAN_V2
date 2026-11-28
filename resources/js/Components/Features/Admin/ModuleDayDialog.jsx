@@ -12,6 +12,8 @@ export default function ModuleDayDialog({ open, onClose, onCreated = null, modul
         day_number: nextDayNumber,
         title: '',
         description: '',
+        kotoba_intro_title: '',
+        kotoba_intro_body: '',
         status: 'draft',
         handwriting_enabled: true,
         exam_id: '',
@@ -24,6 +26,8 @@ export default function ModuleDayDialog({ open, onClose, onCreated = null, modul
             day_number: day?.day_number || nextDayNumber,
             title: day?.title || `Hari ${nextDayNumber}`,
             description: day?.description || '',
+            kotoba_intro_title: day?.kotoba_intro_title || '',
+            kotoba_intro_body: day?.kotoba_intro_body || '',
             status: day?.status || 'draft',
             handwriting_enabled: day?.handwriting_enabled ?? true,
             exam_id: day?.exam_id ? String(day.exam_id) : '',
@@ -130,6 +134,42 @@ export default function ModuleDayDialog({ open, onClose, onCreated = null, modul
                         placeholder="Target belajar pada hari ini"
                     />
                 </FormField>
+
+                <div className="space-y-3 rounded-2xl border border-pink-100 bg-pink-50/40 p-3.5 dark:border-pink-900/40 dark:bg-pink-950/15">
+                    <p className="text-[11px] font-black uppercase tracking-wider text-pink-700 dark:text-pink-300">
+                        Penjelasan Pembuka Sesi Kotoba (Opsional)
+                    </p>
+                    <FormField
+                        label="Judul Pembuka Kotoba"
+                        error={form.errors.kotoba_intro_title}
+                        tooltip="Judul pengantar tema kosakata yang tampil sebelum murid masuk ke kartu Kotoba hari ini."
+                    >
+                        <input
+                            value={form.data.kotoba_intro_title}
+                            onChange={(event) => {
+                                form.setData('kotoba_intro_title', event.target.value);
+                                form.clearErrors('kotoba_intro_title');
+                            }}
+                            className={`${inputClass} ${form.errors.kotoba_intro_title ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                            placeholder="Contoh: Kosakata Rumah & Dapur"
+                        />
+                    </FormField>
+                    <FormField
+                        label="Ringkasan / Penjelasan Kotoba"
+                        error={form.errors.kotoba_intro_body}
+                        tooltip="Penjelasan singkat konteks dan gambaran kata-kata yang akan dipelajari pada sesi Kotoba hari ini."
+                    >
+                        <textarea
+                            value={form.data.kotoba_intro_body}
+                            onChange={(event) => {
+                                form.setData('kotoba_intro_body', event.target.value);
+                                form.clearErrors('kotoba_intro_body');
+                            }}
+                            className={`${inputClass} min-h-20 ${form.errors.kotoba_intro_body ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                            placeholder="Gambaran tema dan tips menghafal kosakata hari ini..."
+                        />
+                    </FormField>
+                </div>
 
                 <FormField
                     label="Status"

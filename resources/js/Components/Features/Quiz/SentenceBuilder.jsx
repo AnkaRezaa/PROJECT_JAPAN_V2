@@ -37,6 +37,21 @@ const THEME_STYLES = {
     },
 };
 
+function shuffleTokensList(list = []) {
+    if (!Array.isArray(list) || list.length <= 1) return Array.isArray(list) ? [...list] : [];
+    const shuffled = [...list];
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const sameOrder = shuffled.every((item, index) => item?.id === list[index]?.id);
+    if (sameOrder) {
+        const first = shuffled.shift();
+        shuffled.push(first);
+    }
+    return shuffled;
+}
+
 export default function SentenceBuilder({
     tokens = [],
     selectedIds = [],
@@ -49,12 +64,23 @@ export default function SentenceBuilder({
     const selected = Array.isArray(selectedIds) ? selectedIds : [];
     const tStyle = THEME_STYLES[theme] || THEME_STYLES.amber;
 
+    const tokenSignature = useMemo(
+        () => (Array.isArray(tokens) ? tokens.map((t) => t?.id ?? t?.text ?? '').join('|') : ''),
+        [tokens],
+    );
+
+    const shuffledTokens = useMemo(
+        () => shuffleTokensList(tokens),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [tokenSignature],
+    );
+
     // Lookup token O(1)
     const tokenMap = useMemo(() => {
         const map = new Map();
-        tokens.forEach((t) => map.set(t.id, t));
+        shuffledTokens.forEach((t) => map.set(t.id, t));
         return map;
-    }, [tokens]);
+    }, [shuffledTokens]);
 
     const selectedTokens = useMemo(() => {
         return selected.map((id) => tokenMap.get(id)).filter(Boolean);
@@ -62,8 +88,8 @@ export default function SentenceBuilder({
 
     const availableTokens = useMemo(() => {
         const selectedSet = new Set(selected);
-        return tokens.filter((t) => !selectedSet.has(t.id));
-    }, [tokens, selected]);
+        return shuffledTokens.filter((t) => !selectedSet.has(t.id));
+    }, [shuffledTokens, selected]);
 
     const handleSelectToken = (tokenId) => {
         if (disabled) return;

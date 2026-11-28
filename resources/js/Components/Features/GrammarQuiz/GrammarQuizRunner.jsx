@@ -166,8 +166,8 @@ function IntroScreen({ quiz, onStart, onClose }) {
                                 examples.map((example, idx) => (
                                     <div key={idx} className="flex items-start justify-between gap-2 rounded-xl border border-gray-100 bg-gray-50/80 p-3 dark:border-gray-800 dark:bg-gray-800/60">
                                         <JapaneseReading {...example} className="text-sm font-extrabold leading-6 text-gray-900 dark:text-white" />
-                                        {example.japanese && (
-                                            <JapaneseSpeechButton text={example.japanese} size="small" className="mt-0.5 shrink-0 text-gray-400 fine-pointer:hover:text-emerald-600 dark:fine-pointer:hover:text-emerald-400" />
+                                        {(example.reading || example.japanese) && (
+                                            <JapaneseSpeechButton text={example.reading || example.japanese} size="small" className="mt-0.5 shrink-0 text-gray-400 fine-pointer:hover:text-emerald-600 dark:fine-pointer:hover:text-emerald-400" />
                                         )}
                                     </div>
                                 ))
@@ -241,7 +241,7 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
     const meta = STAGE_META[stage?.id] || STAGE_META.transformation;
     const canCheck = question?.type === 'sentence_builder'
         ? Array.isArray(answer) && answer.length > 0 : typeof answer === 'string' && Boolean(answer);
-    const narrationText = japaneseSpeechText(question?.japanese || question?.prompt);
+    const narrationText = japaneseSpeechText(question?.reading || question?.japanese || question?.prompt);
     const narrationAudioUrl = isStreamableAudio(question?.audio_url) ? question.audio_url : null;
     const narrationKey = `grammar-question-${stage?.id}-${question?.id || question?.prompt}-${narrationRevision}`;
 
@@ -336,7 +336,7 @@ function QuestionScreen({ stage, question, answer, feedback, onAnswer, onCheck, 
                                         translation={question.translation}
                                         className="min-w-0 items-center [overflow-wrap:anywhere] text-xl font-black font-japanese text-gray-950 dark:text-white sm:text-2xl"
                                     />
-                                    <JapaneseSpeechButton text={question.japanese} audioUrl={narrationAudioUrl} playbackKey={narrationKey} size="small" className="shrink-0 text-gray-400 fine-pointer:hover:text-emerald-600 dark:fine-pointer:hover:text-emerald-400" />
+                                    <JapaneseSpeechButton text={question.reading || question.japanese} audioUrl={narrationAudioUrl} playbackKey={narrationKey} size="small" className="shrink-0 text-gray-400 fine-pointer:hover:text-emerald-600 dark:fine-pointer:hover:text-emerald-400" />
                                 </div>
                             ) : (
                                 <>

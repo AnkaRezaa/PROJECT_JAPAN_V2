@@ -36,6 +36,7 @@ const emptyForm = {
     example_meaning: '',
     example_word: '',
     audio_url: '',
+    audio_reading_override: '',
     onyomi: '',
     kunyomi: '',
     radicals_text: '',
@@ -78,6 +79,7 @@ const toForm = (item) => ({
     example_meaning: item.example_meaning || '',
     example_word: item.metadata?.example_word || '',
     audio_url: item.audio_url || '',
+    audio_reading_override: item.metadata?.audio_reading_override || '',
     onyomi: item.metadata?.onyomi || '',
     kunyomi: item.metadata?.kunyomi || '',
     radicals_text: Array.isArray(item.metadata?.radicals) ? item.metadata.radicals.join(' | ') : '',
@@ -193,6 +195,7 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                 stroke_count: data.stroke_count ? Number(data.stroke_count) : null,
                 notes: data.notes || null,
                 example_word: data.content_type === 'kanji' ? (data.example_word || null) : (editing?.metadata?.example_word || null),
+                audio_reading_override: data.audio_reading_override || null,
             },
         }));
 
@@ -792,6 +795,17 @@ export default function Kosakata({ vocabulary = {}, filters = {}, programs = [],
                                             }}
                                             placeholder="Opsional"
                                             className={`${inputClass} ${form.errors.audio_url ? '!border-rose-400 focus:!border-rose-500' : ''}`}
+                                        />
+                                    </Field>
+                                    <Field label="Override Bacaan Audio TTS" error={form.errors['metadata.audio_reading_override']} tooltip="Opsional. Isi kana khusus untuk pelafalan TTS otomatis bila bacaan standar masih kurang tepat." wide>
+                                        <input
+                                            value={form.data.audio_reading_override}
+                                            onChange={(event) => {
+                                                form.setData('audio_reading_override', event.target.value);
+                                                form.clearErrors('metadata.audio_reading_override');
+                                            }}
+                                            placeholder="Opsional, contoh: かんきせん"
+                                            className={`${inputClass} ${form.errors['metadata.audio_reading_override'] ? '!border-rose-400 focus:!border-rose-500' : ''}`}
                                         />
                                     </Field>
                                     <Field label="Sumber" error={form.errors.source_type} tooltip="Asal sumber materi (manual, pdf, xlsx, dll).">

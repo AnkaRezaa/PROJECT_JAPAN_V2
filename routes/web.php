@@ -450,6 +450,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dokkai-quizzes/{quiz}', [DokkaiController::class, 'payload'])->name('dokkai-quizzes.payload');
         Route::get('/dokkai/{quiz}', [DokkaiController::class, 'show'])->name('dokkai.show');
         Route::post('/dokkai-quizzes/{quiz}/submit', [DokkaiController::class, 'submit'])->middleware('throttle:learning-actions')->name('dokkai-quizzes.submit');
+        Route::get('/module-days/{moduleDay}/moji-goi/{focus}', [\App\Http\Controllers\User\MojiGoiController::class, 'show'])
+            ->whereIn('focus', ['kanji', 'kotoba'])
+            ->name('moji-goi.show');
         Route::get('/module-days/{moduleDay}/kuis-campuran', [KuisCampuranController::class, 'show'])->name('kuis-campuran.show');
         Route::post('/module-days/{moduleDay}/kuis-campuran/restart', [KuisCampuranController::class, 'restart'])->middleware('throttle:learning-actions')->name('kuis-campuran.restart');
         Route::post('/module-days/{moduleDay}/kuis-campuran/submit', [KuisCampuranController::class, 'submit'])->middleware('throttle:learning-actions')->name('kuis-campuran.submit');

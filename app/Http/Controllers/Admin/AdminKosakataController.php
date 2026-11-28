@@ -393,6 +393,7 @@ class AdminKosakataController extends Controller
             'metadata.stroke_count' => ['nullable', 'integer', 'min:1', 'max:64'],
             'metadata.notes' => ['nullable', 'string'],
             'metadata.example_word' => ['nullable', 'string', 'max:255'],
+            'metadata.audio_reading_override' => ['nullable', 'string', 'max:255'],
             'status' => ['required', 'in:draft,published'],
         ]);
 

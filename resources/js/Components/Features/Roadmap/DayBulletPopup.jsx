@@ -94,7 +94,9 @@ export default function DayBulletPopup({
     const quizLocked = dayLocked || Boolean(day.checkpoint_summary?.locked) || !day.quiz_url;
     const kanjiUrl = day.moji_goi?.kanji_url || day.quiz_url;
     const kotobaUrl = day.moji_goi?.kotoba_url || day.quiz_url;
-    const vocabPassed = day.checkpoint_summary?.progress_status === 'passed';
+    const kanjiDone = Boolean(day.moji_goi?.kanji_done);
+    const kotobaDone = Boolean(day.moji_goi?.kotoba_done);
+    const vocabPassed = day.moji_goi?.moji_goi_done ?? (day.checkpoint_summary?.progress_status === 'passed');
 
     const grammarLessons = day.grammar_lessons || [];
     const hasGrammar = grammarLessons.length > 0;
@@ -169,6 +171,7 @@ export default function DayBulletPopup({
                             furigana="かんじ"
                             label="Kanji"
                             gradient="linear-gradient(180deg, #A78BFA, #6D28D9)"
+                            done={kanjiDone}
                             badge={day.moji_goi?.kanji_count || null}
                             href={kanjiUrl}
                         />
@@ -177,6 +180,7 @@ export default function DayBulletPopup({
                             furigana="ことば"
                             label="Kotoba"
                             gradient="linear-gradient(180deg, #F472B6, #DB2777)"
+                            done={kotobaDone}
                             badge={day.moji_goi?.kotoba_count || null}
                             href={kotobaUrl}
                         />

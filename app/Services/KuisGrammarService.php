@@ -231,9 +231,27 @@ class KuisGrammarService
         ];
 
         if ($question->stage === 'sentence_builder') {
-            $payload['tokens'] = Arr::get($options, 'tokens', []);
+            $tokens = array_values(Arr::get($options, 'tokens', []));
+            $correctOrder = json_decode($question->correct_answer, true) ?: [];
+
+            if (! $includeAnswers && count($tokens) > 1) {
+                $originalIds = array_map(fn ($token) => $token['id'] ?? null, $tokens);
+                $shuffled = $tokens;
+                shuffle($shuffled);
+
+                $shuffledIds = array_map(fn ($token) => $token['id'] ?? null, $shuffled);
+                $correctPrefix = array_slice($shuffledIds, 0, count($correctOrder));
+                if ($shuffledIds === $originalIds || ($correctOrder !== [] && $correctPrefix === $correctOrder)) {
+                    $first = array_shift($shuffled);
+                    $shuffled[] = $first;
+                }
+
+                $tokens = $shuffled;
+            }
+
+            $payload['tokens'] = $tokens;
             if ($includeAnswers) {
-                $payload['correctOrder'] = json_decode($question->correct_answer, true) ?: [];
+                $payload['correctOrder'] = $correctOrder;
             }
         } else {
             $payload['choices'] = Arr::get($options, 'choices', []);

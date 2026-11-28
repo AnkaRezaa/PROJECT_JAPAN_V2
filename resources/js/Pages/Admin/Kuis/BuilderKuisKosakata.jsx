@@ -513,6 +513,45 @@ export default function QuizBuilder({
                             onVisibilityChange={(value) => updateQuestion(activeIndex, 'show_question_reading', value)}
                             error={errors[`questions.${activeIndex}.show_question_reading`] || errors[`questions.${activeIndex}.question_reading`]}
                         />
+                        {qType !== 'listening' && (
+                            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-amber-200/80 bg-amber-50/60 px-3.5 py-2.5 dark:border-amber-900/60 dark:bg-amber-950/20">
+                                    <span className="min-w-0">
+                                        <span className="block text-xs font-black text-gray-900 dark:text-white">
+                                            Soal Cara Baca (Nonaktifkan Audio)
+                                        </span>
+                                        <span className="block text-[11px] font-medium text-gray-600 dark:text-gray-400">
+                                            Sembunyikan speaker & TTS sebelum siswa menjawab.
+                                        </span>
+                                    </span>
+                                    <input
+                                        type="checkbox"
+                                        checked={activeQ.stage === 'word_to_reading'}
+                                        onChange={(e) => updateQuestion(activeIndex, 'stage', e.target.checked ? 'word_to_reading' : null)}
+                                        className="h-4 w-4 shrink-0 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                                    />
+                                </label>
+                                <label className="flex items-center justify-between gap-3 rounded-xl border border-violet-200/80 bg-violet-50/50 px-3.5 py-2.5 dark:border-violet-900/60 dark:bg-violet-950/20">
+                                    <span className="min-w-0">
+                                        <span className="block text-xs font-black text-gray-900 dark:text-white">
+                                            Kelompok Soal Moji-Goi
+                                        </span>
+                                        <span className="block text-[11px] font-medium text-gray-600 dark:text-gray-400">
+                                            Menentukan apakah soal masuk Kuis Kanji atau Kuis Kotoba.
+                                        </span>
+                                    </span>
+                                    <select
+                                        value={activeQ.content_type || ''}
+                                        onChange={(e) => updateQuestion(activeIndex, 'content_type', e.target.value || null)}
+                                        className="h-9 rounded-lg border border-violet-200 bg-white px-2.5 text-xs font-black text-gray-900 dark:border-violet-800 dark:bg-gray-900 dark:text-white"
+                                    >
+                                        <option value="">Umum</option>
+                                        <option value="kanji">Kanji (漢字)</option>
+                                        <option value="kosakata">Kotoba (言葉)</option>
+                                    </select>
+                                </label>
+                            </div>
+                        )}
                     </div>
 
                     {/* ─── Multiple Choice: Options Grid ─── */}

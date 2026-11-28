@@ -364,6 +364,8 @@ class AdminHariModulController extends Controller
             ],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'kotoba_intro_title' => ['nullable', 'string', 'max:255'],
+            'kotoba_intro_body' => ['nullable', 'string', 'max:5000'],
             'handwriting_enabled' => ['sometimes', 'boolean'],
             'exam_id' => ['sometimes', 'nullable', 'integer', Rule::exists('exams', 'id')],
             'status' => ['required', 'in:draft,published'],

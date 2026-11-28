@@ -17,6 +17,7 @@ class PengerjaanKuis extends Model
     protected $fillable = [
         'user_id',
         'quiz_id',
+        'focus',
         'submission_token',
         'status',
         'score',

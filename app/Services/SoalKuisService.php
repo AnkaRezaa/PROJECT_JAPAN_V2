@@ -123,6 +123,7 @@ class SoalKuisService
                         'source_type' => $sourceType,
                         'source_id' => $sourceId,
                         'generation_mode' => $generationMode,
+                        'content_type' => $normalized['content_type'],
                         'question_text' => $normalized['question_text'],
                         'highlight_text' => $normalized['highlight_text'],
                         'question_reading' => $normalized['question_reading'],
@@ -488,6 +489,7 @@ class SoalKuisService
                     'source_type' => 'vocabulary',
                     'source_id' => $vocabulary->id,
                     'generation_mode' => $mode,
+                    'content_type' => $vocabulary->content_type,
                 ] : null;
             })
             ->filter()
@@ -570,6 +572,7 @@ class SoalKuisService
             'source_type' => $this->nullableText($data['source_type'] ?? null),
             'source_id' => isset($data['source_id']) && is_numeric($data['source_id']) ? (int) $data['source_id'] : null,
             'generation_mode' => $this->nullableText($data['generation_mode'] ?? null),
+            'content_type' => in_array($data['content_type'] ?? null, ['kanji', 'kosakata', 'bunpo'], true) ? $data['content_type'] : null,
             'question_text' => $highlight['text'],
             'highlight_text' => $highlight['target'],
             'question_reading' => $this->nullableText($data['question_reading'] ?? null),

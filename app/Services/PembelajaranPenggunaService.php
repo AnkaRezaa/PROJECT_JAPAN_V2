@@ -47,36 +47,62 @@ class PembelajaranPenggunaService
         });
     }
 
-    public function quizPayload(Pengguna $user, Kuis $quiz, ?string $focus = null): array
+    public static function normalizeFocus(?string $focus): ?string
     {
-        $normalizedFocus = in_array($focus, ['kanji', 'kosakata'], true) ? $focus : null;
+        return match ($focus) {
+            'kanji' => 'kanji',
+            'kosakata', 'kotoba' => 'kosakata',
+            default => null,
+        };
+    }
+
+    public static function filterQuestionsByFocus(Collection $questions, ?string $focus, bool $strict = false): Collection
+    {
+        $normalizedFocus = self::normalizeFocus($focus);
+        if ($normalizedFocus === null || $questions->isEmpty()) {
+            return $strict ? collect() : $questions->values();
+        }
+
+        $vocabIdsToResolve = $questions
+            ->filter(fn ($q) => empty($q->content_type) && $q->source_type === 'vocabulary' && $q->source_id)
+            ->pluck('source_id')
+            ->unique()
+            ->values();
+
+        $vocabTypesById = $vocabIdsToResolve->isNotEmpty()
+            ? Kosakata::query()->whereIn('id', $vocabIdsToResolve)->pluck('content_type', 'id')
+            : collect();
+
+        $filtered = $questions->filter(function ($q) use ($normalizedFocus, $vocabTypesById) {
+            $type = $q->content_type;
+            if (! $type && $q->source_type === 'vocabulary' && $q->source_id) {
+                $type = $vocabTypesById->get($q->source_id);
+            }
+
+            if ($normalizedFocus === 'kanji') {
+                return $type === 'kanji';
+            }
+
+            return $type !== null && $type !== 'kanji';
+        })->values();
+
+        if ($strict) {
+            return $filtered;
+        }
+
+        return $filtered->isNotEmpty() ? $filtered : $questions->values();
+    }
+
+    public function quizPayload(Pengguna $user, Kuis $quiz, ?string $focus = null, bool $skipFlashcards = false): array
+    {
+        $normalizedFocus = self::normalizeFocus($focus);
         $module = $quiz->module;
         $questions = $quiz->questions
             ->where('type', '!=', 'handwriting')
             ->values();
 
         if ($normalizedFocus !== null && $questions->isNotEmpty()) {
-            $vocabIds = $questions
-                ->filter(fn ($q) => $q->source_type === 'vocabulary' && $q->source_id)
-                ->pluck('source_id')
-                ->unique()
-                ->values();
-
-            if ($vocabIds->isNotEmpty()) {
-                $matchingVocabIds = Kosakata::query()
-                    ->whereIn('id', $vocabIds)
-                    ->where('content_type', $normalizedFocus)
-                    ->pluck('id')
-                    ->all();
-
-                $filtered = $questions->filter(
-                    fn ($q) => $q->source_type === 'vocabulary' && in_array($q->source_id, $matchingVocabIds, true)
-                )->values();
-
-                if ($filtered->isNotEmpty()) {
-                    $questions = $filtered;
-                }
-            }
+            $questions = self::filterQuestionsByFocus($questions, $normalizedFocus, false);
         }
 
         if ($quiz->shuffle_questions) {
@@ -91,6 +117,11 @@ class PembelajaranPenggunaService
         $attemptsUsed = PengerjaanKuis::query()
             ->where('user_id', $user->id)
             ->where('quiz_id', $quiz->id)
+            ->when(
+                $normalizedFocus !== null,
+                fn ($q) => $q->where('focus', $normalizedFocus),
+                fn ($q) => $q->whereNull('focus')
+            )
             ->where('status', 'completed')
             ->count();
         $maxAttempts = $quiz->max_attempts ? (int) $quiz->max_attempts : null;
@@ -148,10 +179,11 @@ class PembelajaranPenggunaService
                     'question' => $question->question_text,
                     'highlight_text' => $question->highlight_text,
                     'question_reading' => $question->questionReadingForStudent(),
+                    'question_tts_reading' => $question->question_reading,
                     'kanji' => '',
                     'type' => $question->type,
                     'stage' => $question->stage,
-                    'disable_question_narration' => (bool) ($question->stage === 'word_to_reading'),
+                    'disable_question_narration' => $question->shouldDisableQuestionNarration(),
                     'options' => $options,
                     'option_readings' => $optionReadings,
                     'audio_url' => $question->audio_url,
@@ -167,7 +199,7 @@ class PembelajaranPenggunaService
             'total_points' => (int) $questions->sum(
                 fn ($question) => max(1, (int) ($question->points ?? 1))
             ),
-            'flashcards' => $this->quizFlashcards($user, $quiz, $normalizedFocus),
+            'flashcards' => $skipFlashcards ? collect() : $this->quizFlashcards($user, $quiz, $normalizedFocus),
         ];
     }
 
@@ -292,6 +324,7 @@ class PembelajaranPenggunaService
                     'example_reading' => $vocabulary?->example_reading,
                     'example_meaning' => $card->example_meaning,
                     'audio_url' => $card->audio_url,
+                    'audio_reading_override' => $metadata['audio_reading_override'] ?? null,
                     'content_type' => $vocabulary?->content_type,
                     'meaning_en' => $vocabulary?->meaning_en,
                     'onyomi' => $metadata['onyomi'] ?? null,

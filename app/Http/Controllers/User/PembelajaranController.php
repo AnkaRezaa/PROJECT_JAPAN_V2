@@ -34,7 +34,8 @@ class PembelajaranController extends Controller
         $aksesKuis->abortJikaTerkunci(Auth::user(), $quiz);
 
         $focus = $request->query('focus');
-        $payload = $learning->quizPayload(Auth::user(), $quiz, is_string($focus) ? $focus : null);
+        $skipFlashcards = $request->boolean('standalone');
+        $payload = $learning->quizPayload(Auth::user(), $quiz, is_string($focus) ? $focus : null, $skipFlashcards);
         $roadmapUrl = $quiz->module?->programPembelajaran
             ? route('user.modul.program', $quiz->module->programPembelajaran->slug)
             : route('user.kelas.index');
