@@ -873,7 +873,7 @@ export default function QuizBuilder({
             onToggleStatus={toggleQuizStatus}
             onPreview={openStudentPreview}
             onImport={() => importInputRef.current?.click()}
-            importLabel={importProcessing ? 'Memeriksa File...' : 'Import XLSX / CSV'}
+            importLabel={importProcessing ? 'Memeriksa Soal...' : 'Impor Soal'}
             extraActions={
                 activeTab === 'questions' && (
                     <div className="relative">

@@ -412,7 +412,7 @@ export function FlashcardEditorWorkspace({
                                 className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:border-teal-300 hover:text-teal-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
                             >
                                 <UploadFileIcon sx={{ fontSize: 18 }} />
-                                {isImporting ? 'Mengimpor...' : 'Import'}
+                                {isImporting ? 'Mengimpor...' : 'Impor Flashcard'}
                             </button>
                             {showImportMenu && (
                                 <div className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900">
@@ -427,7 +427,7 @@ export function FlashcardEditorWorkspace({
                                         }}
                                         className="block w-full px-4 py-3 text-left text-sm font-bold text-gray-700 hover:bg-teal-50 hover:text-teal-700 dark:text-gray-200 dark:hover:bg-teal-900/20 dark:hover:text-teal-300"
                                     >
-                                        Import CSV / Excel
+                                        Unggah CSV / Excel
                                     </button>
                                     <a
                                         href={route('admin.flashcards.template', { flashcardSet: set.id, format: 'xlsx' })}
