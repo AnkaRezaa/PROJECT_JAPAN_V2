@@ -272,6 +272,7 @@ export default function KelasPage({ programs = [], activeLiveToday = null }) {
 
                                 <Link
                                     href={route('user.live-classes.index')}
+                                    data-tour="kelas-live-btn"
                                     className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:bg-slate-100 fine-pointer:hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:active:bg-gray-700 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm sm:font-bold sm:shadow-sm"
                                 >
                                     <VideoCameraFrontIcon sx={{ fontSize: 18 }} className="text-brand-600 dark:text-brand-400" />
@@ -281,6 +282,7 @@ export default function KelasPage({ programs = [], activeLiveToday = null }) {
 
                                 <Link
                                     href={route('katalog')}
+                                    data-tour="kelas-catalog-btn"
                                     className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r ${theme.ctaBg} px-2.5 text-xs font-semibold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:brightness-90 fine-pointer:hover:brightness-95 sm:gap-2 sm:rounded-xl sm:px-5 sm:text-sm sm:font-black sm:shadow-sm`}
                                 >
                                     <ExploreIcon sx={{ fontSize: 18 }} />
@@ -347,7 +349,7 @@ export default function KelasPage({ programs = [], activeLiveToday = null }) {
                     )}
 
                     {enrolledCourses.length > 0 && (
-                        <section aria-labelledby="kelas-terdaftar-title">
+                        <section data-tour="kelas-enrolled" aria-labelledby="kelas-terdaftar-title">
                             <div className="mb-2 flex flex-wrap items-center justify-between gap-x-2 sm:mb-4">
                                 <div>
                                     <h2 id="kelas-terdaftar-title" className="text-base font-semibold text-slate-950 dark:text-white sm:text-xl sm:font-black">

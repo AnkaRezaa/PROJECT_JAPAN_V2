@@ -120,7 +120,7 @@ export default function ReviewIndex({
                     </details>
                 </header>
 
-                <section aria-labelledby="review-stats" className="py-6">
+                <section data-tour="review-stats" aria-labelledby="review-stats" className="py-6">
                     <div className="flex items-center justify-between gap-3">
                         <h2 id="review-stats" className="text-base font-black text-gray-950 dark:text-white">Ringkasan {filters.range} hari</h2>
                         <select value={filters.range} onChange={(event) => updateFilter('range', event.target.value)} aria-label="Rentang statistik" className="rounded-lg border-gray-300 bg-white py-2 pl-3 pr-8 text-sm font-bold text-gray-700 focus:border-emerald-500 focus:ring-emerald-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
@@ -149,7 +149,7 @@ export default function ReviewIndex({
                     </div>
                 </section>
 
-                <section aria-labelledby="review-history" className="border-t border-gray-200 pt-6 dark:border-gray-800">
+                <section data-tour="review-history" aria-labelledby="review-history" className="border-t border-gray-200 pt-6 dark:border-gray-800">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <h2 id="review-history" className="text-base font-black text-gray-950 dark:text-white">Aktivitas terbaru</h2>
                         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">

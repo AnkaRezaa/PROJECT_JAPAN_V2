@@ -464,7 +464,7 @@ export default function BerandaUser({
                     <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-8">
                         {/* Kolom Kiri: Jalur Belajar (lg:col-span-8) */}
                         <div className="min-w-0 space-y-3 lg:col-span-8 lg:space-y-8">
-                            {!showPhotoCarousel && <section className="min-w-0 rounded-lg border border-emerald-200 bg-white px-3.5 py-3 dark:border-emerald-900 dark:bg-gray-900">
+                            {!showPhotoCarousel && <section data-tour="beranda-continue" className="min-w-0 rounded-lg border border-emerald-200 bg-white px-3.5 py-3 dark:border-emerald-900 dark:bg-gray-900">
                                 <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">Lanjutkan Belajar</p>
                                 <h2 className="mt-1 text-base font-semibold leading-snug text-gray-950 [overflow-wrap:anywhere] dark:text-white">
                                     {activeLearning?.title || 'Belum Ada Kelas Aktif'}
@@ -491,7 +491,7 @@ export default function BerandaUser({
                             {/* 1. Hub Latihan Harian - Grid 2 Kolom: Kuis Campuran & Pemulihan Titik Lemah */}
                             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:gap-5">
                                 {/* Kartu 1: Kuis Campuran Harian (10 Soal Komprehensif) */}
-                                <section className="relative flex min-w-0 flex-col justify-between overflow-hidden rounded-lg border border-emerald-700/40 bg-emerald-900 p-3.5 text-white lg:rounded-3xl lg:bg-gradient-to-br lg:from-emerald-800 lg:to-emerald-950 lg:p-7 lg:shadow-sm">
+                                <section data-tour="beranda-mixed-quiz" className="relative flex min-w-0 flex-col justify-between overflow-hidden rounded-lg border border-emerald-700/40 bg-emerald-900 p-3.5 text-white lg:rounded-3xl lg:bg-gradient-to-br lg:from-emerald-800 lg:to-emerald-950 lg:p-7 lg:shadow-sm">
                                     <span aria-hidden="true" className="pointer-events-none absolute -bottom-6 right-2 hidden select-none text-9xl font-black text-white/[0.07] lg:block">
                                         混
                                     </span>
@@ -564,7 +564,7 @@ export default function BerandaUser({
                                 </section>
 
                                 {/* Kartu 2: Pemulihan Titik Lemah (Weakspot Recovery) */}
-                                <section className={`relative flex min-w-0 flex-col justify-between overflow-hidden rounded-lg border p-3.5 transition lg:rounded-3xl lg:p-7 lg:shadow-sm ${
+                                <section data-tour="beranda-weakspot" className={`relative flex min-w-0 flex-col justify-between overflow-hidden rounded-lg border p-3.5 transition lg:rounded-3xl lg:p-7 lg:shadow-sm ${
                                     weakspotSummary?.has_weakspot
                                         ? 'bg-amber-950 text-white border-amber-700/50 lg:bg-gradient-to-br lg:from-amber-900 lg:via-amber-950 lg:to-orange-950'
                                         : 'bg-white dark:bg-gray-900 border-slate-200/80 dark:border-gray-800 text-gray-900 dark:text-white'
@@ -646,7 +646,7 @@ export default function BerandaUser({
                             </div>
 
                             {/* 2. Belajar Hari Ini - Clean Educational Card with Study Desk Visual */}
-                            {showPhotoCarousel && <section className="rounded-3xl border border-slate-200/80 bg-white p-7 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                            {showPhotoCarousel && <section data-tour="beranda-continue" className="rounded-3xl border border-slate-200/80 bg-white p-7 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                                 <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                                     <div className="flex items-start gap-4 sm:gap-5">
                                         <div className="hidden sm:flex h-24 w-24 sm:h-28 sm:w-28 shrink-0 overflow-hidden rounded-[28px] border border-slate-200/80 shadow-sm dark:border-gray-800">

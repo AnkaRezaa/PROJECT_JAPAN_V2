@@ -819,6 +819,7 @@ function PathNode({ item, selected, onDayToggle, onLiveOpen }) {
         return (
             <button
                 type="button"
+                data-tour={item.status === 'active' ? 'roadmap-day-active' : 'roadmap-day-node'}
                 onClick={(event) => !locked && onDayToggle(item.dayId, event.currentTarget)}
                 disabled={locked}
                 aria-label={`Hari ${item.dayNumber}: ${itemStatusLabel(item)}, progres ${item.progress}%`}
@@ -1992,7 +1993,7 @@ function LibraryShortcut({ program, onOpenDokkaiDrawer }) {
     if (!hasVocab && dokkaiCount === 0) return null;
 
     return (
-        <div className="mb-5 grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2 xl:hidden">
+        <div data-tour="roadmap-library" className="mb-5 grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2 xl:hidden">
             {hasVocab && (
                 <Link
                     href={program.resources.vocabulary_url}

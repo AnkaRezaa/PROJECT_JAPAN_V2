@@ -126,7 +126,7 @@ export default function Index({
 
                     <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
                         {/* Kolom Kiri: Hero & Aksi Cepat */}
-                        <section className="space-y-6 lg:col-span-7">
+                        <section data-tour="live-schedule" className="space-y-6 lg:col-span-7">
                             <div>
                                 <h2 className="text-xl font-black text-slate-950 dark:text-white sm:text-2xl">
                                     Ruang Bimbingan Live
@@ -213,7 +213,7 @@ export default function Index({
                             ) : null}
 
                             {/* Form Input Kode Kelas (Google Meet Input Pattern) */}
-                            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+                            <div data-tour="live-join-code" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
                                 <p className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
                                     Masuk Melalui Kode atau Tautan
                                 </p>

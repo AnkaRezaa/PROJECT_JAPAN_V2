@@ -325,7 +325,7 @@ export default function Progress({
 
             <div className="min-h-screen bg-slate-50/60 pb-12 text-slate-900 dark:bg-slate-950 dark:text-white">
                 <main className="mx-auto max-w-7xl px-4 pt-7 sm:px-6 lg:px-8">
-                    <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <section data-tour="progress-hero" className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                         <div className="grid lg:grid-cols-[minmax(0,1fr)_320px]">
                             <div className="p-6 sm:p-8">
                                 <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
@@ -376,7 +376,7 @@ export default function Progress({
                         </div>
                     </section>
 
-                    <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    <section data-tour="progress-metrics" className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
                         {statCards.map((card) => <StatTile key={card.label} {...card} />)}
                     </section>
 
