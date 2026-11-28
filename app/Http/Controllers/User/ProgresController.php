@@ -49,7 +49,7 @@ class ProgresController extends Controller
         abort_if($quiz->questions->isEmpty(), 422, 'Kuis belum memiliki soal.');
 
         $attempt = DB::transaction(function () use ($user, $quiz, $validated) {
-            Kuis::query()->whereKey($quiz->id)->lockForUpdate()->firstOrFail();
+            $lockedQuiz = Kuis::query()->whereKey($quiz->id)->lockForUpdate()->firstOrFail();
 
             $tokenAttempt = PengerjaanKuis::query()
                 ->where('user_id', $user->id)
@@ -59,6 +59,20 @@ class ProgresController extends Controller
 
             if ($tokenAttempt) {
                 return $tokenAttempt;
+            }
+
+            if ($lockedQuiz->max_attempts !== null) {
+                $completedCount = PengerjaanKuis::query()
+                    ->where('user_id', $user->id)
+                    ->where('quiz_id', $quiz->id)
+                    ->where('status', 'completed')
+                    ->count();
+
+                abort_if(
+                    $completedCount >= (int) $lockedQuiz->max_attempts,
+                    422,
+                    'Batas maksimal percobaan untuk kuis ini sudah tercapai.'
+                );
             }
 
             $activeAttempt = PengerjaanKuis::query()
@@ -173,6 +187,7 @@ class ProgresController extends Controller
             ->exists();
 
         $attempt = DB::transaction(function () use ($validated, $quiz, $user, $repetisi, $gamifikasiConfig, $isGrammar, $rewardAlreadyGranted, &$wrongAttemptCount, &$answeredUniqueCount, &$attemptAlreadyCompleted) {
+            $lockedQuiz = Kuis::query()->whereKey($quiz->id)->lockForUpdate()->firstOrFail();
             $attempt = null;
 
             if ($isGrammar) {
@@ -191,6 +206,18 @@ class ProgresController extends Controller
                 }
 
                 abort_unless($attempt->status === 'in_progress', 422, 'Sesi ujian sudah tidak aktif.');
+            } elseif ($lockedQuiz->max_attempts !== null) {
+                $completedCount = PengerjaanKuis::query()
+                    ->where('user_id', $user->id)
+                    ->where('quiz_id', $quiz->id)
+                    ->where('status', 'completed')
+                    ->count();
+
+                abort_if(
+                    $completedCount >= (int) $lockedQuiz->max_attempts,
+                    422,
+                    'Batas maksimal percobaan untuk kuis ini sudah tercapai.'
+                );
             }
 
             $answerEvents = ($isGrammar

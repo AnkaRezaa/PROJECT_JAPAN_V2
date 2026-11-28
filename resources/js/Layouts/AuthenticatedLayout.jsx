@@ -7,6 +7,7 @@ import SidebarLink from '@/Components/Navigation/SidebarLink';
 import { useScrollLock } from '@/lib/scrollLock';
 import { playSoundEffect } from '@/Components/UI/SoundEffects';
 import ProductFeedbackButton from '@/Components/Features/Feedback/ProductFeedbackButton';
+import GuidedTour from '@/Components/Features/Onboarding/GuidedTour';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
@@ -803,6 +804,17 @@ export default function AuthenticatedLayout({ children, feedbackInline = false }
                     <MenuBookIcon sx={{ fontSize: 18 }} className="text-gray-700 dark:text-gray-300" />
                     Buku Panduan PDF
                 </a>
+                <button
+                    type="button"
+                    onClick={() => {
+                        handleNavigation();
+                        window.dispatchEvent(new CustomEvent('tokuup:restart-tour'));
+                    }}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                    <ExploreIcon sx={{ fontSize: 18 }} className="text-gray-700 dark:text-gray-300" />
+                    Panduan Interaktif
+                </button>
             </div>
 
             <div className="border-t border-gray-100 py-1 dark:border-gray-800">
@@ -1130,6 +1142,8 @@ export default function AuthenticatedLayout({ children, feedbackInline = false }
                     ))}
                 </div>
             )}
+
+            <GuidedTour role={isAdmin ? 'admin' : 'user'} userId={user?.id} />
 
             <ConfirmActionDialog
                 show={isLogoutDialogOpen}

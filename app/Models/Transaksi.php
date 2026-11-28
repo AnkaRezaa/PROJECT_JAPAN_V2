@@ -23,6 +23,9 @@ class Transaksi extends Model
         'program_pembelajaran_id',
         'kloter_belajar_id',
         'amount',
+        'original_amount',
+        'discount_amount',
+        'discount_meta',
         'payment_method',
         'payment_channel',
         'payment_payload',
@@ -35,6 +38,9 @@ class Transaksi extends Model
     protected $casts = [
         'processed_at' => 'datetime',
         'payment_payload' => 'array',
+        'discount_meta' => 'array',
+        'original_amount' => 'integer',
+        'discount_amount' => 'integer',
     ];
 
     public function user()

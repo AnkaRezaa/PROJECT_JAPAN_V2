@@ -71,8 +71,8 @@ class KelasPenggunaPayloadService
                 'tanggal_mulai_label' => optional($kloterAktif->tanggal_mulai)->format('d M Y'),
                 'minggu_aktif' => $this->kloterService->mingguAktif($kloterAktif),
             ] : null,
-            'payment_plan' => $firstPlan ? $this->planPayload($firstPlan) : null,
-            'payment_plans' => $plans->map(fn (PaketPembayaran $plan) => $this->planPayload($plan))->values(),
+            'payment_plan' => $firstPlan ? $this->planPayload($firstPlan, $user) : null,
+            'payment_plans' => $plans->map(fn (PaketPembayaran $plan) => $this->planPayload($plan, $user))->values(),
             'available_kloters' => $hasMentoredPlan
                 ? $this->kloterPayloads($this->kloterService->kloterTersediaUntukCheckout($program->id))
                 : [],
@@ -89,13 +89,20 @@ class KelasPenggunaPayloadService
         ];
     }
 
-    private function planPayload(PaketPembayaran $plan): array
+    private function planPayload(PaketPembayaran $plan, ?Pengguna $user = null): array
     {
+        $discount = $user
+            ? app(ReferralService::class)->discountForCheckout($user, (int) $plan->price)
+            : null;
+
         return [
             'id' => $plan->id,
             'name' => $plan->name,
             'price' => $plan->price,
             'price_formatted' => 'Rp '.number_format($plan->price),
+            'discounted_price' => $discount && $discount['discount_amount'] > 0 ? $discount['final_amount'] : null,
+            'discounted_price_formatted' => $discount && $discount['discount_amount'] > 0 ? 'Rp '.number_format($discount['final_amount']) : null,
+            'referral_discount_percent' => $discount && $discount['discount_amount'] > 0 ? $discount['percent'] : 0,
             'duration_days' => $plan->duration_days,
             'scope_type' => $plan->scope_type,
         ];

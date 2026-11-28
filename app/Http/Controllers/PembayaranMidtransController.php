@@ -635,7 +635,7 @@ class PembayaranMidtransController extends Controller
     ): array {
         try {
             return DB::transaction(function () use ($request, $plan, $scope, $checkoutRequestKey, $kloterId) {
-                Pengguna::query()
+                $lockedUser = Pengguna::query()
                     ->whereKey($request->user()->id)
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -676,6 +676,8 @@ class PembayaranMidtransController extends Controller
                     return [$pendingTransaction, false];
                 }
 
+                $pricing = app(\App\Services\ReferralService::class)->discountForCheckout($lockedUser, (int) $plan->price);
+
                 $transaction = Transaksi::create([
                     'transaction_code' => 'MID-'.strtoupper(Str::random(10)),
                     'checkout_request_key' => $checkoutRequestKey,
@@ -683,10 +685,15 @@ class PembayaranMidtransController extends Controller
                     'payment_plan_id' => $plan->id,
                     ...$scope,
                     'kloter_belajar_id' => $kloter?->id,
-                    'amount' => $plan->price,
+                    'amount' => $pricing['final_amount'],
+                    'original_amount' => $pricing['original_amount'],
+                    'discount_amount' => $pricing['discount_amount'],
+                    'discount_meta' => $pricing['meta'],
                     'payment_method' => 'midtrans',
                     'status' => 'pending',
-                    'notes' => 'Midtrans Snap checkout dibuat dari halaman pricing.',
+                    'notes' => $pricing['discount_amount'] > 0
+                        ? "Midtrans Snap checkout (diskon referral {$pricing['percent']}%)."
+                        : 'Midtrans Snap checkout dibuat dari halaman pricing.',
                 ]);
 
                 LogTransaksi::create([

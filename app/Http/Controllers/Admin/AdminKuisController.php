@@ -219,6 +219,10 @@ class AdminKuisController extends Controller
                 'type' => $quiz->type,
                 'time_limit' => $quiz->time_limit,
                 'passing_score' => $quiz->passing_score ?? 70,
+                'shuffle_questions' => (bool) ($quiz->shuffle_questions ?? false),
+                'shuffle_options' => (bool) ($quiz->shuffle_options ?? false),
+                'max_attempts' => $quiz->max_attempts,
+                'explanation_display' => $quiz->explanation_display ?: 'after_answer',
                 'handwriting_enabled' => $quiz->day?->handwriting_enabled ?? true,
                 'available_at' => $quiz->available_at?->toISOString(),
                 'status' => $quiz->status ?? 'published',
@@ -266,6 +270,10 @@ class AdminKuisController extends Controller
         $validated = $request->validate([
             'time_limit' => ['nullable', 'integer', 'min:0', 'max:1440'],
             'passing_score' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'shuffle_questions' => ['sometimes', 'boolean'],
+            'shuffle_options' => ['sometimes', 'boolean'],
+            'max_attempts' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'explanation_display' => ['sometimes', Rule::in(['after_answer', 'after_finish', 'never'])],
             'deleted_question_ids' => ['sometimes', 'array'],
             'deleted_question_ids.*' => ['integer'],
             'questions' => 'present|array',
@@ -294,6 +302,16 @@ class AdminKuisController extends Controller
             $quiz->update([
                 'time_limit' => $validated['time_limit'] ?? null,
                 'passing_score' => $validated['passing_score'] ?? ($quiz->passing_score ?? 70),
+                'shuffle_questions' => array_key_exists('shuffle_questions', $validated)
+                    ? (bool) $validated['shuffle_questions']
+                    : (bool) ($quiz->shuffle_questions ?? false),
+                'shuffle_options' => array_key_exists('shuffle_options', $validated)
+                    ? (bool) $validated['shuffle_options']
+                    : (bool) ($quiz->shuffle_options ?? false),
+                'max_attempts' => array_key_exists('max_attempts', $validated)
+                    ? ($validated['max_attempts'] ?: null)
+                    : $quiz->max_attempts,
+                'explanation_display' => $validated['explanation_display'] ?? ($quiz->explanation_display ?: 'after_answer'),
             ]);
 
             $questions->syncQuestions($quiz, $validated);

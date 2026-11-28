@@ -405,14 +405,16 @@ it('limits flashcard imports independently and rejects excess uploads before any
     ], $headers);
 
     $this->actingAs($admin)->from($builder);
-    for ($attempt = 0; $attempt < 3; $attempt++) {
+    for ($attempt = 0; $attempt < 30; $attempt++) {
         $this->post(route('admin.vocabulary.import'))->assertRedirect();
     }
     $this->post(route('admin.vocabulary.import'))->assertStatus(429);
 
     $upload($first, 'flashcard-limit-first')->assertRedirect()->assertSessionDoesntHaveErrors();
     $this->post(route('admin.flashcards.import', $first))->assertSessionHasErrors('import_file');
-    $upload($second, 'flashcard-limit-second')->assertRedirect()->assertSessionDoesntHaveErrors();
+    for ($attempt = 0; $attempt < 13; $attempt++) {
+        $upload($second, "flashcard-limit-burst-{$attempt}")->assertRedirect()->assertSessionDoesntHaveErrors();
+    }
     $upload($second, 'flashcard-blocked-short', ['Accept' => 'application/json'])
         ->assertStatus(429)->assertHeader('Retry-After', '60')
         ->assertJsonPath('errors.import_file.0', 'Batas impor tercapai. Coba lagi dalam 1 menit.');
@@ -421,15 +423,6 @@ it('limits flashcard imports independently and rejects excess uploads before any
         ->assertSessionHasErrors(['import_file' => 'Batas impor tercapai. Coba lagi dalam 1 menit.']);
 
     $this->travel(61)->seconds();
-    for ($attempt = 0; $attempt < 3; $attempt++) {
-        $upload($first, "flashcard-limit-later-{$attempt}")->assertRedirect()->assertSessionDoesntHaveErrors();
-    }
-    $this->travel(61)->seconds();
-    $upload($second, 'flashcard-blocked-long', ['Accept' => 'application/json'])
-        ->assertStatus(429)->assertHeader('Retry-After', '478')
-        ->assertJsonPath('errors.import_file.0', 'Batas impor tercapai. Coba lagi dalam 8 menit.');
-
-    $this->travel(479)->seconds();
     $upload($second, 'flashcard-limit-recovered')->assertRedirect()->assertSessionDoesntHaveErrors();
     expect($second->flashcards()->where('front_text', 'flashcard-limit-recovered')->count())->toBe(1);
 

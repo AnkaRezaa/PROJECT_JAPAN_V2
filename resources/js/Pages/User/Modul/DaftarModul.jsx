@@ -11,6 +11,7 @@ import GrammarQuizPreviewDialog from '@/Components/Features/GrammarQuiz/GrammarQ
 import Popper from '@mui/material/Popper';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import LiveSessionDialog from '@/Components/Features/LiveClass/LiveSessionDialog';
+import DayBulletPopup from '@/Components/Features/Roadmap/DayBulletPopup';
 import { examCategoryLabel } from '@/Components/Features/ExamPortal/ExamPortalUI';
 
 const DokkaiQuizRunner = lazy(() => import('@/Components/Features/DokkaiQuiz/DokkaiQuizRunner'));
@@ -1351,6 +1352,11 @@ export function DayDetailContent({ day, onClose, mobile = false, dragControls = 
 function DesktopDayPopover({ day, anchorEl, onClose, onOpenGrammarQuiz, onOpenDokkai }) {
     const popperRef = useRef(null);
     const [panel, setPanel] = useState(null);
+    const [showDetail, setShowDetail] = useState(false);
+
+    useEffect(() => {
+        setShowDetail(false);
+    }, [day?.id]);
 
     useEffect(() => {
         if (!panel || typeof ResizeObserver === 'undefined') return;
@@ -1373,8 +1379,18 @@ function DesktopDayPopover({ day, anchorEl, onClose, onOpenGrammarQuiz, onOpenDo
             ]}
             sx={{ zIndex: 1400 }}
         >
-            <div ref={setPanel} className="w-[min(420px,calc(100vw-24px))]">
-                <DayDetailContent day={day} onClose={onClose} onOpenGrammarQuiz={onOpenGrammarQuiz} onOpenDokkai={onOpenDokkai} />
+            <div ref={setPanel} className={showDetail ? 'w-[min(420px,calc(100vw-24px))]' : 'w-auto'}>
+                {showDetail ? (
+                    <DayDetailContent day={day} onClose={onClose} onOpenGrammarQuiz={onOpenGrammarQuiz} onOpenDokkai={onOpenDokkai} />
+                ) : (
+                    <DayBulletPopup
+                        day={day}
+                        onClose={onClose}
+                        onOpenGrammarQuiz={onOpenGrammarQuiz}
+                        onOpenDokkai={onOpenDokkai}
+                        onShowFullDetail={() => setShowDetail(true)}
+                    />
+                )}
             </div>
         </Popper>
     );
@@ -1382,10 +1398,43 @@ function DesktopDayPopover({ day, anchorEl, onClose, onOpenGrammarQuiz, onOpenDo
 
 function MobileDaySheet({ day, onClose, onOpenGrammarQuiz, onOpenDokkai }) {
     const dragControls = useDragControls();
+    const [showDetail, setShowDetail] = useState(false);
 
     useScrollLock(true);
 
+    useEffect(() => {
+        setShowDetail(false);
+    }, [day?.id]);
+
     if (typeof document === 'undefined') return null;
+
+    if (!showDetail) {
+        return createPortal(
+            <motion.div
+                className="fixed inset-0 z-[9999] flex items-center justify-end pr-3 sm:hidden pointer-events-auto"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+            >
+                <button
+                    type="button"
+                    aria-label="Tutup menu Hari"
+                    onClick={onClose}
+                    className="fixed inset-0 bg-black/35 backdrop-blur-[2px] transition-opacity"
+                />
+                <div className="relative z-10 max-h-[85dvh] overflow-y-auto py-2">
+                    <DayBulletPopup
+                        day={day}
+                        onClose={onClose}
+                        onOpenGrammarQuiz={onOpenGrammarQuiz}
+                        onOpenDokkai={onOpenDokkai}
+                        onShowFullDetail={() => setShowDetail(true)}
+                    />
+                </div>
+            </motion.div>,
+            document.body,
+        );
+    }
 
     return createPortal(
         <motion.div

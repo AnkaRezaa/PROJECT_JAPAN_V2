@@ -78,6 +78,10 @@ export default function QuizBuilder({
     const initialForm = {
         time_limit: quiz?.time_limit ?? '',
         passing_score: quiz?.passing_score ?? 70,
+        shuffle_questions: Boolean(quiz?.shuffle_questions),
+        shuffle_options: Boolean(quiz?.shuffle_options),
+        max_attempts: quiz?.max_attempts ?? '',
+        explanation_display: quiz?.explanation_display || 'after_answer',
         questions: initialQuestions.length ? normalizeQuestions(initialQuestions, quiz?.type) : [],
         deleted_question_ids: [],
     };
@@ -110,6 +114,10 @@ export default function QuizBuilder({
         cleanSnapshotRef.current = JSON.stringify({
             time_limit: quiz?.time_limit ?? '',
             passing_score: quiz?.passing_score ?? 70,
+            shuffle_questions: Boolean(quiz?.shuffle_questions),
+            shuffle_options: Boolean(quiz?.shuffle_options),
+            max_attempts: quiz?.max_attempts ?? '',
+            explanation_display: quiz?.explanation_display || 'after_answer',
             questions: normalized,
             deleted_question_ids: [],
         });
@@ -714,16 +722,75 @@ export default function QuizBuilder({
                     </div>
                 </div>
 
-                <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-900/20">
-                        <div className="flex items-start gap-3">
-                            <ShuffleIcon className="mt-0.5 text-amber-600 dark:text-amber-300" sx={{ fontSize: 20 }} />
-                            <div>
-                                <h3 className="text-sm font-black text-amber-800 dark:text-amber-200">Fitur lanjutan belum aktif</h3>
-                                <p className="mt-1 text-xs font-semibold text-amber-700/80 dark:text-amber-200/80">
-                                    Pengacakan soal, pengacakan opsi, batas percobaan, dan aturan tampilan pembahasan belum disimpan di backend. Untuk saat ini user memakai urutan soal dan feedback dari flow kuis yang sudah aktif.
-                                </p>
-                            </div>
+                <div className="border-t border-gray-100 dark:border-gray-800 pt-6 space-y-5">
+                    <div className="flex items-center gap-2">
+                        <ShuffleIcon className="text-brand-600 dark:text-brand-400" sx={{ fontSize: 18 }} />
+                        <h3 className="text-xs font-black uppercase tracking-widest text-gray-700 dark:text-gray-200">
+                            Pengaturan Lanjutan Kuis
+                        </h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label className="flex min-h-[56px] cursor-pointer items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-3 transition hover:border-brand-300 dark:border-gray-700 dark:bg-gray-800/50">
+                            <span className="min-w-0">
+                                <span className="block text-xs font-black text-gray-900 dark:text-white">Acak Urutan Soal</span>
+                                <span className="block text-[11px] font-medium text-gray-500 dark:text-gray-400">Urutan soal diacak tiap sesi siswa.</span>
+                            </span>
+                            <input
+                                type="checkbox"
+                                checked={Boolean(data.shuffle_questions)}
+                                onChange={(e) => setData('shuffle_questions', e.target.checked)}
+                                className="h-5 w-5 shrink-0 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                            />
+                        </label>
+
+                        <label className="flex min-h-[56px] cursor-pointer items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-3 transition hover:border-brand-300 dark:border-gray-700 dark:bg-gray-800/50">
+                            <span className="min-w-0">
+                                <span className="block text-xs font-black text-gray-900 dark:text-white">Acak Urutan Opsi</span>
+                                <span className="block text-[11px] font-medium text-gray-500 dark:text-gray-400">Opsi pilihan ganda diacak bersama furigana.</span>
+                            </span>
+                            <input
+                                type="checkbox"
+                                checked={Boolean(data.shuffle_options)}
+                                onChange={(e) => setData('shuffle_options', e.target.checked)}
+                                className="h-5 w-5 shrink-0 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                            />
+                        </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                                <span>Batas Percobaan</span>
+                                <TooltipHelp text="Jumlah maksimal pengerjaan kuis yang diperbolehkan per siswa. Kosongkan jika tanpa batas." />
+                            </label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="100"
+                                value={data.max_attempts ?? ''}
+                                onChange={(e) => setData('max_attempts', e.target.value)}
+                                className="w-full h-12 rounded-xl border border-transparent bg-gray-50 px-4 text-sm font-bold text-gray-900 outline-none focus:border-brand-100 focus:bg-white focus:ring-4 focus:ring-focus/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-brand-900/30 dark:focus:bg-gray-950"
+                                placeholder="Kosong = tanpa batas"
+                            />
+                            {errors.max_attempts && <p className="mt-1 text-[10px] font-bold text-red-600">{errors.max_attempts}</p>}
+                        </div>
+
+                        <div>
+                            <label className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                                <span>Tampilan Pembahasan</span>
+                                <TooltipHelp text="Atur kapan penjelasan soal ditampilkan kepada siswa." />
+                            </label>
+                            <select
+                                value={data.explanation_display || 'after_answer'}
+                                onChange={(e) => setData('explanation_display', e.target.value)}
+                                className="w-full h-12 rounded-xl border border-transparent bg-gray-50 px-4 text-sm font-bold text-gray-900 outline-none focus:border-brand-100 focus:bg-white focus:ring-4 focus:ring-focus/10 dark:bg-gray-800/50 dark:text-white dark:focus:border-brand-900/30 dark:focus:bg-gray-950"
+                            >
+                                <option value="after_answer">Langsung setelah jawab</option>
+                                <option value="after_finish">Setelah kuis selesai</option>
+                                <option value="never">Jangan tampilkan</option>
+                            </select>
+                            {errors.explanation_display && <p className="mt-1 text-[10px] font-bold text-red-600">{errors.explanation_display}</p>}
                         </div>
                     </div>
                 </div>

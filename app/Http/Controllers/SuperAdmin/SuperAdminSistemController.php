@@ -106,6 +106,7 @@ class SuperAdminSistemController extends SuperAdminDasarController
             ],
             'socialLinks' => app(SocialLinksSettings::class)->all(),
             'instagramFeed' => app(SocialLinksSettings::class)->feed(),
+            'referralDiscountSettings' => app(\App\Services\ReferralService::class)->discountSettings(),
             'analyticsStatus' => [
                 'gtm' => [
                     'enabled' => (bool) config('beta.google_tag_manager.enabled'),
@@ -142,6 +143,30 @@ class SuperAdminSistemController extends SuperAdminDasarController
         });
 
         return back()->with('success', 'Medsos tersimpan.');
+    }
+
+    public function updateReferralDiscount(Request $request, \App\Services\ReferralService $referrals)
+    {
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+            'inviter_percent_per_referral' => ['required', 'integer', 'min:0', 'max:100'],
+            'invitee_percent' => ['required', 'integer', 'min:0', 'max:100'],
+            'max_discount_percent' => ['required', 'integer', 'min:0', 'max:100'],
+            'min_payable_amount' => ['required', 'integer', 'min:0', 'max:10000000'],
+        ]);
+
+        DB::transaction(function () use ($request, $referrals, $validated) {
+            $referrals->saveDiscountSettings($validated);
+            $this->logActivity(
+                $request,
+                'update_referral_discount',
+                'system',
+                null,
+                "Diskon referral diperbarui (pengundang {$validated['inviter_percent_per_referral']}%/orang, diundang {$validated['invitee_percent']}%, maks {$validated['max_discount_percent']}%)."
+            );
+        });
+
+        return back()->with('success', 'Pengaturan diskon referral tersimpan.');
     }
 
     public function updateBeta(Request $request, \App\Services\BetaAccessService $beta)

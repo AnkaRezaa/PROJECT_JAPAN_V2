@@ -7,6 +7,7 @@ use App\Models\Kuis;
 use App\Models\UmpanBalikPembelajaran;
 use App\Services\AksesKuisPenggunaService;
 use App\Services\PembelajaranPenggunaService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -19,7 +20,7 @@ class PembelajaranController extends Controller
         ]);
     }
 
-    public function showQuiz($id, PembelajaranPenggunaService $learning, AksesKuisPenggunaService $aksesKuis)
+    public function showQuiz(Request $request, $id, PembelajaranPenggunaService $learning, AksesKuisPenggunaService $aksesKuis)
     {
         $quiz = Kuis::with(['module.programPembelajaran', 'questions'])
             ->where('status', 'published')
@@ -32,7 +33,8 @@ class PembelajaranController extends Controller
 
         $aksesKuis->abortJikaTerkunci(Auth::user(), $quiz);
 
-        $payload = $learning->quizPayload(Auth::user(), $quiz);
+        $focus = $request->query('focus');
+        $payload = $learning->quizPayload(Auth::user(), $quiz, is_string($focus) ? $focus : null);
         $roadmapUrl = $quiz->module?->programPembelajaran
             ? route('user.modul.program', $quiz->module->programPembelajaran->slug)
             : route('user.kelas.index');

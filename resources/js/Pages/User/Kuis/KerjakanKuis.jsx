@@ -138,22 +138,28 @@ export default function Quiz({
     const prefersReducedMotion = useReducedMotion();
     const [soundEnabled, setSoundEnabled] = useQuizSoundPreference();
     const [sessionFlashcards] = useState(() => flashcards);
-    const [questions, setQuestions] = useState(() =>
-        rawQuestions
-            .map((q, index) => ({
-                ...q,
-                id: q.id || index + 1,
-                question: q.question || q.question_text || '',
-                question_text: q.question_text || q.question || '',
-                originalIndex: index,
-                originalQuestionId: q.originalQuestionId ?? (q.id || index + 1),
-                type: normalizeQuestionType(q.type),
-                options: Array.isArray(q.options) ? q.options : [],
-                attemptKey: `${q.id || index + 1}-${index}-0`,
-                repeatCount: 0,
-            }))
-            .sort((a, b) => reviewPriority(a) - reviewPriority(b) || a.originalIndex - b.originalIndex)
-    );
+    const explanationDisplay = quiz?.explanation_display || 'after_answer';
+    const explanationLogRef = useRef({});
+    const [questions, setQuestions] = useState(() => {
+        const mapped = rawQuestions.map((q, index) => ({
+            ...q,
+            id: q.id || index + 1,
+            question: q.question || q.question_text || '',
+            question_text: q.question_text || q.question || '',
+            originalIndex: index,
+            originalQuestionId: q.originalQuestionId ?? (q.id || index + 1),
+            type: normalizeQuestionType(q.type),
+            options: Array.isArray(q.options) ? q.options : [],
+            attemptKey: `${q.id || index + 1}-${index}-0`,
+            repeatCount: 0,
+        }));
+
+        if (quiz?.shuffle_questions) {
+            return mapped;
+        }
+
+        return mapped.sort((a, b) => reviewPriority(a) - reviewPriority(b) || a.originalIndex - b.originalIndex);
+    });
     const [currentIndex, setCurrentIndex] = useState(0);
     const questionScrollRef = useRef(null);
     useEffect(() => {
@@ -445,11 +451,23 @@ export default function Quiz({
                 setLives((value) => Math.max(0, value - 1));
                 setShakeKey((value) => value + 1);
                 repeatWrongQuestion(currentQ);
+                if (explanation) {
+                    explanationLogRef.current[currentQ.originalQuestionId ?? currentQ.id] = {
+                        question: currentQ.question,
+                        explanation,
+                        reading: explanationReading,
+                    };
+                }
+                const wrongMessage = explanationDisplay === 'after_answer'
+                    ? (explanation || 'Soal ini akan muncul lagi di akhir sesi untuk repetisi.')
+                    : explanationDisplay === 'after_finish'
+                        ? 'Pembahasan lengkap akan ditampilkan setelah kuis selesai.'
+                        : 'Soal ini akan muncul lagi di akhir sesi untuk repetisi.';
                 setAnswerFeedback({
                     status: 'wrong',
                     title: 'Belum tepat',
-                    message: explanation || 'Soal ini akan muncul lagi di akhir sesi untuk repetisi.',
-                    reading: explanationReading,
+                    message: wrongMessage,
+                    reading: explanationDisplay === 'after_answer' ? explanationReading : null,
                 });
             }
         } catch (error) {
@@ -840,6 +858,24 @@ export default function Quiz({
         router.get(attemptResult?.next_url || finish_url || route('user.dashboard'));
     };
 
+    if (!preview && quiz?.max_attempts && quiz?.attempts_remaining === 0) {
+        return (
+            <div className="relative flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-brand-50 via-white to-learning-50 px-4 py-8 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900 sm:p-6">
+                <Head title="Batas Percobaan Tercapai" />
+                <FloatingLearningDecor />
+                <div className="relative z-10 max-w-md rounded-2xl border border-amber-200 bg-white p-6 text-center shadow-sm dark:border-amber-900/60 dark:bg-gray-900">
+                    <p className="mb-2 text-xl font-black text-gray-900 dark:text-white">Batas Percobaan Tercapai</p>
+                    <p className="mb-6 text-sm font-medium text-gray-600 dark:text-gray-300">
+                        Kamu sudah menyelesaikan {quiz.attempts_used} dari {quiz.max_attempts} percobaan maksimal untuk kuis ini.
+                    </p>
+                    <Link href={back_url || route('user.dashboard')} className="inline-flex min-h-11 items-center rounded-xl bg-action-primary px-6 py-3 font-black text-ink-900 no-underline shadow-sm transition fine-pointer:hover:bg-action-primary-hover">
+                        Kembali ke Roadmap
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
     if (questions.length === 0) {
         return (
             <div className="relative flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-brand-50 via-white to-learning-50 px-4 py-8 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900 sm:p-6">
@@ -921,6 +957,23 @@ export default function Quiz({
                         ]}
                     />
                     <QuizErrorMessage className="mt-4">{attemptError}</QuizErrorMessage>
+                    {explanationDisplay === 'after_finish' && Object.keys(explanationLogRef.current).length > 0 && (
+                        <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                            <p className="text-xs font-black uppercase tracking-widest text-brand-700 dark:text-brand-300">
+                                Pembahasan Soal
+                            </p>
+                            <div className="mt-3 space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                                {Object.entries(explanationLogRef.current).map(([key, item]) => (
+                                    <div key={key} className="rounded-xl bg-gray-50 p-3 dark:bg-gray-800/70">
+                                        <p className="text-xs font-black text-gray-900 dark:text-white">{item.question}</p>
+                                        <div className="mt-1 text-xs font-medium text-gray-600 dark:text-gray-300">
+                                            <JapaneseReading japanese={item.explanation} reading={item.reading} />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     {!preview && isSuccess && !attemptError && (
                         <div className="mt-4">
                             <UniversalFeedbackWidget

@@ -215,6 +215,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::redirect('/pricing', '/superadmin/payments')->name('pricing');
         Route::get('/system', SuperAdminSistemController::class)->name('system');
         Route::put('/system/social-links', [SuperAdminSistemController::class, 'updateSocialLinks'])->name('system.social-links.update');
+        Route::put('/system/referral-discount', [SuperAdminSistemController::class, 'updateReferralDiscount'])->name('system.referral-discount.update');
         Route::post('/system/theme', [SuperAdminSistemController::class, 'updateTheme'])->name('system.theme.update');
         Route::delete('/system/theme', [SuperAdminSistemController::class, 'resetTheme'])->name('system.theme.reset');
         Route::post('/system/maintenance', [SuperAdminSistemController::class, 'runMaintenance'])->name('system.maintenance');

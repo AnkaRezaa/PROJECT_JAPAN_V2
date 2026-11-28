@@ -210,7 +210,7 @@ export default function LandingPage({ programs = [], seo = {}, activePopup = nul
                     </span>
                   ))}
                 </div>
-                <span className="min-w-0 break-words text-xs sm:text-sm">Kurikulum terstruktur berbasis blueprint <strong className="font-bold text-ink-900">Nihongo Soumatome</strong> untuk persiapan JLPT dan kerja</span>
+                <span className="min-w-0 break-words text-xs sm:text-sm">Kurikulum terstruktur mingguan yang dirancang khusus untuk <strong className="font-bold text-ink-900">persiapan JLPT dan kerja di Jepang</strong></span>
               </div>
 
               <div className="mt-5 hidden items-center gap-4 text-[11px] font-bold text-ink-600 sm:flex">

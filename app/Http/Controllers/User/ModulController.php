@@ -342,6 +342,8 @@ class ModulController extends Controller
                         'meaning' => $item->meaning_id,
                     ])
                     ->values();
+                $kanjiCount = $day->vocabulary->where('content_type', 'kanji')->count();
+                $kotobaCount = $day->vocabulary->where('content_type', '!=', 'kanji')->count();
 
                 return [
                     'id' => $day->id,
@@ -388,6 +390,16 @@ class ModulController extends Controller
                         ? route('user.modul.program.kosakata', ['program' => $program->slug, 'module' => $modul->id, 'day' => $day->id])
                         : null,
                     'quiz_url' => $checkpointQuiz && $quizAccess['allowed'] ? route('user.quizzes.show', $checkpointQuiz->id) : null,
+                    'moji_goi' => [
+                        'kanji_count' => $kanjiCount,
+                        'kotoba_count' => $kotobaCount,
+                        'kanji_url' => $checkpointQuiz && $quizAccess['allowed']
+                            ? route('user.quizzes.show', ['quiz' => $checkpointQuiz->id, 'focus' => 'kanji'])
+                            : null,
+                        'kotoba_url' => $checkpointQuiz && $quizAccess['allowed']
+                            ? route('user.quizzes.show', ['quiz' => $checkpointQuiz->id, 'focus' => 'kosakata'])
+                            : null,
+                    ],
                     'quiz_locked_reason' => $checkpointQuiz && ! $quizAccess['allowed'] ? $quizAccess['message'] : null,
                     'primary_url' => $checkpointQuiz && $quizAccess['allowed']
                         ? route('user.quizzes.show', $checkpointQuiz->id)

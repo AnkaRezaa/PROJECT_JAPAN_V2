@@ -110,9 +110,10 @@ class AppServiceProvider extends ServiceProvider
         });
         RateLimiter::for('admin-flashcard-imports', static function (Request $request) use ($importLimitResponse): array {
             $key = $request->user()?->id ?? 'guest:'.$request->ip();
+
             return [
-                Limit::perMinute(3)->by('minute:'.$key)->response($importLimitResponse),
-                Limit::perMinutes(10, 6)->by('ten-minutes:'.$key)->response($importLimitResponse),
+                Limit::perMinute(15)->by('minute:'.$key)->response($importLimitResponse),
+                Limit::perHour(100)->by('hour:'.$key)->response($importLimitResponse),
             ];
         });
         RateLimiter::for('admin-uploads', fn (Request $request) => Limit::perMinutes(10, 20)

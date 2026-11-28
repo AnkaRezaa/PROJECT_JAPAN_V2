@@ -20,12 +20,19 @@ class Kuis extends Model
         'type',
         'time_limit',
         'passing_score',
+        'shuffle_questions',
+        'shuffle_options',
+        'max_attempts',
+        'explanation_display',
         'available_at',
         'status',
     ];
 
     protected $casts = [
         'available_at' => 'datetime',
+        'shuffle_questions' => 'boolean',
+        'shuffle_options' => 'boolean',
+        'max_attempts' => 'integer',
     ];
 
     public function isGrammar(): bool

@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Kosakata;
 use App\Models\Kuis;
+use App\Models\PengerjaanKuis;
 use App\Models\Pengguna;
 use App\Models\ReviewFlashcard;
 use App\Models\ReviewSoal;
@@ -45,16 +47,55 @@ class PembelajaranPenggunaService
         });
     }
 
-    public function quizPayload(Pengguna $user, Kuis $quiz): array
+    public function quizPayload(Pengguna $user, Kuis $quiz, ?string $focus = null): array
     {
+        $normalizedFocus = in_array($focus, ['kanji', 'kosakata'], true) ? $focus : null;
         $module = $quiz->module;
         $questions = $quiz->questions
             ->where('type', '!=', 'handwriting')
             ->values();
+
+        if ($normalizedFocus !== null && $questions->isNotEmpty()) {
+            $vocabIds = $questions
+                ->filter(fn ($q) => $q->source_type === 'vocabulary' && $q->source_id)
+                ->pluck('source_id')
+                ->unique()
+                ->values();
+
+            if ($vocabIds->isNotEmpty()) {
+                $matchingVocabIds = Kosakata::query()
+                    ->whereIn('id', $vocabIds)
+                    ->where('content_type', $normalizedFocus)
+                    ->pluck('id')
+                    ->all();
+
+                $filtered = $questions->filter(
+                    fn ($q) => $q->source_type === 'vocabulary' && in_array($q->source_id, $matchingVocabIds, true)
+                )->values();
+
+                if ($filtered->isNotEmpty()) {
+                    $questions = $filtered;
+                }
+            }
+        }
+
+        if ($quiz->shuffle_questions) {
+            $questions = $questions->shuffle()->values();
+        }
+
         $questionReviews = ReviewSoal::where('user_id', $user->id)
             ->whereIn('question_id', $questions->pluck('id'))
             ->get()
             ->keyBy('question_id');
+
+        $attemptsUsed = PengerjaanKuis::query()
+            ->where('user_id', $user->id)
+            ->where('quiz_id', $quiz->id)
+            ->where('status', 'completed')
+            ->count();
+        $maxAttempts = $quiz->max_attempts ? (int) $quiz->max_attempts : null;
+        $attemptsRemaining = $maxAttempts !== null ? max(0, $maxAttempts - $attemptsUsed) : null;
+        $shouldShuffleOptions = (bool) ($quiz->shuffle_options ?? false);
 
         return [
             'quiz' => [
@@ -62,8 +103,15 @@ class PembelajaranPenggunaService
                 'title' => $this->quizTitle($quiz),
                 'description' => $quiz->description ?? 'Kuis evaluasi materi.',
                 'type' => $quiz->type,
+                'focus' => $normalizedFocus,
                 'time_limit' => $quiz->time_limit,
                 'passing_score' => $quiz->passing_score ?? 70,
+                'shuffle_questions' => (bool) ($quiz->shuffle_questions ?? false),
+                'shuffle_options' => $shouldShuffleOptions,
+                'max_attempts' => $maxAttempts,
+                'attempts_used' => $attemptsUsed,
+                'attempts_remaining' => $attemptsRemaining,
+                'explanation_display' => $quiz->explanation_display ?: 'after_answer',
                 'handwriting_enabled' => $quiz->day?->handwriting_enabled ?? true,
                 'available_at' => $quiz->available_at?->toISOString(),
                 'lesson' => [
@@ -76,8 +124,24 @@ class PembelajaranPenggunaService
                     'week_number' => $module?->week_number,
                 ],
             ],
-            'questions' => $questions->map(function ($question) use ($questionReviews) {
+            'questions' => $questions->map(function ($question) use ($questionReviews, $shouldShuffleOptions) {
                 $review = $questionReviews->get($question->id);
+                $options = $question->options;
+                $optionReadings = $question->option_readings;
+
+                if (
+                    $shouldShuffleOptions
+                    && ($question->type === 'multiple_choice' || $question->type === null)
+                    && is_array($options)
+                    && count($options) > 1
+                ) {
+                    $indices = range(0, count($options) - 1);
+                    shuffle($indices);
+                    $options = array_values(array_map(fn ($i) => $options[$i], $indices));
+                    if (is_array($optionReadings)) {
+                        $optionReadings = array_values(array_map(fn ($i) => $optionReadings[$i] ?? null, $indices));
+                    }
+                }
 
                 return [
                     'id' => $question->id,
@@ -88,8 +152,8 @@ class PembelajaranPenggunaService
                     'type' => $question->type,
                     'stage' => $question->stage,
                     'disable_question_narration' => (bool) ($question->stage === 'word_to_reading'),
-                    'options' => $question->options,
-                    'option_readings' => $question->option_readings,
+                    'options' => $options,
+                    'option_readings' => $optionReadings,
                     'audio_url' => $question->audio_url,
                     'points' => max(1, (int) ($question->points ?? 1)),
                     'review_status' => $review?->status ?? 'new',
@@ -103,7 +167,7 @@ class PembelajaranPenggunaService
             'total_points' => (int) $questions->sum(
                 fn ($question) => max(1, (int) ($question->points ?? 1))
             ),
-            'flashcards' => $this->quizFlashcards($user, $quiz),
+            'flashcards' => $this->quizFlashcards($user, $quiz, $normalizedFocus),
         ];
     }
 
@@ -144,7 +208,7 @@ class PembelajaranPenggunaService
         return max(1, (int) ceil($timeLimit / 60)).' Menit';
     }
 
-    private function quizFlashcards(Pengguna $user, Kuis $quiz): Collection
+    private function quizFlashcards(Pengguna $user, Kuis $quiz, ?string $focus = null): Collection
     {
         $moduleId = $quiz->module_id;
         $moduleDayId = $quiz->module_day_id;
@@ -181,6 +245,16 @@ class PembelajaranPenggunaService
             ->flatMap(fn (SetFlashcard $set) => $set->flashcards)
             ->unique('id')
             ->values();
+
+        if ($focus !== null && $cards->isNotEmpty()) {
+            $focusedCards = $cards
+                ->filter(fn ($card) => $card->vocabulary?->content_type === $focus)
+                ->values();
+
+            if ($focusedCards->isNotEmpty()) {
+                $cards = $focusedCards;
+            }
+        }
         $reviews = ReviewFlashcard::query()
             ->where('user_id', $user->id)
             ->where('skill', 'recognition')
