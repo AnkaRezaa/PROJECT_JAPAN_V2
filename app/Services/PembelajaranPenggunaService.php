@@ -144,6 +144,7 @@ class PembelajaranPenggunaService
                 'attempts_remaining' => $attemptsRemaining,
                 'explanation_display' => $quiz->explanation_display ?: 'after_answer',
                 'handwriting_enabled' => $quiz->day?->handwriting_enabled ?? true,
+                'handwriting_mode' => $quiz->day?->handwriting_mode ?: 'guided_then_blank',
                 'available_at' => $quiz->available_at?->toISOString(),
                 'lesson' => [
                     'id' => $module?->id,

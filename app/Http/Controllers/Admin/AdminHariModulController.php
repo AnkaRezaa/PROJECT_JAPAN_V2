@@ -367,6 +367,7 @@ class AdminHariModulController extends Controller
             'kotoba_intro_title' => ['nullable', 'string', 'max:255'],
             'kotoba_intro_body' => ['nullable', 'string', 'max:5000'],
             'handwriting_enabled' => ['sometimes', 'boolean'],
+            'handwriting_mode' => ['sometimes', Rule::in(['guided_then_blank', 'guided_only', 'blank_only'])],
             'exam_id' => ['sometimes', 'nullable', 'integer', Rule::exists('exams', 'id')],
             'status' => ['required', 'in:draft,published'],
             'checkpoint_quiz_id' => [

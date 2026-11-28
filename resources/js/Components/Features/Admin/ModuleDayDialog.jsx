@@ -16,6 +16,7 @@ export default function ModuleDayDialog({ open, onClose, onCreated = null, modul
         kotoba_intro_body: '',
         status: 'draft',
         handwriting_enabled: true,
+        handwriting_mode: 'guided_then_blank',
         exam_id: '',
     });
 
@@ -30,6 +31,7 @@ export default function ModuleDayDialog({ open, onClose, onCreated = null, modul
             kotoba_intro_body: day?.kotoba_intro_body || '',
             status: day?.status || 'draft',
             handwriting_enabled: day?.handwriting_enabled ?? true,
+            handwriting_mode: day?.handwriting_mode || 'guided_then_blank',
             exam_id: day?.exam_id ? String(day.exam_id) : '',
         });
         form.clearErrors();
@@ -233,6 +235,29 @@ export default function ModuleDayDialog({ open, onClose, onCreated = null, modul
                         {form.data.handwriting_enabled ? 'Aktif' : 'Nonaktif'}
                     </label>
                 </FormField>
+
+                {form.data.handwriting_enabled && (
+                    <FormField
+                        label="Mode Menulis Kanji"
+                        error={form.errors.handwriting_mode}
+                        tooltip="Default Panduan → Kosongan melatih goresan terlebih dahulu lalu otomatis menguji menulis dari ingatan."
+                    >
+                        <select
+                            aria-label="Mode Menulis Kanji"
+                            value={form.data.handwriting_mode}
+                            disabled={form.processing}
+                            onChange={(event) => {
+                                form.setData('handwriting_mode', event.target.value);
+                                form.clearErrors('handwriting_mode');
+                            }}
+                            className={inputClass}
+                        >
+                            <option value="guided_then_blank">Panduan → Kosongan (Default)</option>
+                            <option value="guided_only">Panduan Saja</option>
+                            <option value="blank_only">Kosongan Saja (Uji Ingatan)</option>
+                        </select>
+                    </FormField>
+                )}
 
                 {!day && (
                     <FormField label="Lanjut generate soal">

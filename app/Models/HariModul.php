@@ -25,6 +25,7 @@ class HariModul extends Model
         'checkpoint_quiz_id',
         'exam_id',
         'handwriting_enabled',
+        'handwriting_mode',
     ];
 
     protected $casts = [

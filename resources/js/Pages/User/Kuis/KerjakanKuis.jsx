@@ -185,8 +185,8 @@ export default function Quiz({
     const [flashcardIndex, setFlashcardIndex] = useState(0);
     const [flashcardReviewing, setFlashcardReviewing] = useState(false);
     const [handwritingStrokeWidth, setHandwritingStrokeWidth] = useState(5);
-    const [handwritingBlankMode, setHandwritingBlankMode] = useState(false);
     const [handwritingReviewError, setHandwritingReviewError] = useState('');
+    const quizHandwritingMode = quiz?.handwriting_mode || 'guided_then_blank';
     const hasTimeLimit = Number(quiz?.time_limit || 0) > 0;
     const [secondsLeft, setSecondsLeft] = useState(Number(quiz?.time_limit || 0));
     const [finishedByTimeout, setFinishedByTimeout] = useState(false);
@@ -692,9 +692,11 @@ export default function Quiz({
                 handwritingReviewPendingRef.current = false;
                 setHandwritingReviewError('');
                 setShowFlashcard(false);
+                const initialPhase = quizHandwritingMode === 'blank_only' ? 'blank' : 'guided';
                 setHandwritingPractice({
                     characters: targets,
                     character_index: 0,
+                    phase: initialPhase,
                     flashcard_id: activeFlashcard?.id,
                     title: activeFlashcard?.front_text,
                     reading: activeFlashcard?.reading,
@@ -755,6 +757,17 @@ export default function Quiz({
 
     const finishHandwritingPractice = (result = {}) => {
         if (flashcardReviewing || handwritingReviewPendingRef.current || handwritingTransitionRef.current) return;
+
+        if (
+            result?.outcome !== 'skipped'
+            && quizHandwritingMode === 'guided_then_blank'
+            && handwritingPractice?.phase === 'guided'
+        ) {
+            playSoundEffect('correct');
+            setHandwritingPractice((current) => (current ? { ...current, phase: 'blank' } : current));
+            return;
+        }
+
         handwritingTransitionRef.current = true;
         setHandwritingReviewError('');
 
@@ -771,6 +784,7 @@ export default function Quiz({
             setHandwritingPractice((current) => ({
                 ...current,
                 character_index: nextIndex,
+                phase: quizHandwritingMode === 'blank_only' ? 'blank' : 'guided',
                 outcomes,
             }));
             return;
@@ -781,9 +795,26 @@ export default function Quiz({
             return;
         }
 
+        const anySkipped = outcomes.some((outcome) => outcome.outcome === 'skipped');
+        const allCorrect = !anySkipped && outcomes.every((outcome) => outcome.correct);
+
         recordHandwritingReview(
-            outcomes.every((outcome) => outcome.correct),
-            continueAfterFlashcard,
+            allCorrect,
+            () => {
+                if (anySkipped && !preview) {
+                    router.post(route('user.flashcards.review', handwritingPractice.flashcard_id), {
+                        action: 'learning',
+                        skill: 'recognition',
+                        completed: false,
+                    }, {
+                        preserveScroll: true,
+                        preserveState: true,
+                        onFinish: continueAfterFlashcard,
+                    });
+                    return;
+                }
+                continueAfterFlashcard();
+            },
         );
     };
 
@@ -1060,10 +1091,11 @@ export default function Quiz({
         const activeWritingCharacter = handwritingPractice.characters?.[handwritingPractice.character_index];
         const handwritingStep = (handwritingPractice.character_index ?? 0) + 1;
         const handwritingTotal = handwritingPractice.characters?.length ?? 1;
+        const isBlankPhase = handwritingPractice.phase === 'blank';
 
         return (
             <div className="flex min-h-[100dvh] flex-col items-center bg-orange-50 px-4 py-4 font-sans dark:bg-gray-950 sm:py-6">
-                <Head title="Latihan Menulis" />
+                <Head title={isBlankPhase ? 'Uji Menulis Kanji dari Ingatan' : 'Latihan Menulis'} />
                 <header className="mb-3 flex w-full max-w-4xl items-start gap-3 sm:mb-4">
                     <button type="button" onClick={confirmExit} aria-label="Keluar dari kuis" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-600 transition fine-pointer:hover:bg-white fine-pointer:hover:text-gray-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50 dark:text-gray-300 dark:fine-pointer:hover:bg-gray-800 dark:fine-pointer:hover:text-white">
                         <CloseIcon />
@@ -1084,9 +1116,11 @@ export default function Quiz({
                                 <span className="tabular-nums">{lives}</span>
                             </div>
                         </div>
-                        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.22em] text-orange-600 dark:text-orange-300">Penguatan setelah flashcard</p>
+                        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.22em] text-orange-600 dark:text-orange-300">
+                            {isBlankPhase ? 'Uji menulis dari ingatan' : 'Penguatan setelah flashcard'}
+                        </p>
                         <h1 className="truncate text-lg font-black text-gray-900 dark:text-white">
-                            {handwritingBlankMode ? 'Tulis Kanji dari Ingatan' : `Tulis ${activeWritingCharacter.character}`}
+                            {isBlankPhase ? 'Tulis Kanji dari Ingatan' : `Tulis ${activeWritingCharacter.character}`}
                         </h1>
                         {handwritingTotal > 1 && <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Karakter {handwritingStep} dari {handwritingTotal}</p>}
                     </div>
@@ -1096,15 +1130,10 @@ export default function Quiz({
                     <div className="mb-3 text-center md:mb-0 md:pt-3 md:text-left">
                         <div className="max-sm:flex max-sm:items-center max-sm:justify-center max-sm:gap-2">
                         <div className="min-w-0">
-                        {handwritingBlankMode ? (
-                            <div className="space-y-1">
-                                <span className="inline-flex rounded-full bg-violet-100 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
-                                    Mode Kosongan
-                                </span>
-                                {handwritingPractice.reading && (
-                                    <p className="text-2xl font-black text-gray-900 dark:text-white sm:text-3xl">{handwritingPractice.reading}</p>
-                                )}
-                            </div>
+                        {isBlankPhase ? (
+                            handwritingPractice.reading && (
+                                <p className="text-2xl font-black text-gray-900 dark:text-white sm:text-3xl">{handwritingPractice.reading}</p>
+                            )
                         ) : (
                             <JapaneseReading
                                 japanese={handwritingPractice.title}
@@ -1119,24 +1148,27 @@ export default function Quiz({
                             audioUrl={handwritingPractice.audio_url}
                             autoPlay
                             autoPlayEnabled={soundEnabled}
-                            playbackKey={`handwriting-${handwritingPractice.flashcard_id}`}
+                            playbackKey={`handwriting-${handwritingPractice.flashcard_id}-${handwritingPractice.phase}`}
                             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-orange-200 bg-orange-50 text-orange-600 transition fine-pointer:hover:bg-orange-100 dark:border-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:fine-pointer:hover:bg-orange-900/70 sm:mx-auto sm:mt-3 sm:h-10 sm:w-10 md:mx-0"
                         />
                         </div>
                         <p className="mt-3 hidden text-xs font-semibold leading-5 text-gray-600 dark:text-gray-300 sm:block">
-                            {handwritingBlankMode
+                            {isBlankPhase
                                 ? 'Karakter kanji disembunyikan. Tulis bentuk kanji dari ingatan berdasarkan bacaan & artinya.'
-                                : 'Tulis seluruh karakter mengikuti panduan transparan, lalu periksa hasilnya.'}
+                                : 'Tulis seluruh karakter mengikuti panduan transparan, lalu lanjut ke uji kosongan.'}
                         </p>
                     </div>
                     <KanjiHandwritingCanvas
-                        key={`${handwritingPractice.flashcard_id}-${handwritingPractice.character_index}-${activeWritingCharacter.character}`}
+                        key={`${handwritingPractice.flashcard_id}-${handwritingPractice.character_index}-${handwritingPractice.phase}-${activeWritingCharacter.character}`}
                         character={activeWritingCharacter.character}
                         mode="quiz"
                         selfEvaluation
+                        forcedBlankMode={isBlankPhase}
+                        onJumpToBlank={quizHandwritingMode === 'guided_then_blank' && !isBlankPhase
+                            ? () => setHandwritingPractice((current) => (current ? { ...current, phase: 'blank' } : current))
+                            : null}
                         strokeWidth={handwritingStrokeWidth}
                         onStrokeWidthChange={setHandwritingStrokeWidth}
-                        onBlankModeChange={setHandwritingBlankMode}
                         onSkip={() => finishHandwritingPractice({ outcome: 'skipped' })}
                         disabled={flashcardReviewing}
                         errorMessage={handwritingReviewError}
@@ -1308,7 +1340,7 @@ export default function Quiz({
             <Head title={`Quiz - Level 2`} />
 
             {/* Top Progress & Lives */}
-            <header className="relative z-10 mb-2 flex w-full max-w-4xl shrink-0 items-center gap-2 px-3 sm:mb-4 sm:gap-3 sm:px-2 md:mb-6 md:gap-4 md:px-4">
+            <header data-tour="quiz-header" className="relative z-10 mb-2 flex w-full max-w-4xl shrink-0 items-center gap-2 px-3 sm:mb-4 sm:gap-3 sm:px-2 md:mb-6 md:gap-4 md:px-4">
                 <button type="button" onClick={confirmExit} aria-label="Keluar dari kuis" className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors fine-pointer:hover:bg-gray-100 fine-pointer:hover:text-gray-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50 dark:fine-pointer:hover:bg-gray-800 dark:fine-pointer:hover:text-white">
                     <CloseIcon />
                 </button>
@@ -1427,6 +1459,7 @@ export default function Quiz({
 
                         {/* Answer Area */}
                         <motion.div
+                            data-tour="quiz-answer-area"
                             className="w-full max-w-[500px]"
                             animate={shakeKey > 0 ? { x: [0, -10, 10, -10, 10, 0] } : {}}
                             transition={{ duration: 0.4 }}
