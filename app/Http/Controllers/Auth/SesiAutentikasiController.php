@@ -102,6 +102,22 @@ class SesiAutentikasiController extends Controller
             return null;
         }
 
+        // Never redirect Inertia logins to JSON/AJAX endpoints captured as url.intended.
+        $nonPagePatterns = [
+            '~^/notifications/?$~',
+            '~^/api(?:/|$)~',
+            '~^/broadcasting(?:/|$)~',
+            '~^/user/module-days/\d+/grammar-quizzes/?$~',
+            '~^/user/dokkai-quizzes/\d+/?$~',
+            '~^/user/grammar-quizzes/\d+/?$~',
+            '~^/user/attempts(?:/|$)~',
+        ];
+        foreach ($nonPagePatterns as $pattern) {
+            if (preg_match($pattern, $path)) {
+                return null;
+            }
+        }
+
         return $destination;
     }
 

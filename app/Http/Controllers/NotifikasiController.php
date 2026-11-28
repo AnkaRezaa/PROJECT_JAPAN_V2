@@ -10,6 +10,10 @@ class NotifikasiController extends Controller
 {
     public function index(Request $request)
     {
+        if ($request->header('X-Inertia')) {
+            return redirect()->route('notifications.page');
+        }
+
         $notifications = $request->user()
             ->unreadNotifications()
             ->latest()
