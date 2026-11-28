@@ -169,3 +169,45 @@ it('tracks kanji_done and kotoba_done independently on roadmap program payload',
         ->and($dayPayloadAfter['moji_goi']['kotoba_done'])->toBeTrue()
         ->and($dayPayloadAfter['moji_goi']['moji_goi_done'])->toBeTrue();
 });
+
+it('does not mark kanji as completed when skipped via learning review and marks completed only after known review', function () {
+    $fixture = makeMojiGoiFixture();
+
+    // Skipping kanji handwriting posts action=learning, completed=false
+    $this->actingAs($fixture['user'])
+        ->post(route('user.flashcards.review', $fixture['kanjiCard']->id), [
+            'action' => 'learning',
+            'skill' => 'recognition',
+            'completed' => false,
+        ])
+        ->assertRedirect();
+
+    $afterSkip = $this->actingAs($fixture['user'])
+        ->get(route('user.modul.program', $fixture['program']->slug));
+    $afterSkip->assertOk();
+    expect($afterSkip->viewData('page')['props']['weeks'][0]['days'][0]['moji_goi']['kanji_done'])->toBeFalse();
+
+    $kanjiSessionAfterSkip = $this->actingAs($fixture['user'])
+        ->get(route('user.moji-goi.show', ['moduleDay' => $fixture['day']->id, 'focus' => 'kanji']));
+    $kanjiSessionAfterSkip->assertOk();
+    expect($kanjiSessionAfterSkip->viewData('page')['props']['cards'][0]['is_known'])->toBeFalse();
+
+    // Completing kanji writing without skipping posts action=known
+    $this->actingAs($fixture['user'])
+        ->post(route('user.flashcards.review', $fixture['kanjiCard']->id), [
+            'action' => 'known',
+            'skill' => 'recognition',
+            'completed' => true,
+        ])
+        ->assertRedirect();
+
+    $afterComplete = $this->actingAs($fixture['user'])
+        ->get(route('user.modul.program', $fixture['program']->slug));
+    $afterComplete->assertOk();
+    expect($afterComplete->viewData('page')['props']['weeks'][0]['days'][0]['moji_goi']['kanji_done'])->toBeTrue();
+
+    $kanjiSessionAfterComplete = $this->actingAs($fixture['user'])
+        ->get(route('user.moji-goi.show', ['moduleDay' => $fixture['day']->id, 'focus' => 'kanji']));
+    $kanjiSessionAfterComplete->assertOk();
+    expect($kanjiSessionAfterComplete->viewData('page')['props']['cards'][0]['is_known'])->toBeTrue();
+});

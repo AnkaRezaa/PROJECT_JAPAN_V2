@@ -41,4 +41,18 @@ class ReviewFlashcard extends Model
     {
         return $this->belongsTo(Flashcard::class, 'flashcard_id');
     }
+
+    public function isCompleted(): bool
+    {
+        return in_array($this->status, ['review', 'known', 'mastered'], true)
+            || $this->last_result === 'correct';
+    }
+
+    public function scopeCompleted($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereIn('status', ['review', 'known', 'mastered'])
+                ->orWhere('last_result', 'correct');
+        });
+    }
 }

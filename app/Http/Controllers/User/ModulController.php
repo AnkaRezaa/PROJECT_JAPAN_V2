@@ -80,7 +80,7 @@ class ModulController extends Controller
                                         'reviews' => fn ($reviewQuery) => $reviewQuery
                                             ->where('user_id', $user->id)
                                             ->where('skill', 'recognition')
-                                            ->select(['id', 'flashcard_id', 'user_id', 'status', 'skill']),
+                                            ->select(['id', 'flashcard_id', 'user_id', 'status', 'skill', 'last_result']),
                                     ]),
                             ]),
                         'quizzes' => fn ($query) => $query
@@ -237,7 +237,7 @@ class ModulController extends Controller
                 $flashcardCount = $day->flashcardSets->sum('flashcards_count');
                 $flashcardReviewed = $day->flashcardSets
                     ->flatMap->flashcards
-                    ->filter(fn ($card) => $card->reviews->isNotEmpty())
+                    ->filter(fn ($card) => $card->reviews->contains(fn ($review) => $review->isCompleted()))
                     ->count();
                 $questionCount = $day->quizzes->where('type', '!=', 'dokkai')->sum('questions_count');
                 $grammarLessons = $day->quizzes
@@ -352,10 +352,10 @@ class ModulController extends Controller
                 $kanjiFlashcards = $dayFlashcards->filter(fn ($card) => $card->vocabulary?->content_type === 'kanji')->values();
                 $kotobaFlashcards = $dayFlashcards->filter(fn ($card) => $card->vocabulary?->content_type !== 'kanji')->values();
                 $kanjiKnownCount = $kanjiFlashcards->filter(
-                    fn ($card) => $card->reviews->contains(fn ($review) => in_array($review->status, ['review', 'known'], true))
+                    fn ($card) => $card->reviews->contains(fn ($review) => $review->isCompleted())
                 )->count();
                 $kotobaKnownCount = $kotobaFlashcards->filter(
-                    fn ($card) => $card->reviews->contains(fn ($review) => in_array($review->status, ['review', 'known'], true))
+                    fn ($card) => $card->reviews->contains(fn ($review) => $review->isCompleted())
                 )->count();
                 $kanjiTotalCards = $kanjiFlashcards->count();
                 $kotobaTotalCards = $kotobaFlashcards->count();

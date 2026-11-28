@@ -159,6 +159,7 @@ class ProgresRoadmapService
             ->where('user_id', $user->id)
             ->where('skill', 'recognition')
             ->whereIn('flashcard_id', $cardIds)
+            ->completed()
             ->distinct()
             ->count('flashcard_id');
 
