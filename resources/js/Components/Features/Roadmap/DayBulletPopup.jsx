@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import LockIcon from '@mui/icons-material/Lock';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+
+async function loadGrammarLesson(id, signal) {
+    const { data } = await window.axios.get(`/user/grammar-quizzes/${id}`, { signal });
+    if (Number(data?.lesson?.id) !== Number(id) || !data.lesson.stages?.some((stage) => stage.questions?.length)) {
+        throw new Error('Materi Grammar tidak tersedia.');
+    }
+    return data.lesson;
+}
 
 function BulletCircle({
     jp,
@@ -89,6 +97,11 @@ export default function DayBulletPopup({
     onShowFullDetail,
 }) {
     const [mojiExpanded, setMojiExpanded] = useState(false);
+    const [grammarLoading, setGrammarLoading] = useState(false);
+    const [grammarError, setGrammarError] = useState(false);
+    const grammarRequestRef = useRef(null);
+
+    useEffect(() => () => grammarRequestRef.current?.abort(), []);
 
     const dayLocked = ['locked', 'unavailable'].includes(day.status);
     const quizLocked = dayLocked || Boolean(day.checkpoint_summary?.locked) || !day.quiz_url;
@@ -111,14 +124,37 @@ export default function DayBulletPopup({
     const dokkaiLessons = day.dokkai_lessons || [];
     const exam = day.exam_summary;
 
-    const handleGrammarClick = () => {
-        if (!hasGrammar || dayLocked) return;
-        if (grammarLessons.length === 1) {
-            onClose?.();
-            onOpenGrammarQuiz?.(day.id, grammarLessons[0].id);
-            return;
+    const handleGrammarClick = async () => {
+        if (!hasGrammar || dayLocked || !onOpenGrammarQuiz || grammarRequestRef.current) return;
+        const nextLesson = grammarLessons.find((lesson) => lesson.progress_status !== 'passed');
+        const targetLesson = nextLesson ?? grammarLessons[0];
+        const request = new AbortController();
+        grammarRequestRef.current = request;
+        setGrammarLoading(true);
+        setGrammarError(false);
+
+        try {
+            const quiz = await loadGrammarLesson(targetLesson.id, request.signal);
+            if (!request.signal.aborted) {
+                onClose?.();
+                onOpenGrammarQuiz(quiz, {
+                    dayId: day.id,
+                    lessons: grammarLessons,
+                    review: !nextLesson,
+                });
+            }
+        } catch {
+            if (!request.signal.aborted) {
+                setGrammarError(true);
+            }
+        } finally {
+            if (grammarRequestRef.current === request) {
+                grammarRequestRef.current = null;
+            }
+            if (!request.signal.aborted) {
+                setGrammarLoading(false);
+            }
         }
-        onShowFullDetail?.();
     };
 
     const handleDokkaiClick = () => {
@@ -189,16 +225,23 @@ export default function DayBulletPopup({
             </AnimatePresence>
 
             {hasGrammar && (
-                <BulletCircle
-                    jp="文法"
-                    furigana="ぶんぽう"
-                    label="Grammar"
-                    gradient="linear-gradient(180deg, #38BDF8, #0284C7)"
-                    locked={dayLocked}
-                    done={grammarDone}
-                    badge={grammarLessons.length > 1 ? grammarLessons.length : null}
-                    onClick={handleGrammarClick}
-                />
+                <>
+                    <BulletCircle
+                        jp={grammarLoading ? '...' : '文法'}
+                        furigana={grammarLoading ? 'memuat' : 'ぶんぽう'}
+                        label="Grammar"
+                        gradient="linear-gradient(180deg, #38BDF8, #0284C7)"
+                        locked={dayLocked}
+                        done={grammarDone}
+                        badge={grammarLessons.length > 1 ? grammarLessons.length : null}
+                        onClick={handleGrammarClick}
+                    />
+                    {grammarError && (
+                        <p role="alert" className="max-w-[78px] text-center text-[9px] font-bold text-rose-600 dark:text-rose-400">
+                            Gagal memuat. Coba lagi.
+                        </p>
+                    )}
+                </>
             )}
 
             {dokkaiLessons.length > 0 && (
