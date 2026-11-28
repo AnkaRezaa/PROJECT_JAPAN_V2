@@ -102,7 +102,7 @@ function GrammarFormulaDisplay({ formula, meaning }) {
                                     <React.Fragment key={tIdx}>
                                         <span
                                             lang="ja"
-                                            className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100/90 px-2.5 py-1 text-xs sm:text-sm font-black font-japanese text-slate-900 dark:border-slate-700 dark:bg-slate-750 dark:text-white"
+                                            className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100/90 px-2.5 py-1 text-xs sm:text-sm font-black font-japanese text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-50"
                                         >
                                             {token}
                                         </span>

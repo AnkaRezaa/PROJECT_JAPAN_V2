@@ -553,7 +553,7 @@ export default function KuisCampuranRunner({ quiz, submitUrl, restartUrl, backUr
 
                             <Link
                                 href={backUrl || route('user.dashboard')}
-                                className="flex-1 flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-[0.98] transition"
+                                className="flex-1 flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-[0.98] transition"
                             >
                                 <span>{(isDashboard || quiz?.is_dashboard || backUrl?.includes('beranda')) ? 'Kembali ke Beranda' : (isWeakspot || quiz?.is_weakspot) ? 'Selesai' : 'Kembali ke Modul'}</span>
                             </Link>

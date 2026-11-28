@@ -204,7 +204,7 @@ export default function PopupManager({ popups = [] }) {
                                     <img src={popup.image_url} alt={popup.title} className="h-full w-full object-cover" />
                                 </div>
                             ) : (
-                                <div className="flex aspect-video w-full shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400 dark:from-gray-800 dark:to-gray-750 dark:text-gray-500 sm:w-44">
+                                <div className="flex aspect-video w-full shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400 dark:from-gray-800 dark:to-gray-700 dark:text-gray-500 sm:w-44">
                                     <CampaignIcon sx={{ fontSize: 32 }} />
                                 </div>
                             )}
@@ -298,7 +298,7 @@ export default function PopupManager({ popups = [] }) {
                             {/* Kolom Input (7 cols di desktop) */}
                             <div className="space-y-5 lg:col-span-7">
                                 {/* Section 1: Konten Promosi */}
-                                <div className="space-y-3 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-850/50">
+                                <div className="space-y-3 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-800/60">
                                     <h4 className="text-xs font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">
                                         1. Informasi Pesan & Konten
                                     </h4>
@@ -372,7 +372,7 @@ export default function PopupManager({ popups = [] }) {
                                 </div>
 
                                 {/* Section 2: Tombol CTA & Media */}
-                                <div className="space-y-3 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-850/50">
+                                <div className="space-y-3 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-800/60">
                                     <h4 className="text-xs font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">
                                         2. Tombol Aksi (CTA) & Banner Gambar
                                     </h4>
@@ -436,7 +436,7 @@ export default function PopupManager({ popups = [] }) {
                                 </div>
 
                                 {/* Section 3: Target & Penjadwalan */}
-                                <div className="space-y-3 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-850/50">
+                                <div className="space-y-3 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-800/60">
                                     <h4 className="text-xs font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">
                                         3. Target Penayangan & Jadwal
                                     </h4>
