@@ -1,6 +1,7 @@
 import React from 'react';
 import { Head, router } from '@inertiajs/react';
 import DokkaiQuizRunner from '@/Components/Features/DokkaiQuiz/DokkaiQuizRunner';
+import GuidedTour from '@/Components/Features/Onboarding/GuidedTour';
 import axios from 'axios';
 
 export default function KerjakanDokkai({
@@ -45,6 +46,7 @@ export default function KerjakanDokkai({
                 onBookmark={handleBookmark}
                 persist={true}
             />
+            <GuidedTour pageKey="dokkai_runner" />
         </>
     );
 }

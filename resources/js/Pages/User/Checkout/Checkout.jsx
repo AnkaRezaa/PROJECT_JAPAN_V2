@@ -19,6 +19,7 @@ import EWalletView from '@/Components/Features/Checkout/EWalletView';
 import ConvenienceStoreView from '@/Components/Features/Checkout/ConvenienceStoreView';
 import PayLaterView from '@/Components/Features/Checkout/PayLaterView';
 import PaymentCountdownTimer from '@/Components/Features/Checkout/PaymentCountdownTimer';
+import GuidedTour from '@/Components/Features/Onboarding/GuidedTour';
 
 
 const statusPresentation = {
@@ -614,6 +615,7 @@ export default function Checkout({ transaction, midtrans }) {
         {...confirmState}
         onCancel={closeConfirm}
       />
+      <GuidedTour pageKey="checkout" />
     </>
   );
 }

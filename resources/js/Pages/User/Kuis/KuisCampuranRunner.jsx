@@ -15,6 +15,7 @@ import SentenceBuilder from '@/Components/Features/Quiz/SentenceBuilder';
 import HighlightedLearningText from '@/Components/Features/Learning/HighlightedLearningText';
 import { UniversalFeedbackWidget } from '@/Components/Features/UniversalFeedback';
 import ConfirmActionDialog, { useConfirmAction } from '@/Components/UI/ConfirmActionDialog';
+import GuidedTour from '@/Components/Features/Onboarding/GuidedTour';
 
 const PILLAR_CONFIG = {
     kosakata: {
@@ -725,6 +726,7 @@ export default function KuisCampuranRunner({ quiz, submitUrl, restartUrl, backUr
                 </footer>
             )}
             <ConfirmActionDialog {...confirmState} onCancel={closeConfirm} />
+            <GuidedTour pageKey="mixed_quiz" />
         </div>
     );
 }

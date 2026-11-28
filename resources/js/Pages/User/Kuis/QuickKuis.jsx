@@ -11,6 +11,7 @@ import KanjiHandwritingCanvas from '@/Components/Features/Handwriting/KanjiHandw
 import JapaneseReading from '@/Components/Features/Learning/JapaneseReading';
 import JapaneseSpeechButton from '@/Components/UI/JapaneseSpeechButton';
 import { questionDisplayText } from '@/lib/questionMarkup';
+import GuidedTour from '@/Components/Features/Onboarding/GuidedTour';
 
 const normalizeType = (type) => {
     if (type === 'fill_blank' || type === 'typing') return 'fill_blank';
@@ -214,6 +215,7 @@ export default function QuickKuis({ quickSession, backUrl, answerUrl, resetUrl }
                     </motion.aside>
                 )}
             </AnimatePresence>
+            <GuidedTour pageKey="quick_quiz" />
         </div>
     );
 }

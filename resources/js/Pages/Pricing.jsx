@@ -14,6 +14,7 @@ import Footer from '@/Components/Layout/GuestFooter';
 import GuestNavbar from '@/Components/Layout/GuestNavbar';
 import FallEffect from '@/Components/theme/FallEffect';
 import SeoHead from '@/Components/SEO/SeoHead';
+import GuidedTour from '@/Components/Features/Onboarding/GuidedTour';
 import heroStaticImage from '@/../Images/Mount-Fuji-New.jpg';
 
 const faqs = [
@@ -386,6 +387,7 @@ export default function Pricing({ programs = [], seo = {} }) {
       </main>
 
       <Footer />
+      <GuidedTour pageKey="catalog" />
     </>
   );
 }

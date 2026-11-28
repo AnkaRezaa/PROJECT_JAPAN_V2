@@ -20,6 +20,7 @@ import { pushAnalyticsEvent } from '@/lib/analytics';
 import { questionDisplayText } from '@/lib/questionMarkup';
 import useQuizCheckpoint from '@/Hooks/useQuizCheckpoint';
 import ResumeQuizModal from '@/Components/Features/Quiz/ResumeQuizModal';
+import GuidedTour from '@/Components/Features/Onboarding/GuidedTour';
 
 // MUI Icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -1517,6 +1518,7 @@ export default function Quiz({
                 )}
             </AnimatePresence>
             {exitConfirmation}
+            {!preview && <GuidedTour pageKey="quiz_runner" />}
         </div>
     );
 }

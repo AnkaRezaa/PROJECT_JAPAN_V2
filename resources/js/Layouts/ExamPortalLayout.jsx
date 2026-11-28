@@ -10,6 +10,7 @@ import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
+import GuidedTour from '@/Components/Features/Onboarding/GuidedTour';
 
 const navigation = [
     { label: 'Beranda Ujian', href: '/user/exams', icon: HomeRoundedIcon, exact: true },
@@ -143,6 +144,7 @@ export default function ExamPortalLayout({ children }) {
             </header>
 
             <main>{children}</main>
+            <GuidedTour role="user" userId={auth?.user?.id} />
         </div>
     );
 }
